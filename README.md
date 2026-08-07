@@ -25,6 +25,10 @@ Assets are **generated** — never hand-edit anything under
 python3 tools/gen_textures.py && python3 tools/gen_assets.py
 ```
 
+Read [docs/TRAPS.md](docs/TRAPS.md) before debugging anything that looks
+impossible -- most of this mod's expensive bugs were the client and the server
+disagreeing, not the code being wrong.
+
 Four checks, all offline and all fast:
 
 | Command | Catches |
