@@ -499,6 +499,20 @@ public final class TrapGuide {
                 .append(Text.literal(Quality.FIRE.display()).formatted(Quality.FIRE.colour()))
                 .append(body(" pays " + Quality.FIRE.emeralds() + "e.\n\n"))
                 .append(hint("Same work, " + (Quality.FIRE.emeralds() / Quality.SWILL.emeralds()) + "x the money."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9c. CUSTOMERS\n\n"))
+                .append(body("Carry product and somebody eventually walks up wanting one strain.\n\n"))
+                .append(body("They pay well over the trader.\n\n"))
+                .append(hint("Their name says what they're after."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9d. DEALING\n\n"))
+                .append(body("Hold it and right-click them. No menu.\n\n"))
+                .append(body("They take up to " + TrapDealing.UNITS_WANTED
+                        + ", paying per item as you go.\n\n"))
+                .append(hint("Sneak-click to send them off.\nThey leave on their own after "
+                        + TrapDealing.LIFETIME_TICKS / 20 / 60 + " min."))));
     }
 
     // --- text helpers ---------------------------------------------------------

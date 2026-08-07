@@ -52,7 +52,7 @@ public final class TrapDealing {
     private static final int SPAWN_CHANCE = 30;
 
     /** How long they'll hang around before giving up on you. */
-    private static final int LIFETIME_TICKS = 20 * 180;
+    public static final int LIFETIME_TICKS = 20 * 180;
 
     private static final int SPAWN_MIN = 11;
     private static final int SPAWN_RANGE = 9;      // 11..20 blocks out
@@ -105,7 +105,9 @@ public final class TrapDealing {
                             // worked out -- so showing it at all just offers a
                             // broken way to do the thing handOver does properly.
                             // Consuming the interaction is what suppresses it.
-                            if (!handOver(customer, seller, record.craving())) {
+                            if (seller.isSneaking()) {
+                                dismiss(customer, seller, seller.getServer().getTicks());
+                            } else if (!handOver(customer, seller, record.craving())) {
                                 nudge(seller, customer, record.craving());
                             }
                             return net.minecraft.util.ActionResult.SUCCESS;
@@ -161,7 +163,11 @@ public final class TrapDealing {
                     .formatted(Formatting.GRAY), false);
             return 0;
         }
-        if (!visit(player, wanted, (int) player.getWorld().getTime())) {
+        // server.getTicks(), NOT world.getTime(). The shepherd measures a
+        // customer's age against the server tick counter, and world time is a
+        // different, far larger clock -- mixing them made the difference
+        // negative, so a summoned customer never aged out and waited forever.
+        if (!visit(player, wanted, player.getServer().getTicks())) {
             player.sendMessage(Text.literal("Nowhere for them to walk in from.")
                     .formatted(Formatting.RED), false);
             return 0;
@@ -375,7 +381,7 @@ public final class TrapDealing {
      * item -- two emeralds for somebody who walked across the map to find you.
      * A visit should be worth the interruption.
      */
-    private static final int UNITS_WANTED = 8;
+    public static final int UNITS_WANTED = 8;
 
     /**
      * Sell by handing it over, with no screen at all.
@@ -434,7 +440,11 @@ public final class TrapDealing {
 
         int left = appetite - units;
         APPETITE.put(customer.getUuid(), left);
-        if (left <= 0) {
+        // Satisfied either when they've had their fill OR when you've run dry.
+        // Waiting for the full eight when the player has nothing left to sell
+        // left them loitering forever with no way to end it.
+        boolean soldOut = !hasMore(seller, craving);
+        if (left <= 0 || soldOut) {
             DEALT.add(customer.getUuid());
         }
 
@@ -474,12 +484,71 @@ public final class TrapDealing {
             message = Text.literal("They want ").formatted(Formatting.GRAY)
                     .append(Text.literal(craving.strain().display())
                             .withColor(craving.strain().colour()))
-                    .append(Text.literal(" -- cured buds or joints, in your hand.")
+                    .append(Text.literal(" -- in your hand.  Sneak-click to send them off.")
                             .formatted(Formatting.GRAY));
         }
         seller.sendMessage(message, true);
         seller.getWorld().playSound(null, customer.getBlockPos(),
                 SoundEvents.ENTITY_WANDERING_TRADER_TRADE, SoundCategory.NEUTRAL, 0.5F, 1.1F);
+    }
+
+    /** Is the player still carrying anything this customer would buy? */
+    private static boolean hasMore(ServerPlayerEntity seller, Craving craving) {
+        if (craving.powder()) {
+            return lowestPurity(seller) != null;
+        }
+        return lowestQuality(seller, TrapContent.driedBud(craving.strain())) != null
+                || lowestQuality(seller, TrapContent.joint(craving.strain())) != null;
+    }
+
+    /** The poorest grade of this item the player has on them, or null. */
+    private static Quality lowestQuality(ServerPlayerEntity seller, net.minecraft.item.Item item) {
+        Quality worst = null;
+        var inventory = seller.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (stack.isEmpty() || !stack.isOf(item)) {
+                continue;
+            }
+            Quality grade = TrapComponents.get(stack);
+            if (worst == null || grade.index() < worst.index()) {
+                worst = grade;
+            }
+        }
+        return worst;
+    }
+
+    private static Purity lowestPurity(ServerPlayerEntity seller) {
+        Purity worst = null;
+        var inventory = seller.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (stack.isEmpty() || !stack.isOf(TrapContent.cocaPowder)) {
+                continue;
+            }
+            Purity grade = TrapComponents.getPurity(stack);
+            if (worst == null || grade.index() < worst.index()) {
+                worst = grade;
+            }
+        }
+        return worst;
+    }
+
+    /**
+     * Send them off yourself: sneak and right-click.
+     *
+     * Emeralds are paid per hand-over, so ending early costs nothing you have
+     * already earned -- this only exists so you aren't stuck with somebody
+     * loitering for product you don't intend to sell them.
+     */
+    private static void dismiss(WanderingTraderEntity customer, ServerPlayerEntity seller, int now) {
+        boolean bought = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED) < UNITS_WANTED;
+        DEALT.add(customer.getUuid());
+        startLeaving(customer, seller, now, bought);
+        seller.sendMessage(Text.literal(bought
+                        ? "Deal's done. They're off."
+                        : "You wave them off.")
+                .formatted(Formatting.GRAY), true);
     }
 
     /** Has this customer actually bought something? */
