@@ -363,6 +363,19 @@ public final class TrapContent {
      * without the client having the mod. Ordered by stage of the loop rather
      * than by strain, so the tab reads seeds -> fresh -> cured -> joint.
      */
+    /**
+     * A creative-tab stack that carries a grade, like every real one does.
+     *
+     * Bare `entries.add(item)` hands out a stack with NO quality component,
+     * which looks identical but behaves differently everywhere the grade is
+     * read: dealer offers match on the component being present, so a creative
+     * joint could not be sold to anybody. Harvested product always carries a
+     * grade, so this makes the tab agree with the game.
+     */
+    private static ItemStack graded(Item item) {
+        return TrapComponents.apply(new ItemStack(item), Quality.MIDS);
+    }
+
     private static void registerItemGroup() {
         ItemGroup group = PolymerItemGroupUtils.builder()
                 .displayName(Text.literal("TrapCraft"))
@@ -372,13 +385,13 @@ public final class TrapContent {
                         entries.add(SEEDS.get(strain));
                     }
                     for (Strain strain : Strain.values()) {
-                        entries.add(RAW_BUDS.get(strain));
+                        entries.add(graded(RAW_BUDS.get(strain)));
                     }
                     for (Strain strain : Strain.values()) {
-                        entries.add(DRIED_BUDS.get(strain));
+                        entries.add(graded(DRIED_BUDS.get(strain)));
                     }
                     for (Strain strain : Strain.values()) {
-                        entries.add(JOINTS.get(strain));
+                        entries.add(graded(JOINTS.get(strain)));
                     }
                     entries.add(dryingRackItem);
                     // Coca line, in chain order like the weed items above.

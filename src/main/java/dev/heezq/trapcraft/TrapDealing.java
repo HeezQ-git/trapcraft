@@ -459,18 +459,19 @@ public final class TrapDealing {
         return offers;
     }
 
-    /** Does the player carry this item at exactly this grade? */
+    /**
+     * Does the player carry this item at exactly this grade?
+     *
+     * The component must be PRESENT, not merely default to zero. Treating an
+     * absent grade as zero advertised a row the offer could never accept: the
+     * trade's predicate requires the component to exist and equal zero, and a
+     * stack carrying no grade at all fails it. The result was a single,
+     * correct-looking, permanently dead trade.
+     */
     private static boolean holds(ServerPlayerEntity player, net.minecraft.item.Item item,
                                  net.minecraft.component.ComponentType<Integer> type, int value) {
-        return player.getInventory().contains(stack -> {
-            if (!stack.isOf(item)) {
-                return false;
-            }
-            Integer carried = stack.get(type);
-            // Absent component means the default grade, which is index 0 --
-            // matching how the components read everywhere else.
-            return (carried == null ? 0 : carried) == value;
-        });
+        return player.getInventory().contains(stack ->
+                stack.isOf(item) && Integer.valueOf(value).equals(stack.get(type)));
     }
 
     private static TradeOfferList offersFor(Craving craving) {
