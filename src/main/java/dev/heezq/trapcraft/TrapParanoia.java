@@ -75,8 +75,13 @@ public final class TrapParanoia {
     private static final Set<UUID> OPTED_OUT = new HashSet<>();
 
     /** The one figure a player can be haunted by at a time. */
-    private record Figure(int id, long removeAtTick) {
+    private record Figure(int id, Vec3d at, long removeAtTick) {
     }
+
+    /** Close enough to make it out properly. */
+    private static final double WATCHER_FLEE_RANGE = 20.0;
+    /** cos(~10 degrees): looking near enough at it to be sure. */
+    private static final double WATCHER_LOOK_DOT = 0.985;
 
     private static final Map<UUID, Figure> FIGURES = new HashMap<>();
 
@@ -496,22 +501,44 @@ public final class TrapParanoia {
         float yaw = (float) Math.toDegrees(Math.atan2(
                 player.getZ() - standing.z, player.getX() - standing.x)) - 90.0F;
         int id = TrapPhantom.figure(player, EntityType.PILLAGER, standing, yaw);
-        FIGURES.put(player.getUuid(), new Figure(id, player.getWorld().getTime() + 20L * 12));
+        FIGURES.put(player.getUuid(),
+                new Figure(id, standing, player.getWorld().getTime() + 20L * 12));
 
         if (random.nextInt(3) == 0) {
             TrapPhantom.sound(player, standing, SoundEvents.AMBIENT_CAVE.value(), 0.6F, 0.7F);
         }
     }
 
-    /** Take the figure away before the player can prove it exists. */
+    /**
+     * Take the figure away before the player can prove it exists.
+     *
+     * The timer alone was not enough, and its absence was the whole problem:
+     * a pillager standing motionless for twelve seconds that you can walk up
+     * to and inspect isn't unsettling, it's a bug you've found. It has to be
+     * gone the instant you try to confirm it.
+     */
     private static void expireFigure(ServerPlayerEntity player, long time) {
         Figure figure = FIGURES.get(player.getUuid());
         if (figure == null) {
             return;
         }
-        if (time >= figure.removeAtTick()) {
+        if (time >= figure.removeAtTick() || spotted(player, figure)) {
             drop(player, figure);
         }
+    }
+
+    /** Has the player looked straight at it, or got close enough to be sure? */
+    private static boolean spotted(ServerPlayerEntity player, Figure figure) {
+        Vec3d toFigure = figure.at().subtract(player.getEyePos());
+        double distance = toFigure.length();
+        if (distance < WATCHER_FLEE_RANGE) {
+            return true;
+        }
+        if (distance < 1.0e-4) {
+            return true;
+        }
+        return player.getRotationVec(1.0F).dotProduct(toFigure.multiply(1.0 / distance))
+                > WATCHER_LOOK_DOT;
     }
 
     private static void drop(ServerPlayerEntity player, Figure figure) {
