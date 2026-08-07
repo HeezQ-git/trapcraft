@@ -92,8 +92,8 @@ public final class TrapDealing {
                     if (!world.isClient() && entity instanceof WanderingTraderEntity customer
                             && customer.getCommandTags().contains(TAG)) {
                         Customer record = CUSTOMERS.get(customer.getUuid());
-                        if (record != null) {
-                            enforceOffers(customer, record.craving());
+                        if (record != null && player instanceof ServerPlayerEntity seller) {
+                            enforceOffers(customer, record.craving(), seller);
                         }
                     }
                     return net.minecraft.util.ActionResult.PASS;
@@ -388,6 +388,24 @@ public final class TrapDealing {
      * in between, the list is rebuilt before anyone reads it.
      */
     private static void enforceOffers(WanderingTraderEntity customer, Craving craving) {
+        enforceOffers(customer, craving, null);
+    }
+
+    /**
+     * Show only what this player can actually sell them.
+     *
+     * A customer has one offer per grade, because a Fire bud must not be
+     * bought at Swill prices -- but listing all of them means eight rows that
+     * look identical, and picking the wrong one silently does nothing. You
+     * can't tell a B+ joint row from an A+ joint row at a glance, so the honest
+     * outcome of the full list is a player concluding the trade is broken.
+     *
+     * Filtering to the grades in your inventory keeps grade pricing intact and
+     * makes every visible row one you can complete. With nothing to sell, the
+     * full list is shown instead, so you can still see what they came for.
+     */
+    private static void enforceOffers(WanderingTraderEntity customer, Craving craving,
+                                      ServerPlayerEntity seller) {
         if (craving == null) {
             return;
         }
@@ -402,9 +420,57 @@ public final class TrapDealing {
         // getOffers() returns the real field (filling it first if it is null),
         // and TradeOfferList is an ArrayList, so clearing and refilling it in
         // place is the one thing that actually sticks without a mixin.
+        TradeOfferList wanted = offersFor(craving);
+        if (seller != null) {
+            TradeOfferList sellable = sellableBy(seller, craving);
+            if (!sellable.isEmpty()) {
+                wanted = sellable;
+            }
+        }
         TradeOfferList live = customer.getOffers();
         live.clear();
-        live.addAll(offersFor(craving));
+        live.addAll(wanted);
+    }
+
+    /** The offers this player could complete right now, grade for grade. */
+    private static TradeOfferList sellableBy(ServerPlayerEntity seller, Craving craving) {
+        TradeOfferList offers = new TradeOfferList();
+        if (craving.powder()) {
+            for (Purity purity : Purity.values()) {
+                if (holds(seller, TrapContent.cocaPowder, TrapComponents.purity, purity.index())) {
+                    offers.add(buy(TrapContent.cocaPowder, TrapComponents.purity, purity.index(),
+                            2, premium(purity.emeralds() * 2)));
+                }
+            }
+            return offers;
+        }
+        for (Quality grade : Quality.values()) {
+            var bud = TrapContent.driedBud(craving.strain());
+            var joint = TrapContent.joint(craving.strain());
+            if (holds(seller, bud, TrapComponents.quality, grade.index())) {
+                offers.add(buy(bud, TrapComponents.quality, grade.index(),
+                        4, premium(grade.emeralds())));
+            }
+            if (holds(seller, joint, TrapComponents.quality, grade.index())) {
+                offers.add(buy(joint, TrapComponents.quality, grade.index(),
+                        2, premium(grade.emeralds())));
+            }
+        }
+        return offers;
+    }
+
+    /** Does the player carry this item at exactly this grade? */
+    private static boolean holds(ServerPlayerEntity player, net.minecraft.item.Item item,
+                                 net.minecraft.component.ComponentType<Integer> type, int value) {
+        return player.getInventory().contains(stack -> {
+            if (!stack.isOf(item)) {
+                return false;
+            }
+            Integer carried = stack.get(type);
+            // Absent component means the default grade, which is index 0 --
+            // matching how the components read everywhere else.
+            return (carried == null ? 0 : carried) == value;
+        });
     }
 
     private static TradeOfferList offersFor(Craving craving) {
