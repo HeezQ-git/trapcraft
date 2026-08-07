@@ -320,7 +320,19 @@ public final class TrapDealing {
             // fine for a vanilla trader wandering the wilds and useless for
             // somebody who is supposed to be walking up to you, so it gets
             // stripped every pass rather than fought at the AI level.
+            //
+            // The EFFECT and the BOTTLE are two separate problems: removing the
+            // effect alone leaves them stood there holding a potion forever,
+            // because the drink goal keeps re-arming and we keep cancelling its
+            // result. Take the bottle out of their hands too.
             entity.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.INVISIBILITY);
+            for (var slot : new net.minecraft.entity.EquipmentSlot[]{
+                    net.minecraft.entity.EquipmentSlot.MAINHAND,
+                    net.minecraft.entity.EquipmentSlot.OFFHAND}) {
+                if (!entity.getEquippedStack(slot).isEmpty()) {
+                    entity.equipStack(slot, ItemStack.EMPTY);
+                }
+            }
 
             // Re-assert what they buy, every pass, unconditionally.
             //
