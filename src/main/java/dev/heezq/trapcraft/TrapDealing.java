@@ -7,8 +7,6 @@ import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.component.ComponentMapPredicate;
-import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -18,13 +16,10 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.village.TradeOffer;
-import net.minecraft.village.TradeOfferList;
-import net.minecraft.village.TradedItem;
 import net.minecraft.world.Heightmap;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -65,31 +60,6 @@ public final class TrapDealing {
 
     /** They pay this much over the wandering trader for what they crave. */
     private static final float PREMIUM = 1.9F;
-    /**
-     * How many times one customer will buy a given offer.
-     *
-     * Raised from 4 because every offer now costs ONE item rather than a
-     * handful, so the per-visit volume had to move to the use count to stay
-     * roughly where it was.
-     */
-    private static final int MAX_USES = 8;
-
-    /**
-     * Every offer costs exactly one item. This is a workaround, not a taste.
-     *
-     * Polymer bug #254: with a Polymer item as a trade's cost, the CLIENT
-     * visually rejects the trade and shows a ghost slot whenever the stack
-     * placed differs from the required count -- and it only reliably agrees
-     * when that count is one. The server completes the trade perfectly either
-     * way, which is why the payout was collectable by clicking the blank
-     * square while never being drawn.
-     *
-     * https://github.com/Patbox/polymer/issues/254
-     *
-     * Per-unit prices below are the old bundle prices divided by the old bundle
-     * size, so a visit is worth about what it was.
-     */
-    private static final int UNIT = 1;
 
     private record Customer(UUID player, int bornAt, Craving craving) {
     }
@@ -117,31 +87,28 @@ public final class TrapDealing {
         ServerTickEvents.END_SERVER_TICK.register(TrapDealing::tick);
         registerCommand();
 
-        // The last word before the screen opens.
-        //
-        // The tick pass can be outraced -- anything that appends to the offer
-        // list between the last pass and the right-click wins, and the player
-        // sees it. Rebuilding here means the list is correct at the only moment
-        // that matters, whatever happened to it beforehand.
+        // Every interaction with a customer is handled here and nowhere else.
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
                 (player, world, hand, entity, hit) -> {
-                    // MAIN_HAND only. The callback fires once per hand, so
-                    // without this the offer list is torn down and rebuilt
-                    // twice around the instant the screen opens -- replacing
-                    // the very TradeOffer objects the open screen is holding.
+                    // MAIN_HAND only: the callback fires once per hand, and a
+                    // sale must not happen twice for one right-click.
                     if (!world.isClient() && hand == net.minecraft.util.Hand.MAIN_HAND
                             && entity instanceof WanderingTraderEntity customer
                             && customer.getCommandTags().contains(TAG)) {
                         Customer record = CUSTOMERS.get(customer.getUuid());
                         if (record != null && player instanceof ServerPlayerEntity seller) {
-                            // Hand it over directly if you're holding what they
-                            // want. See handOver: the merchant SCREEN can't draw
-                            // a payout for Polymer items, so the sale happens
-                            // without one.
-                            if (handOver(customer, seller, record.craving())) {
-                                return net.minecraft.util.ActionResult.SUCCESS;
+                            // The trade screen never opens for a customer.
+                            //
+                            // It cannot draw a payout for a Polymer item -- the
+                            // client recomputes the result slot and paints an
+                            // empty square over emeralds the server has already
+                            // worked out -- so showing it at all just offers a
+                            // broken way to do the thing handOver does properly.
+                            // Consuming the interaction is what suppresses it.
+                            if (!handOver(customer, seller, record.craving())) {
+                                nudge(seller, customer, record.craving());
                             }
-                            enforceOffers(customer, record.craving(), seller);
+                            return net.minecraft.util.ActionResult.SUCCESS;
                         }
                     }
                     return net.minecraft.util.ActionResult.PASS;
@@ -264,9 +231,10 @@ public final class TrapDealing {
         customer.setDespawnDelay(LIFETIME_TICKS + 20 * 30);
 
         world.spawnEntity(customer);
-        // After spawning, not before: spawn can run the entity's own
-        // initialisation, and this has to be the last word on what they'll buy.
-        enforceOffers(customer, craving);
+        // No trade offers are set at all. The screen never opens (see the
+        // UseEntityCallback in register), so whatever the wandering trader
+        // stocks itself is never seen, and everything this customer buys goes
+        // through handOver instead.
         CUSTOMERS.put(customer.getUuid(), new Customer(player.getUuid(), now, craving));
 
         player.sendMessage(Text.literal(craving.greeting()).formatted(Formatting.GRAY), false);
@@ -329,22 +297,6 @@ public final class TrapDealing {
                 return true;
             }
 
-            // Keep the payout visible while the screen is open.
-            //
-            // The client works out that result slot itself and gets it wrong
-            // for our items, painting an empty square over a real payout --
-            // click the blank and the emeralds come out. The server's answer
-            // is authoritative, so it is simply sent every tick.
-            //
-            // UNCONDITIONALLY, including when the result is empty. An earlier
-            // version skipped empty pushes to save a packet, which left the
-            // client showing the last payout after the trade had consumed the
-            // inputs: emeralds hanging in the result slot above two empty
-            // input slots.
-            if (entity.getCustomer() == player) {
-                pushResultSlot(player);
-            }
-
             // The deal's done. Wait for the screen to close so they don't
             // evaporate out of the menu mid-trade, then send them off happy.
             if (entity.getCustomer() == null && hasTraded(entity)) {
@@ -373,14 +325,6 @@ public final class TrapDealing {
             // A size check wasn't enough because the totals could coincide;
             // overwriting outright is cheap for one customer and can't be
             // outraced by an append.
-            // NOT re-asserted per tick any more.
-            //
-            // Rebuilding the list every tick replaced the TradeOffer objects
-            // continuously, which reset each offer's `uses` counter -- so
-            // MAX_USES never limited anything -- and churned the exact objects
-            // an open screen holds a reference to. Spawn and right-click are
-            // the only two moments the list needs to be right, and both set it.
-
 
             // Don't drag them away mid-trade -- or once they're heading off,
             // which would have them trudging back to somebody they're done with.
@@ -417,20 +361,6 @@ public final class TrapDealing {
         }
     }
 
-    /** Result slot index in a merchant screen: two inputs, then the payout. */
-    private static final int RESULT_SLOT = 2;
-
-    /** Send the server's own view of the result slot, overriding the client's. */
-    private static void pushResultSlot(ServerPlayerEntity player) {
-        if (!(player.currentScreenHandler
-                instanceof net.minecraft.screen.MerchantScreenHandler handler)) {
-            return;
-        }
-        player.networkHandler.sendPacket(
-                new net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket(
-                        handler.syncId, handler.nextRevision(), RESULT_SLOT,
-                        handler.getSlot(RESULT_SLOT).getStack().copy()));
-    }
 
     /** Customers who have bought all they came for, so they know to leave. */
     private static final java.util.Set<UUID> DEALT = new java.util.HashSet<>();
@@ -524,17 +454,39 @@ public final class TrapDealing {
         return true;
     }
 
+    /**
+     * Say what they're after, since there's no screen to show it.
+     *
+     * The name over their head gives the strain; this gives the rest -- what
+     * form they'll take and whether they still want any.
+     */
+    private static void nudge(ServerPlayerEntity seller, WanderingTraderEntity customer,
+                              Craving craving) {
+        int appetite = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED);
+        Text message;
+        if (appetite <= 0) {
+            message = Text.literal("They've had enough. They're off.")
+                    .formatted(Formatting.GRAY);
+        } else if (craving.powder()) {
+            message = Text.literal("They want powder. Put some in your hand.")
+                    .formatted(Formatting.GRAY);
+        } else {
+            message = Text.literal("They want ").formatted(Formatting.GRAY)
+                    .append(Text.literal(craving.strain().display())
+                            .withColor(craving.strain().colour()))
+                    .append(Text.literal(" -- cured buds or joints, in your hand.")
+                            .formatted(Formatting.GRAY));
+        }
+        seller.sendMessage(message, true);
+        seller.getWorld().playSound(null, customer.getBlockPos(),
+                SoundEvents.ENTITY_WANDERING_TRADER_TRADE, SoundCategory.NEUTRAL, 0.5F, 1.1F);
+    }
+
     /** Has this customer actually bought something? */
     private static boolean hasTraded(WanderingTraderEntity customer) {
-        if (DEALT.contains(customer.getUuid())) {
-            return true;
-        }
-        for (TradeOffer offer : customer.getOffers()) {
-            if (offer.getUses() > 0) {
-                return true;
-            }
-        }
-        return false;
+        // Only hand-overs count now: the trade screen is never opened, so the
+        // offers' own use counters can never move.
+        return DEALT.contains(customer.getUuid());
     }
 
     /**
@@ -646,139 +598,21 @@ public final class TrapDealing {
      * would let a Swill bud satisfy a Fire offer, and the grade system exists
      * precisely so that can't happen.
      */
-    /**
-     * Make the list say exactly what this customer buys, and nothing else.
-     *
-     * Called both on the tick and the instant the player opens the screen. The
-     * second one is what actually guarantees it: whatever appended to the list
-     * in between, the list is rebuilt before anyone reads it.
-     */
-    private static void enforceOffers(WanderingTraderEntity customer, Craving craving) {
-        enforceOffers(customer, craving, null);
-    }
 
-    /**
-     * Show only what this player can actually sell them.
-     *
-     * A customer has one offer per grade, because a Fire bud must not be
-     * bought at Swill prices -- but listing all of them means eight rows that
-     * look identical, and picking the wrong one silently does nothing. You
-     * can't tell a B+ joint row from an A+ joint row at a glance, so the honest
-     * outcome of the full list is a player concluding the trade is broken.
-     *
-     * Filtering to the grades in your inventory keeps grade pricing intact and
-     * makes every visible row one you can complete. With nothing to sell, the
-     * full list is shown instead, so you can still see what they came for.
-     */
-    private static void enforceOffers(WanderingTraderEntity customer, Craving craving,
-                                      ServerPlayerEntity seller) {
-        if (craving == null) {
-            return;
-        }
-        // Never rebuild after a sale. Rebuilding mints fresh TradeOffer objects
-        // with `uses` back at zero, which would both hand back the MAX_USES
-        // allowance and erase the only evidence that the deal happened -- so
-        // the customer would never realise it was time to leave.
-        if (hasTraded(customer)) {
-            return;
-        }
-        // Mutate the live list, do NOT call setOffersFromServer.
-        //
-        // That method is `{ return; }` on the server -- it exists for the
-        // CLIENT to accept offers sent to it, and the name reads the other way
-        // round. So every customer since this feature was written has ignored
-        // its craving entirely and shown whatever the wandering-trader pool
-        // handed it, which is why a Midnight customer offered to buy Purp.
-        //
-        // getOffers() returns the real field (filling it first if it is null),
-        // and TradeOfferList is an ArrayList, so clearing and refilling it in
-        // place is the one thing that actually sticks without a mixin.
-        TradeOfferList wanted = offersFor(craving);
-        if (seller != null) {
-            normaliseGrades(seller);
-            TradeOfferList sellable = sellableBy(seller, craving);
-            if (!sellable.isEmpty()) {
-                wanted = sellable;
-            }
-        }
-        TradeOfferList live = customer.getOffers();
-        live.clear();
-        live.addAll(wanted);
-    }
-
-
-    /**
-     * Write down the grade that everything already assumes.
-     *
-     * Product can exist with no quality component at all -- creative-tab
-     * stacks, /give, and anything minted before the grade was stamped. Every
-     * reader treats that as Mids (see TrapComponents#get), so the item BEHAVES
-     * as Mids everywhere except a trade, where the offer's predicate demands
-     * the component actually be there and the trade silently does nothing.
-     *
-     * Rather than teach the predicate about absent components, which it cannot
-     * express, this stamps the grade the code already believes in. It only
-     * ever adds data the stack should have carried from the start, and it runs
-     * where the mismatch bites: as the customer's screen is about to open.
-     */
-    private static void normaliseGrades(ServerPlayerEntity seller) {
-        var inventory = seller.getInventory();
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (!stack.isEmpty()
-                    && TrapContent.carriesQuality(stack.getItem())
-                    && stack.get(TrapComponents.quality) == null) {
-                TrapComponents.apply(stack, TrapComponents.get(stack));
-            }
-        }
-    }
-
-    /**
-     * One offer per form, priced for the worst of what the seller is carrying.
-     *
-     * NO component predicate, and that is forced rather than chosen. The grade
-     * lives in a component Polymer hides from clients -- which is what stops a
-     * vanilla client being kicked over an unknown registry entry -- so the
-     * client can never see it. It draws the merchant result slot itself, and a
-     * predicate it cannot evaluate always fails, so it paints an empty slot
-     * over a payout the server has already worked out. A grade predicate and a
-     * hidden component cannot both exist.
-     *
-     * Pricing by the LOWEST grade held keeps that honest: matching on the item
-     * alone would otherwise let a Swill bud be sold on a Fire row. Paying for
-     * the worst of the batch is the same rule the mixing station already
-     * applies to blends, so it should read as deliberate rather than mean.
-     */
-    private static TradeOfferList sellableBy(ServerPlayerEntity seller, Craving craving) {
-        TradeOfferList offers = new TradeOfferList();
-        if (craving.powder()) {
-            Purity worst = lowestPurity(seller);
-            if (worst != null) {
-                offers.add(buyAny(TrapContent.cocaPowder, UNIT, premium(worst.emeralds())));
-            }
-            return offers;
-        }
-        var bud = TrapContent.driedBud(craving.strain());
-        var joint = TrapContent.joint(craving.strain());
-        Quality worstBud = lowestQuality(seller, bud);
-        if (worstBud != null) {
-            offers.add(buyAny(bud, UNIT, budPrice(worstBud)));
-        }
-        Quality worstJoint = lowestQuality(seller, joint);
-        if (worstJoint != null) {
-            offers.add(buyAny(joint, UNIT, jointPrice(worstJoint)));
-        }
-        return offers;
+    private static int premium(int base) {
+        // Always at least one emerald better than the trader, or the low grades
+        // round back down to the same price and the premium is invisible.
+        return Math.max(base + 1, Math.round(base * PREMIUM));
     }
 
     /**
      * What a customer pays, per item.
      *
-     * Doubled from the old per-unit rates. Carrying the grade up from Swill is
-     * most of the work in this mod, and paying 1 emerald for a bud made the
-     * whole chain -- breed, grow, cure, grade -- come out worse than mining.
-     * A rolled joint is worth more than the bud it came from, which is why the
-     * two curves differ rather than just scaling.
+     * Carrying the grade up from Swill is most of the work in this mod, and a
+     * single emerald a bud made the whole chain -- breed, grow, cure, grade --
+     * come out worse than mining. A rolled joint is worth more than the bud it
+     * came from, so the two curves differ rather than one being a scale of the
+     * other.
      *
      *          Swill  Mids  Loud  Fire
      *   bud        1     2     4     7
@@ -790,107 +624,6 @@ public final class TrapDealing {
 
     private static int jointPrice(Quality grade) {
         return Math.max(1, premium(grade.emeralds()));
-    }
-
-    /** The poorest grade of this item the player has on them, or null. */
-    private static Quality lowestQuality(ServerPlayerEntity seller, net.minecraft.item.Item item) {
-        Quality worst = null;
-        var inventory = seller.getInventory();
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.isEmpty() || !stack.isOf(item)) {
-                continue;
-            }
-            Quality grade = TrapComponents.get(stack);
-            if (worst == null || grade.index() < worst.index()) {
-                worst = grade;
-            }
-        }
-        return worst;
-    }
-
-    private static Purity lowestPurity(ServerPlayerEntity seller) {
-        Purity worst = null;
-        var inventory = seller.getInventory();
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.isEmpty() || !stack.isOf(TrapContent.cocaPowder)) {
-                continue;
-            }
-            Purity grade = TrapComponents.getPurity(stack);
-            if (worst == null || grade.index() < worst.index()) {
-                worst = grade;
-            }
-        }
-        return worst;
-    }
-
-    /** A buy offer that matches on the item alone, so the client can see it. */
-    private static TradeOffer buyAny(net.minecraft.item.Item wanted, int count, int emeralds) {
-        return new TradeOffer(
-                new TradedItem(Registries.ITEM.getEntry(wanted), count,
-                        ComponentMapPredicate.EMPTY),
-                Optional.empty(),
-                new ItemStack(Items.EMERALD, emeralds), MAX_USES, 2, 0.05F);
-    }
-
-    /**
-     * Does the player carry this item at exactly this grade?
-     *
-     * The component must be PRESENT, not merely default to zero. Treating an
-     * absent grade as zero advertised a row the offer could never accept: the
-     * trade's predicate requires the component to exist and equal zero, and a
-     * stack carrying no grade at all fails it. The result was a single,
-     * correct-looking, permanently dead trade.
-     */
-    private static boolean holds(ServerPlayerEntity player, net.minecraft.item.Item item,
-                                 net.minecraft.component.ComponentType<Integer> type, int value) {
-        return player.getInventory().contains(stack ->
-                stack.isOf(item) && Integer.valueOf(value).equals(stack.get(type)));
-    }
-
-    /**
-     * The shop window: what this customer buys, when you have none of it.
-     *
-     * One row per form, item-only, at the poorest grade's price, so an
-     * empty-handed player can still see what the visit is for.
-     *
-     * Grade predicates are absent here too, and that matters more than it
-     * looks: leaving them in the fallback quietly reinstated the dead rows the
-     * moment a player sold their last unit. The list sprang back to eight
-     * unmatchable offers and looked like the bug had returned -- because it
-     * had, by a path nobody was watching.
-     *
-     * Priced at the floor because it is a floor; once you carry something,
-     * {@link #sellableBy} reprices it for what you actually have.
-     */
-    private static TradeOfferList offersFor(Craving craving) {
-        TradeOfferList offers = new TradeOfferList();
-        if (craving.powder()) {
-            offers.add(buyAny(TrapContent.cocaPowder, UNIT,
-                    premium(Purity.byIndex(0).emeralds())));
-            return offers;
-        }
-        Quality floor = Quality.byIndex(0);
-        offers.add(buyAny(TrapContent.driedBud(craving.strain()), UNIT, budPrice(floor)));
-        offers.add(buyAny(TrapContent.joint(craving.strain()), UNIT, jointPrice(floor)));
-        return offers;
-    }
-
-    private static int premium(int base) {
-        // Always at least one emerald better than the trader, or the low grades
-        // round back down to the same price and the premium is invisible.
-        return Math.max(base + 1, Math.round(base * PREMIUM));
-    }
-
-    private static TradeOffer buy(net.minecraft.item.Item wanted,
-                                  net.minecraft.component.ComponentType<Integer> type,
-                                  int value, int count, int emeralds) {
-        var predicate = ComponentMapPredicate.of(type, value);
-        return new TradeOffer(
-                new TradedItem(Registries.ITEM.getEntry(wanted), count, predicate),
-                Optional.empty(),
-                new ItemStack(Items.EMERALD, emeralds), MAX_USES, 2, 0.05F);
     }
 
     private static boolean hasCustomer(ServerPlayerEntity player) {
