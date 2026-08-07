@@ -105,6 +105,17 @@ public final class TrapContent {
         return RAW_BUD_LOOKUP.get(item);
     }
 
+    /** Whether this item is one that carries a quality grade. */
+    public static boolean carriesQuality(Item item) {
+        for (Strain strain : Strain.values()) {
+            if (item == RAW_BUDS.get(strain) || item == DRIED_BUDS.get(strain)
+                    || item == JOINTS.get(strain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Null when the stack isn't a cured bud -- the bongs use this to reject junk. */
     public static Strain strainOfDriedBud(Item item) {
         return DRIED_BUD_LOOKUP.get(item);

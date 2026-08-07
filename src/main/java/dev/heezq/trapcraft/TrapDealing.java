@@ -422,6 +422,7 @@ public final class TrapDealing {
         // place is the one thing that actually sticks without a mixin.
         TradeOfferList wanted = offersFor(craving);
         if (seller != null) {
+            normaliseGrades(seller);
             TradeOfferList sellable = sellableBy(seller, craving);
             if (!sellable.isEmpty()) {
                 wanted = sellable;
@@ -430,6 +431,32 @@ public final class TrapDealing {
         TradeOfferList live = customer.getOffers();
         live.clear();
         live.addAll(wanted);
+    }
+
+    /**
+     * Write down the grade that everything already assumes.
+     *
+     * Product can exist with no quality component at all -- creative-tab
+     * stacks, /give, and anything minted before the grade was stamped. Every
+     * reader treats that as Mids (see TrapComponents#get), so the item BEHAVES
+     * as Mids everywhere except a trade, where the offer's predicate demands
+     * the component actually be there and the trade silently does nothing.
+     *
+     * Rather than teach the predicate about absent components, which it cannot
+     * express, this stamps the grade the code already believes in. It only
+     * ever adds data the stack should have carried from the start, and it runs
+     * where the mismatch bites: as the customer's screen is about to open.
+     */
+    private static void normaliseGrades(ServerPlayerEntity seller) {
+        var inventory = seller.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (!stack.isEmpty()
+                    && TrapContent.carriesQuality(stack.getItem())
+                    && stack.get(TrapComponents.quality) == null) {
+                TrapComponents.apply(stack, TrapComponents.get(stack));
+            }
+        }
     }
 
     /** The offers this player could complete right now, grade for grade. */
