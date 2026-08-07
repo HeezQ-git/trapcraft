@@ -218,7 +218,7 @@ public final class TrapDealing {
         world.spawnEntity(customer);
         // After spawning, not before: spawn can run the entity's own
         // initialisation, and this has to be the last word on what they'll buy.
-        customer.setOffersFromServer(offersFor(craving));
+        enforceOffers(customer, craving);
         CUSTOMERS.put(customer.getUuid(), new Customer(player.getUuid(), now, craving));
 
         player.sendMessage(Text.literal(craving.greeting()).formatted(Formatting.GRAY), false);
@@ -391,13 +391,20 @@ public final class TrapDealing {
         if (craving == null) {
             return;
         }
-        TradeOfferList wanted = offersFor(craving);
-        int had = customer.getOffers().size();
-        customer.setOffersFromServer(wanted);
-        if (had != wanted.size()) {
-            TrapCraft.LOGGER.info("customer {}: offers {} -> {}",
-                    craving.title(), had, wanted.size());
-        }
+        // Mutate the live list, do NOT call setOffersFromServer.
+        //
+        // That method is `{ return; }` on the server -- it exists for the
+        // CLIENT to accept offers sent to it, and the name reads the other way
+        // round. So every customer since this feature was written has ignored
+        // its craving entirely and shown whatever the wandering-trader pool
+        // handed it, which is why a Midnight customer offered to buy Purp.
+        //
+        // getOffers() returns the real field (filling it first if it is null),
+        // and TradeOfferList is an ArrayList, so clearing and refilling it in
+        // place is the one thing that actually sticks without a mixin.
+        TradeOfferList live = customer.getOffers();
+        live.clear();
+        live.addAll(offersFor(craving));
     }
 
     private static TradeOfferList offersFor(Craving craving) {
