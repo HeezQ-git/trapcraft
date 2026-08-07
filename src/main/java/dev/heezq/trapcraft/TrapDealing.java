@@ -79,6 +79,61 @@ public final class TrapDealing {
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(TrapDealing::tick);
+        registerCommand();
+    }
+
+    /**
+     * /customer [strain|powder] -- summon one on demand.
+     *
+     * A visit is deliberately rare, which is good for play and terrible for
+     * testing: the trade list was carrying vanilla's stock for who knows how
+     * long precisely because nobody could reproduce a customer to look at.
+     * Ops only, and it still refuses if you already have one.
+     */
+    private static void registerCommand() {
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, access, env) -> {
+                    var root = net.minecraft.server.command.CommandManager.literal("customer")
+                            .requires(source -> source.hasPermissionLevel(2))
+                            .executes(context -> summon(context.getSource().getPlayer(), null));
+                    for (Strain strain : Strain.values()) {
+                        root.then(net.minecraft.server.command.CommandManager
+                                .literal(strain.id())
+                                .executes(context -> summon(context.getSource().getPlayer(),
+                                        new Craving(strain, false))));
+                    }
+                    root.then(net.minecraft.server.command.CommandManager.literal("powder")
+                            .executes(context -> summon(context.getSource().getPlayer(),
+                                    new Craving(null, true))));
+                    dispatcher.register(root);
+                });
+    }
+
+    private static int summon(ServerPlayerEntity player, Craving craving) {
+        if (player == null) {
+            return 0;
+        }
+        if (hasCustomer(player)) {
+            player.sendMessage(Text.literal("You've already got one on the way.")
+                    .formatted(Formatting.GRAY), false);
+            return 0;
+        }
+        // No argument means "whatever I'm carrying", the same choice the random
+        // path makes, so the default tests the real behaviour rather than a
+        // special case.
+        Craving wanted = craving != null ? craving : cravingFor(player);
+        if (wanted == null) {
+            player.sendMessage(Text.literal(
+                            "Nobody wants nothing. Carry some product, or name a strain.")
+                    .formatted(Formatting.GRAY), false);
+            return 0;
+        }
+        if (!visit(player, wanted, (int) player.getWorld().getTime())) {
+            player.sendMessage(Text.literal("Nowhere for them to walk in from.")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        return 1;
     }
 
     private static void tick(MinecraftServer server) {
@@ -100,8 +155,7 @@ public final class TrapDealing {
         if (hasCustomer(player)) {
             return;   // one at a time; a queue of junkies is a mob, not a deal
         }
-        ServerWorld world = player.getWorld();
-        if (world.getRandom().nextInt(SPAWN_CHANCE) != 0) {
+        if (player.getWorld().getRandom().nextInt(SPAWN_CHANCE) != 0) {
             return;
         }
 
@@ -111,16 +165,27 @@ public final class TrapDealing {
         if (craving == null) {
             return;
         }
+        visit(player, craving, now);
+    }
 
+    /**
+     * Actually send somebody over.
+     *
+     * Split out from the random roll above so /customer can summon one without
+     * a second copy of the spawn code -- a visit is rare by design, which is
+     * exactly what made the trade list bug survive so long.
+     */
+    private static boolean visit(ServerPlayerEntity player, Craving craving, int now) {
+        ServerWorld world = player.getWorld();
         BlockPos spot = findSpot(world, player.getBlockPos());
         if (spot == null) {
-            return;
+            return false;
         }
 
         WanderingTraderEntity customer =
                 EntityType.WANDERING_TRADER.create(world, SpawnReason.EVENT);
         if (customer == null) {
-            return;
+            return false;
         }
         customer.refreshPositionAndAngles(spot, world.getRandom().nextFloat() * 360.0F, 0.0F);
         customer.setCustomName(Text.literal(craving.title())
@@ -141,6 +206,7 @@ public final class TrapDealing {
         player.sendMessage(Text.literal(craving.greeting()).formatted(Formatting.GRAY), false);
         world.playSound(null, spot, SoundEvents.ENTITY_WANDERING_TRADER_YES,
                 SoundCategory.NEUTRAL, 0.7F, 0.8F);
+        return true;
     }
 
     /** A clear surface spot near the player but not on top of them. */
