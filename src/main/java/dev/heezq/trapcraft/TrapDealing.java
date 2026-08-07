@@ -469,9 +469,15 @@ public final class TrapDealing {
                         .append(Text.literal("  for  ").formatted(Formatting.GRAY))
                         .append(Text.literal(paid + " emerald" + (paid == 1 ? "" : "s"))
                                 .formatted(Formatting.GREEN))
-                        .append(Text.literal(left > 0
-                                        ? "   still wants " + left
-                                        : "   that's the lot")
+                        // Three outcomes, not two. Reporting "still wants 5"
+                        // and then walking off because the seller ran dry reads
+                        // as a bug -- the number was true and the conclusion
+                        // wasn't, which is worse than saying nothing.
+                        .append(Text.literal(left <= 0
+                                        ? "   that's the lot"
+                                        : soldOut
+                                        ? "   you're out -- they'll take it and go"
+                                        : "   still wants " + left)
                                 .formatted(Formatting.DARK_GRAY)),
                 false);
         return true;
