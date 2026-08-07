@@ -65,8 +65,31 @@ public final class TrapDealing {
 
     /** They pay this much over the wandering trader for what they crave. */
     private static final float PREMIUM = 1.9F;
-    /** How many times one customer will buy a given offer. */
-    private static final int MAX_USES = 4;
+    /**
+     * How many times one customer will buy a given offer.
+     *
+     * Raised from 4 because every offer now costs ONE item rather than a
+     * handful, so the per-visit volume had to move to the use count to stay
+     * roughly where it was.
+     */
+    private static final int MAX_USES = 8;
+
+    /**
+     * Every offer costs exactly one item. This is a workaround, not a taste.
+     *
+     * Polymer bug #254: with a Polymer item as a trade's cost, the CLIENT
+     * visually rejects the trade and shows a ghost slot whenever the stack
+     * placed differs from the required count -- and it only reliably agrees
+     * when that count is one. The server completes the trade perfectly either
+     * way, which is why the payout was collectable by clicking the blank
+     * square while never being drawn.
+     *
+     * https://github.com/Patbox/polymer/issues/254
+     *
+     * Per-unit prices below are the old bundle prices divided by the old bundle
+     * size, so a visit is worth about what it was.
+     */
+    private static final int UNIT = 1;
 
     private record Customer(UUID player, int bornAt, Craving craving) {
     }
@@ -627,7 +650,7 @@ public final class TrapDealing {
         if (craving.powder()) {
             Purity worst = lowestPurity(seller);
             if (worst != null) {
-                offers.add(buyAny(TrapContent.cocaPowder, 2, premium(worst.emeralds() * 2)));
+                offers.add(buyAny(TrapContent.cocaPowder, UNIT, premium(worst.emeralds())));
             }
             return offers;
         }
@@ -635,13 +658,23 @@ public final class TrapDealing {
         var joint = TrapContent.joint(craving.strain());
         Quality worstBud = lowestQuality(seller, bud);
         if (worstBud != null) {
-            offers.add(buyAny(bud, 4, premium(worstBud.emeralds())));
+            offers.add(buyAny(bud, UNIT, budPrice(worstBud)));
         }
         Quality worstJoint = lowestQuality(seller, joint);
         if (worstJoint != null) {
-            offers.add(buyAny(joint, 2, premium(worstJoint.emeralds())));
+            offers.add(buyAny(joint, UNIT, jointPrice(worstJoint)));
         }
         return offers;
+    }
+
+    /** Old price for four buds, per bud. Never free. */
+    private static int budPrice(Quality grade) {
+        return Math.max(1, Math.round(premium(grade.emeralds()) / 4.0F));
+    }
+
+    /** Old price for two joints, per joint. */
+    private static int jointPrice(Quality grade) {
+        return Math.max(1, Math.round(premium(grade.emeralds()) / 2.0F));
     }
 
     /** The poorest grade of this item the player has on them, or null. */
@@ -719,13 +752,13 @@ public final class TrapDealing {
     private static TradeOfferList offersFor(Craving craving) {
         TradeOfferList offers = new TradeOfferList();
         if (craving.powder()) {
-            offers.add(buyAny(TrapContent.cocaPowder, 2,
-                    premium(Purity.byIndex(0).emeralds() * 2)));
+            offers.add(buyAny(TrapContent.cocaPowder, UNIT,
+                    premium(Purity.byIndex(0).emeralds())));
             return offers;
         }
         Quality floor = Quality.byIndex(0);
-        offers.add(buyAny(TrapContent.driedBud(craving.strain()), 4, premium(floor.emeralds())));
-        offers.add(buyAny(TrapContent.joint(craving.strain()), 2, premium(floor.emeralds())));
+        offers.add(buyAny(TrapContent.driedBud(craving.strain()), UNIT, budPrice(floor)));
+        offers.add(buyAny(TrapContent.joint(craving.strain()), UNIT, jointPrice(floor)));
         return offers;
     }
 
