@@ -153,6 +153,12 @@ public final class TrapParanoia {
                         // Ops can jump the meter straight to a value. Tier 3 and
                         // 4 are otherwise an hour of farming away, which is how
                         // they went untested long enough to ship broken.
+                        // The escape hatch. Nothing here writes to the world, so
+                        // anything odd on screen is a client that has been told
+                        // something untrue -- this restates the truth for every
+                        // block we ever lied about, without a relog.
+                        .then(CommandManager.literal("clear")
+                                .executes(context -> clear(context.getSource().getPlayer())))
                         .then(CommandManager.argument("level",
                                         com.mojang.brigadier.arguments.IntegerArgumentType
                                                 .integer(0, (int) MAX))
@@ -381,11 +387,22 @@ public final class TrapParanoia {
         TrapPhantom.particles(player, ParticleTypes.SMALL_FLAME, at, 2, 0.05, 0.0);
     }
 
+    /**
+     * What a block is briefly mistaken for.
+     *
+     * Full opaque cubes only, and nothing with a block entity. A chest or a
+     * mob head has a different collision shape from the block it replaces, so
+     * any imperfection in the revert leaves a wrongly-shaped outline hanging in
+     * the air -- and a chest additionally implies a container the client will
+     * try to open. Swapping one full cube for another cannot change the shape
+     * at all, so the worst case is a wrong texture until the next chunk update.
+     */
     private static final BlockState[] WRONG = {
-            Blocks.CHEST.getDefaultState(),
-            Blocks.COBWEB.getDefaultState(),
-            Blocks.ZOMBIE_HEAD.getDefaultState(),
             Blocks.SOUL_SAND.getDefaultState(),
+            Blocks.MAGMA_BLOCK.getDefaultState(),
+            Blocks.SCULK.getDefaultState(),
+            Blocks.COAL_BLOCK.getDefaultState(),
+            Blocks.MOSS_BLOCK.getDefaultState(),
     };
 
     /** How long a wrong block stays wrong. */
@@ -427,11 +444,32 @@ public final class TrapParanoia {
             if (pos.equals(feet) || pos.equals(feet.down()) || pos.equals(feet.up())) {
                 continue;
             }
-            if (!player.getWorld().getBlockState(pos).isAir()) {
+            if (canLieAbout(player.getWorld().getBlockState(pos))) {
                 return pos;
             }
         }
         return null;
+    }
+
+    /**
+     * Whether a block may be misrepresented.
+     *
+     * Full opaque cubes only, and never anything holding a block entity. Two
+     * separate reasons, both learned the hard way:
+     *
+     * Shape -- swapping a snow layer or a plant for a full cube changes the
+     * collision box, so any hiccup in the revert leaves a cube-shaped outline
+     * floating where a flower used to be. Cube-for-cube cannot change shape at
+     * all, so the worst possible failure is a wrong texture until the next
+     * chunk update.
+     *
+     * Contents -- a chest, barrel or furnace is somebody's storage. Lying about
+     * one invites a click that the server will answer honestly and confusingly,
+     * and there is no version of this feature worth going near a player's
+     * things for.
+     */
+    private static boolean canLieAbout(BlockState state) {
+        return !state.isAir() && state.isOpaqueFullCube() && !state.hasBlockEntity();
     }
 
     /**
@@ -550,6 +588,17 @@ public final class TrapParanoia {
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't save paranoia opt-outs: {}", failure.toString());
         }
+    }
+
+    /** Wipe every illusion and resync the blocks they touched. */
+    private static int clear(ServerPlayerEntity player) {
+        if (player == null) {
+            return 0;
+        }
+        calm(player, 0);
+        player.sendMessage(Text.literal("Cleared. Nothing was ever really there.")
+                .formatted(Formatting.GRAY), false);
+        return 1;
     }
 
     /** Force the meter, for testing the tiers without farming heat for one. */

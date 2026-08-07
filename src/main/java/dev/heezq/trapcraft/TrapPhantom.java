@@ -88,10 +88,22 @@ public final class TrapPhantom {
                 .add(new Lie(pos.toImmutable(), player.getWorld().getTime() + ticks));
     }
 
-    /** Send the real state back, cancelling one lie. */
+    /**
+     * Put the truth back.
+     *
+     * Goes through the server's own markForUpdate rather than a hand-built
+     * packet. A hand-built one carries the raw server-side state and skips the
+     * path Polymer's translation mixins hook, so a reverted block could arrive
+     * as an id the client couldn't resolve. The client then kept the fake
+     * block's COLLISION SHAPE while rendering nothing -- a floating outline you
+     * could put a crosshair on but never touch.
+     *
+     * This rebroadcasts to everyone tracking the chunk rather than just the one
+     * player, and that is the point: it is the server restating what is
+     * actually there, so whatever any client believed gets overwritten.
+     */
     private static void revert(ServerPlayerEntity player, BlockPos pos) {
-        player.networkHandler.sendPacket(
-                new BlockUpdateS2CPacket(pos, player.getWorld().getBlockState(pos)));
+        player.getWorld().getChunkManager().markForUpdate(pos);
     }
 
     /** Expire whatever is due for this player. Cheap when there is nothing. */
