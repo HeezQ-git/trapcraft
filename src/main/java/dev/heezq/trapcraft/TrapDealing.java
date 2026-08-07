@@ -68,7 +68,7 @@ public final class TrapDealing {
     /** How many times one customer will buy a given offer. */
     private static final int MAX_USES = 4;
 
-    private record Customer(UUID player, int bornAt) {
+    private record Customer(UUID player, int bornAt, Craving craving) {
     }
 
     /** Live customers, by entity id. In memory only -- see tick(). */
@@ -136,7 +136,7 @@ public final class TrapDealing {
         // After spawning, not before: spawn can run the entity's own
         // initialisation, and this has to be the last word on what they'll buy.
         customer.setOffersFromServer(offersFor(craving));
-        CUSTOMERS.put(customer.getUuid(), new Customer(player.getUuid(), now));
+        CUSTOMERS.put(customer.getUuid(), new Customer(player.getUuid(), now, craving));
 
         player.sendMessage(Text.literal(craving.greeting()).formatted(Formatting.GRAY), false);
         world.playSound(null, spot, SoundEvents.ENTITY_WANDERING_TRADER_YES,
@@ -192,6 +192,20 @@ public final class TrapDealing {
             // somebody who is supposed to be walking up to you, so it gets
             // stripped every pass rather than fought at the AI level.
             entity.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.INVISIBILITY);
+
+            // Re-assert what they buy.
+            //
+            // Setting the offers once at spawn is not enough: the wandering
+            // trader fills its OWN stock lazily, after we have had our say, so
+            // vanilla's emeralds-for-gold-nuggets trades end up in the list and
+            // bury the one offer this customer actually came for. Checking the
+            // size each pass is cheap and beats fighting the fill order.
+            if (entity.getCustomer() == null) {
+                TradeOfferList wanted = offersFor(record.craving());
+                if (entity.getOffers().size() != wanted.size()) {
+                    entity.setOffersFromServer(wanted);
+                }
+            }
 
             // Don't drag them away mid-trade.
             if (entity.getCustomer() == null && now % 30 == 0) {

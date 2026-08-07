@@ -488,10 +488,14 @@ public final class TrapParanoia {
             return;
         }
         Vec3d look = player.getRotationVec(1.0F);
-        double distance = 40 + random.nextInt(21);
+        // Just beyond the range at which it flees. Forty to sixty blocks put it
+        // near the fog and it read as scenery; this is close enough to make out
+        // that it is a person, and far enough that stepping toward it is what
+        // makes it disappear.
+        double distance = WATCHER_FLEE_RANGE + 4 + random.nextInt(11);
         Vec3d at = player.getPos()
                 .add(look.multiply(distance))
-                .add(random.nextGaussian() * 6.0, 0.0, random.nextGaussian() * 6.0);
+                .add(random.nextGaussian() * 4.0, 0.0, random.nextGaussian() * 4.0);
 
         BlockPos ground = player.getWorld().getTopPosition(
                 net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,

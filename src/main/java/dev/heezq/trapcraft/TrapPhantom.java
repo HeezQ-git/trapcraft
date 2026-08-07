@@ -165,9 +165,12 @@ public final class TrapPhantom {
      */
     public static int figure(ServerPlayerEntity player, EntityType<?> type, Vec3d pos, float yaw) {
         int id = reserveId();
+        // headYaw must match the body yaw. Passing 0 there turned the body to
+        // face the player while leaving the HEAD pointing due south, so it read
+        // as a mob idly looking away rather than something watching you.
         player.networkHandler.sendPacket(new EntitySpawnS2CPacket(
                 id, UUID.randomUUID(), pos.x, pos.y, pos.z,
-                0.0F, yaw, type, 0, Vec3d.ZERO, 0.0));
+                0.0F, yaw, type, 0, Vec3d.ZERO, yaw));
         FIGURES.computeIfAbsent(player.getUuid(), key -> new HashSet<>()).add(id);
         return id;
     }
