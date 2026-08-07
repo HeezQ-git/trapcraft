@@ -565,21 +565,31 @@ public final class TrapDealing {
                 stack.isOf(item) && Integer.valueOf(value).equals(stack.get(type)));
     }
 
+    /**
+     * The shop window: what this customer buys, when you have none of it.
+     *
+     * One row per form, item-only, at the poorest grade's price, so an
+     * empty-handed player can still see what the visit is for.
+     *
+     * Grade predicates are absent here too, and that matters more than it
+     * looks: leaving them in the fallback quietly reinstated the dead rows the
+     * moment a player sold their last unit. The list sprang back to eight
+     * unmatchable offers and looked like the bug had returned -- because it
+     * had, by a path nobody was watching.
+     *
+     * Priced at the floor because it is a floor; once you carry something,
+     * {@link #sellableBy} reprices it for what you actually have.
+     */
     private static TradeOfferList offersFor(Craving craving) {
         TradeOfferList offers = new TradeOfferList();
         if (craving.powder()) {
-            for (Purity purity : Purity.values()) {
-                offers.add(buy(TrapContent.cocaPowder, TrapComponents.purity, purity.index(),
-                        2, premium(purity.emeralds() * 2)));
-            }
+            offers.add(buyAny(TrapContent.cocaPowder, 2,
+                    premium(Purity.byIndex(0).emeralds() * 2)));
             return offers;
         }
-        for (Quality grade : Quality.values()) {
-            offers.add(buy(TrapContent.driedBud(craving.strain()), TrapComponents.quality,
-                    grade.index(), 4, premium(grade.emeralds())));
-            offers.add(buy(TrapContent.joint(craving.strain()), TrapComponents.quality,
-                    grade.index(), 2, premium(grade.emeralds())));
-        }
+        Quality floor = Quality.byIndex(0);
+        offers.add(buyAny(TrapContent.driedBud(craving.strain()), 4, premium(floor.emeralds())));
+        offers.add(buyAny(TrapContent.joint(craving.strain()), 2, premium(floor.emeralds())));
         return offers;
     }
 
