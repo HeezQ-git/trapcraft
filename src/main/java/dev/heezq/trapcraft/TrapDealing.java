@@ -6,8 +6,6 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
-import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.component.ComponentMapPredicate;
 import net.minecraft.registry.Registries;
@@ -301,21 +299,6 @@ public final class TrapDealing {
             // an open screen holds a reference to. Spawn and right-click are
             // the only two moments the list needs to be right, and both set it.
 
-            // Tell the client what it actually earned.
-            //
-            // The result slot renders EMPTY even on a trade the server has
-            // happily completed -- click the blank square and the emeralds are
-            // there. The client computes that slot itself, and its copy of the
-            // product has no quality component: Polymer strips ours from the
-            // sync (see TrapComponents), which is exactly what stops vanilla
-            // clients being kicked over unknown registry entries. So the
-            // client's own matchesBuyItems fails and it paints an empty slot
-            // over a real payout.
-            //
-            // The server's answer is authoritative, so it just has to be sent.
-            if (entity.getCustomer() == player) {
-                pushResultSlot(player);
-            }
 
             // Don't drag them away mid-trade.
             if (entity.getCustomer() == null && now % 30 == 0) {
@@ -460,27 +443,6 @@ public final class TrapDealing {
         live.addAll(wanted);
     }
 
-    /** Result slot index in a merchant screen: two inputs, then the payout. */
-    private static final int RESULT_SLOT = 2;
-
-    /**
-     * Re-send the merchant result slot, overriding the client's own guess.
-     *
-     * Only when it holds something: an empty result is the one case the client
-     * gets right on its own, so there is nothing to correct and no packet worth
-     * spending.
-     */
-    private static void pushResultSlot(ServerPlayerEntity player) {
-        if (!(player.currentScreenHandler instanceof MerchantScreenHandler handler)) {
-            return;
-        }
-        ItemStack result = handler.getSlot(RESULT_SLOT).getStack();
-        if (result.isEmpty()) {
-            return;
-        }
-        player.networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(
-                handler.syncId, handler.nextRevision(), RESULT_SLOT, result.copy()));
-    }
 
     /**
      * Write down the grade that everything already assumes.
@@ -508,31 +470,84 @@ public final class TrapDealing {
         }
     }
 
-    /** The offers this player could complete right now, grade for grade. */
+    /**
+     * One offer per form, priced for the worst of what the seller is carrying.
+     *
+     * NO component predicate, and that is forced rather than chosen. The grade
+     * lives in a component Polymer hides from clients -- which is what stops a
+     * vanilla client being kicked over an unknown registry entry -- so the
+     * client can never see it. It draws the merchant result slot itself, and a
+     * predicate it cannot evaluate always fails, so it paints an empty slot
+     * over a payout the server has already worked out. A grade predicate and a
+     * hidden component cannot both exist.
+     *
+     * Pricing by the LOWEST grade held keeps that honest: matching on the item
+     * alone would otherwise let a Swill bud be sold on a Fire row. Paying for
+     * the worst of the batch is the same rule the mixing station already
+     * applies to blends, so it should read as deliberate rather than mean.
+     */
     private static TradeOfferList sellableBy(ServerPlayerEntity seller, Craving craving) {
         TradeOfferList offers = new TradeOfferList();
         if (craving.powder()) {
-            for (Purity purity : Purity.values()) {
-                if (holds(seller, TrapContent.cocaPowder, TrapComponents.purity, purity.index())) {
-                    offers.add(buy(TrapContent.cocaPowder, TrapComponents.purity, purity.index(),
-                            2, premium(purity.emeralds() * 2)));
-                }
+            Purity worst = lowestPurity(seller);
+            if (worst != null) {
+                offers.add(buyAny(TrapContent.cocaPowder, 2, premium(worst.emeralds() * 2)));
             }
             return offers;
         }
-        for (Quality grade : Quality.values()) {
-            var bud = TrapContent.driedBud(craving.strain());
-            var joint = TrapContent.joint(craving.strain());
-            if (holds(seller, bud, TrapComponents.quality, grade.index())) {
-                offers.add(buy(bud, TrapComponents.quality, grade.index(),
-                        4, premium(grade.emeralds())));
-            }
-            if (holds(seller, joint, TrapComponents.quality, grade.index())) {
-                offers.add(buy(joint, TrapComponents.quality, grade.index(),
-                        2, premium(grade.emeralds())));
-            }
+        var bud = TrapContent.driedBud(craving.strain());
+        var joint = TrapContent.joint(craving.strain());
+        Quality worstBud = lowestQuality(seller, bud);
+        if (worstBud != null) {
+            offers.add(buyAny(bud, 4, premium(worstBud.emeralds())));
+        }
+        Quality worstJoint = lowestQuality(seller, joint);
+        if (worstJoint != null) {
+            offers.add(buyAny(joint, 2, premium(worstJoint.emeralds())));
         }
         return offers;
+    }
+
+    /** The poorest grade of this item the player has on them, or null. */
+    private static Quality lowestQuality(ServerPlayerEntity seller, net.minecraft.item.Item item) {
+        Quality worst = null;
+        var inventory = seller.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (stack.isEmpty() || !stack.isOf(item)) {
+                continue;
+            }
+            Quality grade = TrapComponents.get(stack);
+            if (worst == null || grade.index() < worst.index()) {
+                worst = grade;
+            }
+        }
+        return worst;
+    }
+
+    private static Purity lowestPurity(ServerPlayerEntity seller) {
+        Purity worst = null;
+        var inventory = seller.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (stack.isEmpty() || !stack.isOf(TrapContent.cocaPowder)) {
+                continue;
+            }
+            Purity grade = TrapComponents.getPurity(stack);
+            if (worst == null || grade.index() < worst.index()) {
+                worst = grade;
+            }
+        }
+        return worst;
+    }
+
+    /** A buy offer that matches on the item alone, so the client can see it. */
+    private static TradeOffer buyAny(net.minecraft.item.Item wanted, int count, int emeralds) {
+        return new TradeOffer(
+                new TradedItem(Registries.ITEM.getEntry(wanted), count,
+                        ComponentMapPredicate.EMPTY),
+                Optional.empty(),
+                new ItemStack(Items.EMERALD, emeralds), MAX_USES, 2, 0.05F);
     }
 
     /**
