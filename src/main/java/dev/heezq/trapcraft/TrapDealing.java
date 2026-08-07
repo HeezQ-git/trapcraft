@@ -6,6 +6,8 @@ import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
+import net.minecraft.screen.MerchantScreenHandler;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.component.ComponentMapPredicate;
 import net.minecraft.registry.Registries;
@@ -89,7 +91,12 @@ public final class TrapDealing {
         // that matters, whatever happened to it beforehand.
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
                 (player, world, hand, entity, hit) -> {
-                    if (!world.isClient() && entity instanceof WanderingTraderEntity customer
+                    // MAIN_HAND only. The callback fires once per hand, so
+                    // without this the offer list is torn down and rebuilt
+                    // twice around the instant the screen opens -- replacing
+                    // the very TradeOffer objects the open screen is holding.
+                    if (!world.isClient() && hand == net.minecraft.util.Hand.MAIN_HAND
+                            && entity instanceof WanderingTraderEntity customer
                             && customer.getCommandTags().contains(TAG)) {
                         Customer record = CUSTOMERS.get(customer.getUuid());
                         if (record != null && player instanceof ServerPlayerEntity seller) {
@@ -286,8 +293,28 @@ public final class TrapDealing {
             // A size check wasn't enough because the totals could coincide;
             // overwriting outright is cheap for one customer and can't be
             // outraced by an append.
-            if (entity.getCustomer() == null) {
-                enforceOffers(entity, record.craving());
+            // NOT re-asserted per tick any more.
+            //
+            // Rebuilding the list every tick replaced the TradeOffer objects
+            // continuously, which reset each offer's `uses` counter -- so
+            // MAX_USES never limited anything -- and churned the exact objects
+            // an open screen holds a reference to. Spawn and right-click are
+            // the only two moments the list needs to be right, and both set it.
+
+            // Tell the client what it actually earned.
+            //
+            // The result slot renders EMPTY even on a trade the server has
+            // happily completed -- click the blank square and the emeralds are
+            // there. The client computes that slot itself, and its copy of the
+            // product has no quality component: Polymer strips ours from the
+            // sync (see TrapComponents), which is exactly what stops vanilla
+            // clients being kicked over unknown registry entries. So the
+            // client's own matchesBuyItems fails and it paints an empty slot
+            // over a real payout.
+            //
+            // The server's answer is authoritative, so it just has to be sent.
+            if (entity.getCustomer() == player) {
+                pushResultSlot(player);
             }
 
             // Don't drag them away mid-trade.
@@ -431,6 +458,28 @@ public final class TrapDealing {
         TradeOfferList live = customer.getOffers();
         live.clear();
         live.addAll(wanted);
+    }
+
+    /** Result slot index in a merchant screen: two inputs, then the payout. */
+    private static final int RESULT_SLOT = 2;
+
+    /**
+     * Re-send the merchant result slot, overriding the client's own guess.
+     *
+     * Only when it holds something: an empty result is the one case the client
+     * gets right on its own, so there is nothing to correct and no packet worth
+     * spending.
+     */
+    private static void pushResultSlot(ServerPlayerEntity player) {
+        if (!(player.currentScreenHandler instanceof MerchantScreenHandler handler)) {
+            return;
+        }
+        ItemStack result = handler.getSlot(RESULT_SLOT).getStack();
+        if (result.isEmpty()) {
+            return;
+        }
+        player.networkHandler.sendPacket(new ScreenHandlerSlotUpdateS2CPacket(
+                handler.syncId, handler.nextRevision(), RESULT_SLOT, result.copy()));
     }
 
     /**
