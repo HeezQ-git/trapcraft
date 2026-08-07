@@ -299,6 +299,22 @@ public final class TrapDealing {
                 return true;
             }
 
+            // Keep the payout visible while the screen is open.
+            //
+            // The client works out that result slot itself and gets it wrong
+            // for our items, painting an empty square over a real payout --
+            // click the blank and the emeralds come out. The server's answer
+            // is authoritative, so it is simply sent every tick.
+            //
+            // UNCONDITIONALLY, including when the result is empty. An earlier
+            // version skipped empty pushes to save a packet, which left the
+            // client showing the last payout after the trade had consumed the
+            // inputs: emeralds hanging in the result slot above two empty
+            // input slots.
+            if (entity.getCustomer() == player) {
+                pushResultSlot(player);
+            }
+
             // The deal's done. Wait for the screen to close so they don't
             // evaporate out of the menu mid-trade, then send them off happy.
             if (entity.getCustomer() == null && hasTraded(entity)) {
@@ -371,6 +387,21 @@ public final class TrapDealing {
         }
     }
 
+    /** Result slot index in a merchant screen: two inputs, then the payout. */
+    private static final int RESULT_SLOT = 2;
+
+    /** Send the server's own view of the result slot, overriding the client's. */
+    private static void pushResultSlot(ServerPlayerEntity player) {
+        if (!(player.currentScreenHandler
+                instanceof net.minecraft.screen.MerchantScreenHandler handler)) {
+            return;
+        }
+        player.networkHandler.sendPacket(
+                new net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket(
+                        handler.syncId, handler.nextRevision(), RESULT_SLOT,
+                        handler.getSlot(RESULT_SLOT).getStack().copy()));
+    }
+
     /** Has this customer actually bought something? */
     private static boolean hasTraded(WanderingTraderEntity customer) {
         for (TradeOffer offer : customer.getOffers()) {
@@ -404,12 +435,6 @@ public final class TrapDealing {
                 customer.getX(), customer.getY() + 1.4, customer.getZ(),
                 8, 0.25, 0.25, 0.25, 0.01);
 
-        if (player != null) {
-            player.sendMessage(Text.literal(satisfied
-                            ? "They pocket it and walk off."
-                            : "They got tired of waiting and moved on.")
-                    .formatted(satisfied ? Formatting.GREEN : Formatting.GRAY), false);
-        }
     }
 
     /** Walk them away from the player until they're far enough to vanish. */
