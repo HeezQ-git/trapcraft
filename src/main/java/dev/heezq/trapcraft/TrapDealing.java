@@ -74,6 +74,19 @@ public final class TrapDealing {
     /** Live customers, by entity id. In memory only -- see tick(). */
     private static final Map<UUID, Customer> CUSTOMERS = new HashMap<>();
 
+    /**
+     * Customers on their way out, and the tick they started leaving.
+     *
+     * They walk off rather than popping: a visitor who vanishes the instant
+     * the deal closes reads as despawn jank, and the walk away is the part
+     * that makes them feel like a person who came and went.
+     */
+    private static final Map<UUID, Integer> LEAVING = new HashMap<>();
+    /** How long they get to walk before they're gone. */
+    private static final int LEAVE_TICKS = 20 * 8;
+    /** Far enough away to stop being interesting. */
+    private static final int LEAVE_DISTANCE = 28;
+
     private TrapDealing() {
     }
 
@@ -267,13 +280,36 @@ public final class TrapDealing {
             var entity = findCustomer(server, entry.getKey());
 
             if (entity == null) {
+                LEAVING.remove(entry.getKey());
                 return true;    // killed, despawned, or unloaded
             }
+
+            // Already walking off: let them finish, then they're gone.
+            if (tickLeaving(entity, player, now)) {
+                return true;
+            }
+
+            // Out of range, out of time, or the player left the world. These
+            // vanish outright rather than walking, because there is nobody
+            // there to watch them go.
             if (player == null || player.getWorld() != entity.getWorld()
-                    || now - record.bornAt() > LIFETIME_TICKS
                     || !entity.getBlockPos().isWithinDistance(player.getBlockPos(), GIVE_UP_DISTANCE)) {
+                LEAVING.remove(entry.getKey());
                 leave(entity);
                 return true;
+            }
+
+            // The deal's done. Wait for the screen to close so they don't
+            // evaporate out of the menu mid-trade, then send them off happy.
+            if (entity.getCustomer() == null && hasTraded(entity)) {
+                startLeaving(entity, player, now, true);
+                return false;
+            }
+
+            // Nobody's selling. Give up and move on.
+            if (now - record.bornAt() > LIFETIME_TICKS) {
+                startLeaving(entity, player, now, false);
+                return false;
             }
 
             // Wandering traders drink an invisibility potion at night. That's
@@ -300,11 +336,14 @@ public final class TrapDealing {
             // the only two moments the list needs to be right, and both set it.
 
 
-            // Don't drag them away mid-trade.
-            if (entity.getCustomer() == null && now % 30 == 0) {
+            // Don't drag them away mid-trade -- or once they're heading off,
+            // which would have them trudging back to somebody they're done with.
+            if (entity.getCustomer() == null && now % 30 == 0
+                    && !LEAVING.containsKey(entry.getKey())) {
                 entity.getNavigation().startMovingTo(player, 0.55);
             }
-            if (now % 80 == 0) {
+            // Somebody walking away shouldn't still be asking.
+            if (now % 80 == 0 && !LEAVING.containsKey(entry.getKey())) {
                 beg(entity, player);
             }
             return false;
@@ -330,6 +369,71 @@ public final class TrapDealing {
                     SoundEvents.ENTITY_WANDERING_TRADER_TRADE,
                     SoundCategory.NEUTRAL, 0.5F, 0.7F);
         }
+    }
+
+    /** Has this customer actually bought something? */
+    private static boolean hasTraded(WanderingTraderEntity customer) {
+        for (TradeOffer offer : customer.getOffers()) {
+            if (offer.getUses() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Send them on their way, with a word about how it went.
+     *
+     * Two different departures on purpose: a customer who got what they came
+     * for and one who waited around for nothing should not feel the same, and
+     * the difference is the only feedback telling you a visit was missed.
+     */
+    private static void startLeaving(WanderingTraderEntity customer, ServerPlayerEntity player,
+                                     int now, boolean satisfied) {
+        if (LEAVING.containsKey(customer.getUuid())) {
+            return;
+        }
+        LEAVING.put(customer.getUuid(), now);
+
+        ServerWorld world = (ServerWorld) customer.getWorld();
+        world.playSound(null, customer.getBlockPos(),
+                satisfied ? SoundEvents.ENTITY_WANDERING_TRADER_YES
+                        : SoundEvents.ENTITY_WANDERING_TRADER_NO,
+                SoundCategory.NEUTRAL, 0.8F, satisfied ? 1.0F : 0.8F);
+        world.spawnParticles(satisfied ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.SMOKE,
+                customer.getX(), customer.getY() + 1.4, customer.getZ(),
+                8, 0.25, 0.25, 0.25, 0.01);
+
+        if (player != null) {
+            player.sendMessage(Text.literal(satisfied
+                            ? "They pocket it and walk off."
+                            : "They got tired of waiting and moved on.")
+                    .formatted(satisfied ? Formatting.GREEN : Formatting.GRAY), false);
+        }
+    }
+
+    /** Walk them away from the player until they're far enough to vanish. */
+    private static boolean tickLeaving(WanderingTraderEntity customer, ServerPlayerEntity player,
+                                       int now) {
+        Integer since = LEAVING.get(customer.getUuid());
+        if (since == null) {
+            return false;
+        }
+        boolean farEnough = player == null
+                || !customer.getBlockPos().isWithinDistance(player.getBlockPos(), LEAVE_DISTANCE);
+        if (now - since > LEAVE_TICKS || farEnough) {
+            LEAVING.remove(customer.getUuid());
+            leave(customer);
+            return true;
+        }
+        if (player != null && now % 20 == 0) {
+            // Straight away from the player, so the exit reads as deliberate.
+            var away = customer.getPos().subtract(player.getPos()).normalize()
+                    .multiply(LEAVE_DISTANCE);
+            customer.getNavigation().startMovingTo(
+                    customer.getX() + away.x, customer.getY(), customer.getZ() + away.z, 0.6);
+        }
+        return false;
     }
 
     private static void leave(WanderingTraderEntity customer) {
@@ -417,6 +521,13 @@ public final class TrapDealing {
     private static void enforceOffers(WanderingTraderEntity customer, Craving craving,
                                       ServerPlayerEntity seller) {
         if (craving == null) {
+            return;
+        }
+        // Never rebuild after a sale. Rebuilding mints fresh TradeOffer objects
+        // with `uses` back at zero, which would both hand back the MAX_USES
+        // allowance and erase the only evidence that the deal happened -- so
+        // the customer would never realise it was time to leave.
+        if (hasTraded(customer)) {
             return;
         }
         // Mutate the live list, do NOT call setOffersFromServer.
