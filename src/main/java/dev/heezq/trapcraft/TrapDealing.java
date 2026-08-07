@@ -80,6 +80,24 @@ public final class TrapDealing {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(TrapDealing::tick);
         registerCommand();
+
+        // The last word before the screen opens.
+        //
+        // The tick pass can be outraced -- anything that appends to the offer
+        // list between the last pass and the right-click wins, and the player
+        // sees it. Rebuilding here means the list is correct at the only moment
+        // that matters, whatever happened to it beforehand.
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
+                (player, world, hand, entity, hit) -> {
+                    if (!world.isClient() && entity instanceof WanderingTraderEntity customer
+                            && customer.getCommandTags().contains(TAG)) {
+                        Customer record = CUSTOMERS.get(customer.getUuid());
+                        if (record != null) {
+                            enforceOffers(customer, record.craving());
+                        }
+                    }
+                    return net.minecraft.util.ActionResult.PASS;
+                });
     }
 
     /**
@@ -259,18 +277,17 @@ public final class TrapDealing {
             // stripped every pass rather than fought at the AI level.
             entity.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.INVISIBILITY);
 
-            // Re-assert what they buy.
+            // Re-assert what they buy, every pass, unconditionally.
             //
-            // Setting the offers once at spawn is not enough: the wandering
-            // trader fills its OWN stock lazily, after we have had our say, so
-            // vanilla's emeralds-for-gold-nuggets trades end up in the list and
-            // bury the one offer this customer actually came for. Checking the
-            // size each pass is cheap and beats fighting the fill order.
+            // WanderingTraderEntity.fillRecipes() APPENDS to the existing list
+            // rather than replacing it, so vanilla's stock piles on top of ours
+            // whenever it runs -- which is why a Midnight customer ended up
+            // selling saplings and dye with one of our rows buried among them.
+            // A size check wasn't enough because the totals could coincide;
+            // overwriting outright is cheap for one customer and can't be
+            // outraced by an append.
             if (entity.getCustomer() == null) {
-                TradeOfferList wanted = offersFor(record.craving());
-                if (entity.getOffers().size() != wanted.size()) {
-                    entity.setOffersFromServer(wanted);
-                }
+                enforceOffers(entity, record.craving());
             }
 
             // Don't drag them away mid-trade.
@@ -363,6 +380,26 @@ public final class TrapDealing {
      * would let a Swill bud satisfy a Fire offer, and the grade system exists
      * precisely so that can't happen.
      */
+    /**
+     * Make the list say exactly what this customer buys, and nothing else.
+     *
+     * Called both on the tick and the instant the player opens the screen. The
+     * second one is what actually guarantees it: whatever appended to the list
+     * in between, the list is rebuilt before anyone reads it.
+     */
+    private static void enforceOffers(WanderingTraderEntity customer, Craving craving) {
+        if (craving == null) {
+            return;
+        }
+        TradeOfferList wanted = offersFor(craving);
+        int had = customer.getOffers().size();
+        customer.setOffersFromServer(wanted);
+        if (had != wanted.size()) {
+            TrapCraft.LOGGER.info("customer {}: offers {} -> {}",
+                    craving.title(), had, wanted.size());
+        }
+    }
+
     private static TradeOfferList offersFor(Craving craving) {
         TradeOfferList offers = new TradeOfferList();
         if (craving.powder()) {
