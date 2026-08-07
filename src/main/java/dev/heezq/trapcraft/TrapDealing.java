@@ -134,6 +134,13 @@ public final class TrapDealing {
                             && customer.getCommandTags().contains(TAG)) {
                         Customer record = CUSTOMERS.get(customer.getUuid());
                         if (record != null && player instanceof ServerPlayerEntity seller) {
+                            // Hand it over directly if you're holding what they
+                            // want. See handOver: the merchant SCREEN can't draw
+                            // a payout for Polymer items, so the sale happens
+                            // without one.
+                            if (handOver(customer, seller, record.craving())) {
+                                return net.minecraft.util.ActionResult.SUCCESS;
+                            }
                             enforceOffers(customer, record.craving(), seller);
                         }
                     }
@@ -425,8 +432,72 @@ public final class TrapDealing {
                         handler.getSlot(RESULT_SLOT).getStack().copy()));
     }
 
+    /** Customers who have been sold to by hand, so they know to leave. */
+    private static final java.util.Set<UUID> DEALT = new java.util.HashSet<>();
+
+    /**
+     * Sell by handing it over, with no screen at all.
+     *
+     * The vanilla merchant screen cannot render a payout for a Polymer item:
+     * the client recomputes that result slot itself, disagrees, and paints an
+     * empty square over emeralds the server has already worked out. Polymer
+     * #254 is the same family of bug and its one-item workaround did not cover
+     * this. Every attempt to correct the client -- re-sending the slot,
+     * dropping the grade predicate, matching the required count -- lost to the
+     * client's own recomputation.
+     *
+     * So the sale stops going through that screen. Walk up holding what they
+     * want, right-click, and they take one and pay you. No menu can desync,
+     * and for a street deal, handing it over is the better fiction anyway.
+     *
+     * The trade screen still opens when your hands are empty, as the shop
+     * window telling you what they came for.
+     *
+     * @return true if a sale happened, so the screen does not also open
+     */
+    private static boolean handOver(WanderingTraderEntity customer, ServerPlayerEntity seller,
+                                    Craving craving) {
+        ItemStack held = seller.getMainHandStack();
+        if (held.isEmpty()) {
+            return false;
+        }
+
+        int paid;
+        if (craving.powder()) {
+            if (!held.isOf(TrapContent.cocaPowder)) {
+                return false;
+            }
+            paid = premium(TrapComponents.getPurity(held).emeralds());
+        } else if (held.isOf(TrapContent.driedBud(craving.strain()))) {
+            paid = budPrice(TrapComponents.get(held));
+        } else if (held.isOf(TrapContent.joint(craving.strain()))) {
+            paid = jointPrice(TrapComponents.get(held));
+        } else {
+            return false;
+        }
+
+        held.decrement(1);
+        seller.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, paid));
+        DEALT.add(customer.getUuid());
+
+        ServerWorld world = seller.getWorld();
+        world.playSound(null, customer.getBlockPos(), SoundEvents.ENTITY_VILLAGER_YES,
+                SoundCategory.NEUTRAL, 0.9F, 1.0F);
+        world.playSound(null, seller.getBlockPos(),
+                SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.6F, 1.4F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+                customer.getX(), customer.getY() + 1.6, customer.getZ(),
+                10, 0.3, 0.3, 0.3, 0.02);
+        seller.sendMessage(Text.literal("+" + paid + " emeralds")
+                .formatted(Formatting.GREEN), true);
+        return true;
+    }
+
     /** Has this customer actually bought something? */
     private static boolean hasTraded(WanderingTraderEntity customer) {
+        if (DEALT.contains(customer.getUuid())) {
+            return true;
+        }
         for (TradeOffer offer : customer.getOffers()) {
             if (offer.getUses() > 0) {
                 return true;
@@ -485,6 +556,7 @@ public final class TrapDealing {
     }
 
     private static void leave(WanderingTraderEntity customer) {
+        DEALT.remove(customer.getUuid());
         ServerWorld world = (ServerWorld) customer.getWorld();
         world.spawnParticles(ParticleTypes.POOF,
                 customer.getX(), customer.getY() + 0.6, customer.getZ(),
