@@ -1,0 +1,88 @@
+{
+  "name": "tlok_pull",
+  "format": "player_animation",
+  "version": 3,
+  "emote": {
+    "beginTick": 0,
+    "endTick": 48,
+    "stopTick": 54,
+    "isLoop": false,
+    "returnTick": 0,
+    "degrees": true,
+    "easeBeforeKeyframe": false,
+    "moves": [
+      {
+        "comment": "rest",
+        "tick": 0,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": 0, "yaw": 0, "roll": 0 },
+        "torso":    { "pitch": 0, "yaw": 0, "roll": 0 },
+        "rightArm": { "pitch": 0, "yaw": 0, "roll": 0 },
+        "leftArm":  { "pitch": 0, "yaw": 0, "roll": 0 }
+      },
+      {
+        "comment": "reach down and grip the bottle",
+        "tick": 5,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": 12 },
+        "torso":    { "pitch": 8 },
+        "rightArm": { "pitch": -50, "roll": 10 },
+        "leftArm":  { "pitch": -50, "roll": -10 }
+      },
+      {
+        "comment": "lift it clear of the water",
+        "tick": 13,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": 15 },
+        "torso":    { "pitch": 2 },
+        "rightArm": { "pitch": -100, "roll": 14 },
+        "leftArm":  { "pitch": -100, "roll": -14 }
+      },
+      {
+        "comment": "mouthpiece to the lips",
+        "tick": 20,
+        "easing": "easeOutQuad",
+        "head":     { "pitch": 8 },
+        "torso":    { "pitch": -2 },
+        "rightArm": { "pitch": -122, "roll": 16 },
+        "leftArm":  { "pitch": -122, "roll": -16 }
+      },
+      {
+        "comment": "the pull -- chest opens, bottle sinks",
+        "tick": 28,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": 3 },
+        "torso":    { "pitch": -7 },
+        "rightArm": { "pitch": -126, "roll": 16 },
+        "leftArm":  { "pitch": -126, "roll": -16 }
+      },
+      {
+        "comment": "off the mouth, head back, exhale",
+        "tick": 35,
+        "easing": "easeOutQuad",
+        "head":     { "pitch": -20 },
+        "torso":    { "pitch": -9 },
+        "rightArm": { "pitch": -40, "roll": 6 },
+        "leftArm":  { "pitch": -40, "roll": -6 }
+      },
+      {
+        "comment": "coming down",
+        "tick": 42,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": -8 },
+        "torso":    { "pitch": -3 },
+        "rightArm": { "pitch": -10, "roll": 0 },
+        "leftArm":  { "pitch": -10, "roll": 0 }
+      },
+      {
+        "comment": "rest",
+        "tick": 48,
+        "easing": "easeInOutSine",
+        "head":     { "pitch": 0, "yaw": 0, "roll": 0 },
+        "torso":    { "pitch": 0, "yaw": 0, "roll": 0 },
+        "rightArm": { "pitch": 0, "yaw": 0, "roll": 0 },
+        "leftArm":  { "pitch": 0, "yaw": 0, "roll": 0 }
+      }
+    ]
+  }
+}

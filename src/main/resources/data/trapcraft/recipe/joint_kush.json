@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "misc",
+  "input": "trapcraft:dried_bud_kush",
+  "material": "minecraft:paper",
+  "result": {
+    "id": "trapcraft:joint_kush"
+  }
+}

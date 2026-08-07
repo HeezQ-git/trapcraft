@@ -1,0 +1,1236 @@
+#!/usr/bin/env python3
+"""Generate every models/items/lang/loot/recipe JSON for TrapCraft.
+
+Re-runnable: `python3 tools/gen_assets.py`. These files are pure boilerplate
+that varies only by strain name, so they're generated rather than hand-written
+-- adding a strain means editing STRAINS here and in gen_textures.py, nothing
+else. Don't hand-edit the output; the next run overwrites it.
+"""
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent / "src/main/resources"
+NS = "trapcraft"
+STRAINS = {"kush": "Kush", "haze": "Haze", "purp": "Purp",
+           "diesel": "Diesel", "midnight": "Midnight", "sunset": "Sunset"}
+MAX_AGE = 3
+
+written = 0
+
+
+def put(relative: str, payload: dict) -> None:
+    global written
+    path = ROOT / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+    written += 1
+
+
+def leaf(y0, y1, spread, angle, span_x, tex="leaf"):
+    """One foliage quad, angled about the vertical.
+
+    Zero thickness on one axis, which is legal and is how every plant in the
+    game is built -- minecraft:block/cross is exactly two of these. Element
+    rotation only accepts 0, +/-22.5 and +/-45, so eight distinct directions is
+    the most a plant can have: four angles on an X-spanning quad and the same
+    on a Z-spanning one.
+
+    shade off, like vanilla foliage: quads facing different ways would
+    otherwise get different brightness and the plant would look striped.
+    """
+    if span_x:
+        frm, to = [8 - spread, y0, 8], [8 + spread, y1, 8]
+        faces = {"north": {"texture": f"#{tex}"}, "south": {"texture": f"#{tex}"}}
+    else:
+        frm, to = [8, y0, 8 - spread], [8, y1, 8 + spread]
+        faces = {"east": {"texture": f"#{tex}"}, "west": {"texture": f"#{tex}"}}
+    return {
+        "from": frm, "to": to,
+        "rotation": {"origin": [8, (y0 + y1) / 2.0, 8], "axis": "y",
+                     "angle": angle, "rescale": True},
+        "shade": False,
+        "faces": faces,
+    }
+
+
+def plant_model(age: int, leaf_tex: str, bud_tex: str | None) -> dict:
+    """A crop with an actual stalk instead of two crossed pictures of one.
+
+    A billboard has no plant in it -- turn your head and it turns with you,
+    which is precisely why a field of these read as flat. Here the stalk is a
+    real box you can walk round, and the foliage is a fan of quads at as many
+    angles as element rotation allows, so the silhouette changes as you move.
+
+    Growth is in the geometry, not just the texture: the stalk climbs, the fan
+    widens and gains a tier per stage, and the mature plant grows bud boxes
+    that stand proud of the leaves.
+    """
+    height = [5, 9, 13, 15][age]
+    els = [{
+        "from": [7, 0, 7], "to": [9, height, 9],
+        "faces": {side: {"texture": "#stem"} for side in
+                  ("north", "south", "east", "west", "up")},
+    }]
+
+    # (bottom, top, spread, angle, spans-x) per tier. Lower tiers droop wider,
+    # upper ones sit tighter -- that taper is most of what makes it read as a
+    # plant rather than a bush.
+    tiers = [
+        [(1, 8, 5.5, 45, True), (1, 8, 5.5, -45, False)],
+        [(1, 9, 6.0, 45, True), (1, 9, 6.0, -45, False),
+         (4, 12, 5.0, 22.5, True), (4, 12, 5.0, -22.5, False)],
+        [(1, 10, 6.5, 45, True), (1, 10, 6.5, -45, False),
+         (4, 13, 5.5, 22.5, True), (4, 13, 5.5, -22.5, False),
+         (7, 15, 4.5, 0, True), (7, 15, 4.5, 0, False)],
+        [(1, 11, 7.0, 45, True), (1, 11, 7.0, -45, False),
+         (3, 14, 6.0, 22.5, True), (3, 14, 6.0, -22.5, False),
+         (6, 16, 5.0, 0, True), (6, 16, 5.0, 0, False),
+         (8, 16, 4.0, -45, True), (8, 16, 4.0, 45, False)],
+    ][age]
+    for y0, y1, spread, angle, span_x in tiers:
+        els.append(leaf(y0, y1, spread, angle, span_x))
+
+    if bud_tex is not None:
+        # Main cola on top, two smaller ones down the stalk.
+        for frm, to in (([6.5, 11, 6.5], [9.5, 15.5, 9.5]),
+                        ([4.5, 7, 7], [6.5, 10.5, 9]),
+                        ([9.5, 6, 7], [11.5, 9.5, 9])):
+            els.append(box(frm, to, "bud"))
+
+    textures = {"stem": f"{NS}:block/crop_stem", "leaf": leaf_tex,
+                "particle": leaf_tex}
+    if bud_tex is not None:
+        textures["bud"] = bud_tex
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": textures,
+        "elements": els,
+    }
+
+
+def block_models() -> None:
+    # Ages 0-2 are one neutral model across strains: you shouldn't be able to
+    # identify a seedling by looking at it. Only the mature plant shows its
+    # phenotype, and it shows it in the leaves AND the buds.
+    for age in range(MAX_AGE):
+        put(f"assets/{NS}/models/block/cannabis_crop_age{age}.json",
+            plant_model(age, f"{NS}:block/crop_leaf", None))
+    for strain in STRAINS:
+        put(f"assets/{NS}/models/block/cannabis_crop_age{MAX_AGE}_{strain}.json",
+            plant_model(MAX_AGE, f"{NS}:block/crop_leaf_{strain}",
+                        f"{NS}:block/crop_bud_{strain}"))
+
+    put(f"assets/{NS}/models/block/drying_rack_empty.json", rack_model(None))
+    # One model per (strain, drying stage) so the cure is visible on the block.
+    for strain in STRAINS:
+        for stage in range(5):
+            put(f"assets/{NS}/models/block/drying_rack_{strain}_{stage}.json",
+                rack_model(f"{NS}:block/drying_rack_bud_{strain}_{stage}"))
+
+
+def rack_model(bud: str | None) -> dict:
+    """The drying rack as a recessed cabinet.
+
+    It used to be a cube with a picture of a rack painted on each face, which
+    is why it read flat next to everything else. This is real geometry: a
+    frame of corner posts between a plinth and a lid, with a four-pixel recess
+    on each of the four sides and the bud hanging inside it.
+
+    RECESSED, not an open frame, and that's forced rather than chosen. Polymer
+    serves this on a FULL_BLOCK carrier, so the client treats the space as
+    solid -- an open skeleton would let you see through to a world lit as if
+    the block were still there, which looks broken. The other pools that would
+    allow a see-through model are either nearly empty (TRANSPARENT_BLOCK has
+    fewer free states than this block needs models) or would desync collision.
+    A closed cabinet with recessed faces gets the depth without either problem,
+    and a cabinet is a perfectly good drying rack.
+
+    No facing property, so all four sides are identical -- you can put it
+    against a wall or in the middle of a room and it reads the same.
+    """
+    inner = f"{NS}:block/drying_rack_inner"
+    frame = f"{NS}:block/drying_rack_side"
+    lid = f"{NS}:block/drying_rack_top"
+
+    els = [
+        # Plinth and lid, full width, so the silhouette is still a solid block
+        # from above and below.
+        box([0, 0, 0], [16, 3, 16], "frame", up="lid", down="lid"),
+        box([0, 13, 0], [16, 16, 16], "frame", up="lid", down="lid"),
+        # Four corner posts.
+        box([0, 3, 0], [4, 13, 4], "frame"),
+        box([12, 3, 0], [16, 13, 4], "frame"),
+        box([0, 3, 12], [4, 13, 16], "frame"),
+        box([12, 3, 12], [16, 13, 16], "frame"),
+        # The core the recesses are cut into. This is what stops you seeing
+        # through the block.
+        box([4, 3, 4], [12, 13, 12], "inner"),
+    ]
+
+    # A rail across each recess, and the bud hanging off it. The rail sits
+    # proud of the core so it catches light from the side.
+    rails = [([4, 10, 1], [12, 11, 2.5]), ([4, 10, 13.5], [12, 11, 15]),
+             ([1, 10, 4], [2.5, 11, 12]), ([13.5, 10, 4], [15, 11, 12])]
+    for frm, to in rails:
+        els.append(box(frm, to, "frame"))
+
+    if bud is not None:
+        # Hanging from each rail, in the 4px gap between post line and core.
+        hangs = [([4.5, 4, 1.2], [11.5, 10, 2.3]), ([4.5, 4, 13.7], [11.5, 10, 14.8]),
+                 ([1.2, 4, 4.5], [2.3, 10, 11.5]), ([13.7, 4, 4.5], [14.8, 10, 11.5])]
+        for frm, to in hangs:
+            els.append(box(frm, to, "bud"))
+
+    textures = {
+        "frame": frame,
+        "lid": lid,
+        "inner": inner,
+        "particle": frame,
+    }
+    if bud is not None:
+        textures["bud"] = bud
+
+    return {
+        "parent": "minecraft:block/block",
+        # Off: the recesses are shallow and vanilla AO bands every join in them
+        # with a dark seam, which reads as dirt rather than depth.
+        "ambientocclusion": False,
+        "textures": textures,
+        "elements": els,
+    }
+
+
+def item_assets() -> None:
+    """Flat sprites for everything except the rack, which shows its block model."""
+    flat = [f"{kind}_{strain}"
+            for strain in STRAINS
+            for kind in ("seeds", "raw_bud", "dried_bud", "joint")]
+
+    flat = flat + ["miners_hammer"]
+
+    for name in flat:
+        put(f"assets/{NS}/models/item/{name}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"{NS}:item/{name}"},
+        })
+
+    put(f"assets/{NS}/models/item/drying_rack.json",
+        {"parent": f"{NS}:block/drying_rack_empty"})
+
+    # 1.21.4+ item model definitions -- what getPolymerItemModel() resolves to.
+    for name in flat + ["drying_rack"]:
+        put(f"assets/{NS}/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+        })
+
+
+def post_effects() -> None:
+    """One blur per strain -- radius is baked into the JSON, not settable live.
+
+    Vanilla's own blur.json ships six passes at Radius 0 (the pause menu injects
+    the value at runtime), so pointing at minecraft:blur does nothing at all.
+    These reuse vanilla's shader programs with a real radius.
+    """
+    # How much of the previous frame survives each frame. Higher = longer
+    # trails. Kush is the heavy one, Haze barely ghosts.
+    blends = {"haze": 0.56, "kush": 0.74, "purp": 0.62,
+              "diesel": 0.60, "midnight": 0.78, "sunset": 0.58,
+              # Mixes get their own three, by how many distinct strains went
+              # in. These are the only pipelines that switch on the mirror,
+              # echo and posterise layers.
+              "blend2": 0.68, "blend3": 0.74, "blend4": 0.80,
+              # The coca line. Short trails on purpose -- Baked smears and
+              # sinks, Wired is supposed to feel sharp and over-clocked, and
+              # long trails would read as the same drug twice.
+              "wired": 0.34,
+              # The comedown. Trails go long as everything sags.
+              "crash": 0.82}
+
+    def blit(source, output):
+        return {
+            "vertex_shader": "minecraft:post/blit",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [{"sampler_name": "In", "target": source, "bilinear": False}],
+            "output": output,
+            "uniforms": {
+                "BlitConfig": [
+                    {"name": "ColorModulate", "type": "vec4", "value": [1.0, 1.0, 1.0, 1.0]},
+                ]
+            },
+        }
+
+    # Three trail lengths per strain. The blend value can't be changed at
+    # runtime -- it's baked into the pipeline JSON -- so a harder hit means
+    # swapping to a different file, and the client latches the choice at the
+    # moment you take the hit so the shader reload can't flash mid-high.
+    bands = [0.0, 0.09, 0.16]
+
+    # How hard the warp shader bends the world, per band. Band 0 is one
+    # ordinary joint and is deliberately almost nothing -- a faint lens, not a
+    # funhouse -- because that's the baseline the mod has always had. Band 2 is
+    # a fire tlok and is meant to be a lot.
+    #
+    #                 warp    swirl   split   spin   pulse
+    warps = [(0.0016, 0.030, 0.0025,  4.0,  0.55),
+             (0.0060, 0.110, 0.0090, 14.0,  0.85),
+             (0.0135, 0.230, 0.0180, 30.0,  1.20)]
+
+    # Per-strain character, multiplying the band values. Same idea as the
+    # sway/FOV tables on the client: a strain should still feel like itself at
+    # every strength, so Purp twists and Kush lumbers whatever band it's in.
+    #             warp swirl split spin pulse
+    character = {"haze":     (1.25, 0.55, 1.15, 0.70, 1.70),
+                 "kush":     (0.80, 0.75, 0.70, 0.55, 0.45),
+                 "purp":     (1.00, 1.60, 1.35, 1.80, 0.95),
+                 "diesel":   (1.15, 0.95, 1.00, 0.90, 1.35),
+                 "midnight": (0.90, 1.45, 0.85, 1.30, 0.40),
+                 "sunset":   (1.05, 1.20, 1.20, 1.50, 1.10),
+                 "blend2":   (1.30, 1.30, 1.40, 1.60, 1.15),
+                 "blend3":   (1.55, 1.70, 1.65, 2.10, 1.30),
+                 "blend4":   (1.85, 2.10, 1.90, 2.60, 1.45),
+                 # Wired: almost no warp or twist, but hard channel split
+                 # and a fast pulse. Crisp and jittery, not liquid.
+                 "wired":    (0.35, 0.10, 2.40, 0.40, 2.60),
+                 # Crash: everything slows to a crawl and the world bends
+                 # under its own weight.
+                 "crash":    (1.40, 0.90, 0.50, 0.30, 0.18)}
+
+    # mirror segments, ghost strength, echo, posterise steps. Single strains
+    # get none of it -- these four are what a blend buys you, and they escalate
+    # with how many distinct strains are in the mix.
+    #
+    # Ghost stays well under half even at the top: a full kaleidoscope is
+    # unplayable, you genuinely cannot see where you're walking.
+    # Saturation multiplier per stem. Single strains sit at 1.0 (untouched);
+    # blends push past what the game normally shows; the coca line runs cold
+    # and over-saturated, then the crash drains it to almost nothing.
+    sat = {"blend2": 1.15, "blend3": 1.30, "blend4": 1.45,
+           "wired": 1.35, "crash": 0.22}
+
+    wilds = {"blend2": [(0, 0.0, 0.00, 0), (4, 0.12, 0.10, 0), (4, 0.20, 0.18, 12)],
+             "blend3": [(0, 0.0, 0.06, 0), (6, 0.18, 0.16, 14), (6, 0.28, 0.26, 9)],
+             "blend4": [(5, 0.10, 0.12, 0), (8, 0.26, 0.24, 10), (8, 0.38, 0.34, 6)],
+             # Wired posterises hard at the top -- flat banded colour reads
+             # as over-exposed rather than as the liquid blend look.
+             "wired":  [(0, 0.0, 0.00, 0), (0, 0.0, 0.00, 16), (0, 0.0, 0.06, 10)],
+             "crash":  [(0, 0.0, 0.10, 0), (0, 0.0, 0.16, 0), (0, 0.0, 0.22, 0)]}
+
+    for strain, base in blends.items():
+      for band, longer in enumerate(bands):
+        blend = round(min(base + longer, 0.90), 3)
+        warp, swirl, split, spin, pulse = warps[band]
+        put(f"assets/{NS}/post_effect/motion_blur_{strain}_{band}.json", {
+            "targets": {
+                # persistent: survives between frames. Without it there is no
+                # previous frame to accumulate and the effect does nothing.
+                "prev": {"persistent": True},
+                "swap": {},
+            },
+            "passes": [
+                {
+                    "vertex_shader": "minecraft:post/blit",
+                    "fragment_shader": f"{NS}:post/motion_blur",
+                    "inputs": [
+                        {"sampler_name": "In", "target": "minecraft:main", "bilinear": False},
+                        {"sampler_name": "Prev", "target": "prev", "bilinear": False},
+                    ],
+                    "output": "swap",
+                    "uniforms": {
+                        "MotionBlurConfig": [
+                            {"name": "Blend", "type": "float", "value": blend},
+                        ]
+                    },
+                },
+                # Feed the result back for the next frame BEFORE warping. The
+                # accumulation buffer has to hold the straight image: warp it
+                # on the way in and every frame re-warps the last one, which
+                # compounds into mush within a second.
+                blit("swap", "prev"),
+                {
+                    "vertex_shader": "minecraft:post/blit",
+                    "fragment_shader": f"{NS}:post/trip_warp",
+                    "inputs": [{"sampler_name": "In", "target": "swap", "bilinear": True}],
+                    "output": "minecraft:main",
+                    "uniforms": {
+                        "TripConfig": [
+                            {"name": "Warp", "type": "float",
+                             "value": round(warp * character[strain][0], 5)},
+                            {"name": "Swirl", "type": "float",
+                             "value": round(swirl * character[strain][1], 4)},
+                            {"name": "Split", "type": "float",
+                             "value": round(split * character[strain][2], 5)},
+                            {"name": "Spin", "type": "float",
+                             "value": round(spin * character[strain][3], 2)},
+                            {"name": "Pulse", "type": "float",
+                             "value": round(pulse * character[strain][4], 3)},
+                            {"name": "Mirror", "type": "float",
+                             "value": float(wilds.get(strain, [(0, 0, 0, 0)] * 3)[band][0])},
+                            {"name": "Ghost", "type": "float",
+                             "value": float(wilds.get(strain, [(0, 0, 0, 0)] * 3)[band][1])},
+                            {"name": "Echo", "type": "float",
+                             "value": float(wilds.get(strain, [(0, 0, 0, 0)] * 3)[band][2])},
+                            {"name": "Poster", "type": "float",
+                             "value": float(wilds.get(strain, [(0, 0, 0, 0)] * 3)[band][3])},
+                            {"name": "Sat", "type": "float",
+                             "value": sat.get(strain, 1.0)},
+                        ]
+                    },
+                },
+            ],
+        })
+
+    return
+
+
+def _unused_gaussian_blur() -> None:
+    """Superseded by the accumulation blur above -- kept only as a worked
+    example of driving vanilla's box_blur with a real radius, since vanilla's
+    own blur.json ships at Radius 0 and is useless as a reference."""
+    radii = {"haze": 3.0, "kush": 6.0, "purp": 4.5}
+
+    # One axis per file, not both. A blur along ONE axis is a directional smear
+    # -- that's what motion blur looks like when you whip your head sideways.
+    # Blurring both axes is just soft-focus and reads as bad eyesight instead.
+    axes = {"h": [1.0, 0.0], "v": [0.0, 1.0]}
+
+    for strain, radius in radii.items():
+        for axis, direction in axes.items():
+            put(f"assets/{NS}/post_effect/high_blur_{strain}_{axis}.json", {
+                "targets": {"swap": {}},
+                "passes": [
+                    {
+                        "vertex_shader": "minecraft:post/blur",
+                        "fragment_shader": "minecraft:post/box_blur",
+                        "inputs": [{
+                            "sampler_name": "In",
+                            "target": "minecraft:main",
+                            "bilinear": True,
+                        }],
+                        "output": "swap",
+                        "uniforms": {
+                            "BlurConfig": [
+                                {"name": "BlurDir", "type": "vec2", "value": direction},
+                                {"name": "Radius", "type": "float", "value": radius},
+                            ]
+                        },
+                    },
+                    {
+                        "vertex_shader": "minecraft:post/blit",
+                        "fragment_shader": "minecraft:post/blit",
+                        "inputs": [{
+                            "sampler_name": "In",
+                            "target": "swap",
+                            "bilinear": False,
+                        }],
+                        "output": "minecraft:main",
+                    },
+                ],
+            })
+
+
+def lang() -> None:
+    entries = {
+        "block.trapcraft.drying_rack": "Drying Rack",
+        "block.trapcraft.wild_cannabis": "Wild Cannabis",
+        "item.trapcraft.miners_hammer": "Miner's Hammer",
+        "block.trapcraft.coca_crop": "Coca Bush",
+        "item.trapcraft.coca_seeds": "Coca Seeds",
+        "item.trapcraft.coca_leaves": "Coca Leaves",
+        "item.trapcraft.coca_paste": "Coca Paste",
+        "item.trapcraft.coca_powder": "Powder",
+        "block.trapcraft.leaf_press": "Leaf Press",
+        "item.trapcraft.leaf_press": "Leaf Press",
+        "block.trapcraft.refiner": "Refiner",
+        "item.trapcraft.refiner": "Refiner",
+        "effect.trapcraft.wired": "Wired",
+        "block.trapcraft.bong": "Bong",
+        "item.trapcraft.bong": "Bong",
+        "block.trapcraft.gravity_bong": "T\u0142ok",
+        "item.trapcraft.gravity_bong": "T\u0142ok",
+        "item.trapcraft.drying_rack": "Drying Rack",
+        "block.trapcraft.mixing_station": "Mixing Station",
+        "item.trapcraft.mixing_station": "Mixing Station",
+        # Both are normally renamed per-blend by the component, so these only
+        # show on a /give with no mix attached.
+        "item.trapcraft.blend_bud": "Blend Bud",
+        "item.trapcraft.blend_joint": "Blend Joint",
+        "item.trapcraft.nerve_tonic": "Nerve Tonic",
+        "item.trapcraft.ledger": "The Ledger",
+        "item.trapcraft.burner_phone": "Burner Phone",
+        "effect.trapcraft.baked": "Baked",
+        "effect.trapcraft.tolerance": "Tolerance",
+        "entity.minecraft.villager.trapcraft.dealer": "Dealer",
+    }
+    for strain, nice in STRAINS.items():
+        entries[f"block.trapcraft.cannabis_crop_{strain}"] = f"{nice} Plant"
+        entries[f"item.trapcraft.seeds_{strain}"] = f"{nice} Seeds"
+        entries[f"item.trapcraft.raw_bud_{strain}"] = f"Fresh {nice} Bud"
+        entries[f"item.trapcraft.dried_bud_{strain}"] = f"Cured {nice} Bud"
+        entries[f"item.trapcraft.joint_{strain}"] = f"{nice} Joint"
+    put(f"assets/{NS}/lang/en_us.json", dict(sorted(entries.items())))
+
+
+def loot_tables() -> None:
+    for strain in STRAINS:
+        mature = {
+            "condition": "minecraft:block_state_property",
+            "block": f"{NS}:cannabis_crop_{strain}",
+            "properties": {"age": str(MAX_AGE)},
+        }
+        put(f"data/{NS}/loot_table/blocks/cannabis_crop_{strain}.json", {
+            "type": "minecraft:block",
+            "pools": [
+                # Always returns the seed, mature or not -- losing your only
+                # seed to a misclick is a bad time on a friends server.
+                {
+                    "rolls": 1,
+                    "entries": [{"type": "minecraft:item", "name": f"{NS}:seeds_{strain}"}],
+                },
+                {
+                    "rolls": 1,
+                    "conditions": [mature],
+                    "entries": [{
+                        "type": "minecraft:item",
+                        "name": f"{NS}:raw_bud_{strain}",
+                        "functions": [{
+                            "function": "minecraft:set_count",
+                            "count": {"type": "minecraft:uniform", "min": 1, "max": 3},
+                        }],
+                    }],
+                },
+                {
+                    "rolls": 1,
+                    "conditions": [mature],
+                    "entries": [{
+                        "type": "minecraft:item",
+                        "name": f"{NS}:seeds_{strain}",
+                        "functions": [{
+                            "function": "minecraft:set_count",
+                            "count": {"type": "minecraft:uniform", "min": 0, "max": 2},
+                        }],
+                    }],
+                },
+            ],
+        })
+
+    # Wild plants give a random strain -- picking your phenotype is what the
+    # traders are for. One pool, three evenly weighted entries.
+    put(f"data/{NS}/loot_table/blocks/wild_cannabis.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [
+                {
+                    "type": "minecraft:item",
+                    "name": f"{NS}:seeds_{strain}",
+                    "weight": 1,
+                    "functions": [{
+                        "function": "minecraft:set_count",
+                        "count": {"type": "minecraft:uniform", "min": 1, "max": 2},
+                    }],
+                }
+                for strain in STRAINS
+            ],
+        }],
+    })
+
+    put(f"data/{NS}/loot_table/blocks/drying_rack.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:drying_rack"}],
+        }],
+    })
+
+
+def worldgen() -> None:
+    """Wild patches. Registered to biomes from Java (BiomeModifications)."""
+    wild = {"Name": f"{NS}:wild_cannabis"}
+
+    put(f"data/{NS}/worldgen/configured_feature/wild_cannabis.json", {
+        "type": "minecraft:random_patch",
+        "config": {
+            "tries": 12,
+            "xz_spread": 7,
+            "y_spread": 3,
+            "feature": {
+                "feature": {
+                    "type": "minecraft:simple_block",
+                    "config": {
+                        "to_place": {
+                            "type": "minecraft:simple_state_provider",
+                            "state": wild,
+                        }
+                    },
+                },
+                # Without would_survive the patch happily places plants on
+                # stone and water, and they pop off on the next block update.
+                "placement": [{
+                    "type": "minecraft:block_predicate_filter",
+                    "predicate": {
+                        "type": "minecraft:would_survive",
+                        "state": wild,
+                        "offset": [0, 0, 0],
+                    },
+                }],
+            },
+        },
+    })
+
+    put(f"data/{NS}/worldgen/placed_feature/wild_cannabis.json", {
+        "feature": f"{NS}:wild_cannabis",
+        "placement": [
+            # 1 in 14 chunks in eligible biomes -- a find, not scenery.
+            {"type": "minecraft:rarity_filter", "chance": 14},
+            {"type": "minecraft:in_square"},
+            {"type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE_WG"},
+            {"type": "minecraft:biome"},
+        ],
+    })
+
+
+COCA_ITEMS = ["coca_seeds", "coca_leaves", "coca_paste", "coca_powder"]
+
+
+def press_model(progress: int | None) -> dict:
+    """The leaf press as a screw press that visibly presses.
+
+    Both machines were cube_bottom_top with a picture of themselves painted on
+    each face -- the same flat problem the bong and tlok were rebuilt to fix,
+    and the last two places in the pack still doing it.
+
+    CLOSED, not an open frame, for the same reason as the drying rack: Polymer
+    serves this on a FULL_BLOCK carrier, so the client treats the volume as
+    solid and any gap shows you a world lit as though the block were still
+    there. Depth comes from a recess between proud corner posts, between a
+    solid plinth and a solid lid.
+
+    The stage is in the geometry rather than the texture: the platen descends
+    and the pulp under it gets thinner, so a press mid-batch reads as a machine
+    doing work instead of a box with a different picture on it.
+    """
+    loaded = progress is not None
+    # Pulp thins as the platen comes down; empty parks the platen at the top.
+    pulp_top = 3.0 + (3.0 - progress * 0.8) if loaded else 3.0
+    platen_y = pulp_top if loaded else 10.5
+
+    els = [
+        box([0, 0, 0], [16, 3, 16], "stone", up="stone", down="stone"),   # plinth
+        box([0, 13, 0], [16, 16, 16], "wood", up="wood", down="wood"),    # lid
+        # Corner posts, proud of the core so the recess between them reads.
+        box([0, 3, 0], [3.5, 13, 3.5], "wood"),
+        box([12.5, 3, 0], [16, 13, 3.5], "wood"),
+        box([0, 3, 12.5], [3.5, 13, 16], "wood"),
+        box([12.5, 3, 12.5], [16, 13, 16], "wood"),
+        # Dark interior above the platen -- this is the piece that keeps the
+        # block solid, and reading as shadow is exactly what it should do.
+        box([3.5, platen_y + 1.5, 3.5], [12.5, 13, 12.5], "void"),
+        # The platen itself, standing proud so it catches the light.
+        box([3.2, platen_y, 3.2], [12.8, platen_y + 1.5, 12.8], "iron"),
+    ]
+    if loaded:
+        els.append(box([3.4, 3, 3.4], [12.6, pulp_top, 12.6], "pulp"))
+    else:
+        els.append(box([3.5, 3, 3.5], [12.5, platen_y, 12.5], "void"))
+
+    # Screw boss and handle on the lid, so the top isn't a blank slab.
+    els.append(box([6, 16, 6], [10, 17, 10], "iron"))
+    els.append(box([2.5, 16.2, 7.2], [13.5, 16.8, 8.8], "iron"))
+
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "stone": f"{NS}:block/press_stone",
+            "wood": f"{NS}:block/press_wood",
+            "iron": f"{NS}:block/press_iron",
+            "pulp": f"{NS}:block/press_pulp",
+            "void": f"{NS}:block/press_void",
+            "particle": f"{NS}:block/press_wood",
+        },
+        "elements": els,
+    }
+
+
+def refiner_model(progress: int | None) -> dict:
+    """The refiner as a copper retort over a firebox.
+
+    Same closed-shell rule as the press. The heat lives in an ember band around
+    the firebox that brightens with progress and goes dull at BURNT, so you can
+    read the state from across the room -- which is the whole point of a
+    machine that can be ruined by leaving it too long.
+    """
+    ember = "refiner_ember_idle" if progress is None else f"refiner_ember_{progress}"
+
+    els = [
+        box([0, 0, 0], [16, 5, 16], "brick", up="brick", down="brick"),    # firebox
+        box([0, 14, 0], [16, 16, 16], "copper", up="copper", down="copper"),  # lid
+        # Ember band, proud of the firebox so it glows round the whole base.
+        box([-0.05, 1.5, -0.05], [16.05, 3.2, 16.05], "ember"),
+        # Corner posts and the solid vessel core between them.
+        box([0, 5, 0], [3, 14, 3], "copper"),
+        box([13, 5, 0], [16, 14, 3], "copper"),
+        box([0, 5, 13], [3, 14, 16], "copper"),
+        box([13, 5, 13], [16, 14, 16], "copper"),
+        box([3, 5, 3], [13, 14, 13], "copper"),
+        # Sight glass banding the vessel, proud of the core.
+        box([2.8, 7, 2.8], [13.2, 10, 13.2], "glass"),
+        # Condenser arm over the top and a spout back down into the recess.
+        box([6.5, 16, 6.5], [9.5, 18, 9.5], "copper"),
+        box([9.5, 16.4, 7.2], [14.5, 17.6, 8.8], "copper"),
+        box([13.2, 12, 7.2], [14.8, 16.4, 8.8], "copper"),
+    ]
+
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "brick": f"{NS}:block/refiner_brick",
+            "copper": f"{NS}:block/refiner_copper",
+            "glass": f"{NS}:block/refiner_glass",
+            "ember": f"{NS}:block/{ember}",
+            "particle": f"{NS}:block/refiner_brick",
+        },
+        "elements": els,
+    }
+
+
+def coca_assets() -> None:
+    """Crop stages, the two machines, lang and recipes for the coca line."""
+    # Same construction as the cannabis plants, but coca never grows buds --
+    # the harvest is the leaves, so the mature stage just gets more of them.
+    for age in range(4):
+        put(f"assets/{NS}/models/block/coca_crop_age{age}.json",
+            plant_model(age, f"{NS}:block/coca_plant_leaf", None))
+
+    put(f"assets/{NS}/models/block/leaf_press_empty.json", press_model(None))
+    for step in range(4):
+        put(f"assets/{NS}/models/block/leaf_press_{step}.json", press_model(step))
+    put(f"assets/{NS}/models/block/refiner_idle.json", refiner_model(None))
+    for step in range(5):
+        put(f"assets/{NS}/models/block/refiner_{step}.json", refiner_model(step))
+
+    for name in COCA_ITEMS:
+        put(f"assets/{NS}/models/item/{name}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"{NS}:item/{name}"},
+        })
+    put(f"assets/{NS}/models/item/leaf_press.json", {"parent": f"{NS}:block/leaf_press_empty"})
+    put(f"assets/{NS}/models/item/refiner.json", {"parent": f"{NS}:block/refiner_idle"})
+    for name in COCA_ITEMS + ["leaf_press", "refiner"]:
+        put(f"assets/{NS}/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+        })
+
+    put(f"data/{NS}/loot_table/blocks/coca_crop.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:coca_seeds"}]}],
+    })
+    for block in ("leaf_press", "refiner"):
+        put(f"data/{NS}/loot_table/blocks/{block}.json", {
+            "type": "minecraft:block",
+            "pools": [{"rolls": 1, "entries": [
+                {"type": "minecraft:item", "name": f"{NS}:{block}"}]}],
+        })
+
+    put(f"data/{NS}/recipe/leaf_press.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["LLL", "SIS", "SSS"],
+        "key": {"L": "minecraft:smooth_stone", "S": "minecraft:oak_log",
+                "I": "minecraft:iron_ingot"},
+        "result": {"id": f"{NS}:leaf_press", "count": 1},
+    })
+    put(f"data/{NS}/recipe/refiner.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["III", "IBI", "CCC"],
+        "key": {"I": "minecraft:iron_ingot", "B": "minecraft:blaze_rod",
+                "C": "minecraft:copper_block"},
+        "result": {"id": f"{NS}:refiner", "count": 1},
+    })
+
+
+def mixing_station_assets() -> None:
+    """The station block plus the two blend items it feeds."""
+    put(f"assets/{NS}/models/block/mixing_station.json", {
+        "parent": "minecraft:block/cube_bottom_top",
+        "textures": {
+            "top": f"{NS}:block/mixing_station_top",
+            "bottom": f"{NS}:block/mixing_station_side",
+            "side": f"{NS}:block/mixing_station_side",
+            "particle": f"{NS}:block/mixing_station_side",
+        },
+    })
+    put(f"assets/{NS}/models/item/mixing_station.json", {
+        "parent": f"{NS}:block/mixing_station",
+    })
+    put(f"assets/{NS}/items/mixing_station.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/mixing_station"},
+    })
+    put(f"data/{NS}/loot_table/blocks/mixing_station.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:mixing_station"}]}],
+    })
+
+    for item in ("blend_bud", "blend_joint"):
+        put(f"assets/{NS}/models/item/{item}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"{NS}:item/{item}"},
+        })
+        put(f"assets/{NS}/items/{item}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{item}"},
+        })
+
+    put(f"data/{NS}/recipe/mixing_station.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["BGB", "CIC", "LLL"],
+        "key": {"B": "minecraft:glass_bottle", "G": "minecraft:bowl",
+                "C": "minecraft:copper_ingot", "I": "minecraft:iron_ingot",
+                "L": "minecraft:oak_log"},
+        "result": {"id": f"{NS}:mixing_station", "count": 1},
+    })
+
+    # crafting_transmute, same reason as the per-strain joints: a shapeless
+    # recipe builds a fresh stack and would drop the blend component, turning
+    # every rolled mix into a blank joint with no mix on it at all.
+    put(f"data/{NS}/recipe/blend_joint.json", {
+        "type": "minecraft:crafting_transmute",
+        "category": "misc",
+        "input": f"{NS}:blend_bud",
+        "material": "minecraft:paper",
+        "result": {"id": f"{NS}:blend_joint"},
+    })
+
+
+DEVICES = ["bong_dry", "bong_wet", "bong_loaded"] + [f"gravity_bong_{i}" for i in range(5)]
+
+
+def box(frm, to, tex, up=None, down=None):
+    """One cuboid, same material all round unless a cap is overridden.
+
+    UVs are left off so Minecraft derives them from the element's own size.
+    That keeps the textures tiling at a consistent scale whatever the box is,
+    which is the whole reason the glassware materials are patterns rather than
+    pictures -- a hand-placed UV would stretch differently on every part.
+    """
+    faces = {}
+    for side in ("north", "south", "east", "west"):
+        faces[side] = {"texture": f"#{tex}"}
+    faces["up"] = {"texture": f"#{up or tex}"}
+    faces["down"] = {"texture": f"#{down or tex}"}
+    return {"from": frm, "to": to, "faces": faces}
+
+
+def tlok_model(stage: int) -> dict:
+    """The tlok as an actual bottle standing in a bucket.
+
+    Five stages that read as one object doing something, rather than five
+    pictures. The bottle RISES out of the water as it fills, because that is
+    what a gravity bong physically does -- pulling it up is what draws the
+    smoke in. Stages 3 and 4 sit a notch higher than 0-2 for exactly that
+    reason, and the interior swaps water for smoke at the same moment.
+
+    Minecraft elements are axis-aligned boxes only, so the taper from body to
+    neck is four stacked boxes rather than a curve. At block scale that reads
+    as a bottle silhouette; a real cone would need an entity model and a whole
+    renderer to go with it.
+    """
+    water = stage >= 1                  # bucket filled
+    lifted = stage in (3, 4)            # pulled up, smoke inside
+    loaded = stage >= 2                 # bud in the bowl
+    lift = 1.0 if lifted else 0.0
+
+    def y(v):
+        return v + lift
+
+    # The fill level is GEOMETRY -- the lower part of the body is a separate box
+    # wearing the contents as its own skin -- rather than an inner box seen
+    # through a translucent wall. Polymer serves these on a carrier block whose
+    # render layer we don't control, and on a cutout layer partial alpha snaps
+    # to fully opaque, which would have hidden an inner box completely. This
+    # way the water line reads the same however the client decides to draw it.
+    if lifted:
+        fill, level = ("smoke_stale" if stage == 4 else "smoke"), 8.5
+    elif water:
+        fill, level = "water", 7.0
+    else:
+        fill, level = None, 2.0
+
+    els = [
+        # The bucket. Its top face is water once you've filled it, which is the
+        # cheapest honest way to show a filled tub: you only ever see the top.
+        box([2, 0, 2], [14, 4, 14], "basin", up="water" if water else "basin"),
+    ]
+    if fill:
+        els.append(box([4, y(2), 4], [12, y(level), 12], fill))
+    els += [
+        # Bottle: body above the fill line, shoulder, neck, cap.
+        box([4, y(level), 4], [12, y(9), 12], "plastic"),
+        box([5, y(9), 5], [11, y(11), 11], "plastic"),
+        box([6.5, y(11), 6.5], [9.5, y(12.5), 9.5], "plastic"),
+        box([6, y(12.5), 6], [10, y(14), 10], "cap"),
+    ]
+
+    if loaded:
+        # The packed bowl, sat on the cap.
+        els.append(box([7, y(14), 7], [9, y(15), 9], "bowl"))
+
+    textures = {
+        "basin": f"{NS}:block/tlok_basin",
+        "plastic": f"{NS}:block/tlok_plastic",
+        "water": f"{NS}:block/tlok_water",
+        "smoke": f"{NS}:block/tlok_smoke",
+        "smoke_stale": f"{NS}:block/tlok_smoke_stale",
+        "cap": f"{NS}:block/tlok_cap",
+        "bowl": f"{NS}:block/tlok_bowl",
+        "particle": f"{NS}:block/tlok_plastic",
+    }
+    return {
+        "parent": "minecraft:block/block",
+        # Off because the model is a thin stack of small boxes -- vanilla AO
+        # bands them with dark seams at every join.
+        "ambientocclusion": False,
+        "textures": textures,
+        "elements": els,
+    }
+
+
+def bong_model(stage: str) -> dict:
+    """Beaker base, straight tube, mouthpiece, and a downstem out the side."""
+    # Same trick as the tlok: the water is the skin of the lower tube section,
+    # not something seen through the glass.
+    level = 7 if stage in ("wet", "loaded") else 3
+    els = [
+        box([4, 0, 4], [12, 3, 12], "base"),          # weighted beaker foot
+        box([5.5, 12, 5.5], [10.5, 13.5, 10.5], "glass"),   # mouthpiece flare
+        box([11, 5, 7], [13.5, 7, 9], "glass"),       # downstem, out and down
+        box([12.5, 7, 6.5], [15, 9.5, 9.5], "bowl" if stage == "loaded" else "glass"),
+        box([6, level, 6], [10, 12, 10], "glass"),    # tube above the water
+    ]
+    if level > 3:
+        els.append(box([6, 3, 6], [10, level, 10], "water"))
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "base": f"{NS}:block/bong_base",
+            "glass": f"{NS}:block/bong_glass",
+            "water": f"{NS}:block/tlok_water",
+            "bowl": f"{NS}:block/tlok_bowl",
+            "particle": f"{NS}:block/bong_glass",
+        },
+        "elements": els,
+    }
+
+
+def device_assets() -> None:
+    """Bong and tlok as real geometry.
+
+    These were cross models -- two flat quads in an X, the same trick vanilla
+    uses for grass. That's why they looked papery next to everything else: a
+    bottle drawn on a billboard has no bottle in it. Both are now built out of
+    boxes with translucent walls you can see the contents through.
+    """
+    for stage in range(5):
+        put(f"assets/{NS}/models/block/gravity_bong_{stage}.json", tlok_model(stage))
+    for stage in ("dry", "wet", "loaded"):
+        put(f"assets/{NS}/models/block/bong_{stage}.json", bong_model(stage))
+
+    for item, tex in (("bong", "bong_wet"), ("gravity_bong", "gravity_bong_1")):
+        # Inherit the block model rather than flattening it to a sprite, so the
+        # thing in your hand is the same bottle you're about to place.
+        put(f"assets/{NS}/models/item/{item}.json", {
+            "parent": f"{NS}:block/{tex}",
+        })
+        put(f"assets/{NS}/items/{item}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{item}"},
+        })
+        put(f"data/{NS}/loot_table/blocks/{item}.json", {
+            "type": "minecraft:block",
+            "pools": [{"rolls": 1, "entries": [
+                {"type": "minecraft:item", "name": f"{NS}:{item}"}]}],
+        })
+
+    mixing_station_assets()
+
+    put(f"data/{NS}/recipe/bong.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": [" B ", "GBG", "GGG"],
+        "key": {"G": "minecraft:glass", "B": "minecraft:bamboo"},
+        "result": {"id": f"{NS}:bong", "count": 1},
+    })
+    # The tlok is the improvised one: a bottle and a bucket, nothing fancy.
+    put(f"data/{NS}/recipe/gravity_bong.json", {
+        "type": "minecraft:crafting_shapeless",
+        "category": "misc",
+        "ingredients": ["minecraft:glass_bottle", "minecraft:bucket",
+                        "minecraft:bamboo", "minecraft:paper"],
+        "result": {"id": f"{NS}:gravity_bong", "count": 1},
+    })
+
+
+# Vanilla minecraft:block/block display transforms: (rotation, translation,
+# scale) per slot. Everything here is expressed RELATIVE to these, because a
+# block item at gui scale 0.625 is what a Minecraft slot is drawn to expect.
+# The first attempt used absolute scales around 1.7 -- nearly three times the
+# vanilla value -- and the items burst out of their slots.
+_BLOCK_DISPLAY = {
+    "gui": ((30, 225, 0), (0, 0, 0), 0.625),
+    "ground": ((0, 0, 0), (0, 3, 0), 0.25),
+    "fixed": ((0, 0, 0), (0, 0, 0), 0.5),
+    "thirdperson_righthand": ((75, 45, 0), (0, 2.5, 0), 0.375),
+    "thirdperson_lefthand": ((75, 45, 0), (0, 2.5, 0), 0.375),
+    "firstperson_righthand": ((0, 45, 0), (0, 0, 0), 0.4),
+    "firstperson_lefthand": ((0, 225, 0), (0, 0, 0), 0.4),
+    "head": ((0, 0, 0), (0, 14, 0), 1.0),
+}
+
+
+def held(boost: float = 1.0, gui_rotation=None) -> dict:
+    """Display transforms for a 3D item, as a nudge on the vanilla block ones.
+
+    `boost` is a multiplier on vanilla's scales, so 1.0 renders exactly like a
+    normal block item and 1.15 is a slightly generous one. Keep it near 1 --
+    anything much above overflows the slot frame, which is what "bigger" got
+    wrong the first time. Reach for bigger GEOMETRY before a bigger boost.
+
+    gui_rotation overrides only the inventory angle, for shapes whose
+    silhouette doesn't read at vanilla's default 225 degrees.
+    """
+    display = {}
+    for slot, (rotation, translation, scale) in _BLOCK_DISPLAY.items():
+        if slot == "gui" and gui_rotation is not None:
+            rotation = gui_rotation
+        display[slot] = {
+            "rotation": list(rotation),
+            "translation": list(translation),
+            "scale": [round(scale * boost, 4)] * 3,
+        }
+    return display
+
+
+def nerve_tonic_model() -> dict:
+    """A stubby apothecary bottle with a cork, not a sprite of one.
+
+    Built like the bong and tlok: the liquid is the skin of the lower section
+    rather than something seen through a wall, because a translucent inner box
+    inside a translucent outer box z-fights on every client that renders the
+    pack on the cutout layer.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "glass": f"{NS}:item/tonic_glass",
+            "liquid": f"{NS}:item/tonic_liquid",
+            "cork": f"{NS}:item/tonic_cork",
+            "particle": f"{NS}:item/tonic_liquid",
+        },
+        "display": held(1.05, gui_rotation=(20, 215, 0)),
+        "elements": [
+            box([4, 0, 4], [12, 7, 12], "liquid"),          # the dose itself
+            box([4, 7, 4], [12, 9.5, 12], "glass"),         # air above it
+            box([6, 9.5, 6], [10, 13, 10], "glass"),        # neck
+            box([5.5, 13, 5.5], [10.5, 15, 10.5], "cork"),  # stopper
+        ],
+    }
+
+
+def nerve_tonic_assets() -> None:
+    put(f"assets/{NS}/models/block/nerve_tonic.json", nerve_tonic_model())
+    # Inherit the geometry rather than flattening to a sprite, same as the
+    # glassware -- a bottle drawn on a billboard has no bottle in it.
+    put(f"assets/{NS}/models/item/nerve_tonic.json", {
+        "parent": f"{NS}:block/nerve_tonic",
+    })
+    put(f"assets/{NS}/items/nerve_tonic.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/nerve_tonic"},
+    })
+
+    # Honey for the base, sugar to take the edge off, and a flower because
+    # every calming brew in every game ever has a flower in it. All three are
+    # obtainable within a day of spawning, which is the point: the counterplay
+    # to paranoia must not be gated behind the thing that causes it.
+    put(f"data/{NS}/recipe/nerve_tonic.json", {
+        "type": "minecraft:crafting_shapeless",
+        "category": "misc",
+        "ingredients": ["minecraft:honey_bottle", "minecraft:sugar",
+                        "#minecraft:small_flowers"],
+        "result": {"id": f"{NS}:nerve_tonic", "count": 1},
+    })
+
+
+def ledger_model() -> dict:
+    """A closed book lying flat with a pencil across it.
+
+    Flat-sprite books read as "generic quest item" in a bar full of other
+    books; the pencil is what makes it legible as an index at a glance in a
+    hotbar.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "cover": f"{NS}:item/ledger_cover",
+            "pages": f"{NS}:item/ledger_pages",
+            "pencil": f"{NS}:item/ledger_pencil",
+            "particle": f"{NS}:item/ledger_cover",
+        },
+        # Tilted hard in the GUI: a book lying flat is a rectangle from above
+        # and unrecognisable at 16 pixels, so it is shown at an angle where the
+        # page block and the pencil both read.
+        "display": held(1.15, gui_rotation=(35, 215, 0)),
+        "elements": [
+            box([2, 3.5, 1.5], [14, 6, 14.5], "pages", up="pages"),      # page block
+            box([1.5, 6, 1], [14.5, 7.6, 15], "cover", up="cover"),      # front board
+            box([1.5, 1.6, 1], [14.5, 3.5, 15], "cover", down="cover"),  # back board
+            box([3, 7.6, 7], [13, 9, 8.6], "pencil"),                    # pencil on top
+        ],
+    }
+
+
+def ledger_assets() -> None:
+    put(f"assets/{NS}/models/block/ledger.json", ledger_model())
+    put(f"assets/{NS}/models/item/ledger.json", {"parent": f"{NS}:block/ledger"})
+    put(f"assets/{NS}/items/ledger.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/ledger"},
+    })
+
+    # Compass for "where", amethyst for "look", book for "index". Mid-game on
+    # purpose: this is the payoff for having accumulated enough stuff to lose
+    # track of it, not a starter tool.
+    put(f"data/{NS}/recipe/ledger.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": [" A ", "ABA", " C "],
+        "key": {
+            "A": "minecraft:amethyst_shard",
+            "B": "minecraft:book",
+            "C": "minecraft:compass",
+        },
+        "result": {"id": f"{NS}:ledger", "count": 1},
+    })
+
+
+def phone_model() -> dict:
+    """A cheap candybar handset: body, screen, keypad, stub antenna.
+
+    Held upright rather than lying flat -- a phone seen edge-on in a hotbar is
+    a grey rectangle, and the antenna is what makes the silhouette read as a
+    burner from across the screen.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "shell": f"{NS}:item/phone_shell",
+            "screen": f"{NS}:item/phone_screen",
+            "keys": f"{NS}:item/phone_keys",
+            "particle": f"{NS}:item/phone_shell",
+        },
+        # Barely rotated in the GUI: the screen and keypad are the whole
+        # silhouette, and turning it edge-on hides both behind a 2px shell.
+        "display": held(1.1, gui_rotation=(15, 200, 0)),
+        "elements": [
+            box([4.5, 0.5, 6.5], [11.5, 14, 9.5], "shell"),      # body
+            box([5.1, 8, 6.1], [10.9, 12.8, 6.7], "screen"),     # screen, proud of shell
+            box([5.1, 1.8, 6.1], [10.9, 7.2, 6.7], "keys"),      # keypad
+            box([9.8, 14, 7.4], [10.6, 16, 8.4], "shell"),       # antenna stub
+        ],
+    }
+
+
+def phone_assets() -> None:
+    put(f"assets/{NS}/models/block/burner_phone.json", phone_model())
+    put(f"assets/{NS}/models/item/burner_phone.json", {"parent": f"{NS}:block/burner_phone"})
+    put(f"assets/{NS}/items/burner_phone.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/burner_phone"},
+    })
+
+    # Copper for the aerial, redstone for the guts, amethyst for the screen.
+    # Cheap on purpose: the phone is replaceable, the reputation on it isn't.
+    put(f"data/{NS}/recipe/burner_phone.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": [" C ", "IAI", "IRI"],
+        "key": {
+            "C": "minecraft:copper_ingot",
+            "I": "minecraft:iron_nugget",
+            "A": "minecraft:amethyst_shard",
+            "R": "minecraft:redstone",
+        },
+        "result": {"id": f"{NS}:burner_phone", "count": 1},
+    })
+
+
+def tags() -> None:
+    """Make the hammer enchantable.
+
+    Enchanting eligibility in 1.21 is tag-driven: Item.Settings.enchantable()
+    sets how GOOD the enchants are, but the table only offers them if the item
+    is in these tags. Setting one without the other silently does nothing.
+    Tags merge across mods, so adding to minecraft: namespace is correct here.
+    """
+    for tag in ("mining", "mining_loot", "durability", "vanishing"):
+        put(f"data/minecraft/tags/item/enchantable/{tag}.json", {
+            "values": [f"{NS}:miners_hammer"],
+        })
+
+
+def recipes() -> None:
+    # 5 diamonds is deliberate: nine blocks a swing should cost real money.
+    put(f"data/{NS}/recipe/miners_hammer.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "equipment",
+        "pattern": ["DDD", "DSD", " S "],
+        "key": {"D": "minecraft:diamond", "S": "minecraft:stick"},
+        "result": {"id": f"{NS}:miners_hammer", "count": 1},
+    })
+
+    put(f"data/{NS}/recipe/drying_rack.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["SSS", "T T", "SSS"],
+        "key": {"S": "minecraft:stick", "T": "minecraft:string"},
+        "result": {"id": f"{NS}:drying_rack", "count": 1},
+    })
+    for strain in STRAINS:
+        # crafting_transmute, NOT crafting_shapeless. A shapeless recipe builds
+        # a fresh result stack and silently drops the quality component, so
+        # every joint would come out the default grade no matter what went in.
+        # Transmute carries the input's components onto the result.
+        put(f"data/{NS}/recipe/joint_{strain}.json", {
+            "type": "minecraft:crafting_transmute",
+            "category": "misc",
+            "input": f"{NS}:dried_bud_{strain}",
+            "material": "minecraft:paper",
+            "result": {"id": f"{NS}:joint_{strain}"},
+        })
+
+
+def main() -> None:
+    block_models()
+    item_assets()
+    post_effects()
+    lang()
+    loot_tables()
+    coca_assets()
+    device_assets()
+    nerve_tonic_assets()
+    ledger_assets()
+    phone_assets()
+    tags()
+    worldgen()
+    recipes()
+    print(f"wrote {written} json files under {ROOT}")
+
+
+if __name__ == "__main__":
+    main()

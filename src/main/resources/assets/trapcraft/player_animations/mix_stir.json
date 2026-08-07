@@ -1,0 +1,35 @@
+{
+  "name": "mix_stir",
+  "format": "player_animation",
+  "version": 3,
+  "emote": {
+    "beginTick": 0, "endTick": 46, "stopTick": 52,
+    "isLoop": false, "returnTick": 0, "degrees": true, "easeBeforeKeyframe": false,
+    "moves": [
+      { "comment": "rest", "tick": 0, "easing": "easeInOutSine",
+        "head": {"pitch": 0}, "torso": {"pitch": 0},
+        "rightArm": {"pitch": 0, "roll": 0}, "leftArm": {"pitch": 0, "roll": 0} },
+      { "comment": "lean over the bowl", "tick": 7, "easing": "easeInOutSine",
+        "head": {"pitch": 20}, "torso": {"pitch": 14},
+        "rightArm": {"pitch": -60, "roll": 18}, "leftArm": {"pitch": -60, "roll": -18} },
+      { "comment": "stir, right leading", "tick": 14, "easing": "easeInOutSine",
+        "head": {"pitch": 22}, "torso": {"pitch": 15},
+        "rightArm": {"pitch": -72, "roll": 26}, "leftArm": {"pitch": -52, "roll": -12} },
+      { "comment": "stir, left leading", "tick": 21, "easing": "easeInOutSine",
+        "head": {"pitch": 20}, "torso": {"pitch": 13},
+        "rightArm": {"pitch": -52, "roll": 12}, "leftArm": {"pitch": -72, "roll": -26} },
+      { "comment": "and again", "tick": 28, "easing": "easeInOutSine",
+        "head": {"pitch": 22}, "torso": {"pitch": 15},
+        "rightArm": {"pitch": -72, "roll": 26}, "leftArm": {"pitch": -52, "roll": -12} },
+      { "comment": "and again", "tick": 34, "easing": "easeInOutSine",
+        "head": {"pitch": 20}, "torso": {"pitch": 13},
+        "rightArm": {"pitch": -52, "roll": 12}, "leftArm": {"pitch": -72, "roll": -26} },
+      { "comment": "lift out", "tick": 40, "easing": "easeOutQuad",
+        "head": {"pitch": 6}, "torso": {"pitch": 4},
+        "rightArm": {"pitch": -22, "roll": 6}, "leftArm": {"pitch": -22, "roll": -6} },
+      { "comment": "rest", "tick": 46, "easing": "easeInOutSine",
+        "head": {"pitch": 0}, "torso": {"pitch": 0},
+        "rightArm": {"pitch": 0, "roll": 0}, "leftArm": {"pitch": 0, "roll": 0} }
+    ]
+  }
+}

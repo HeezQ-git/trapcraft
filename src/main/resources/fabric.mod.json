@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "trapcraft",
+  "version": "${version}",
+  "name": "TrapCraft",
+  "description": "Cannabis cultivation for TrapPack: grow it, dry it, roll it, sell it. Server-side only via Polymer -- vanilla clients need no install.",
+  "authors": ["HeezQ"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.heezq.trapcraft.TrapCraft"],
+    "client": ["dev.heezq.trapcraft.client.TrapCraftClient"]
+  },
+  "mixins": [
+    {
+      "config": "trapcraft.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.8",
+    "java": ">=21",
+    "fabric-api": "*",
+    "polymer-core": "*",
+    "polymer-blocks": "*"
+  }
+}

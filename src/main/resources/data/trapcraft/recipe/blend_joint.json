@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_transmute",
+  "category": "misc",
+  "input": "trapcraft:blend_bud",
+  "material": "minecraft:paper",
+  "result": {
+    "id": "trapcraft:blend_joint"
+  }
+}

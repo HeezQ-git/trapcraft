@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "trapcraft:item/raw_bud_purp"
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "targets": {
+    "prev": {
+      "persistent": true
+    },
+    "swap": {}
+  },
+  "passes": [
+    {
+      "vertex_shader": "minecraft:post/blit",
+      "fragment_shader": "trapcraft:post/motion_blur",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "minecraft:main",
+          "bilinear": false
+        },
+        {
+          "sampler_name": "Prev",
+          "target": "prev",
+          "bilinear": false
+        }
+      ],
+      "output": "swap",
+      "uniforms": {
+        "MotionBlurConfig": [
+          {
+            "name": "Blend",
+            "type": "float",
+            "value": 0.6
+          }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:post/blit",
+      "fragment_shader": "minecraft:post/blit",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap",
+          "bilinear": false
+        }
+      ],
+      "output": "prev",
+      "uniforms": {
+        "BlitConfig": [
+          {
+            "name": "ColorModulate",
+            "type": "vec4",
+            "value": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "vertex_shader": "minecraft:post/blit",
+      "fragment_shader": "trapcraft:post/trip_warp",
+      "inputs": [
+        {
+          "sampler_name": "In",
+          "target": "swap",
+          "bilinear": true
+        }
+      ],
+      "output": "minecraft:main",
+      "uniforms": {
+        "TripConfig": [
+          {
+            "name": "Warp",
+            "type": "float",
+            "value": 0.00184
+          },
+          {
+            "name": "Swirl",
+            "type": "float",
+            "value": 0.0285
+          },
+          {
+            "name": "Split",
+            "type": "float",
+            "value": 0.0025
+          },
+          {
+            "name": "Spin",
+            "type": "float",
+            "value": 3.6
+          },
+          {
+            "name": "Pulse",
+            "type": "float",
+            "value": 0.743
+          },
+          {
+            "name": "Mirror",
+            "type": "float",
+            "value": 0.0
+          },
+          {
+            "name": "Ghost",
+            "type": "float",
+            "value": 0.0
+          },
+          {
+            "name": "Echo",
+            "type": "float",
+            "value": 0.0
+          },
+          {
+            "name": "Poster",
+            "type": "float",
+            "value": 0.0
+          },
+          {
+            "name": "Sat",
+            "type": "float",
+            "value": 1.0
+          }
+        ]
+      }
+    }
+  ]
+}

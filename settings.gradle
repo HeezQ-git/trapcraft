@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        maven { url = uri('https://maven.fabricmc.net/') }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// This machine has JDK 24 and 17 but no 21, which the java{} toolchain asks
+// for. Rather than pin the build to whatever JDK happens to be installed,
+// let Gradle fetch a 21 itself -- one download, then every future checkout
+// builds without anyone hunting for the right JDK.
+plugins {
+    // 1.x is the Gradle 9 line; 0.8.0 references a JvmVendorSpec field that
+    // Gradle 9.6 no longer has and fails at configuration time.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'trapcraft'

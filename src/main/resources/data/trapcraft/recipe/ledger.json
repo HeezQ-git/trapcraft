@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " A ",
+    "ABA",
+    " C "
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "minecraft:book",
+    "C": "minecraft:compass"
+  },
+  "result": {
+    "id": "trapcraft:ledger",
+    "count": 1
+  }
+}

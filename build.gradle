@@ -1,0 +1,70 @@
+plugins {
+    id 'fabric-loom' version '1.17.18'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven { url = uri('https://maven.nucleoid.xyz') }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // No include() -- the server already has polymer-bundled.
+    modImplementation "eu.pb4:polymer-core:${project.polymer_version}"
+    modImplementation "eu.pb4:polymer-blocks:${project.polymer_version}"
+    modImplementation "eu.pb4:polymer-resource-pack:${project.polymer_version}"
+    modImplementation "eu.pb4:polymer-virtual-entity:${project.polymer_version}"
+
+    // Local jar, not maven: the pack runs PlayerAnimationLib 1.1.2+1.21.8 while
+    // maven's newest is 2.0.2+1.21.7 -- a different major with a different API.
+    // Compiling against the file that's actually loaded is the only safe option.
+    // modCompileOnly, not compileOnly: the jar ships in intermediary mappings,
+    // so plain compileOnly hands us class_2960 instead of Identifier. Loom only
+    // remaps dependencies declared with a mod* configuration.
+    modCompileOnly files("libs/PlayerAnimationLibFabric-1.1.2+mc.1.21.8.jar")
+
+    // Only ever runs against TrapMath, which imports nothing from Minecraft.
+    // That's deliberate: it means the test source set needs no Loom classpath
+    // wiring, so `gradlew test` stays a plain fast JUnit run.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

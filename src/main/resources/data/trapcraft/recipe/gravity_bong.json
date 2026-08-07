@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:glass_bottle",
+    "minecraft:bucket",
+    "minecraft:bamboo",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "trapcraft:gravity_bong",
+    "count": 1
+  }
+}

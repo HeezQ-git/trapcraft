@@ -1,0 +1,385 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "stem": "trapcraft:block/crop_stem",
+    "leaf": "trapcraft:block/crop_leaf_kush",
+    "particle": "trapcraft:block/crop_leaf_kush",
+    "bud": "trapcraft:block/crop_bud_kush"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        0,
+        7
+      ],
+      "to": [
+        9,
+        15,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#stem"
+        },
+        "south": {
+          "texture": "#stem"
+        },
+        "east": {
+          "texture": "#stem"
+        },
+        "west": {
+          "texture": "#stem"
+        },
+        "up": {
+          "texture": "#stem"
+        }
+      }
+    },
+    {
+      "from": [
+        1.0,
+        1,
+        8
+      ],
+      "to": [
+        15.0,
+        11,
+        8
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          6.0,
+          8
+        ],
+        "axis": "y",
+        "angle": 45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#leaf"
+        },
+        "south": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        1,
+        1.0
+      ],
+      "to": [
+        8,
+        11,
+        15.0
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          6.0,
+          8
+        ],
+        "axis": "y",
+        "angle": -45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#leaf"
+        },
+        "west": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        2.0,
+        3,
+        8
+      ],
+      "to": [
+        14.0,
+        14,
+        8
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8.5,
+          8
+        ],
+        "axis": "y",
+        "angle": 22.5,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#leaf"
+        },
+        "south": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        3,
+        2.0
+      ],
+      "to": [
+        8,
+        14,
+        14.0
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8.5,
+          8
+        ],
+        "axis": "y",
+        "angle": -22.5,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#leaf"
+        },
+        "west": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        3.0,
+        6,
+        8
+      ],
+      "to": [
+        13.0,
+        16,
+        8
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          11.0,
+          8
+        ],
+        "axis": "y",
+        "angle": 0,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#leaf"
+        },
+        "south": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        6,
+        3.0
+      ],
+      "to": [
+        8,
+        16,
+        13.0
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          11.0,
+          8
+        ],
+        "axis": "y",
+        "angle": 0,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#leaf"
+        },
+        "west": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        4.0,
+        8,
+        8
+      ],
+      "to": [
+        12.0,
+        16,
+        8
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          12.0,
+          8
+        ],
+        "axis": "y",
+        "angle": -45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#leaf"
+        },
+        "south": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        8,
+        4.0
+      ],
+      "to": [
+        8,
+        16,
+        12.0
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          12.0,
+          8
+        ],
+        "axis": "y",
+        "angle": 45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#leaf"
+        },
+        "west": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        6.5,
+        11,
+        6.5
+      ],
+      "to": [
+        9.5,
+        15.5,
+        9.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bud"
+        },
+        "south": {
+          "texture": "#bud"
+        },
+        "east": {
+          "texture": "#bud"
+        },
+        "west": {
+          "texture": "#bud"
+        },
+        "up": {
+          "texture": "#bud"
+        },
+        "down": {
+          "texture": "#bud"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        7,
+        7
+      ],
+      "to": [
+        6.5,
+        10.5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bud"
+        },
+        "south": {
+          "texture": "#bud"
+        },
+        "east": {
+          "texture": "#bud"
+        },
+        "west": {
+          "texture": "#bud"
+        },
+        "up": {
+          "texture": "#bud"
+        },
+        "down": {
+          "texture": "#bud"
+        }
+      }
+    },
+    {
+      "from": [
+        9.5,
+        6,
+        7
+      ],
+      "to": [
+        11.5,
+        9.5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#bud"
+        },
+        "south": {
+          "texture": "#bud"
+        },
+        "east": {
+          "texture": "#bud"
+        },
+        "west": {
+          "texture": "#bud"
+        },
+        "up": {
+          "texture": "#bud"
+        },
+        "down": {
+          "texture": "#bud"
+        }
+      }
+    }
+  ]
+}

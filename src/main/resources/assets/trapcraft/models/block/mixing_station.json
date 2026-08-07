@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "trapcraft:block/mixing_station_top",
+    "bottom": "trapcraft:block/mixing_station_side",
+    "side": "trapcraft:block/mixing_station_side",
+    "particle": "trapcraft:block/mixing_station_side"
+  }
+}

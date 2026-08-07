@@ -1,0 +1,176 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "basin": "trapcraft:block/tlok_basin",
+    "plastic": "trapcraft:block/tlok_plastic",
+    "water": "trapcraft:block/tlok_water",
+    "smoke": "trapcraft:block/tlok_smoke",
+    "smoke_stale": "trapcraft:block/tlok_smoke_stale",
+    "cap": "trapcraft:block/tlok_cap",
+    "bowl": "trapcraft:block/tlok_bowl",
+    "particle": "trapcraft:block/tlok_plastic"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        4,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#basin"
+        },
+        "south": {
+          "texture": "#basin"
+        },
+        "east": {
+          "texture": "#basin"
+        },
+        "west": {
+          "texture": "#basin"
+        },
+        "up": {
+          "texture": "#basin"
+        },
+        "down": {
+          "texture": "#basin"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        2.0,
+        4
+      ],
+      "to": [
+        12,
+        9.0,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#plastic"
+        },
+        "south": {
+          "texture": "#plastic"
+        },
+        "east": {
+          "texture": "#plastic"
+        },
+        "west": {
+          "texture": "#plastic"
+        },
+        "up": {
+          "texture": "#plastic"
+        },
+        "down": {
+          "texture": "#plastic"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        9.0,
+        5
+      ],
+      "to": [
+        11,
+        11.0,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#plastic"
+        },
+        "south": {
+          "texture": "#plastic"
+        },
+        "east": {
+          "texture": "#plastic"
+        },
+        "west": {
+          "texture": "#plastic"
+        },
+        "up": {
+          "texture": "#plastic"
+        },
+        "down": {
+          "texture": "#plastic"
+        }
+      }
+    },
+    {
+      "from": [
+        6.5,
+        11.0,
+        6.5
+      ],
+      "to": [
+        9.5,
+        12.5,
+        9.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#plastic"
+        },
+        "south": {
+          "texture": "#plastic"
+        },
+        "east": {
+          "texture": "#plastic"
+        },
+        "west": {
+          "texture": "#plastic"
+        },
+        "up": {
+          "texture": "#plastic"
+        },
+        "down": {
+          "texture": "#plastic"
+        }
+      }
+    },
+    {
+      "from": [
+        6,
+        12.5,
+        6
+      ],
+      "to": [
+        10,
+        14.0,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#cap"
+        },
+        "south": {
+          "texture": "#cap"
+        },
+        "east": {
+          "texture": "#cap"
+        },
+        "west": {
+          "texture": "#cap"
+        },
+        "up": {
+          "texture": "#cap"
+        },
+        "down": {
+          "texture": "#cap"
+        }
+      }
+    }
+  ]
+}

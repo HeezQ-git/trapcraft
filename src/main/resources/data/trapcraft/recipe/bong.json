@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " B ",
+    "GBG",
+    "GGG"
+  ],
+  "key": {
+    "G": "minecraft:glass",
+    "B": "minecraft:bamboo"
+  },
+  "result": {
+    "id": "trapcraft:bong",
+    "count": 1
+  }
+}

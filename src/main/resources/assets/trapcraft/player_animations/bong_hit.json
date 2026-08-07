@@ -1,0 +1,32 @@
+{
+  "name": "bong_hit",
+  "format": "player_animation",
+  "version": 3,
+  "emote": {
+    "beginTick": 0, "endTick": 44, "stopTick": 50,
+    "isLoop": false, "returnTick": 0, "degrees": true, "easeBeforeKeyframe": false,
+    "moves": [
+      { "comment": "rest", "tick": 0, "easing": "easeInOutSine",
+        "head": {"pitch": 0}, "torso": {"pitch": 0},
+        "rightArm": {"pitch": 0, "roll": 0}, "leftArm": {"pitch": 0, "roll": 0} },
+      { "comment": "lean down to it", "tick": 7, "easing": "easeInOutSine",
+        "head": {"pitch": 22}, "torso": {"pitch": 18},
+        "rightArm": {"pitch": -35, "roll": 12}, "leftArm": {"pitch": -20, "roll": -8} },
+      { "comment": "lips on the mouthpiece", "tick": 15, "easing": "easeOutQuad",
+        "head": {"pitch": 26}, "torso": {"pitch": 22},
+        "rightArm": {"pitch": -55, "roll": 18}, "leftArm": {"pitch": -30, "roll": -10} },
+      { "comment": "draw", "tick": 23, "easing": "easeInOutSine",
+        "head": {"pitch": 24}, "torso": {"pitch": 20},
+        "rightArm": {"pitch": -58, "roll": 18}, "leftArm": {"pitch": -32, "roll": -10} },
+      { "comment": "up and out, exhale", "tick": 31, "easing": "easeOutQuad",
+        "head": {"pitch": -18}, "torso": {"pitch": -6},
+        "rightArm": {"pitch": -20, "roll": 6}, "leftArm": {"pitch": -10, "roll": -4} },
+      { "comment": "settle", "tick": 38, "easing": "easeInOutSine",
+        "head": {"pitch": -6}, "torso": {"pitch": -2},
+        "rightArm": {"pitch": -6, "roll": 0}, "leftArm": {"pitch": -3, "roll": 0} },
+      { "comment": "rest", "tick": 44, "easing": "easeInOutSine",
+        "head": {"pitch": 0}, "torso": {"pitch": 0},
+        "rightArm": {"pitch": 0, "roll": 0}, "leftArm": {"pitch": 0, "roll": 0} }
+    ]
+  }
+}

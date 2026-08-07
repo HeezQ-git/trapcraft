@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "LLL",
+    "SIS",
+    "SSS"
+  ],
+  "key": {
+    "L": "minecraft:smooth_stone",
+    "S": "minecraft:oak_log",
+    "I": "minecraft:iron_ingot"
+  },
+  "result": {
+    "id": "trapcraft:leaf_press",
+    "count": 1
+  }
+}

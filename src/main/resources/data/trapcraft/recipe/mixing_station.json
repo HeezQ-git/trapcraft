@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BGB",
+    "CIC",
+    "LLL"
+  ],
+  "key": {
+    "B": "minecraft:glass_bottle",
+    "G": "minecraft:bowl",
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:oak_log"
+  },
+  "result": {
+    "id": "trapcraft:mixing_station",
+    "count": 1
+  }
+}

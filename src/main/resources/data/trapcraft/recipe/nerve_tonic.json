@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:honey_bottle",
+    "minecraft:sugar",
+    "#minecraft:small_flowers"
+  ],
+  "result": {
+    "id": "trapcraft:nerve_tonic",
+    "count": 1
+  }
+}
