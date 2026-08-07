@@ -432,8 +432,20 @@ public final class TrapDealing {
                         handler.getSlot(RESULT_SLOT).getStack().copy()));
     }
 
-    /** Customers who have been sold to by hand, so they know to leave. */
+    /** Customers who have bought all they came for, so they know to leave. */
     private static final java.util.Set<UUID> DEALT = new java.util.HashSet<>();
+
+    /** How much each customer still wants, by entity id. */
+    private static final Map<UUID, Integer> APPETITE = new HashMap<>();
+
+    /**
+     * How many items one customer will take before they're done.
+     *
+     * They used to leave after a SINGLE hand-over, which made a visit worth one
+     * item -- two emeralds for somebody who walked across the map to find you.
+     * A visit should be worth the interruption.
+     */
+    private static final int UNITS_WANTED = 8;
 
     /**
      * Sell by handing it over, with no screen at all.
@@ -462,23 +474,39 @@ public final class TrapDealing {
             return false;
         }
 
-        int paid;
+        int each;
         if (craving.powder()) {
             if (!held.isOf(TrapContent.cocaPowder)) {
                 return false;
             }
-            paid = premium(TrapComponents.getPurity(held).emeralds());
+            each = premium(TrapComponents.getPurity(held).emeralds() * 2);
         } else if (held.isOf(TrapContent.driedBud(craving.strain()))) {
-            paid = budPrice(TrapComponents.get(held));
+            each = budPrice(TrapComponents.get(held));
         } else if (held.isOf(TrapContent.joint(craving.strain()))) {
-            paid = jointPrice(TrapComponents.get(held));
+            each = jointPrice(TrapComponents.get(held));
         } else {
             return false;
         }
 
-        held.decrement(1);
+        // Take the whole handful, up to what they still want. One item per
+        // click would mean eight clicks for a full sale, and the grade is read
+        // per stack anyway -- so hand over the good stuff separately if you
+        // want paying for it separately.
+        int appetite = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED);
+        int units = Math.min(held.getCount(), appetite);
+        if (units <= 0) {
+            return false;
+        }
+        int paid = units * each;
+
+        held.decrement(units);
         seller.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, paid));
-        DEALT.add(customer.getUuid());
+
+        int left = appetite - units;
+        APPETITE.put(customer.getUuid(), left);
+        if (left <= 0) {
+            DEALT.add(customer.getUuid());
+        }
 
         ServerWorld world = seller.getWorld();
         world.playSound(null, customer.getBlockPos(), SoundEvents.ENTITY_VILLAGER_YES,
@@ -489,7 +517,10 @@ public final class TrapDealing {
                 customer.getX(), customer.getY() + 1.6, customer.getZ(),
                 10, 0.3, 0.3, 0.3, 0.02);
         seller.sendMessage(Text.literal("+" + paid + " emeralds")
-                .formatted(Formatting.GREEN), true);
+                        .formatted(Formatting.GREEN)
+                        .append(Text.literal(left > 0 ? "   (wants " + left + " more)" : "   (that's enough)")
+                                .formatted(Formatting.DARK_GRAY)),
+                true);
         return true;
     }
 
@@ -557,6 +588,7 @@ public final class TrapDealing {
 
     private static void leave(WanderingTraderEntity customer) {
         DEALT.remove(customer.getUuid());
+        APPETITE.remove(customer.getUuid());
         ServerWorld world = (ServerWorld) customer.getWorld();
         world.spawnParticles(ParticleTypes.POOF,
                 customer.getX(), customer.getY() + 0.6, customer.getZ(),
@@ -739,14 +771,25 @@ public final class TrapDealing {
         return offers;
     }
 
-    /** Old price for four buds, per bud. Never free. */
+    /**
+     * What a customer pays, per item.
+     *
+     * Doubled from the old per-unit rates. Carrying the grade up from Swill is
+     * most of the work in this mod, and paying 1 emerald for a bud made the
+     * whole chain -- breed, grow, cure, grade -- come out worse than mining.
+     * A rolled joint is worth more than the bud it came from, which is why the
+     * two curves differ rather than just scaling.
+     *
+     *          Swill  Mids  Loud  Fire
+     *   bud        1     2     4     7
+     *   joint      2     4     8    13
+     */
     private static int budPrice(Quality grade) {
-        return Math.max(1, Math.round(premium(grade.emeralds()) / 4.0F));
+        return Math.max(1, Math.round(premium(grade.emeralds()) / 2.0F));
     }
 
-    /** Old price for two joints, per joint. */
     private static int jointPrice(Quality grade) {
-        return Math.max(1, Math.round(premium(grade.emeralds()) / 2.0F));
+        return Math.max(1, premium(grade.emeralds()));
     }
 
     /** The poorest grade of this item the player has on them, or null. */
