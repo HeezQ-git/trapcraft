@@ -435,6 +435,10 @@ public final class TrapDealing {
         }
         int paid = units * each;
 
+        // Captured BEFORE the decrement: emptying the stack turns it into air,
+        // and the receipt would name the wrong thing.
+        Text sold = held.getName();
+
         held.decrement(units);
         seller.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, paid));
 
@@ -456,11 +460,20 @@ public final class TrapDealing {
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 customer.getX(), customer.getY() + 1.6, customer.getZ(),
                 10, 0.3, 0.3, 0.3, 0.02);
-        seller.sendMessage(Text.literal("+" + paid + " emeralds")
-                        .formatted(Formatting.GREEN)
-                        .append(Text.literal(left > 0 ? "   (wants " + left + " more)" : "   (that's enough)")
+        // A receipt in chat, so a sale leaves a record you can scroll back to
+        // rather than a line that flashes past the actionbar and is gone.
+        // The item's own name carries its grade and colour already.
+        seller.sendMessage(Text.literal("Sold ").formatted(Formatting.GRAY)
+                        .append(Text.literal(units + "x ").formatted(Formatting.WHITE))
+                        .append(sold)
+                        .append(Text.literal("  for  ").formatted(Formatting.GRAY))
+                        .append(Text.literal(paid + " emerald" + (paid == 1 ? "" : "s"))
+                                .formatted(Formatting.GREEN))
+                        .append(Text.literal(left > 0
+                                        ? "   still wants " + left
+                                        : "   that's the lot")
                                 .formatted(Formatting.DARK_GRAY)),
-                true);
+                false);
         return true;
     }
 
