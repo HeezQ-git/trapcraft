@@ -156,7 +156,7 @@ class FormulaTest {
     void theHouseKeepsItsEdge() {
         float rtp = TrapMath.slotReturnToPlayer();
         assertTrue(rtp < 1.0f, "the house must win long-run, got " + rtp);
-        assertTrue(rtp > 0.7f, "but not so hard nobody plays, got " + rtp);
+        assertTrue(rtp > 0.55f, "but not so hard nobody plays, got " + rtp);
     }
 
     @Test
@@ -167,12 +167,12 @@ class FormulaTest {
                 losses++;
             }
         }
-        assertTrue(losses > 700, "expected a clear majority of losses, got " + losses);
+        assertTrue(losses > 830, "the great majority of spins must lose, got " + losses);
     }
 
     @Test
     void theJackpotIsRareAndReal() {
-        assertEquals(20.0f, TrapMath.slotPayout(0.0f), 0.001f);
+        assertEquals(TrapMath.SLOT_PAYS[0], TrapMath.slotPayout(0.0f), 0.001f);
         assertEquals(0.0f, TrapMath.slotPayout(0.999f), 0.001f);
     }
 

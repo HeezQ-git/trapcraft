@@ -207,8 +207,8 @@ public final class TrapMath {
      * and about three spins in four pay nothing at all. That gap between "I win
      * sometimes" and "I lose money overall" is the whole design.
      */
-    public static final float[] SLOT_ODDS = {0.008f, 0.030f, 0.080f, 0.140f};
-    public static final float[] SLOT_PAYS = {20.0f, 8.0f, 3.0f, 1.5f};
+    public static final float[] SLOT_ODDS = {0.003f, 0.012f, 0.035f, 0.100f};
+    public static final float[] SLOT_PAYS = {40.0f, 12.0f, 5.0f, 2.5f};
 
     /** @param roll a uniform 0..1 draw */
     public static float slotPayout(float roll) {

@@ -204,7 +204,7 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("4e. LUCKY STREAK\n\n"))
                 .append(body("A two-block cabinet. Needs headroom.\n\n"))
-                .append(body("Pull the lever. The payline is the middle row.\n\n"))
+                .append(body("Five reels. Matches run from the left along the middle row.\n\n"))
                 .append(warn("The house keeps about "
                         + Math.round((1.0f - TrapMath.slotReturnToPlayer()) * 100)
                         + "% of everything staked."))));
