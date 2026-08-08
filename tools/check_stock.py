@@ -7,6 +7,8 @@ doesn't have what you expected -- and neither logs anything useful:
   * A book line naming an enchantment that doesn't exist, or a level above its
     cap. `build()` counts it as "mod not present" and drops it, so a typo in
     "minecraft:featherfalling" costs you a shelf line and says nothing.
+  * A reel width that disagrees between TrapMath and SlotScreenHandler,
+    which throws mid-spin on a live server.
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
     below 2e, and the daily index can push a 2e line under that on a bad day.
     That is the "it's not rentable" complaint: you farm a bundle, walk to the
@@ -49,6 +51,35 @@ def vanilla_enchantments() -> dict[str, int]:
     return found
 
 
+def slot_reel() -> list[str]:
+    """The reel width must agree across three declarations in two files.
+
+    TrapMath draws symbol indices with rng.nextInt(SLOT_FACES) and
+    SlotScreenHandler looks them up in FACES and FACE_NAMES. If those ever
+    disagree the machine throws an ArrayIndexOutOfBounds mid-spin, which on a
+    live server means a player watching their stake vanish into a stack trace.
+    """
+    math = (ROOT / "src/main/java/dev/heezq/trapcraft/TrapMath.java").read_text()
+    screen = (ROOT / "src/main/java/dev/heezq/trapcraft/SlotScreenHandler.java").read_text()
+
+    declared = re.search(r"SLOT_FACES\s*=\s*(\d+)", math)
+    if not declared:
+        return ["SLOT_FACES not found in TrapMath -- this check has rotted"]
+    want = int(declared.group(1))
+
+    problems = []
+    for name, pattern in (("FACES", r"Item\[\]\s+FACES\s*=\s*\{(.*?)\}"),
+                          ("FACE_NAMES", r"String\[\]\s+FACE_NAMES\s*=\s*\{(.*?)\}")):
+        found = re.search(pattern, screen, re.S)
+        if not found:
+            problems.append(f"{name} not found in SlotScreenHandler")
+            continue
+        size = len([part for part in found.group(1).split(",") if part.strip()])
+        if size != want:
+            problems.append(f"{name} has {size} entries but SLOT_FACES is {want}")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -65,6 +96,8 @@ def main() -> int:
                      if not any(b[0] == name and int(b[1]) == spells[name] for b in books))
     if missing:
         print(f"note: no max-level book for {', '.join(missing)}")
+
+    problems.extend(slot_reel())
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:
