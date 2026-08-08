@@ -706,6 +706,108 @@ public final class TrapMath {
         return paid / spins;
     }
 
+    // --- roulette ---------------------------------------------------------------
+
+    /**
+     * A European wheel: one zero, not two.
+     *
+     * The American wheel's second zero doubles the house edge to 5.3%, which
+     * on a server where the slot machine keeps 2.4% would make the table next
+     * to it the worse bet for no reason a player could see. One zero puts
+     * every bet on this table at the same 2.7%, which is the nice property of
+     * roulette: straight up or red-black, the edge is identical and the choice
+     * is purely about how you want to lose it.
+     */
+    public static final int ROULETTE_POCKETS = 37;
+    /** A straight-up number pays 35 to 1, so 36 back including the stake. */
+    public static final int ROULETTE_STRAIGHT = 36;
+    /** The even-money bets pay 1 to 1, so 2 back. */
+    public static final int ROULETTE_EVEN_MONEY = 2;
+
+    private static final int[] REDS = {
+            1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36,
+    };
+
+    public static boolean rouletteRed(int pocket) {
+        for (int red : REDS) {
+            if (red == pocket) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean rouletteBlack(int pocket) {
+        return pocket != 0 && !rouletteRed(pocket);
+    }
+
+    /**
+     * What one bet returns on this pocket, per emerald staked.
+     *
+     * Zero is the house's pocket: it loses every outside bet, which is the
+     * entire edge. A bet named for a number wins only on that number.
+     *
+     * @param bet "red", "black", "odd", "even", "low", "high", or a number
+     * @return emeralds returned per emerald staked, including the stake
+     */
+    public static int rouletteReturn(String bet, int pocket) {
+        if (bet.equals("red")) {
+            return rouletteRed(pocket) ? ROULETTE_EVEN_MONEY : 0;
+        }
+        if (bet.equals("black")) {
+            return rouletteBlack(pocket) ? ROULETTE_EVEN_MONEY : 0;
+        }
+        if (pocket == 0) {
+            // Zero beats every outside bet. Straight-up on zero is handled by
+            // the number branch below and does win.
+            if (!bet.equals("0")) {
+                return 0;
+            }
+        }
+        switch (bet) {
+            case "odd":
+                return pocket % 2 == 1 ? ROULETTE_EVEN_MONEY : 0;
+            case "even":
+                return pocket != 0 && pocket % 2 == 0 ? ROULETTE_EVEN_MONEY : 0;
+            case "low":
+                return pocket >= 1 && pocket <= 18 ? ROULETTE_EVEN_MONEY : 0;
+            case "high":
+                return pocket >= 19 && pocket <= 36 ? ROULETTE_EVEN_MONEY : 0;
+            default:
+                try {
+                    return Integer.parseInt(bet) == pocket ? ROULETTE_STRAIGHT : 0;
+                } catch (NumberFormatException notANumber) {
+                    return 0;
+                }
+        }
+    }
+
+    /**
+     * Long-run return per emerald on one kind of bet.
+     *
+     * Exact rather than sampled -- there are only 37 outcomes, so summing them
+     * is both faster and more honest than a Monte Carlo. Every bet on a
+     * single-zero wheel comes out at 36/37; a test asserts exactly that,
+     * because a payout typo is otherwise invisible.
+     */
+    public static float rouletteReturnToPlayer(String bet) {
+        int total = 0;
+        for (int pocket = 0; pocket < ROULETTE_POCKETS; pocket++) {
+            total += rouletteReturn(bet, pocket);
+        }
+        return total / (float) ROULETTE_POCKETS;
+    }
+
+    /** Every bet a player can place, for tests and for the paytable. */
+    public static List<String> rouletteBets() {
+        List<String> bets = new ArrayList<>(
+                List.of("red", "black", "odd", "even", "low", "high"));
+        for (int number = 0; number < ROULETTE_POCKETS; number++) {
+            bets.add(String.valueOf(number));
+        }
+        return bets;
+    }
+
     // --- investments ----------------------------------------------------------
 
     /**

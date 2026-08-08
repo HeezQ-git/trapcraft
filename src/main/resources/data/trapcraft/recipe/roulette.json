@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GIG",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "I": "minecraft:iron_ingot",
+    "W": "minecraft:green_wool",
+    "P": "#minecraft:planks"
+  },
+  "result": {
+    "id": "trapcraft:roulette",
+    "count": 1
+  }
+}

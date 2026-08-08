@@ -9,6 +9,8 @@ doesn't have what you expected -- and neither logs anything useful:
     "minecraft:featherfalling" costs you a shelf line and says nothing.
   * A reel width that disagrees between TrapMath and SlotScreenHandler,
     which throws mid-spin on a live server.
+  * A roulette wheel missing a pocket, which lands the ball on one number
+    while the table pays out on another.
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
     below 2e, and the daily index can push a 2e line under that on a bad day.
     That is the "it's not rentable" complaint: you farm a bundle, walk to the
@@ -80,6 +82,34 @@ def slot_reel() -> list[str]:
     return problems
 
 
+def roulette_wheel() -> list[str]:
+    """The ball's path must be a real wheel: every pocket, exactly once.
+
+    RouletteScreenHandler animates the ball by walking WHEEL and lands it with
+    indexOnWheel(result). A missing pocket makes indexOnWheel fall back to 0,
+    so the ball would settle visibly on one number while the table paid out on
+    another -- the exact "shows one thing, pays another" failure the slot
+    machine was rebuilt to make impossible.
+    """
+    source = (ROOT / "src/main/java/dev/heezq/trapcraft/RouletteScreenHandler.java").read_text()
+    found = re.search(r"int\[\] WHEEL = \{(.*?)\};", source, re.S)
+    if not found:
+        return ["WHEEL not found in RouletteScreenHandler -- this check has rotted"]
+    pockets = [int(n) for n in re.findall(r"\d+", found.group(1))]
+
+    problems = []
+    if sorted(pockets) != list(range(37)):
+        missing = sorted(set(range(37)) - set(pockets))
+        extra = sorted(p for p in set(pockets) if pockets.count(p) > 1)
+        if missing:
+            problems.append(f"WHEEL is missing pockets {missing}")
+        if extra:
+            problems.append(f"WHEEL repeats pockets {extra}")
+        if not missing and not extra:
+            problems.append(f"WHEEL has {len(pockets)} entries, expected 37")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -98,6 +128,7 @@ def main() -> int:
         print(f"note: no max-level book for {', '.join(missing)}")
 
     problems.extend(slot_reel())
+    problems.extend(roulette_wheel())
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

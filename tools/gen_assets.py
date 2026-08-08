@@ -459,6 +459,7 @@ def lang() -> None:
         "item.trapcraft.nerve_tonic": "Nerve Tonic",
         "item.trapcraft.ledger": "The Ledger",
         "item.trapcraft.wallet": "Wallet",
+        "block.trapcraft.roulette": "Roulette Table",
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
@@ -1076,6 +1077,77 @@ def nerve_tonic_assets() -> None:
     })
 
 
+def roulette_model() -> dict:
+    """A waist-high table: legs, a felt top, a mahogany rim, and the wheel.
+
+    Built low and wide on purpose. The slot machine next to it is two blocks
+    tall, so a table you look DOWN at is what makes a room of both read as a
+    casino floor rather than a row of cabinets. The wheel head sits proud of
+    the felt with a brass hub, because a flat green square with a picture of a
+    wheel on it is a rug.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "felt": f"{NS}:block/roulette_felt",
+            "rim": f"{NS}:block/roulette_rim",
+            "wheel": f"{NS}:block/roulette_wheel",
+            "particle": f"{NS}:block/roulette_rim",
+        },
+        "elements": [
+            # Four legs, inset so the table reads as standing rather than as a
+            # solid cube painted to look like one.
+            box([2, 0, 2], [4, 9, 4], "rim"),
+            box([12, 0, 2], [14, 9, 4], "rim"),
+            box([2, 0, 12], [4, 9, 14], "rim"),
+            box([12, 0, 12], [14, 9, 14], "rim"),
+            # The top: felt inside a raised rim.
+            box([1, 9, 1], [15, 11, 15], "rim", up="rim", down="rim"),
+            box([2, 11, 2], [14, 11.5, 14], "felt", up="felt"),
+            # The wheel head, sunk into the felt and standing proud of it.
+            box([4, 11.5, 4], [12, 13, 12], "wheel", up="wheel", down="wheel"),
+            box([6.5, 13, 6.5], [9.5, 13.8, 9.5], "rim", up="rim"),
+        ],
+    }
+
+
+def roulette_assets() -> None:
+    put(f"assets/{NS}/models/block/roulette.json", roulette_model())
+    put(f"assets/{NS}/models/item/roulette.json", {"parent": f"{NS}:block/roulette"})
+    put(f"assets/{NS}/items/roulette.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/roulette"},
+    })
+    put(f"assets/{NS}/blockstates/roulette.json", {
+        "variants": {"": {"model": f"{NS}:block/roulette"}},
+    })
+
+    # Wool for the felt, planks for the table, iron for the wheel bearing and
+    # gold for the trim. Costs about what the slot machine does -- a casino
+    # should be a project, not a starter build.
+    put(f"data/{NS}/recipe/roulette.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["GIG", "WWW", "PPP"],
+        "key": {
+            "G": "minecraft:gold_ingot",
+            "I": "minecraft:iron_ingot",
+            "W": "minecraft:green_wool",
+            "P": "#minecraft:planks",
+        },
+        "result": {"id": f"{NS}:roulette", "count": 1},
+    })
+
+    put(f"data/{NS}/loot_table/blocks/roulette.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:roulette"}],
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+        }],
+    })
+
+
 def wallet_model() -> dict:
     """A fat leather pouch with a brass clasp and an emerald poking out.
 
@@ -1406,6 +1478,7 @@ def main() -> None:
     nerve_tonic_assets()
     ledger_assets()
     wallet_assets()
+    roulette_assets()
     phone_assets()
     stall_assets()
     slot_assets()

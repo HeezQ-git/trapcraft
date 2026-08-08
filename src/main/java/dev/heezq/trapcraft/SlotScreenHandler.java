@@ -38,7 +38,7 @@ import java.util.List;
  * way the return rate is a number anyone can check. It pays back 85% over
  * time, and roughly three spins in four pay nothing.
  */
-public class SlotScreenHandler extends ScreenHandler {
+public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playing {
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
 
@@ -385,6 +385,7 @@ public class SlotScreenHandler extends ScreenHandler {
     }
 
     /** Called each server tick while anything is moving. */
+    @Override
     public boolean tick() {
         flash++;
 

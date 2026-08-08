@@ -4,7 +4,6 @@ import eu.pb4.polymer.blocks.api.BlockModelType;
 import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -29,8 +28,6 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import xyz.nucleoid.packettweaker.PacketContext;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A machine that takes your emeralds and occasionally gives some back.
@@ -49,14 +46,6 @@ public class SlotMachineBlock extends Block implements PolymerBlock, PolymerText
     private final BlockState lowerCarrier;
     private final BlockState upperCarrier;
 
-    /**
-     * Machines mid-spin, ticked from one shared handler.
-     *
-     * The reels animate server-side and the screen is repainted each tick, so
-     * something has to drive them; a screen handler gets no tick of its own.
-     */
-    private static final List<SlotScreenHandler> SPINNING = new ArrayList<>();
-
     public SlotMachineBlock(Settings settings) {
         super(settings);
         this.lowerCarrier = TrapPolymer.requestOrFallback(
@@ -70,19 +59,9 @@ public class SlotMachineBlock extends Block implements PolymerBlock, PolymerText
         setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }
 
-    public static void register() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (!SPINNING.isEmpty()) {
-                SPINNING.removeIf(machine -> !machine.tick());
-            }
-        });
-    }
-
     /** Start ticking a machine that has just been pulled. */
     public static void watch(SlotScreenHandler machine) {
-        if (!SPINNING.contains(machine)) {
-            SPINNING.add(machine);
-        }
+        TrapTables.watch(machine);
     }
 
     @Override

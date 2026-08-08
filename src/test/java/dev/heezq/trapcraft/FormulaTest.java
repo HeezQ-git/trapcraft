@@ -427,6 +427,72 @@ class FormulaTest {
         return grid;
     }
 
+    // --- roulette -------------------------------------------------------------
+
+    @Test
+    void everyBetOnTheTableHasTheSameEdge() {
+        // The nice property of a single-zero wheel, and the one thing a payout
+        // typo would silently break: straight up or flat on red, the return is
+        // identical, so the choice is only about how you want to lose it.
+        float expected = 36.0f / 37.0f;
+        for (String bet : TrapMath.rouletteBets()) {
+            assertEquals(expected, TrapMath.rouletteReturnToPlayer(bet), 0.0001f,
+                    "bet '" + bet + "' is not priced like the rest of the table");
+        }
+    }
+
+    @Test
+    void theWheelIsHalfRedHalfBlackAndOneGreen() {
+        int reds = 0;
+        int blacks = 0;
+        for (int pocket = 0; pocket < TrapMath.ROULETTE_POCKETS; pocket++) {
+            if (TrapMath.rouletteRed(pocket)) {
+                reds++;
+            }
+            if (TrapMath.rouletteBlack(pocket)) {
+                blacks++;
+            }
+        }
+        assertEquals(18, reds);
+        assertEquals(18, blacks);
+        assertFalse(TrapMath.rouletteRed(0), "zero is green, not red");
+        assertFalse(TrapMath.rouletteBlack(0), "zero is green, not black");
+    }
+
+    @Test
+    void zeroTakesEveryOutsideBet() {
+        // Where the entire house edge comes from. If any of these ever pays,
+        // the table is a losing business.
+        for (String bet : List.of("red", "black", "odd", "even", "low", "high")) {
+            assertEquals(0, TrapMath.rouletteReturn(bet, 0),
+                    "'" + bet + "' must lose to zero");
+        }
+        assertEquals(TrapMath.ROULETTE_STRAIGHT, TrapMath.rouletteReturn("0", 0),
+                "but backing zero itself must pay");
+    }
+
+    @Test
+    void theHouseWinsOnRouletteToo() {
+        assertTrue(TrapMath.rouletteReturnToPlayer("red") < 1.0f);
+    }
+
+    @Test
+    void exactlyOneOfEachOppositePairWins() {
+        // No pocket may pay both red and black, or both odd and even. A wheel
+        // that pays both sides of a coin flip is a money printer.
+        for (int pocket = 1; pocket < TrapMath.ROULETTE_POCKETS; pocket++) {
+            assertTrue(TrapMath.rouletteReturn("red", pocket) == 0
+                            ^ TrapMath.rouletteReturn("black", pocket) == 0,
+                    "pocket " + pocket + " pays both red and black, or neither");
+            assertTrue(TrapMath.rouletteReturn("odd", pocket) == 0
+                            ^ TrapMath.rouletteReturn("even", pocket) == 0,
+                    "pocket " + pocket + " pays both odd and even, or neither");
+            assertTrue(TrapMath.rouletteReturn("low", pocket) == 0
+                            ^ TrapMath.rouletteReturn("high", pocket) == 0,
+                    "pocket " + pocket + " pays both halves, or neither");
+        }
+    }
+
     // --- investments ----------------------------------------------------------
 
     @Test

@@ -1097,6 +1097,84 @@ kkkkkkekkkkkkkkk
 """
 
 
+# --- the roulette table ---------------------------------------------------
+
+ROULETTE_PAL = {
+    "w": "#5a3a1e",     # mahogany rim
+    "W": "#7a5230",     # rim, lit
+    "d": "#3a2412",     # rim, shadow
+    "m": "#c9a227",     # brass
+    "M": "#f0cf5a",     # brass, lit
+    "g": "#1e6b3a",     # felt
+    "G": "#2a8c4c",     # felt, lit
+    "k": "#14472a",     # felt, shadow
+    "r": "#b02020",     # red pocket
+    "b": "#1a1a1a",     # black pocket
+    "s": "#c8ccd0",     # silver / ball
+    "S": "#f2f5f7",     # silver, lit
+}
+
+# The felt: green baize with a lighter worn patch where the chips go.
+ROULETTE_FELT = """
+kkkkkkkkkkkkkkkk
+kggggggggggggggk
+kgGGgggggggGGggk
+kggggggggggggggk
+kgggGGgggggggggk
+kggggggggggGggGk
+kgGggggggggggggk
+kgggggggGGggggGk
+kGggggggggggggGk
+kggggGggggggGggk
+kgggggggggggkggk
+kGgggggkgggggggk
+kggGgggggggggGgk
+kgggggggggggkggk
+kggggggggggggggk
+kkkkkkkkkkkkkkkk
+"""
+
+# The rim: polished wood with brass studs at the corners.
+ROULETTE_RIM = """
+mMwwwwwwwwwwwwMm
+MWWWWWWWWWWWWWWM
+wWWdWWWWWWWdWWWw
+wWWWWWWdWWWWWWWw
+wWdWWWWWWWWWdWWw
+wWWWWWdWWWWWWWWw
+wWWWWWWWWWdWWWWw
+wWdWWWWWWWWWWWWw
+wWWWWWWWWdWWWWWw
+wWWWdWWWWWWWWdWw
+wWWWWWWWWWWWWWWw
+wWWdWWWWdWWWWWWw
+wWWWWWWWWWWWdWWw
+wWWWWdWWWWWWWWWw
+MWWWWWWWWWWWWWWM
+mMwwwwwwwwwwwwMm
+"""
+
+# The wheel head: alternating red and black wedges around a silver hub, with
+# the ball resting in one pocket.
+ROULETTE_WHEEL = """
+....wwwwwwww....
+..wwrrbbrrbbww..
+.wwrrbbrrbbrrww.
+wwrrbbrrbbrrbbww
+wrrbbss....ssbbw
+wrbbsSSSSSSSSsbw
+wbbsSSssssssSSsw
+wbsSSssSSSSssSSw
+wbsSSssSSSSssSSw
+wbbsSSssssssSSsw
+wrbbsSSSSSSSSsbw
+wrrbbss....ssbbw
+wwrrbbrrbbrrbbww
+.wwrrbbrrbbrrww.
+..wwrrbbrrbbww..
+....wwwwwwww....
+"""
+
 # --- the wallet -----------------------------------------------------------
 
 WALLET_PAL = {
@@ -1766,6 +1844,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(ROULETTE_FELT, ROULETTE_PAL), "block", "roulette_felt.png")
+    write(render(ROULETTE_RIM, ROULETTE_PAL), "block", "roulette_rim.png")
+    write(render(ROULETTE_WHEEL, ROULETTE_PAL), "block", "roulette_wheel.png")
     write(render(WALLET_BODY, WALLET_PAL), "item", "wallet_body.png")
     write(render(WALLET_FLAP, WALLET_PAL), "item", "wallet_flap.png")
     write(render(WALLET_COIN, WALLET_PAL), "item", "wallet_coin.png")

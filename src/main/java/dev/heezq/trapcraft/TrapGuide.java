@@ -243,7 +243,37 @@ public final class TrapGuide {
                 .append(hint("A shape pays once, not for its own lines too."))));
 
         pages.add(page(Text.empty()
-                .append(title("4h. THE HOUSE\n\n"))
+                .append(title("4h. ROULETTE\n\n"))
+                .append(item("Gold  Iron  Gold\nGreen Green Green\nPlank Plank Plank\n\n"))
+                .append(body("A table, not a cabinet. Green wool.\n\n"))
+                .append(hint("Any planks will do."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4h2. THE FELT\n\n"))
+                .append(body("Click a number or an outside bet to put a chip "
+                        + "down. As many as you like.\n\n"))
+                .append(body("Right-click takes one back.\n\n"))
+                .append(hint("The chip button sets how much each click is."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4h3. ONE ZERO\n\n"))
+                .append(body("A number pays " + (TrapMath.ROULETTE_STRAIGHT - 1)
+                        + " to 1. Red, black, odd, even and the halves pay "
+                        + "even money.\n\n"))
+                .append(warn("Zero takes every outside bet. That is the "
+                        + "whole edge."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4h4. THE SAME BET\n\n"))
+                .append(body("Every bet on the table returns "
+                        + Math.round(TrapMath.rouletteReturnToPlayer("red") * 100)
+                        + "%.\n\n"))
+                .append(body("Straight up or flat on red, the edge is "
+                        + "identical.\n\n"))
+                .append(hint("Shift-click SPIN repeats your last bet."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4i. THE HOUSE\n\n"))
                 .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
                         + " spins in 100 pay, and never less than "
                         + "your stake.\n\n"))
