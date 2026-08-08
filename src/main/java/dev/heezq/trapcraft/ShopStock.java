@@ -1,12 +1,20 @@
 package dev.heezq.trapcraft;
 
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +43,34 @@ public final class ShopStock {
         }
     }
 
-    public record Entry(Category category, Item item, String id, int count, int base) {
+    /**
+     * One line of the catalogue.
+     *
+     * The prototype is the stack itself, built once at startup, because a line
+     * is not always just an item and a number: an enchanted book carries the
+     * enchantment in a component, and "Sharpness V" and "Sharpness I" are the
+     * same item at different prices. Buying copies the prototype, selling
+     * compares against it, and the shelf shows it -- one source of truth, so
+     * the shelf can't advertise something the till won't accept.
+     */
+    public record Entry(Category category, Item item, String id, int count, int base,
+                        ItemStack prototype, String label) {
+
+        public ItemStack stack() {
+            return prototype.copy();
+        }
+
+        /** Would this stack in a player's bag count towards selling this line? */
+        public boolean matches(ItemStack other) {
+            if (!other.isOf(item)) {
+                return false;
+            }
+            var wanted = prototype.get(DataComponentTypes.STORED_ENCHANTMENTS);
+            if (wanted == null) {
+                return true;
+            }
+            return Objects.equals(other.get(DataComponentTypes.STORED_ENCHANTMENTS), wanted);
+        }
     }
 
     public static final Category BUILDING = new Category("building", "Building",
@@ -52,11 +87,13 @@ public final class ShopStock {
             "minecraft:iron_ingot", Formatting.AQUA, "Ore, ingots, drops");
     public static final Category UTILITY = new Category("utility", "Utility",
             "minecraft:redstone", Formatting.YELLOW, "Redstone and hardware");
+    public static final Category ENCHANTS = new Category("enchants", "Enchantments",
+            "minecraft:enchanted_book", Formatting.LIGHT_PURPLE, "Books, bought not ground for");
     public static final Category RARE = new Category("rare", "The Good Stuff",
             "minecraft:nether_star", Formatting.DARK_PURPLE, "If you can afford it");
 
     public static final List<Category> CATEGORIES =
-            List.of(BUILDING, WOOD, DECOR, FARMING, FOOD, MATERIALS, UTILITY, RARE);
+            List.of(BUILDING, WOOD, DECOR, FARMING, FOOD, MATERIALS, UTILITY, ENCHANTS, RARE);
 
     /**
      * Items the market must never trade, at any price.
@@ -78,11 +115,17 @@ public final class ShopStock {
         if (CURRENCY.contains(id)) {
             throw new IllegalArgumentException("the market cannot trade its own currency: " + id);
         }
-        DECLARED.put(id, new Object[]{category, count, base});
+        DECLARED.put(id, new Object[]{category, count, base, null, 0});
+    }
+
+    /** An enchanted book line. Keyed separately so levels don't collide. */
+    private static void book(String enchantment, int level, int base) {
+        DECLARED.put("minecraft:enchanted_book#" + enchantment + "#" + level,
+                new Object[]{ENCHANTS, 1, base, enchantment, level});
     }
 
     private static Item resolve(String id, Item fallback) {
-        Identifier key = Identifier.tryParse(id);
+        Identifier key = Identifier.tryParse(id.contains("#") ? id.substring(0, id.indexOf('#')) : id);
         if (key == null) {
             return fallback;
         }
@@ -96,11 +139,14 @@ public final class ShopStock {
      * modded id to air, because none of them exist yet when this class first
      * loads.
      */
-    public static void build() {
+    public static void build(MinecraftServer server) {
         if (built) {
             return;
         }
         built = true;
+        // Enchantments are a datapack registry, so they only exist once a world
+        // is loaded -- there is no static Enchantments.SHARPNESS to reference.
+        Registry<Enchantment> spells = server.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
         int missing = 0;
         for (var declaration : DECLARED.entrySet()) {
             Item item = resolve(declaration.getKey(), Items.AIR);
@@ -109,8 +155,26 @@ public final class ShopStock {
                 continue;
             }
             Object[] spec = declaration.getValue();
+            int count = (Integer) spec[1];
+            String enchantment = (String) spec[3];
+            ItemStack prototype = new ItemStack(item, count);
+            String label = item.getName().getString();
+
+            if (enchantment != null) {
+                var found = spells.getEntry(Identifier.of(enchantment));
+                if (found.isEmpty()) {
+                    missing++;
+                    continue;
+                }
+                int level = (Integer) spec[4];
+                var written = new ItemEnchantmentsComponent.Builder(ItemEnchantmentsComponent.DEFAULT);
+                written.add(found.get(), level);
+                prototype.set(DataComponentTypes.STORED_ENCHANTMENTS, written.build());
+                label = Enchantment.getName(found.get(), level).getString();
+            }
+
             STOCK.add(new Entry((Category) spec[0], item, declaration.getKey(),
-                    (Integer) spec[1], (Integer) spec[2]));
+                    count, (Integer) spec[2], prototype, label));
         }
         TrapCraft.LOGGER.info("market: {} lines stocked, {} skipped (mod not present)",
                 STOCK.size(), missing);
@@ -124,6 +188,7 @@ public final class ShopStock {
         kitchen();
         materials();
         utility();
+        enchantments();
         theGoodStuff();
     }
 
@@ -275,91 +340,101 @@ public final class ShopStock {
         add(c, "alcocraftplus:hop_seeds", 8, 10);
     }
 
+    /**
+     * Food, priced to be worth farming.
+     *
+     * Smaller lots at higher prices than the raw ingredients suggest, because
+     * the sell side is 35% and a realistic price on a stack of bread means a
+     * day in the fields pays about four emeralds. Food is the one thing on this
+     * server that renews itself, so it earns like a crop rather than like
+     * gravel. The luxuries -- golden apples, cake -- keep their old prices;
+     * they are already anchored against the top shelf.
+     */
     private static void kitchen() {
         Category c = FOOD;
-        add(c, "minecraft:bread", 16, 6);
-        add(c, "minecraft:cooked_beef", 12, 10);
-        add(c, "minecraft:cooked_porkchop", 12, 10);
-        add(c, "minecraft:cooked_chicken", 12, 8);
-        add(c, "minecraft:cooked_mutton", 12, 9);
-        add(c, "minecraft:cooked_rabbit", 12, 9);
-        add(c, "minecraft:cooked_salmon", 12, 9);
-        add(c, "minecraft:cooked_cod", 12, 8);
-        add(c, "minecraft:baked_potato", 16, 6);
-        add(c, "minecraft:pumpkin_pie", 8, 12);
+        add(c, "minecraft:bread", 8, 16);
+        add(c, "minecraft:cooked_beef", 6, 26);
+        add(c, "minecraft:cooked_porkchop", 6, 26);
+        add(c, "minecraft:cooked_chicken", 6, 21);
+        add(c, "minecraft:cooked_mutton", 6, 23);
+        add(c, "minecraft:cooked_rabbit", 6, 23);
+        add(c, "minecraft:cooked_salmon", 6, 23);
+        add(c, "minecraft:cooked_cod", 6, 21);
+        add(c, "minecraft:baked_potato", 8, 16);
+        add(c, "minecraft:pumpkin_pie", 4, 31);
         add(c, "minecraft:cake", 1, 14);
-        add(c, "minecraft:cookie", 16, 6);
-        add(c, "minecraft:apple", 16, 7);
-        add(c, "minecraft:melon_slice", 16, 5);
-        add(c, "minecraft:dried_kelp", 16, 5);
-        add(c, "minecraft:mushroom_stew", 4, 8);
-        add(c, "minecraft:rabbit_stew", 4, 14);
-        add(c, "minecraft:beetroot_soup", 4, 9);
+        add(c, "minecraft:cookie", 8, 16);
+        add(c, "minecraft:apple", 8, 18);
+        add(c, "minecraft:melon_slice", 8, 13);
+        add(c, "minecraft:dried_kelp", 8, 13);
+        add(c, "minecraft:mushroom_stew", 2, 21);
+        add(c, "minecraft:rabbit_stew", 2, 36);
+        add(c, "minecraft:beetroot_soup", 2, 23);
         add(c, "minecraft:suspicious_stew", 2, 18);
         add(c, "minecraft:golden_carrot", 8, 46);
         add(c, "minecraft:golden_apple", 1, 60);
         add(c, "minecraft:milk_bucket", 1, 12);
-        add(c, "minecraft:honey_bottle", 4, 14);
-        add(c, "minecraft:sugar", 16, 5);
+        add(c, "minecraft:honey_bottle", 2, 36);
+        add(c, "minecraft:sugar", 8, 13);
 
-        add(c, "farmersdelight:hamburger", 4, 18);
-        add(c, "farmersdelight:chicken_sandwich", 4, 16);
-        add(c, "farmersdelight:bacon_sandwich", 4, 17);
-        add(c, "farmersdelight:egg_sandwich", 4, 14);
-        add(c, "farmersdelight:beef_stew", 4, 20);
-        add(c, "farmersdelight:chicken_soup", 4, 18);
-        add(c, "farmersdelight:vegetable_soup", 4, 16);
-        add(c, "farmersdelight:fish_stew", 4, 18);
-        add(c, "farmersdelight:pumpkin_soup", 4, 16);
-        add(c, "farmersdelight:noodle_soup", 4, 19);
-        add(c, "farmersdelight:fried_rice", 4, 17);
-        add(c, "farmersdelight:mixed_salad", 4, 15);
-        add(c, "farmersdelight:roast_chicken", 2, 26);
-        add(c, "farmersdelight:honey_glazed_ham", 2, 28);
-        add(c, "farmersdelight:shepherds_pie", 2, 26);
-        add(c, "farmersdelight:steak_and_potatoes", 2, 27);
-        add(c, "farmersdelight:stuffed_pumpkin", 2, 24);
-        add(c, "farmersdelight:apple_pie_slice", 8, 12);
-        add(c, "farmersdelight:sweet_berry_cheesecake_slice", 8, 13);
-        add(c, "farmersdelight:chocolate_pie_slice", 8, 13);
-        add(c, "farmersdelight:fruit_salad", 4, 14);
-        add(c, "farmersdelight:melon_popsicle", 8, 10);
-        add(c, "farmersdelight:hot_cocoa", 4, 12);
-        add(c, "farmersdelight:apple_cider", 4, 13);
-        add(c, "farmersdelight:melon_juice", 4, 11);
-        add(c, "farmersdelight:cooked_bacon", 12, 11);
-        add(c, "farmersdelight:cooked_rice", 8, 10);
-        add(c, "farmersdelight:pie_crust", 8, 9);
-        add(c, "farmersdelight:wheat_dough", 8, 7);
+        add(c, "farmersdelight:hamburger", 2, 47);
+        add(c, "farmersdelight:chicken_sandwich", 2, 42);
+        add(c, "farmersdelight:bacon_sandwich", 2, 44);
+        add(c, "farmersdelight:egg_sandwich", 2, 36);
+        add(c, "farmersdelight:beef_stew", 2, 52);
+        add(c, "farmersdelight:chicken_soup", 2, 47);
+        add(c, "farmersdelight:vegetable_soup", 2, 42);
+        add(c, "farmersdelight:fish_stew", 2, 47);
+        add(c, "farmersdelight:pumpkin_soup", 2, 42);
+        add(c, "farmersdelight:noodle_soup", 2, 49);
+        add(c, "farmersdelight:fried_rice", 2, 44);
+        add(c, "farmersdelight:mixed_salad", 2, 39);
+        add(c, "farmersdelight:roast_chicken", 1, 68);
+        add(c, "farmersdelight:honey_glazed_ham", 1, 73);
+        add(c, "farmersdelight:shepherds_pie", 1, 68);
+        add(c, "farmersdelight:steak_and_potatoes", 1, 70);
+        add(c, "farmersdelight:stuffed_pumpkin", 1, 62);
+        add(c, "farmersdelight:apple_pie_slice", 4, 31);
+        add(c, "farmersdelight:sweet_berry_cheesecake_slice", 4, 34);
+        add(c, "farmersdelight:chocolate_pie_slice", 4, 34);
+        add(c, "farmersdelight:fruit_salad", 2, 36);
+        add(c, "farmersdelight:melon_popsicle", 4, 26);
+        add(c, "farmersdelight:hot_cocoa", 2, 31);
+        add(c, "farmersdelight:apple_cider", 2, 34);
+        add(c, "farmersdelight:melon_juice", 2, 29);
+        add(c, "farmersdelight:cooked_bacon", 6, 29);
+        add(c, "farmersdelight:cooked_rice", 4, 26);
+        add(c, "farmersdelight:pie_crust", 4, 23);
+        add(c, "farmersdelight:wheat_dough", 4, 18);
 
-        add(c, "culturaldelights:beef_burrito", 4, 20);
-        add(c, "culturaldelights:chicken_taco", 4, 17);
-        add(c, "culturaldelights:fish_taco", 4, 17);
-        add(c, "culturaldelights:eggplant_burger", 4, 18);
-        add(c, "culturaldelights:avocado_toast", 4, 15);
-        add(c, "culturaldelights:hearty_salad", 4, 16);
-        add(c, "culturaldelights:spicy_curry", 4, 21);
-        add(c, "culturaldelights:elote", 4, 13);
-        add(c, "culturaldelights:popcorn", 8, 9);
-        add(c, "culturaldelights:tortilla", 8, 8);
-        add(c, "culturaldelights:tortilla_chips", 8, 9);
-        add(c, "culturaldelights:rice_ball", 8, 11);
-        add(c, "culturaldelights:cooked_calamari", 8, 14);
+        add(c, "culturaldelights:beef_burrito", 2, 52);
+        add(c, "culturaldelights:chicken_taco", 2, 44);
+        add(c, "culturaldelights:fish_taco", 2, 44);
+        add(c, "culturaldelights:eggplant_burger", 2, 47);
+        add(c, "culturaldelights:avocado_toast", 2, 39);
+        add(c, "culturaldelights:hearty_salad", 2, 42);
+        add(c, "culturaldelights:spicy_curry", 2, 55);
+        add(c, "culturaldelights:elote", 2, 34);
+        add(c, "culturaldelights:popcorn", 4, 23);
+        add(c, "culturaldelights:tortilla", 4, 21);
+        add(c, "culturaldelights:tortilla_chips", 4, 23);
+        add(c, "culturaldelights:rice_ball", 4, 29);
+        add(c, "culturaldelights:cooked_calamari", 4, 36);
 
-        add(c, "rusticdelight:pancake", 8, 12);
-        add(c, "rusticdelight:honey_pancake", 8, 14);
-        add(c, "rusticdelight:chocolate_pancake", 8, 14);
-        add(c, "rusticdelight:coffee", 4, 12);
-        add(c, "rusticdelight:milk_coffee", 4, 13);
-        add(c, "rusticdelight:honey_coffee", 4, 14);
-        add(c, "rusticdelight:fried_chicken", 4, 19);
-        add(c, "rusticdelight:potato_salad", 4, 14);
-        add(c, "rusticdelight:spring_rolls", 4, 16);
-        add(c, "rusticdelight:fried_dumplings", 4, 16);
-        add(c, "rusticdelight:bell_pepper_soup", 4, 17);
-        add(c, "rusticdelight:sweet_salad", 4, 15);
-        add(c, "rusticdelight:cooking_oil", 4, 10);
-        add(c, "rusticdelight:syrup", 4, 11);
+        add(c, "rusticdelight:pancake", 4, 31);
+        add(c, "rusticdelight:honey_pancake", 4, 36);
+        add(c, "rusticdelight:chocolate_pancake", 4, 36);
+        add(c, "rusticdelight:coffee", 2, 31);
+        add(c, "rusticdelight:milk_coffee", 2, 34);
+        add(c, "rusticdelight:honey_coffee", 2, 36);
+        add(c, "rusticdelight:fried_chicken", 2, 49);
+        add(c, "rusticdelight:potato_salad", 2, 36);
+        add(c, "rusticdelight:spring_rolls", 2, 42);
+        add(c, "rusticdelight:fried_dumplings", 2, 42);
+        add(c, "rusticdelight:bell_pepper_soup", 2, 44);
+        add(c, "rusticdelight:sweet_salad", 2, 39);
+        add(c, "rusticdelight:cooking_oil", 2, 26);
+        add(c, "rusticdelight:syrup", 2, 29);
     }
 
     private static void materials() {
@@ -468,6 +543,78 @@ public final class ShopStock {
         add(c, "minecraft:boat", 1, 8);
     }
 
+    /**
+     * Books, priced against the grind they replace.
+     *
+     * The bands are effort, not power: a curse is worth what someone will pay
+     * to be rid of it, a situational book is an afternoon, and the ones people
+     * actually chase -- Mending, Fortune III, Protection IV -- cost about what
+     * a fat contract pays. Deliberately not cheap enough to skip the enchanting
+     * table, and deliberately not so dear that the table is the only route.
+     *
+     * Levels below the cap are listed only where somebody would genuinely buy
+     * one; nobody wants Sharpness I on a shelf next to Sharpness V.
+     */
+    private static void enchantments() {
+        // The chase list.
+        book("minecraft:mending", 1, 340);
+        book("minecraft:fortune", 3, 300);
+        book("minecraft:fortune", 1, 90);
+        book("minecraft:silk_touch", 1, 260);
+        book("minecraft:infinity", 1, 250);
+        book("minecraft:efficiency", 5, 270);
+        book("minecraft:efficiency", 2, 70);
+        book("minecraft:protection", 4, 290);
+        book("minecraft:protection", 1, 80);
+        book("minecraft:unbreaking", 3, 210);
+        book("minecraft:unbreaking", 1, 60);
+        book("minecraft:looting", 3, 260);
+        book("minecraft:looting", 1, 75);
+        book("minecraft:sharpness", 5, 240);
+        book("minecraft:sharpness", 2, 70);
+        book("minecraft:power", 5, 230);
+        book("minecraft:power", 2, 65);
+
+        // Worth having, nobody loses sleep over it.
+        book("minecraft:fire_protection", 4, 160);
+        book("minecraft:blast_protection", 4, 190);
+        book("minecraft:projectile_protection", 4, 165);
+        book("minecraft:feather_falling", 4, 200);
+        book("minecraft:feather_falling", 2, 60);
+        book("minecraft:respiration", 3, 140);
+        book("minecraft:aqua_affinity", 1, 120);
+        book("minecraft:depth_strider", 3, 155);
+        book("minecraft:frost_walker", 2, 145);
+        book("minecraft:soul_speed", 3, 175);
+        book("minecraft:swift_sneak", 3, 195);
+        book("minecraft:thorns", 3, 150);
+        book("minecraft:fire_aspect", 2, 145);
+        book("minecraft:knockback", 2, 95);
+        book("minecraft:sweeping_edge", 3, 150);
+        book("minecraft:smite", 5, 130);
+        book("minecraft:bane_of_arthropods", 5, 110);
+        book("minecraft:punch", 2, 105);
+        book("minecraft:flame", 1, 150);
+        book("minecraft:luck_of_the_sea", 3, 170);
+        book("minecraft:lure", 3, 155);
+        book("minecraft:quick_charge", 3, 160);
+        book("minecraft:piercing", 4, 145);
+        book("minecraft:multishot", 1, 165);
+
+        // Trident and mace work: rarer to roll, so dearer to buy.
+        book("minecraft:loyalty", 3, 210);
+        book("minecraft:channeling", 1, 240);
+        book("minecraft:impaling", 5, 195);
+        book("minecraft:riptide", 3, 200);
+        book("minecraft:density", 5, 215);
+        book("minecraft:breach", 4, 225);
+        book("minecraft:wind_burst", 3, 280);
+
+        // Sold as curiosities. Somebody always buys one.
+        book("minecraft:binding_curse", 1, 25);
+        book("minecraft:vanishing_curse", 1, 20);
+    }
+
     private static void theGoodStuff() {
         Category c = RARE;
         add(c, "minecraft:diamond_block", 1, 380);
@@ -510,14 +657,5 @@ public final class ShopStock {
 
     public static List<Entry> of(Category category) {
         return STOCK.stream().filter(entry -> entry.category() == category).toList();
-    }
-
-    public static Entry find(Item item) {
-        for (Entry entry : STOCK) {
-            if (entry.item() == item) {
-                return entry;
-            }
-        }
-        return null;
     }
 }

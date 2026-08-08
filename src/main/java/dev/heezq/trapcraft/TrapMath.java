@@ -123,8 +123,20 @@ public final class TrapMath {
     /** How far the index may swing on supply alone. */
     public static final float INDEX_MIN = 0.65f;
     public static final float INDEX_MAX = 1.85f;
-    /** How far a single item may drift on a given day, either way. */
+    /** How far a single item may drift on its own, either way. */
     public static final float DRIFT = 0.18f;
+    /** Beats one wobble lasts before the next one is aimed for. */
+    public static final int DRIFT_WINDOW = 8;
+    /** How far one lot traded moves that item's own price. */
+    public static final float IMPACT = 0.022f;
+    /** How far order flow may push one item, either way. */
+    public static final float PRESSURE_CAP = 0.60f;
+    /** What survives one beat: a half-life of about eleven. */
+    public static final float PRESSURE_DECAY = 0.94f;
+    /** Below this, order flow is called spent and forgotten. */
+    public static final float PRESSURE_FLOOR = 0.004f;
+    /** How much of a transaction lands on the money supply immediately. */
+    public static final float FLOW_WEIGHT = 0.25f;
     /** What a sale returns, as a share of the buy price. */
     public static final float SELL_RATE = 0.35f;
 
@@ -146,19 +158,85 @@ public final class TrapMath {
     }
 
     /**
-     * One item's wobble for one day, as a multiplier around 1.
+     * One item's wobble right now, as a multiplier around 1.
      *
-     * Deterministic from (day, item) so every player is quoted the same price
-     * on the same day and it stays put until tomorrow -- a shop whose numbers
-     * change while you look at them is a slot machine. Per ITEM rather than
-     * per day, so some things are up while others are down and there is a
-     * reason to read the board.
+     * Each item is always walking from one random target to the next, a window
+     * of beats apart, eased so it arrives and leaves gently. That is the
+     * difference between a price list and a market: come back in a minute and
+     * copper has moved, and it moved in the direction it was already going.
+     *
+     * Deterministic from (beat, item), so two players at the same stall are
+     * quoted the same number and can argue about it. Per ITEM rather than per
+     * beat, so some things are climbing while others slide and the board is
+     * worth reading.
      */
-    public static float dailyDrift(long day, String itemId) {
-        int hash = mix((int) day * 31 + itemId.hashCode());
+    public static float drift(long beat, String itemId) {
+        long window = Math.floorDiv(beat, DRIFT_WINDOW);
+        float phase = Math.floorMod(beat, (long) DRIFT_WINDOW) / (float) DRIFT_WINDOW;
+        float from = wobble(window, itemId);
+        float to = wobble(window + 1, itemId);
+        // Smoothstep: no kink at the handover, so nothing lurches on the beat
+        // a window rolls over.
+        return from + (to - from) * (phase * phase * (3.0f - 2.0f * phase));
+    }
+
+    /**
+     * One deterministic wobble around 1, from any seed and key.
+     *
+     * Also used for things that need a number nobody can reroll -- an
+     * investment's payout is drawn from the day it matures, so reloading the
+     * world until you like it isn't a strategy.
+     */
+    public static float wobble(long seed, String key) {
+        int hash = mix((int) seed * 31 + key.hashCode());
         // 0..1 from the low bits, then mapped onto +/- DRIFT.
         float unit = (hash >>> 8 & 0xFFFF) / (float) 0xFFFF;
         return 1.0f + (unit * 2.0f - 1.0f) * DRIFT;
+    }
+
+    /**
+     * Where one item's price sits after the orders that just went through it.
+     *
+     * Buying pushes a price up and selling pushes it down, immediately and
+     * only for that line. This is the part of the market a player can actually
+     * feel: clear the shelf of diamonds and the next diamond costs more, dump
+     * forty lots of wheat and wheat is worth less by the time you walk back.
+     *
+     * Capped, because the alternative is a player with deep pockets moving a
+     * price to zero or to the moon and breaking the shop for everyone else.
+     */
+    public static float pressureAfter(float pressure, int lots, boolean buying) {
+        float moved = pressure + (buying ? 1 : -1) * lots * IMPACT;
+        return Math.max(-PRESSURE_CAP, Math.min(PRESSURE_CAP, moved));
+    }
+
+    /**
+     * One beat of the market forgetting what you did.
+     *
+     * Snapped to zero at the bottom rather than approaching it forever, so a
+     * line that has settled can be dropped from the books instead of being
+     * carried as 0.0001 for the rest of the world's life.
+     */
+    public static float relax(float pressure) {
+        float eased = pressure * PRESSURE_DECAY;
+        return Math.abs(eased) < PRESSURE_FLOOR ? 0.0f : eased;
+    }
+
+    /** Order flow as a price multiplier. */
+    public static float flowFactor(float pressure) {
+        return 1.0f + pressure;
+    }
+
+    /**
+     * The money supply after emeralds change hands.
+     *
+     * Only a share lands at once: the rest shows up when the supply is next
+     * sampled from what people are actually carrying. Without the damping a
+     * single netherite purchase would move every price on the board by a
+     * third, which reads as a bug rather than as a market.
+     */
+    public static float circulated(float supply, int delta) {
+        return Math.max(0.0f, supply + delta * FLOW_WEIGHT);
     }
 
     /** Deterministic scramble, so neighbouring days don't produce neighbouring prices. */
@@ -171,8 +249,8 @@ public final class TrapMath {
     }
 
     /** Never free, whatever the market does. */
-    public static int buyPrice(int base, float index, float drift) {
-        return Math.max(1, Math.round(base * index * drift));
+    public static int buyPrice(int base, float index, float drift, float flow) {
+        return Math.max(1, Math.round(base * index * drift * flow));
     }
 
     /**
@@ -207,8 +285,106 @@ public final class TrapMath {
      * and about three spins in four pay nothing at all. That gap between "I win
      * sometimes" and "I lose money overall" is the whole design.
      */
-    public static final float[] SLOT_ODDS = {0.003f, 0.012f, 0.035f, 0.100f};
-    public static final float[] SLOT_PAYS = {40.0f, 12.0f, 5.0f, 2.5f};
+    public static final float[] SLOT_ODDS = {0.004f, 0.026f, 0.270f};
+    public static final float[] SLOT_PAYS = {50.0f, 8.0f, 1.5f};
+    /** Run length each tier corresponds to, longest first. */
+    public static final int[] SLOT_RUNS = {5, 4, 3};
+
+    /** How often a spin pays anything at all. */
+    public static float slotWinChance() {
+        float chance = 0;
+        for (float odds : SLOT_ODDS) {
+            chance += odds;
+        }
+        return chance;
+    }
+
+    /** The grid is square. */
+    public static final int SLOT_SIZE = 5;
+
+    /**
+     * Every line a win can sit on: rows, columns, both diagonals.
+     *
+     * Twelve lines rather than one payline. A 5x5 window where only the middle
+     * row counted meant twenty of the twenty-five cells were decoration, and
+     * decoration full of accidental pairs reads as a machine that owes you
+     * money and won't pay.
+     */
+    public static int[][] slotLines() {
+        int[][] lines = new int[SLOT_SIZE * 2 + 2][SLOT_SIZE];
+        int at = 0;
+        for (int row = 0; row < SLOT_SIZE; row++) {
+            for (int col = 0; col < SLOT_SIZE; col++) {
+                lines[at][col] = row * SLOT_SIZE + col;
+            }
+            at++;
+        }
+        for (int col = 0; col < SLOT_SIZE; col++) {
+            for (int row = 0; row < SLOT_SIZE; row++) {
+                lines[at][row] = row * SLOT_SIZE + col;
+            }
+            at++;
+        }
+        for (int i = 0; i < SLOT_SIZE; i++) {
+            lines[at][i] = i * SLOT_SIZE + i;
+            lines[at + 1][i] = i * SLOT_SIZE + (SLOT_SIZE - 1 - i);
+        }
+        return lines;
+    }
+
+    /** Longest run of identical symbols on one line, and where it starts. */
+    public static int[] longestRun(int[] grid, int[] line) {
+        int best = 1;
+        int bestStart = 0;
+        int run = 1;
+        int start = 0;
+        for (int i = 1; i < line.length; i++) {
+            if (grid[line[i]] == grid[line[i - 1]]) {
+                run++;
+            } else {
+                run = 1;
+                start = i;
+            }
+            if (run > best) {
+                best = run;
+                bestStart = start;
+            }
+        }
+        return new int[]{best, bestStart};
+    }
+
+    /**
+     * The best win on the board: its cells, or an empty array for a loss.
+     *
+     * Reading the grid rather than trusting what was intended means the
+     * highlight can never disagree with the payout -- if the cells light up,
+     * they are the cells that paid.
+     */
+    public static int[] slotWinningCells(int[] grid) {
+        int bestRun = 0;
+        int[] bestCells = new int[0];
+        for (int[] line : slotLines()) {
+            int[] found = longestRun(grid, line);
+            if (found[0] > bestRun) {
+                bestRun = found[0];
+                bestCells = new int[found[0]];
+                for (int i = 0; i < found[0]; i++) {
+                    bestCells[i] = line[found[1] + i];
+                }
+            }
+        }
+        return bestRun >= SLOT_RUNS[SLOT_RUNS.length - 1] ? bestCells : new int[0];
+    }
+
+    /** What a run of this length pays. Zero if it isn't long enough. */
+    public static float slotPayForRun(int run) {
+        for (int tier = 0; tier < SLOT_RUNS.length; tier++) {
+            if (run >= SLOT_RUNS[tier]) {
+                return SLOT_PAYS[tier];
+            }
+        }
+        return 0.0f;
+    }
 
     /** @param roll a uniform 0..1 draw */
     public static float slotPayout(float roll) {

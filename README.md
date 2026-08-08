@@ -37,6 +37,7 @@ Four checks, all offline and all fast:
 | `python3 tools/check_models.py` | typo'd texture refs, out-of-range elements |
 | `python3 tools/check_pages.py` | guide pages that would silently truncate |
 | `python3 tools/check_shaders.py` | post-effect JSON |
+| `python3 tools/check_stock.py` | book lines that drop silently, goods too cheap to sell |
 
 ## The loop
 

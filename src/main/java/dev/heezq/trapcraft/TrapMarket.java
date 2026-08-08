@@ -12,26 +12,49 @@ import net.minecraft.util.WorldSavePath;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * The market: what things cost today, and why.
+ * The market: what things cost right now, and why.
  *
- * Two forces. **Supply** is the money in circulation, smoothed over days --
- * the shop is the only sink on this server, so without it every price would
- * fall in real terms each time somebody farms a customer. **Drift** is a
- * per-item daily wobble so the board is worth reading rather than memorising.
+ * Three forces, multiplied together.
  *
- * Both are deterministic for a given day, so two players standing at the same
- * stall are quoted the same number and can argue about it. See
- * {@link TrapMath#marketIndex} and {@link TrapMath#dailyDrift}.
+ * **Supply** is the money in circulation. It moves the whole board at once and
+ * it moves for real reasons: every emerald spent at the shop, fed to a slot
+ * machine or put into the exchange leaves circulation, and every emerald paid
+ * out by a customer, a contract, a jackpot or a matured position enters it. So
+ * a jackpot really is inflationary, and a quiet week really does make things
+ * cheap. It is also re-sampled from what players are carrying, which keeps it
+ * anchored to the world rather than to our own bookkeeping.
+ *
+ * **Drift** is each item walking between random targets, so prices creep while
+ * you shop instead of standing still until tomorrow.
+ *
+ * **Pressure** is order flow: buying an item pushes its own price up, selling
+ * pushes it down, and it fades over the following minutes. This is the force
+ * players can actually steer, and the reason clearing a shelf costs more at
+ * the end than at the start.
+ *
+ * All three are deterministic given the beat, so two players standing at the
+ * same stall are quoted the same number. See {@link TrapMath#marketIndex},
+ * {@link TrapMath#drift} and {@link TrapMath#pressureAfter}.
  */
 public final class TrapMarket {
-    /** How much of today's reading is folded into the running average. */
-    private static final float SMOOTHING = 0.25f;
+    /** How much of a fresh reading is folded into the running average. */
+    private static final float SMOOTHING = 0.08f;
+    /** Ticks between beats. The market moves twice a minute. */
+    private static final int BEAT_TICKS = 600;
+    /** An index move worth interrupting people about. */
+    private static final float SHOCK = 0.06f;
 
     private static float supply = TrapMath.MARKET_BASELINE;
+    private static long beat = 0;
     private static long lastDay = -1;
+    /** Order flow per item id. Absent means settled. */
+    private static final Map<String, Float> PRESSURE = new HashMap<>();
     private static Path saveFile;
 
     private TrapMarket() {
@@ -39,18 +62,27 @@ public final class TrapMarket {
 
     public static void register() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            ShopStock.build();
+            ShopStock.build(server);
             load(server);
             TrapInvest.load(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            // Once a second is plenty to notice the date changed.
-            if (server.getOverworld().getTime() % 20 != 0) {
+            if (server.getTicks() % BEAT_TICKS != 0) {
                 return;
             }
+            beat++;
+            resample(server);
+            settle();
+            ShopScreenHandler.refreshAll();
+            save();
+
             long day = today(server);
             if (day != lastDay) {
-                roll(server, day);
+                boolean firstEver = lastDay < 0;
+                lastDay = day;
+                if (!firstEver) {
+                    announce(server);
+                }
             }
         });
     }
@@ -59,7 +91,7 @@ public final class TrapMarket {
         return server.getOverworld().getTimeOfDay() / 24000L;
     }
 
-    /** Today's cost multiplier from the money supply. */
+    /** The current cost multiplier from the money supply. */
     public static float index() {
         return TrapMath.marketIndex(supply);
     }
@@ -68,51 +100,128 @@ public final class TrapMarket {
         return supply;
     }
 
+    public static long beat() {
+        return beat;
+    }
+
+    /** How hard this line has been traded lately, as a multiplier around 1. */
+    public static float pressureOf(ShopStock.Entry entry) {
+        return PRESSURE.getOrDefault(entry.id(), 0.0f);
+    }
+
     public static int buyPrice(MinecraftServer server, ShopStock.Entry entry) {
         return TrapMath.buyPrice(entry.base(), index(),
-                TrapMath.dailyDrift(today(server), entry.id()));
+                TrapMath.drift(beat, entry.id()),
+                TrapMath.flowFactor(pressureOf(entry)));
     }
 
     public static int sellPrice(MinecraftServer server, ShopStock.Entry entry) {
         return TrapMath.sellPrice(buyPrice(server, entry));
     }
 
-    /** How today's price compares with a flat day, as a percentage. */
+    /**
+     * How this line's price compares with its own flat price, as a percentage.
+     *
+     * Deliberately excludes the index: that moves everything together and is
+     * therefore not news about this item. Drift and order flow are.
+     */
     public static int movement(MinecraftServer server, ShopStock.Entry entry) {
-        float d = TrapMath.dailyDrift(today(server), entry.id());
-        return Math.round((d - 1.0f) * 100.0f);
+        float own = TrapMath.drift(beat, entry.id())
+                * TrapMath.flowFactor(pressureOf(entry));
+        return Math.round((own - 1.0f) * 100.0f);
+    }
+
+    // --- what players do to it -----------------------------------------------
+
+    /**
+     * Record emeralds entering (+) or leaving (-) players' hands.
+     *
+     * Called from one place -- {@link #take} and {@link #pay} -- because every
+     * emerald this mod moves goes through those two methods. That is what
+     * makes the shop, the machines, the exchange, the customers and the
+     * contracts one economy instead of five features that happen to use the
+     * same currency.
+     */
+    private static void circulate(int delta) {
+        float before = index();
+        supply = TrapMath.circulated(supply, delta);
+        float after = index();
+        if (Math.abs(after - before) >= SHOCK) {
+            shock(after > before);
+        }
+    }
+
+    /** Somebody moved enough money to be felt. Tell the room. */
+    private static void shock(boolean up) {
+        MinecraftServer server = lastServer;
+        if (server == null) {
+            return;
+        }
+        Text line = Text.literal("Market  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(up
+                                ? "Somebody just got paid. Prices are climbing."
+                                : "A lot of money just left the room. Prices are easing.")
+                        .formatted(Formatting.GRAY));
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            player.sendMessage(line, true);
+        }
+    }
+
+    /** Log an order against one line so its own price responds. */
+    public static void traded(ShopStock.Entry entry, int lots, boolean buying) {
+        float moved = TrapMath.pressureAfter(pressureOf(entry), lots, buying);
+        if (moved == 0.0f) {
+            PRESSURE.remove(entry.id());
+        } else {
+            PRESSURE.put(entry.id(), moved);
+        }
+    }
+
+    /** One beat of everybody's orders being forgotten. */
+    private static void settle() {
+        List<String> spent = new ArrayList<>();
+        PRESSURE.replaceAll((id, held) -> TrapMath.relax(held));
+        PRESSURE.forEach((id, held) -> {
+            if (held == 0.0f) {
+                spent.add(id);
+            }
+        });
+        spent.forEach(PRESSURE::remove);
     }
 
     // --- the daily roll -------------------------------------------------------
 
     /**
-     * Re-read the money supply and open the new day.
+     * Re-read the money supply from what people are carrying.
      *
-     * Counts what online players are carrying. That is a sample rather than a
-     * census -- offline players' emeralds are invisible without reading their
-     * NBT off disk, which is a lot of file IO for a number that only needs to
-     * be roughly right. Smoothed so one player logging in with a full shulker
-     * doesn't spike the whole economy.
+     * Our own bookkeeping in {@link #circulate} is the fast, reactive half;
+     * this is the slow, honest half. Emeralds also arrive by mining, mob drops,
+     * villager trades and creative mode, and leave down lava and on death, and
+     * none of that goes through us. Without the resample the index would drift
+     * away from the world it is supposed to describe.
+     *
+     * Counts online players only -- offline emeralds mean reading player NBT
+     * off disk, which is a lot of IO for a number that need only be roughly
+     * right. Smoothed hard, because it now runs twice a minute and one player
+     * logging in with a full shulker should not be an economic event.
      */
-    private static void roll(MinecraftServer server, long day) {
-        boolean firstEver = lastDay < 0;
-        lastDay = day;
-
+    private static void resample(MinecraftServer server) {
+        lastServer = server;
+        var online = server.getPlayerManager().getPlayerList();
+        // With nobody online there is nothing to sample, so leave it be rather
+        // than letting the economy crash to zero while everyone sleeps.
+        if (online.isEmpty()) {
+            return;
+        }
         float counted = 0;
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayerEntity player : online) {
             counted += wealthOf(player);
         }
-        // With nobody online there is nothing to sample, so leave it be rather
-        // than letting the economy crash to zero overnight.
-        if (!server.getPlayerManager().getPlayerList().isEmpty()) {
-            supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
-        }
-        save();
-
-        if (!firstEver) {
-            announce(server);
-        }
+        supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
     }
+
+    /** Whoever ticked us last, so a price shock can find the player list. */
+    private static MinecraftServer lastServer;
 
     /** Emeralds plus emerald blocks, which are just nine emeralds in a coat. */
     public static int wealthOf(ServerPlayerEntity player) {
@@ -175,7 +284,7 @@ public final class TrapMarket {
     }
 
     private static String name(ShopStock.Entry entry) {
-        return entry.item().getName().getString();
+        return entry.label();
     }
 
     // --- the wallet -----------------------------------------------------------
@@ -192,6 +301,7 @@ public final class TrapMarket {
      * Callers MUST check {@link #wealthOf} first; this assumes it can be paid.
      */
     public static void take(ServerPlayerEntity player, int amount) {
+        circulate(-amount);
         var inventory = player.getInventory();
         int owed = amount;
 
@@ -224,6 +334,7 @@ public final class TrapMarket {
      * Selling a stack of diamonds should not bury you in loose emeralds.
      */
     public static void pay(ServerPlayerEntity player, int amount) {
+        circulate(amount);
         int blocks = amount / 9;
         int loose = amount % 9;
         // Below a stack of blocks it's friendlier to hand over singles --
@@ -250,7 +361,7 @@ public final class TrapMarket {
         var inventory = player.getInventory();
         for (int slot = 0; slot < inventory.size(); slot++) {
             ItemStack stack = inventory.getStack(slot);
-            if (stack.isOf(entry.item())) {
+            if (entry.matches(stack)) {
                 count += stack.getCount();
             }
         }
@@ -263,7 +374,7 @@ public final class TrapMarket {
         var inventory = player.getInventory();
         for (int slot = 0; slot < inventory.size() && owed > 0; slot++) {
             ItemStack stack = inventory.getStack(slot);
-            if (!stack.isOf(entry.item())) {
+            if (!entry.matches(stack)) {
                 continue;
             }
             int taken = Math.min(owed, stack.getCount());
@@ -274,13 +385,31 @@ public final class TrapMarket {
 
     // --- persistence ----------------------------------------------------------
 
+    /**
+     * Header line, then one line per item still carrying order flow.
+     *
+     * Settled lines aren't written, so the file stays the size of what is
+     * actually being traded rather than the size of the catalogue. A file from
+     * before pressure existed is a one-line file and still loads.
+     */
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-market.txt");
         try {
-            if (Files.exists(saveFile)) {
-                String[] parts = Files.readString(saveFile).trim().split("\\s+");
-                supply = Float.parseFloat(parts[0]);
-                lastDay = Long.parseLong(parts[1]);
+            if (!Files.exists(saveFile)) {
+                return;
+            }
+            List<String> lines = Files.readAllLines(saveFile);
+            String[] header = lines.get(0).trim().split("\\s+");
+            supply = Float.parseFloat(header[0]);
+            lastDay = Long.parseLong(header[1]);
+            beat = header.length > 2 ? Long.parseLong(header[2]) : 0;
+
+            PRESSURE.clear();
+            for (String held : lines.subList(1, lines.size())) {
+                String[] parts = held.trim().split("\\s+");
+                if (parts.length == 2) {
+                    PRESSURE.put(parts[0], Float.parseFloat(parts[1]));
+                }
             }
         } catch (Exception failure) {
             // A corrupt file costs the market's memory, not the world.
@@ -293,7 +422,11 @@ public final class TrapMarket {
             return;
         }
         try {
-            Files.writeString(saveFile, supply + " " + lastDay);
+            StringBuilder out = new StringBuilder()
+                    .append(supply).append(' ').append(lastDay).append(' ').append(beat);
+            PRESSURE.forEach((id, held) ->
+                    out.append('\n').append(id).append(' ').append(held));
+            Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't save the market: {}", failure.toString());
         }

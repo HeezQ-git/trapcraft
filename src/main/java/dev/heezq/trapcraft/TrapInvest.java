@@ -128,15 +128,8 @@ public final class TrapInvest {
         }
         save();
 
-        // Noise is drawn from the day and the position so a payout is fixed
-        // once it matures -- reloading until you like the number isn't a
-        // strategy anybody should have.
-        float noise = TrapMath.dailyDrift(position.maturesOn(),
-                player.getUuid() + ":" + position.principal()) - 1.0f;
-        noise = (noise / TrapMath.DRIFT + 1.0f) / 2.0f;
-
         float multiplier = TrapMath.investReturn(position.days(),
-                position.indexAtStart(), TrapMarket.index(), noise);
+                position.indexAtStart(), TrapMarket.index(), luck(player, position));
         int paid = Math.max(1, Math.round(position.principal() * multiplier));
         TrapMarket.pay(player, paid);
         return paid;
@@ -144,10 +137,22 @@ public final class TrapInvest {
 
     /** What a position would pay if collected now, for display. */
     public static int projected(ServerPlayerEntity player, Position position) {
-        float noise = TrapMath.dailyDrift(position.maturesOn(),
-                player.getUuid() + ":" + position.principal()) - 1.0f;
-        noise = (noise / TrapMath.DRIFT + 1.0f) / 2.0f;
         return Math.max(1, Math.round(position.principal() * TrapMath.investReturn(
-                position.days(), position.indexAtStart(), TrapMarket.index(), noise)));
+                position.days(), position.indexAtStart(), TrapMarket.index(),
+                luck(player, position))));
+    }
+
+    /**
+     * This position's share of luck, 0..1.
+     *
+     * Drawn from the day it matures and who owns it, so the payout is settled
+     * the moment the position is opened -- reloading the world until you like
+     * the number isn't a strategy anybody should have. The projection and the
+     * payout read the same function, so the quote can't lie.
+     */
+    private static float luck(ServerPlayerEntity player, Position position) {
+        float wobble = TrapMath.wobble(position.maturesOn(),
+                player.getUuid() + ":" + position.principal()) - 1.0f;
+        return (wobble / TrapMath.DRIFT + 1.0f) / 2.0f;
     }
 }

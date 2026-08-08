@@ -265,7 +265,7 @@ public final class TrapContracts {
 
         phone.remove(TrapComponents.contract);
         adjustRep(phone, contract.rep());
-        player.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, contract.payout()));
+        TrapMarket.pay(player, contract.payout());
 
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),

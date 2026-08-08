@@ -5,7 +5,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -452,7 +451,7 @@ public final class TrapDealing {
         Text sold = held.getName();
 
         held.decrement(units);
-        seller.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, paid));
+        TrapMarket.pay(seller, paid);
 
         int left = appetite - units;
         APPETITE.put(customer.getUuid(), left);

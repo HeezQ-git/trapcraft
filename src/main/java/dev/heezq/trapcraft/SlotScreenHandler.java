@@ -76,6 +76,18 @@ public class SlotScreenHandler extends ScreenHandler {
 
     private int spinning;
     private float pending;
+    /**
+     * The whole board, not just a payline.
+     *
+     * Twenty-five cells, and the win is READ back off them rather than
+     * assumed -- so the cells that glow are always the cells that paid. The
+     * previous version only made the middle row agree with the outcome and
+     * left the other twenty random, which is why the board looked full of
+     * matches that paid nothing.
+     */
+    private final int[] grid = new int[REELS * WINDOW_ROWS];
+    private int[] winners = new int[0];
+
     /** Where each reel has come to rest, once it has. */
     private final int[] landed = new int[REELS];
     /** Scroll offset per reel while it's still moving. */
@@ -111,52 +123,79 @@ public class SlotScreenHandler extends ScreenHandler {
     // --- painting -------------------------------------------------------------
 
     private void repaint() {
-        // The surround cycles colour every few ticks while anything is
-        // happening. It is noise on purpose: a machine that sits still between
-        // spins is a spreadsheet.
-        Item[] cycle = {Items.RED_STAINED_GLASS_PANE, Items.ORANGE_STAINED_GLASS_PANE,
-                Items.YELLOW_STAINED_GLASS_PANE, Items.LIME_STAINED_GLASS_PANE,
-                Items.LIGHT_BLUE_STAINED_GLASS_PANE, Items.MAGENTA_STAINED_GLASS_PANE};
-        boolean busy = spinning > 0 || celebrating > 0;
         for (int index = 0; index < SIZE; index++) {
-            Item pane = busy
-                    ? cycle[Math.floorMod(flash + index / 9 + index % 9, cycle.length)]
-                    : (index / 9) % 2 == 0
-                    ? Items.RED_STAINED_GLASS_PANE : Items.BLACK_STAINED_GLASS_PANE;
-            display.setStack(index, pane(pane));
+            display.setStack(index, pane(surround(index)));
         }
-
-        for (int reel = 0; reel < REELS; reel++) {
-            for (int row = 0; row < WINDOW_ROWS; row++) {
-                int slot = row * 9 + WINDOW_LEFT + reel;
-                display.setStack(slot, face(symbolAt(reel, row), row == PAYLINE_ROW));
-            }
+        for (int cell = 0; cell < grid.length; cell++) {
+            int slot = (cell / REELS) * 9 + WINDOW_LEFT + (cell % REELS);
+            display.setStack(slot, face(cell));
         }
-
         display.setStack(STAKE_SLOT, stakeTag());
         display.setStack(LEVER_SLOT, leverTag());
         display.setStack(PURSE_SLOT, purseTag());
         sendContentUpdates();
     }
 
-    /** Which face shows in a given cell, spinning or settled. */
-    private int symbolAt(int reel, int row) {
-        int centre = spinning > 0 && spinning > SPIN_TICKS - STOPS[reel]
-                ? offset[reel]
-                : landed[reel];
-        return Math.floorMod(centre + row - PAYLINE_ROW, FACES.length);
+    /**
+     * The surround, animated by what was actually won.
+     *
+     * Rainbow is reserved for the jackpot. Making every spin rainbow taught
+     * the eye that the lights mean nothing -- which is exactly what they meant.
+     */
+    private Item surround(int index) {
+        if (spinning > 0) {
+            // A slow two-tone sweep while the reels run: busy, but not a claim.
+            return ((index / 9) + (index % 9) + flash / 3) % 2 == 0
+                    ? Items.GRAY_STAINED_GLASS_PANE : Items.BLACK_STAINED_GLASS_PANE;
+        }
+        if (celebrating > 0 && lastWon > 0) {
+            int tier = winners.length;
+            if (tier >= 5) {
+                Item[] rainbow = {Items.RED_STAINED_GLASS_PANE, Items.ORANGE_STAINED_GLASS_PANE,
+                        Items.YELLOW_STAINED_GLASS_PANE, Items.LIME_STAINED_GLASS_PANE,
+                        Items.LIGHT_BLUE_STAINED_GLASS_PANE, Items.PURPLE_STAINED_GLASS_PANE};
+                return rainbow[Math.floorMod(flash + index / 9 + index % 9, rainbow.length)];
+            }
+            if (tier == 4) {
+                return (flash / 2 + index) % 2 == 0
+                        ? Items.ORANGE_STAINED_GLASS_PANE : Items.YELLOW_STAINED_GLASS_PANE;
+            }
+            return (flash / 3) % 2 == 0
+                    ? Items.LIME_STAINED_GLASS_PANE : Items.GREEN_STAINED_GLASS_PANE;
+        }
+        return (index / 9) % 2 == 0
+                ? Items.GRAY_STAINED_GLASS_PANE : Items.BLACK_STAINED_GLASS_PANE;
     }
 
-    private ItemStack face(int symbol, boolean onLine) {
+    /** One cell of the board, lit if it was part of the win. */
+    private ItemStack face(int cell) {
+        int reel = cell % REELS;
+        boolean moving = spinning > 0 && spinning > SPIN_TICKS - STOPS[reel];
+        int symbol = moving
+                ? Math.floorMod(offset[reel] + cell / REELS, FACES.length)
+                : grid[cell];
+
         ItemStack tag = new ItemStack(FACES[symbol]);
-        Formatting colour = onLine
-                ? (celebrating > 0 && flash % 2 == 0 ? Formatting.GOLD : Formatting.YELLOW)
-                : Formatting.DARK_GRAY;
+        boolean won = !moving && contains(winners, cell);
+        if (won) {
+            // Enchantment glint: the winning line is unmistakable without
+            // needing the player to work out which line it even was.
+            tag.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(FACE_NAMES[symbol]).formatted(colour, onLine ? Formatting.BOLD : Formatting.ITALIC));
-        // Stack size wobbles while busy purely so the eye has more to track.
-        tag.setCount(onLine ? 1 : Math.max(1, Math.floorMod(flash + symbol, 3) + 1));
+                plain(FACE_NAMES[symbol]).formatted(
+                        won ? Formatting.GOLD : Formatting.DARK_GRAY,
+                        won ? Formatting.BOLD : Formatting.ITALIC));
         return tag;
+    }
+
+    private static boolean contains(int[] cells, int cell) {
+        for (int candidate : cells) {
+            if (candidate == cell) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ItemStack pane(Item item) {
@@ -183,20 +222,30 @@ public class SlotScreenHandler extends ScreenHandler {
                         .formatted(spinning > 0 ? Formatting.GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Five in a row", Formatting.WHITE)
+                line("Five in a line", Formatting.WHITE)
                         .append(plain("   x" + (int) TrapMath.SLOT_PAYS[0]).formatted(Formatting.GOLD)),
                 line("Four", Formatting.WHITE)
                         .append(plain("   x" + (int) TrapMath.SLOT_PAYS[1]).formatted(Formatting.GOLD)),
                 line("Three", Formatting.WHITE)
-                        .append(plain("   x" + (int) TrapMath.SLOT_PAYS[2]).formatted(Formatting.GOLD)),
-                line("Two", Formatting.WHITE)
-                        .append(plain("   x" + TrapMath.SLOT_PAYS[3]).formatted(Formatting.GOLD)),
+                        .append(plain("   x" + TrapMath.SLOT_PAYS[2]).formatted(Formatting.GOLD)),
                 Text.empty(),
-                line("Matches run from the left, on the payline.", Formatting.DARK_GRAY),
+                line("Rows, columns and both diagonals.", Formatting.GRAY),
+                line("Winning symbols glow.", Formatting.GRAY),
+                Text.empty(),
+                line("About " + Math.round(sumOdds() * 100) + " spins in 100 pay.",
+                        Formatting.DARK_GRAY),
                 line("The house keeps about "
                         + Math.round((1 - TrapMath.slotReturnToPlayer()) * 100)
-                        + "% of everything staked.", Formatting.DARK_GRAY))));
+                        + "%.", Formatting.DARK_GRAY))));
         return tag;
+    }
+
+    private static float sumOdds() {
+        float total = 0;
+        for (float odd : TrapMath.SLOT_ODDS) {
+            total += odd;
+        }
+        return total;
     }
 
     private ItemStack purseTag() {
@@ -236,7 +285,7 @@ public class SlotScreenHandler extends ScreenHandler {
         TrapMarket.take(player, stake);
         // Outcome first, symbols afterwards.
         pending = TrapMath.slotPayout(player.getWorld().getRandom().nextFloat());
-        chooseSymbols();
+        buildBoard();
         spinning = SPIN_TICKS;
         SlotMachineBlock.watch(this);
 
@@ -252,34 +301,56 @@ public class SlotScreenHandler extends ScreenHandler {
      * three different faces for a loss -- so what you see on the payline always
      * explains what you were paid.
      */
-    private void chooseSymbols() {
+    /**
+     * Build a board that genuinely contains the decided result.
+     *
+     * Outcome first, board second -- that keeps the return rate an exact,
+     * checkable number. But the board is then constructed so the win is really
+     * there on a real line, and re-rolled until no LONGER run appears by
+     * accident. The payout is finally read back off the finished grid, so what
+     * glows and what pays can never disagree.
+     */
+    private void buildBoard() {
         var random = player.getWorld().getRandom();
-        int matches = pending >= TrapMath.SLOT_PAYS[0] ? REELS
-                : pending >= TrapMath.SLOT_PAYS[1] ? 4
-                : pending >= TrapMath.SLOT_PAYS[2] ? 3
-                : pending > 0.0f ? 2 : 0;
-
-        if (matches == 0) {
-            // A loss must never show a run of three, or the machine looks
-            // broken rather than unlucky.
-            for (int reel = 0; reel < REELS; reel++) {
-                landed[reel] = random.nextInt(FACES.length);
+        int wantRun = 0;
+        for (int tier = 0; tier < TrapMath.SLOT_PAYS.length; tier++) {
+            if (pending >= TrapMath.SLOT_PAYS[tier]) {
+                wantRun = TrapMath.SLOT_RUNS[tier];
+                break;
             }
-            for (int reel = 2; reel < REELS; reel++) {
-                if (landed[reel] == landed[reel - 1] && landed[reel] == landed[reel - 2]) {
-                    landed[reel] = (landed[reel] + 1) % FACES.length;
+        }
+
+        int[][] lines = TrapMath.slotLines();
+        for (int attempt = 0; attempt < 200; attempt++) {
+            for (int cell = 0; cell < grid.length; cell++) {
+                grid[cell] = random.nextInt(FACES.length);
+            }
+            if (wantRun > 0) {
+                int[] line = lines[random.nextInt(lines.length)];
+                int symbol = random.nextInt(FACES.length);
+                int start = random.nextInt(TrapMath.SLOT_SIZE - wantRun + 1);
+                for (int i = 0; i < wantRun; i++) {
+                    grid[line[start + i]] = symbol;
+                }
+                // Break the cells either side so the run is exactly as long as
+                // it should be, not accidentally longer.
+                if (start > 0) {
+                    grid[line[start - 1]] = (symbol + 1) % FACES.length;
+                }
+                if (start + wantRun < TrapMath.SLOT_SIZE) {
+                    grid[line[start + wantRun]] = (symbol + 1) % FACES.length;
                 }
             }
-            return;
+            int[] found = TrapMath.slotWinningCells(grid);
+            if (found.length == wantRun || (wantRun == 0 && found.length == 0)) {
+                winners = found;
+                return;
+            }
         }
-
-        int hit = pending >= TrapMath.SLOT_PAYS[0] ? FACES.length - 1
-                : pending >= TrapMath.SLOT_PAYS[1] ? FACES.length - 2
-                : random.nextInt(FACES.length);
-        for (int reel = 0; reel < REELS; reel++) {
-            landed[reel] = reel < matches ? hit
-                    : (hit + 1 + random.nextInt(FACES.length - 1)) % FACES.length;
-        }
+        // Couldn't land it cleanly in 200 tries: keep whatever the board says
+        // and pay what it shows, rather than paying one thing and showing
+        // another.
+        winners = TrapMath.slotWinningCells(grid);
     }
 
     /** Called each server tick while anything is moving. */
@@ -289,10 +360,12 @@ public class SlotScreenHandler extends ScreenHandler {
         if (celebrating > 0) {
             celebrating--;
             repaint();
-            if (celebrating % 3 == 0) {
+            // Chimes ONLY on a win. Ringing for every spin is how a machine
+            // teaches you its sounds mean nothing.
+            if (lastWon > 0 && celebrating % 3 == 0) {
                 player.getWorld().playSound(null, player.getBlockPos(),
                         SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), SoundCategory.PLAYERS,
-                        0.5F, 1.0F + (celebrating % 6) * 0.12F);
+                        0.6F, 1.0F + (celebrating % 6) * 0.12F);
             }
             if (celebrating == 0) {
                 announce();
@@ -346,21 +419,33 @@ public class SlotScreenHandler extends ScreenHandler {
      */
     private void payOut() {
         int stake = STAKES[stakeChoice];
-        lastWon = Math.round(stake * pending);
+        // Read the board, don't trust the intent. If construction had to give
+        // up, the player is paid for what is on screen.
+        float shown = TrapMath.slotPayForRun(winners.length);
+        lastWon = Math.round(stake * shown);
+        pending = shown;
 
         if (lastWon > 0) {
             TrapMarket.pay(player, lastWon);
         }
 
         var world = player.getWorld();
-        boolean big = pending >= TrapMath.SLOT_PAYS[1];
-        world.spawnParticles(big ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.CRIT,
+        if (lastWon <= 0) {
+            // A loss is quiet and short. No lights, no fanfare.
+            world.playSound(null, player.getBlockPos(),
+                    SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                    SoundCategory.PLAYERS, 0.5F, 0.6F);
+            celebrating = 6;
+            return;
+        }
+        boolean jackpot = winners.length >= 5;
+        world.spawnParticles(jackpot ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.HAPPY_VILLAGER,
                 player.getX(), player.getY() + 1.2, player.getZ(),
-                big ? 60 : 20, 0.5, 0.6, 0.5, big ? 0.4 : 0.1);
+                jackpot ? 70 : 18, 0.5, 0.6, 0.5, jackpot ? 0.45 : 0.06);
         world.playSound(null, player.getBlockPos(),
-                lastWon > 0 && big ? SoundEvents.ENTITY_PLAYER_LEVELUP
+                jackpot ? SoundEvents.ENTITY_PLAYER_LEVELUP
                         : SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
-                SoundCategory.PLAYERS, 0.9F, big ? 1.0F : 1.4F);
+                SoundCategory.PLAYERS, 1.0F, jackpot ? 1.0F : 1.4F);
     }
 
     /** The honest bit, once the lights have finished lying. */

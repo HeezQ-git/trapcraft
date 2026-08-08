@@ -45,10 +45,16 @@ public class ShopScreenHandler extends ScreenHandler {
     private static final int PREV_SLOT = FOOTER + 2;
     private static final int NEXT_SLOT = FOOTER + 6;
 
-    /** Two rows of four, centred, so the shelves read as a shopfront. */
-    private static final int[] SHELF_SPOTS = {10, 12, 14, 16, 28, 30, 32, 34};
-    /** The exchange desk, deliberately off on its own rather than in the row. */
-    private static final int INVEST_SPOT = 22;
+    /**
+     * Three rows of three, centred, so the shelves read as a shopfront.
+     *
+     * Sized to CATEGORIES: add a tenth category and it silently wouldn't
+     * appear, which is exactly how the enchantments shelf nearly shipped
+     * invisible.
+     */
+    private static final int[] SHELF_SPOTS = {11, 13, 15, 20, 22, 24, 29, 31, 33};
+    /** The exchange desk, deliberately off on its own rather than in the block. */
+    private static final int INVEST_SPOT = 40;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity shopper;
@@ -59,9 +65,42 @@ public class ShopScreenHandler extends ScreenHandler {
     /** True while the exchange is open instead of a goods shelf. */
     private boolean exchange;
 
+    /**
+     * Shops currently open, repainted on every market beat.
+     *
+     * Without this the board freezes the moment you open it and the whole
+     * point -- prices that move while you're deciding -- is invisible.
+     */
+    private static final List<ShopScreenHandler> OPEN = new ArrayList<>();
+
+    /** Repaint every open shop. Called from the market's beat. */
+    public static void refreshAll() {
+        // A disconnect doesn't always run onClosed, and a handler nobody can
+        // see is a handler that repaints forever.
+        OPEN.removeIf(shop -> shop.shopper.isDisconnected());
+        for (ShopScreenHandler shop : List.copyOf(OPEN)) {
+            shop.repaint();
+        }
+    }
+
+    private void repaint() {
+        if (open != null) {
+            showShelf(open, page);
+        } else if (!exchange) {
+            showShelves();
+        }
+    }
+
+    @Override
+    public void onClosed(net.minecraft.entity.player.PlayerEntity player) {
+        OPEN.remove(this);
+        super.onClosed(player);
+    }
+
     public ShopScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.shopper = (ServerPlayerEntity) playerInventory.player;
+        OPEN.add(this);
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -91,6 +130,10 @@ public class ShopScreenHandler extends ScreenHandler {
         // Two rows of three, centred, so the shelves read as a shopfront rather
         // than a list.
         int[] spots = SHELF_SPOTS;
+        if (ShopStock.CATEGORIES.size() > spots.length) {
+            TrapCraft.LOGGER.warn("shopfront has {} slots for {} categories -- some are hidden",
+                    spots.length, ShopStock.CATEGORIES.size());
+        }
         for (int i = 0; i < ShopStock.CATEGORIES.size() && i < spots.length; i++) {
             ShopStock.Category category = ShopStock.CATEGORIES.get(i);
             ItemStack icon = new ItemStack(category.icon());
@@ -205,13 +248,14 @@ public class ShopScreenHandler extends ScreenHandler {
         int move = TrapMarket.movement(shopper.getServer(), entry);
         int held = TrapMarket.bundlesHeld(shopper, entry);
 
-        ItemStack tag = new ItemStack(entry.item(), entry.count());
+        ItemStack tag = entry.stack();
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(entry.item().getName().getString())
+                plain(entry.label())
                         .formatted(Formatting.WHITE)
                         .append(plain("  x" + entry.count()).formatted(Formatting.DARK_GRAY)));
 
         List<Text> lore = new ArrayList<>();
+        float flow = TrapMarket.pressureOf(entry);
         lore.add(line("Buy    ", Formatting.DARK_GRAY)
                 .append(plain(buy + "e").formatted(Formatting.GREEN))
                 .append(plain(move == 0 ? "" : move > 0 ? "   +" + move + "%" : "   " + move + "%")
@@ -220,6 +264,17 @@ public class ShopScreenHandler extends ScreenHandler {
                 .append(sell > 0
                         ? plain(sell + "e").formatted(Formatting.GOLD)
                         : plain("not bought here").formatted(Formatting.DARK_GRAY)));
+        if (Math.abs(flow) > 0.02f) {
+            // Order flow is the part of the price a player caused, so say so
+            // plainly rather than burying it in the percentage.
+            boolean bought = flow > 0;
+            String heat = Math.abs(flow) > 0.4f ? (bought ? "Everyone's buying" : "Everyone's dumping")
+                    : Math.abs(flow) > 0.15f ? (bought ? "Selling fast" : "Going cheap")
+                    : (bought ? "Moving" : "Slowing");
+            lore.add(line("Flow   ", Formatting.DARK_GRAY)
+                    .append(plain(heat).formatted(bought ? Formatting.RED : Formatting.AQUA))
+                    .append(plain("  (settles in a few minutes)").formatted(Formatting.DARK_GRAY)));
+        }
         lore.add(Text.empty());
         lore.add(line("Click", Formatting.YELLOW).append(plain(" to buy one lot")
                 .formatted(Formatting.GRAY)));
@@ -266,7 +321,9 @@ public class ShopScreenHandler extends ScreenHandler {
                         : index < 0.9f ? "Prices are soft. Money's tight."
                         : "Prices are steady.", Formatting.GRAY),
                 Text.empty(),
-                line("Everything shifts overnight.", Formatting.DARK_GRAY))));
+                line("Index  " + Math.round(index * 100) + "%", Formatting.DARK_GRAY),
+                line("Every emerald spent, won or paid out", Formatting.DARK_GRAY),
+                line("moves this. Prices step every 30s.", Formatting.DARK_GRAY))));
         display.setStack(MOOD_SLOT, mood);
 
         int purse = TrapMarket.wealthOf(shopper);
@@ -431,8 +488,9 @@ public class ShopScreenHandler extends ScreenHandler {
 
         int cost = affordable * each;
         TrapMarket.take(shopper, cost);
+        TrapMarket.traded(entry, affordable, true);
         for (int i = 0; i < affordable; i++) {
-            shopper.getInventory().offerOrDrop(new ItemStack(entry.item(), entry.count()));
+            shopper.getInventory().offerOrDrop(entry.stack());
         }
 
         till();
@@ -463,6 +521,7 @@ public class ShopScreenHandler extends ScreenHandler {
 
         TrapMarket.takeGoods(shopper, entry, 1);
         TrapMarket.pay(shopper, each);
+        TrapMarket.traded(entry, 1, false);
 
         till();
         shopper.sendMessage(plain("Sold ").formatted(Formatting.GRAY)
@@ -492,7 +551,7 @@ public class ShopScreenHandler extends ScreenHandler {
     }
 
     private static String name(ShopStock.Entry entry) {
-        return entry.item().getName().getString();
+        return entry.label();
     }
 
     private static MutableText plain(String text) {

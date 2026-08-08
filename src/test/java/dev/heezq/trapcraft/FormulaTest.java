@@ -110,30 +110,102 @@ class FormulaTest {
     }
 
     @Test
-    void aPriceHoldsStillForTheWholeDay() {
-        assertEquals(TrapMath.dailyDrift(40, "minecraft:diamond"),
-                TrapMath.dailyDrift(40, "minecraft:diamond"), 0.0f);
+    void twoPlayersAtTheSameStallSeeTheSamePrice() {
+        assertEquals(TrapMath.drift(40, "minecraft:diamond"),
+                TrapMath.drift(40, "minecraft:diamond"), 0.0f);
     }
 
     @Test
-    void differentItemsMoveDifferentlyOnTheSameDay() {
-        assertNotEquals(TrapMath.dailyDrift(40, "minecraft:diamond"),
-                TrapMath.dailyDrift(40, "minecraft:bread"));
+    void differentItemsMoveDifferentlyOnTheSameBeat() {
+        assertNotEquals(TrapMath.drift(40, "minecraft:diamond"),
+                TrapMath.drift(40, "minecraft:bread"));
+    }
+
+    @Test
+    void aPriceActuallyMovesWhileYouShop() {
+        // The whole point of the beat: come back in a couple of minutes and
+        // the number is different.
+        int moved = 0;
+        for (long beat = 0; beat < 40; beat++) {
+            if (TrapMath.drift(beat, "minecraft:diamond")
+                    != TrapMath.drift(beat + 1, "minecraft:diamond")) {
+                moved++;
+            }
+        }
+        assertTrue(moved > 30, "prices barely moved over 40 beats: " + moved);
+    }
+
+    @Test
+    void priceWalksRatherThanJumps() {
+        // Smoothstep means no lurch when a window hands over. A single beat
+        // must never cover more than a fraction of the whole band.
+        float worst = 0;
+        for (long beat = 0; beat < 500; beat++) {
+            worst = Math.max(worst, Math.abs(TrapMath.drift(beat, "minecraft:diamond")
+                    - TrapMath.drift(beat + 1, "minecraft:diamond")));
+        }
+        assertTrue(worst < TrapMath.DRIFT * 0.5f, "biggest single step was " + worst);
     }
 
     @Test
     void driftStaysWithinItsBand() {
-        for (long day = 0; day < 400; day++) {
-            float d = TrapMath.dailyDrift(day, "minecraft:diamond");
+        for (long beat = 0; beat < 4000; beat++) {
+            float d = TrapMath.drift(beat, "minecraft:diamond");
             assertTrue(d >= 1.0f - TrapMath.DRIFT - 0.001f && d <= 1.0f + TrapMath.DRIFT + 0.001f,
-                    "day " + day + " drifted to " + d);
+                    "beat " + beat + " drifted to " + d);
         }
+    }
+
+    @Test
+    void buyingPushesAPriceUpAndSellingPushesItDown() {
+        assertTrue(TrapMath.pressureAfter(0f, 5, true) > 0f);
+        assertTrue(TrapMath.pressureAfter(0f, 5, false) < 0f);
+    }
+
+    @Test
+    void deepPocketsCannotBreakAPrice() {
+        assertEquals(TrapMath.PRESSURE_CAP, TrapMath.pressureAfter(0f, 100_000, true), 0.001f);
+        assertEquals(-TrapMath.PRESSURE_CAP, TrapMath.pressureAfter(0f, 100_000, false), 0.001f);
+    }
+
+    @Test
+    void orderFlowFadesToNothing() {
+        float held = TrapMath.PRESSURE_CAP;
+        for (int beat = 0; beat < 500; beat++) {
+            held = TrapMath.relax(held);
+        }
+        assertEquals(0f, held, 0f);   // exactly zero, so the line can be dropped
+    }
+
+    @Test
+    void aRoundTripThroughTheShopIsNeverProfitable() {
+        // Buy a lot, which pushes the price up, then sell it straight back at
+        // the pushed-up price. If that ever nets a profit the market is a
+        // money printer.
+        for (int base : new int[]{3, 16, 42, 300, 1600}) {
+            float after = TrapMath.pressureAfter(0f, 1, true);
+            int paid = TrapMath.buyPrice(base, 1.0f, 1.0f, TrapMath.flowFactor(0f));
+            int back = TrapMath.sellPrice(
+                    TrapMath.buyPrice(base, 1.0f, 1.0f, TrapMath.flowFactor(after)));
+            assertTrue(back < paid, "base " + base + ": paid " + paid + ", got back " + back);
+        }
+    }
+
+    @Test
+    void spendingMoneyTakesItOutOfCirculation() {
+        assertTrue(TrapMath.circulated(2000f, -500) < 2000f);
+        assertTrue(TrapMath.circulated(2000f, 500) > 2000f);
+    }
+
+    @Test
+    void theEconomyCannotGoNegative() {
+        assertEquals(0f, TrapMath.circulated(10f, -999_999), 0f);
     }
 
     @Test
     void sellingAlwaysPaysLessThanBuying() {
         for (int base : new int[]{2, 5, 40, 400, 1200}) {
-            int buy = TrapMath.buyPrice(base, 1.0f, 1.0f);
+            int buy = TrapMath.buyPrice(base, 1.0f, 1.0f, 1.0f);
             assertTrue(TrapMath.sellPrice(buy) < buy, "no spread at base " + base);
         }
     }
@@ -147,7 +219,8 @@ class FormulaTest {
 
     @Test
     void buyingIsNeverFree() {
-        assertTrue(TrapMath.buyPrice(1, TrapMath.INDEX_MIN, 1.0f - TrapMath.DRIFT) >= 1);
+        assertTrue(TrapMath.buyPrice(1, TrapMath.INDEX_MIN, 1.0f - TrapMath.DRIFT,
+                TrapMath.flowFactor(-TrapMath.PRESSURE_CAP)) >= 1);
     }
 
     // --- the slot machine -----------------------------------------------------
@@ -167,13 +240,87 @@ class FormulaTest {
                 losses++;
             }
         }
-        assertTrue(losses > 830, "the great majority of spins must lose, got " + losses);
+        assertTrue(losses > 600, "most spins must still lose, got " + losses);
+    }
+
+    /**
+     * A 5x5 grid with no run of two anywhere -- rows, columns or diagonals.
+     * Tests build on this so any run they find is the one they put there.
+     */
+    private static int[] quietGrid() {
+        int[][] rows = {
+                {0, 1, 2, 3, 4},
+                {2, 3, 4, 0, 1},
+                {4, 0, 1, 2, 3},
+                {1, 2, 3, 4, 0},
+                {3, 4, 0, 1, 2},
+        };
+        int[] grid = new int[25];
+        for (int row = 0; row < 5; row++) {
+            System.arraycopy(rows[row], 0, grid, row * 5, 5);
+        }
+        return grid;
+    }
+
+    @Test
+    void theQuietGridReallyIsQuiet() {
+        assertEquals(0, TrapMath.slotWinningCells(quietGrid()).length,
+                "the baseline must contain no win, or every other test lies");
+    }
+
+    @Test
+    void everyLineIsCovered() {
+        // Five rows, five columns, two diagonals.
+        assertEquals(12, TrapMath.slotLines().length);
+        for (int[] line : TrapMath.slotLines()) {
+            assertEquals(TrapMath.SLOT_SIZE, line.length);
+        }
+    }
+
+    @Test
+    void aRowOfThreeCounts() {
+        int[] grid = quietGrid();
+        grid[5] = grid[6] = grid[7] = 2;
+        assertEquals(3, TrapMath.slotWinningCells(grid).length);
+    }
+
+    @Test
+    void aColumnCounts() {
+        int[] grid = quietGrid();
+        grid[2] = grid[7] = grid[12] = 5;
+        assertEquals(3, TrapMath.slotWinningCells(grid).length);
+    }
+
+    @Test
+    void aDiagonalCounts() {
+        int[] grid = quietGrid();
+        for (int i = 0; i < 5; i++) {
+            grid[i * 5 + i] = 5;
+        }
+        assertEquals(5, TrapMath.slotWinningCells(grid).length);
+    }
+
+    @Test
+    void aPairIsNotAWin() {
+        int[] grid = quietGrid();
+        grid[0] = grid[1] = 3;
+        assertEquals(0, TrapMath.slotWinningCells(grid).length);
+    }
+
+    @Test
+    void theHighlightAlwaysMatchesThePayout() {
+        int[] grid = quietGrid();
+        grid[10] = grid[11] = grid[12] = grid[13] = 2;
+        int[] cells = TrapMath.slotWinningCells(grid);
+        assertEquals(4, cells.length);
+        assertTrue(TrapMath.slotPayForRun(cells.length) > 0);
     }
 
     @Test
     void theJackpotIsRareAndReal() {
         assertEquals(TrapMath.SLOT_PAYS[0], TrapMath.slotPayout(0.0f), 0.001f);
         assertEquals(0.0f, TrapMath.slotPayout(0.999f), 0.001f);
+        assertEquals(0.0f, TrapMath.slotPayForRun(2), 0.001f);
     }
 
     // --- investments ----------------------------------------------------------

@@ -184,30 +184,54 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4b. PRICES\n\n"))
-                .append(body("Every price moves overnight.\n\n"))
-                .append(body("The more emeralds there are about, the dearer "
-                        + "everything gets.\n\n"))
-                .append(hint("Each item drifts on its own. Read the board."))));
+                .append(body("They step every 30 seconds. Watch and you'll "
+                        + "see them move.\n\n"))
+                .append(body("Each item walks its own path.\n\n"))
+                .append(hint("Nobody is quoted a different price to you."))));
 
         pages.add(page(Text.empty()
-                .append(title("4c. DEALING\n\n"))
+                .append(title("4c. THE INDEX\n\n"))
+                .append(body("More emeralds about means dearer everything.\n\n"))
+                .append(body("Spending and losing take them out. Customers "
+                        + "and jackpots put them in.\n\n"))
+                .append(hint("Somebody's jackpot is your price rise."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. ORDER FLOW\n\n"))
+                .append(body("Buying pushes that price up. Selling pushes "
+                        + "it down. At once.\n\n"))
+                .append(body("Clear a shelf and the last lot costs more "
+                        + "than the first.\n\n"))
+                .append(warn("It fades. Come back later."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4e. DEALING\n\n"))
                 .append(body("Click to buy a lot. Shift for four.\n\n"))
                 .append(body("Right-click to sell one back.\n\n"))
                 .append(warn("They buy at about a third of what they sell for."))));
 
         pages.add(page(Text.empty()
-                .append(title("4d. THE EXCHANGE\n\n"))
+                .append(title("4f. THE EXCHANGE\n\n"))
                 .append(body("Put emeralds away for a day, three, or a week.\n\n"))
-                .append(body("You get more back if the market rose while you waited.\n\n"))
+                .append(body("You get more back if the index rose while you waited.\n\n"))
                 .append(warn("And less if it fell. No early withdrawals."))));
 
         pages.add(page(Text.empty()
-                .append(title("4e. LUCKY STREAK\n\n"))
+                .append(title("4g. LUCKY STREAK\n\n"))
                 .append(body("A two-block cabinet. Needs headroom.\n\n"))
-                .append(body("Five reels. Matches run from the left along the middle row.\n\n"))
+                .append(body("Five by five. Three in a line pays, any "
+                        + "direction.\n\n"))
+                .append(hint("Winning squares glow. No glow, no win."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4h. THE HOUSE\n\n"))
+                .append(body("About " + Math.round(TrapMath.slotWinChance() * 100)
+                        + " spins in 100 pay something.\n\n"))
+                .append(body("Green panes for a three, orange for a four, "
+                        + "rainbow only for all five.\n\n"))
                 .append(warn("The house keeps about "
                         + Math.round((1.0f - TrapMath.slotReturnToPlayer()) * 100)
-                        + "% of everything staked."))));
+                        + "% of everything staked. It always does."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {
