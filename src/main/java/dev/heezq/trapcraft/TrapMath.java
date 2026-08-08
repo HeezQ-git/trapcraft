@@ -116,6 +116,83 @@ public final class TrapMath {
         return Math.max(target, current - fall);
     }
 
+    // --- the market -----------------------------------------------------------
+
+    /** Emeralds in circulation that the catalogue is priced against. */
+    public static final float MARKET_BASELINE = 2000.0f;
+    /** How far the index may swing on supply alone. */
+    public static final float INDEX_MIN = 0.65f;
+    public static final float INDEX_MAX = 1.85f;
+    /** How far a single item may drift on a given day, either way. */
+    public static final float DRIFT = 0.18f;
+    /** What a sale returns, as a share of the buy price. */
+    public static final float SELL_RATE = 0.35f;
+
+    /**
+     * How expensive everything is right now, from the money in circulation.
+     *
+     * More emeralds chasing the same goods means higher prices -- the shop is
+     * the only sink on this server, so without this the market would be a
+     * fixed price list that gets cheaper in real terms every day somebody
+     * farms a customer.
+     *
+     * Clamped hard at both ends. An unbounded index turns a good week into
+     * prices nobody can pay, and the point is a market that breathes, not one
+     * that runs away.
+     */
+    public static float marketIndex(float supply) {
+        float raw = 1.0f + (supply - MARKET_BASELINE) / (MARKET_BASELINE * 2.0f);
+        return Math.max(INDEX_MIN, Math.min(INDEX_MAX, raw));
+    }
+
+    /**
+     * One item's wobble for one day, as a multiplier around 1.
+     *
+     * Deterministic from (day, item) so every player is quoted the same price
+     * on the same day and it stays put until tomorrow -- a shop whose numbers
+     * change while you look at them is a slot machine. Per ITEM rather than
+     * per day, so some things are up while others are down and there is a
+     * reason to read the board.
+     */
+    public static float dailyDrift(long day, String itemId) {
+        int hash = mix((int) day * 31 + itemId.hashCode());
+        // 0..1 from the low bits, then mapped onto +/- DRIFT.
+        float unit = (hash >>> 8 & 0xFFFF) / (float) 0xFFFF;
+        return 1.0f + (unit * 2.0f - 1.0f) * DRIFT;
+    }
+
+    /** Deterministic scramble, so neighbouring days don't produce neighbouring prices. */
+    private static int mix(int value) {
+        value ^= value >>> 16;
+        value *= 0x7feb352d;
+        value ^= value >>> 15;
+        value *= 0x846ca68b;
+        return value ^ (value >>> 16);
+    }
+
+    /** Never free, whatever the market does. */
+    public static int buyPrice(int base, float index, float drift) {
+        return Math.max(1, Math.round(base * index * drift));
+    }
+
+    /**
+     * What the shop pays for one.
+     *
+     * A wide spread on purpose: the shop is a convenience, not an income. If
+     * selling approached the buy price, the profitable play would be watching
+     * the daily drift and arbitraging it rather than playing the game.
+     */
+    public static int sellPrice(int buyPrice) {
+        // Zero means "the shop won't buy this". At a one-emerald price there is
+        // no room for a spread -- rounding gives back exactly what you paid --
+        // and a shop that buys penny goods at cost is a free money loop. Real
+        // shops don't buy back a single nail either.
+        if (buyPrice < 2) {
+            return 0;
+        }
+        return Math.max(1, Math.min(buyPrice - 1, Math.round(buyPrice * SELL_RATE)));
+    }
+
     /** One row of a ledger search: what it is, how much, and how spread out. */
     public record Tally<T>(T key, int total, int containers) {
     }

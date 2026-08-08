@@ -1,0 +1,108 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "counter": "trapcraft:block/stall_counter",
+    "awning": "trapcraft:block/stall_awning",
+    "goods": "trapcraft:block/stall_goods",
+    "particle": "trapcraft:block/stall_counter"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        10,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#counter"
+        },
+        "south": {
+          "texture": "#counter"
+        },
+        "east": {
+          "texture": "#counter"
+        },
+        "west": {
+          "texture": "#counter"
+        },
+        "up": {
+          "texture": "#goods"
+        },
+        "down": {
+          "texture": "#counter"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        10,
+        0
+      ],
+      "to": [
+        16,
+        13,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#goods"
+        },
+        "south": {
+          "texture": "#goods"
+        },
+        "east": {
+          "texture": "#goods"
+        },
+        "west": {
+          "texture": "#goods"
+        },
+        "up": {
+          "texture": "#goods"
+        },
+        "down": {
+          "texture": "#goods"
+        }
+      }
+    },
+    {
+      "from": [
+        -1,
+        13,
+        -1
+      ],
+      "to": [
+        17,
+        16,
+        17
+      ],
+      "faces": {
+        "north": {
+          "texture": "#awning"
+        },
+        "south": {
+          "texture": "#awning"
+        },
+        "east": {
+          "texture": "#awning"
+        },
+        "west": {
+          "texture": "#awning"
+        },
+        "up": {
+          "texture": "#awning"
+        },
+        "down": {
+          "texture": "#awning"
+        }
+      }
+    }
+  ]
+}

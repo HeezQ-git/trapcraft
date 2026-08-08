@@ -929,6 +929,80 @@ cCccccncccCccccn
 """
 
 
+# --- market stall ---------------------------------------------------------
+
+STALL_PAL = {
+    "w": "#7a5a34",   # counter timber
+    "W": "#96703f",   # timber, lit
+    "d": "#5c4326",   # timber, shadow
+    "c": "#b23b3b",   # awning stripe, red
+    "C": "#d45252",   # awning, lit
+    "n": "#e8e2d2",   # awning stripe, cream
+    "N": "#f6f2e6",   # awning, lit cream
+    "g": "#3f7a33",   # produce
+    "e": "#3ba55c",   # emerald
+    "E": "#6ee49a",   # emerald, lit
+    "k": "#2b2018",   # shadow under the counter
+}
+
+STALL_COUNTER = """
+WWWWWWWWWWWWWWWW
+wwwwwwwwwwwwwwww
+wdwwwwwdwwwwwdww
+wwwwwwwwwwwwwwww
+dddddddddddddddd
+wwwwwwwwwwwwwwww
+wwdwwwwwwwdwwwww
+wwwwwwwwwwwwwwww
+dddddddddddddddd
+wwwwwwwwwwwwwwww
+wdwwwwwdwwwwwdww
+wwwwwwwwwwwwwwww
+dddddddddddddddd
+wwwwwwwwwwwwwwww
+wwwwwdwwwwwwwdww
+kkkkkkkkkkkkkkkk
+"""
+
+STALL_AWNING = """
+CCCCnnnnCCCCnnnn
+ccccNNNNccccNNNN
+ccccnnnnccccnnnn
+ccccnnnnccccnnnn
+CCCCnnnnCCCCnnnn
+ccccNNNNccccNNNN
+ccccnnnnccccnnnn
+ccccnnnnccccnnnn
+CCCCnnnnCCCCnnnn
+ccccNNNNccccNNNN
+ccccnnnnccccnnnn
+ccccnnnnccccnnnn
+CCCCnnnnCCCCnnnn
+ccccNNNNccccNNNN
+ccccnnnnccccnnnn
+ccccnnnnccccnnnn
+"""
+
+STALL_GOODS = """
+kkkkkkkkkkkkkkkk
+kkgkkkEkkkkgkkkk
+kgggkkekkkgggkkk
+kkgkkkkkkkkgkkkk
+kkkkkeEkkkkkkkkk
+kkkkkkekkkkkkgkk
+kkgkkkkkkkkkgggk
+kgggkkkkEkkkkgkk
+kkgkkkkkekkkkkkk
+kkkkkkkkkkkkkkkk
+kkkkgkkkkkeEkkkk
+kkkgggkkkkekkkkk
+kkkkgkkkkkkkkkkk
+kkkkkkkkkkkkkkkk
+kkkkkkEkkkkkkkkk
+kkkkkkekkkkkkkkk
+"""
+
+
 # --- the ledger -----------------------------------------------------------
 
 LEDGER_PAL = {
@@ -1527,6 +1601,9 @@ def main() -> None:
     write(render(PHONE_SHELL, PHONE_PAL), "item", "phone_shell.png")
     write(render(PHONE_SCREEN, PHONE_PAL), "item", "phone_screen.png")
     write(render(PHONE_KEYS, PHONE_PAL), "item", "phone_keys.png")
+    write(render(STALL_COUNTER, STALL_PAL), "block", "stall_counter.png")
+    write(render(STALL_AWNING, STALL_PAL), "block", "stall_awning.png")
+    write(render(STALL_GOODS, STALL_PAL), "block", "stall_goods.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

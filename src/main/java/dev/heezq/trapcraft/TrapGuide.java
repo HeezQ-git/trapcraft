@@ -126,6 +126,7 @@ public final class TrapGuide {
         paranoia(pages);
         ledger(pages);
         contracts(pages);
+        market(pages);
         return book("Street Handbook", pages);
     }
 
@@ -172,6 +173,27 @@ public final class TrapGuide {
                 .append(item("/paranoia\n\n"))
                 .append(body("Per player. Nobody else.\n\n"))
                 .append(hint("Also clear for a minute after respawn."))));
+    }
+
+    private static void market(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("4. THE MARKET\n\n"))
+                .append(body("Build a stall and somebody will trade with you.\n\n"))
+                .append(item("Wool Wool Wool\nLog  Emrld Log\nLog  Log  Log\n\n"))
+                .append(hint("Emerald block in the middle."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. PRICES\n\n"))
+                .append(body("Every price moves overnight.\n\n"))
+                .append(body("The more emeralds there are about, the dearer "
+                        + "everything gets.\n\n"))
+                .append(hint("Each item drifts on its own. Read the board."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c. DEALING\n\n"))
+                .append(body("Click to buy a lot. Shift for four.\n\n"))
+                .append(body("Right-click to sell one back.\n\n"))
+                .append(warn("They buy at about a third of what they sell for."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {

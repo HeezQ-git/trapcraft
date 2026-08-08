@@ -459,6 +459,8 @@ def lang() -> None:
         "item.trapcraft.nerve_tonic": "Nerve Tonic",
         "item.trapcraft.ledger": "The Ledger",
         "item.trapcraft.burner_phone": "Burner Phone",
+        "block.trapcraft.market_stall": "Market Stall",
+        "item.trapcraft.market_stall": "Market Stall",
         "effect.trapcraft.baked": "Baked",
         "effect.trapcraft.tolerance": "Tolerance",
         "entity.minecraft.villager.trapcraft.dealer": "Dealer",
@@ -1174,6 +1176,52 @@ def phone_assets() -> None:
     })
 
 
+def stall_model() -> dict:
+    """A market stall: counter, striped awning, goods on the top.
+
+    Closed shell like every other block here -- Polymer serves it on a
+    FULL_BLOCK carrier, so gaps would show a world lit as if the block were
+    solid. The awning overhangs the counter to give it a silhouette.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "counter": f"{NS}:block/stall_counter",
+            "awning": f"{NS}:block/stall_awning",
+            "goods": f"{NS}:block/stall_goods",
+            "particle": f"{NS}:block/stall_counter",
+        },
+        "elements": [
+            box([0, 0, 0], [16, 10, 16], "counter", up="goods"),      # counter
+            box([0, 10, 0], [16, 13, 16], "goods", up="goods"),       # produce on top
+            box([-1, 13, -1], [17, 16, 17], "awning", up="awning"),   # overhanging awning
+        ],
+    }
+
+
+def stall_assets() -> None:
+    put(f"assets/{NS}/models/block/market_stall.json", stall_model())
+    put(f"assets/{NS}/models/item/market_stall.json", {"parent": f"{NS}:block/market_stall"})
+    put(f"assets/{NS}/items/market_stall.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/market_stall"},
+    })
+    put(f"data/{NS}/loot_table/blocks/market_stall.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:market_stall"}]}],
+    })
+    # Wool for the awning, logs for the frame, an emerald because it's a shop.
+    put(f"data/{NS}/recipe/market_stall.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["WWW", "LEL", "LLL"],
+        "key": {"W": "#minecraft:wool", "L": "#minecraft:logs",
+                "E": "minecraft:emerald_block"},
+        "result": {"id": f"{NS}:market_stall", "count": 1},
+    })
+
+
 def tags() -> None:
     """Make the hammer enchantable.
 
@@ -1230,6 +1278,7 @@ def main() -> None:
     nerve_tonic_assets()
     ledger_assets()
     phone_assets()
+    stall_assets()
     tags()
     worldgen()
     recipes()

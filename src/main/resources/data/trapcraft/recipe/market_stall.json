@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "WWW",
+    "LEL",
+    "LLL"
+  ],
+  "key": {
+    "W": "#minecraft:wool",
+    "L": "#minecraft:logs",
+    "E": "minecraft:emerald_block"
+  },
+  "result": {
+    "id": "trapcraft:market_stall",
+    "count": 1
+  }
+}

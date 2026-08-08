@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -93,6 +94,60 @@ class FormulaTest {
         assertTrue(TrapMath.payout(0, 0, 0, 0, 0) >= 0);
         assertEquals(TrapMath.PAYOUT_CEILING,
                 TrapMath.payout(999999, 9999, 9, 99, 999));
+    }
+
+    // --- market ---------------------------------------------------------------
+
+    @Test
+    void moreMoneyInCirculationMeansHigherPrices() {
+        assertTrue(TrapMath.marketIndex(6000f) > TrapMath.marketIndex(500f));
+    }
+
+    @Test
+    void theIndexCannotRunAway() {
+        assertEquals(TrapMath.INDEX_MAX, TrapMath.marketIndex(9_000_000f), 0.001f);
+        assertEquals(TrapMath.INDEX_MIN, TrapMath.marketIndex(0f), 0.001f);
+    }
+
+    @Test
+    void aPriceHoldsStillForTheWholeDay() {
+        assertEquals(TrapMath.dailyDrift(40, "minecraft:diamond"),
+                TrapMath.dailyDrift(40, "minecraft:diamond"), 0.0f);
+    }
+
+    @Test
+    void differentItemsMoveDifferentlyOnTheSameDay() {
+        assertNotEquals(TrapMath.dailyDrift(40, "minecraft:diamond"),
+                TrapMath.dailyDrift(40, "minecraft:bread"));
+    }
+
+    @Test
+    void driftStaysWithinItsBand() {
+        for (long day = 0; day < 400; day++) {
+            float d = TrapMath.dailyDrift(day, "minecraft:diamond");
+            assertTrue(d >= 1.0f - TrapMath.DRIFT - 0.001f && d <= 1.0f + TrapMath.DRIFT + 0.001f,
+                    "day " + day + " drifted to " + d);
+        }
+    }
+
+    @Test
+    void sellingAlwaysPaysLessThanBuying() {
+        for (int base : new int[]{2, 5, 40, 400, 1200}) {
+            int buy = TrapMath.buyPrice(base, 1.0f, 1.0f);
+            assertTrue(TrapMath.sellPrice(buy) < buy, "no spread at base " + base);
+        }
+    }
+
+    @Test
+    void pennyGoodsAreNotBoughtBack() {
+        // A one-emerald price leaves no room for a spread, so the shop
+        // declines rather than handing back exactly what you paid.
+        assertEquals(0, TrapMath.sellPrice(1));
+    }
+
+    @Test
+    void buyingIsNeverFree() {
+        assertTrue(TrapMath.buyPrice(1, TrapMath.INDEX_MIN, 1.0f - TrapMath.DRIFT) >= 1);
     }
 
     // --- ledger ---------------------------------------------------------------
