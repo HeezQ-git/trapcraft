@@ -150,6 +150,59 @@ class FormulaTest {
         assertTrue(TrapMath.buyPrice(1, TrapMath.INDEX_MIN, 1.0f - TrapMath.DRIFT) >= 1);
     }
 
+    // --- the slot machine -----------------------------------------------------
+
+    @Test
+    void theHouseKeepsItsEdge() {
+        float rtp = TrapMath.slotReturnToPlayer();
+        assertTrue(rtp < 1.0f, "the house must win long-run, got " + rtp);
+        assertTrue(rtp > 0.7f, "but not so hard nobody plays, got " + rtp);
+    }
+
+    @Test
+    void mostSpinsPayNothing() {
+        int losses = 0;
+        for (int i = 0; i < 1000; i++) {
+            if (TrapMath.slotPayout(i / 1000.0f) == 0.0f) {
+                losses++;
+            }
+        }
+        assertTrue(losses > 700, "expected a clear majority of losses, got " + losses);
+    }
+
+    @Test
+    void theJackpotIsRareAndReal() {
+        assertEquals(20.0f, TrapMath.slotPayout(0.0f), 0.001f);
+        assertEquals(0.0f, TrapMath.slotPayout(0.999f), 0.001f);
+    }
+
+    // --- investments ----------------------------------------------------------
+
+    @Test
+    void waitingLongerPaysMoreOnAFlatMarket() {
+        float shortTerm = TrapMath.investReturn(1, 1.0f, 1.0f, 0.5f);
+        float longTerm = TrapMath.investReturn(7, 1.0f, 1.0f, 0.5f);
+        assertTrue(longTerm > shortTerm);
+    }
+
+    @Test
+    void buyingLowAndSellingHighWins() {
+        float rose = TrapMath.investReturn(3, 0.8f, 1.4f, 0.5f);
+        float fell = TrapMath.investReturn(3, 1.4f, 0.8f, 0.5f);
+        assertTrue(rose > fell, "the market direction must matter");
+    }
+
+    @Test
+    void anInvestmentCanActuallyLose() {
+        assertTrue(TrapMath.investReturn(1, 1.6f, 0.7f, 0.0f) < 1.0f,
+                "a crash with bad luck has to be able to lose money");
+    }
+
+    @Test
+    void butNeverWipesYouOut() {
+        assertTrue(TrapMath.investReturn(7, 9.0f, 0.1f, 0.0f) >= 0.15f);
+    }
+
     // --- ledger ---------------------------------------------------------------
 
     @Test

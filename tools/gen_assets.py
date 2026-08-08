@@ -461,6 +461,8 @@ def lang() -> None:
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
+        "block.trapcraft.slot_machine": "Lucky Streak",
+        "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
         "effect.trapcraft.tolerance": "Tolerance",
         "entity.minecraft.villager.trapcraft.dealer": "Dealer",
@@ -1200,6 +1202,62 @@ def stall_model() -> dict:
     }
 
 
+def slot_model() -> dict:
+    """A cabinet: chrome lever down one side, lit panel on top.
+
+    Closed shell, same FULL_BLOCK constraint as everything else. The lever is
+    a proud box rather than a cut-out so the silhouette reads from the side.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "front": f"{NS}:block/slot_front",
+            "side": f"{NS}:block/slot_side",
+            "top": f"{NS}:block/slot_top",
+            "particle": f"{NS}:block/slot_front",
+        },
+        "elements": [
+            {
+                "from": [0, 0, 0], "to": [16, 16, 16],
+                "faces": {
+                    "north": {"texture": "#front"},
+                    "south": {"texture": "#front"},
+                    "east": {"texture": "#side"},
+                    "west": {"texture": "#side"},
+                    "up": {"texture": "#top"},
+                    "down": {"texture": "#side"},
+                },
+            },
+            box([16, 6, 6.5], [17.5, 12, 9.5], "side"),      # the lever arm
+            box([16.2, 11, 6], [18, 13, 10], "top"),         # its knob
+        ],
+    }
+
+
+def slot_assets() -> None:
+    put(f"assets/{NS}/models/block/slot_machine.json", slot_model())
+    put(f"assets/{NS}/models/item/slot_machine.json", {"parent": f"{NS}:block/slot_machine"})
+    put(f"assets/{NS}/items/slot_machine.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/slot_machine"},
+    })
+    put(f"data/{NS}/loot_table/blocks/slot_machine.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:slot_machine"}]}],
+    })
+    # Iron shell, redstone guts, gold on the front, and a diamond because the
+    # thing has to look like it might pay out.
+    put(f"data/{NS}/recipe/slot_machine.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["IGI", "RDR", "III"],
+        "key": {"I": "minecraft:iron_ingot", "G": "minecraft:gold_ingot",
+                "R": "minecraft:redstone", "D": "minecraft:diamond"},
+        "result": {"id": f"{NS}:slot_machine", "count": 1},
+    })
+
+
 def stall_assets() -> None:
     put(f"assets/{NS}/models/block/market_stall.json", stall_model())
     put(f"assets/{NS}/models/item/market_stall.json", {"parent": f"{NS}:block/market_stall"})
@@ -1279,6 +1337,7 @@ def main() -> None:
     ledger_assets()
     phone_assets()
     stall_assets()
+    slot_assets()
     tags()
     worldgen()
     recipes()

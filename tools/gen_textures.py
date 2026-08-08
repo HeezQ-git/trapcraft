@@ -929,6 +929,79 @@ cCccccncccCccccn
 """
 
 
+# --- slot machine ---------------------------------------------------------
+
+SLOT_PAL = {
+    "r": "#8e2020",   # cabinet red
+    "R": "#b83030",   # cabinet, lit
+    "d": "#5e1414",   # cabinet, shadow
+    "y": "#e0b53a",   # brass trim
+    "Y": "#f7d96a",   # brass, lit
+    "k": "#1a1418",   # screen surround
+    "w": "#e8e4d8",   # reel face
+    "W": "#ffffff",   # reel highlight
+    "g": "#3ba55c",   # win light, green
+    "e": "#d8d8e4",   # chrome lever
+}
+
+SLOT_FRONT = """
+yyyyyyyyyyyyyyyy
+yRRRRRRRRRRRRRRy
+yRdddddddddddRRy
+yRdkkkkkkkkkdRRy
+yRdkwwWkwwWkdRRy
+yRdkwWwkwWwkdRRy
+yRdkwwWkwwWkdRRy
+yRdkkkkkkkkkdRRy
+yRdddddddddddRRy
+yRRRRRRRRRRRRRRy
+yRRgRRRRRRRRgRRy
+yRRRRRRRRRRRRRRy
+yRddddddddddddRy
+yRdyyyyyyyyyydRy
+yRRRRRRRRRRRRRRy
+yyyyyyyyyyyyyyyy
+"""
+
+SLOT_SIDE = """
+yyyyyyyyyyyyyyyy
+yRRRRRRRRRRRRRRy
+yRdRRRRRRRRRRdRy
+yRRRRRRRRRRRRRRy
+yRRRRRRRRRRRReey
+yRRRRRRRRRRRRedy
+yRdRRRRRRRRRRdRy
+yRRRRRRRRRRRRRRy
+yRRRRRRRRRRRRRRy
+yRdRRRRRRRRRRdRy
+yRRRRRRRRRRRRRRy
+yRRRRRRRRRRRRRRy
+yRddddddddddddRy
+yRRRRRRRRRRRRRRy
+yRRRRRRRRRRRRRRy
+yyyyyyyyyyyyyyyy
+"""
+
+SLOT_TOP = """
+yyyyyyyyyyyyyyyy
+yYYYYYYYYYYYYYYy
+yYRRRRRRRRRRRRYy
+yYRddddddddddRYy
+yYRdRRRRRRRRdRYy
+yYRdRgggggRRdRYy
+yYRdRgYYYgRRdRYy
+yYRdRgYkYgRRdRYy
+yYRdRgYYYgRRdRYy
+yYRdRgggggRRdRYy
+yYRdRRRRRRRRdRYy
+yYRddddddddddRYy
+yYRRRRRRRRRRRRYy
+yYYYYYYYYYYYYYYy
+yyyyyyyyyyyyyyyy
+yyyyyyyyyyyyyyyy
+"""
+
+
 # --- market stall ---------------------------------------------------------
 
 STALL_PAL = {
@@ -1604,6 +1677,9 @@ def main() -> None:
     write(render(STALL_COUNTER, STALL_PAL), "block", "stall_counter.png")
     write(render(STALL_AWNING, STALL_PAL), "block", "stall_awning.png")
     write(render(STALL_GOODS, STALL_PAL), "block", "stall_goods.png")
+    write(render(SLOT_FRONT, SLOT_PAL), "block", "slot_front.png")
+    write(render(SLOT_SIDE, SLOT_PAL), "block", "slot_side.png")
+    write(render(SLOT_TOP, SLOT_PAL), "block", "slot_top.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

@@ -193,6 +193,66 @@ public final class TrapMath {
         return Math.max(1, Math.min(buyPrice - 1, Math.round(buyPrice * SELL_RATE)));
     }
 
+    // --- the slot machine -----------------------------------------------------
+
+    /**
+     * What a spin pays, as a multiple of the stake.
+     *
+     * Drawn from a table rather than simulated reels. Real machines work this
+     * way too: pick the outcome, then show reels that agree with it. It means
+     * the return is an exact, tunable number instead of an emergent one nobody
+     * can check.
+     *
+     * The table returns 85% of the stake over time, so the house keeps 15 --
+     * and about three spins in four pay nothing at all. That gap between "I win
+     * sometimes" and "I lose money overall" is the whole design.
+     */
+    public static final float[] SLOT_ODDS = {0.008f, 0.030f, 0.080f, 0.140f};
+    public static final float[] SLOT_PAYS = {20.0f, 8.0f, 3.0f, 1.5f};
+
+    /** @param roll a uniform 0..1 draw */
+    public static float slotPayout(float roll) {
+        float floor = 0.0f;
+        for (int tier = 0; tier < SLOT_ODDS.length; tier++) {
+            floor += SLOT_ODDS[tier];
+            if (roll < floor) {
+                return SLOT_PAYS[tier];
+            }
+        }
+        return 0.0f;
+    }
+
+    /** Long-run return per emerald staked. Below 1 or the house loses money. */
+    public static float slotReturnToPlayer() {
+        float total = 0.0f;
+        for (int tier = 0; tier < SLOT_ODDS.length; tier++) {
+            total += SLOT_ODDS[tier] * SLOT_PAYS[tier];
+        }
+        return total;
+    }
+
+    // --- investments ----------------------------------------------------------
+
+    /**
+     * What a matured investment returns, as a multiple of the principal.
+     *
+     * Three inputs. The **term** pays a flat premium for the wait. The
+     * **market** decides direction: put money in while prices are low and take
+     * it out when they're high and you've done well, which makes the index
+     * worth watching rather than just a price tag. **Noise** stops it being an
+     * arithmetic exercise, and scales with the term, so the long bet is the
+     * volatile one rather than merely the slow one.
+     *
+     * It can lose. An investment that cannot lose is a savings account, and a
+     * savings account nobody can lose is just a slower way to print money.
+     */
+    public static float investReturn(int days, float indexAtStart, float indexNow, float noise) {
+        float termBonus = 0.03f * days;
+        float marketMove = (indexNow - indexAtStart) / Math.max(0.1f, indexAtStart);
+        float swing = (noise * 2.0f - 1.0f) * (0.05f + 0.02f * days);
+        return Math.max(0.15f, 1.0f + termBonus + marketMove + swing);
+    }
+
     /** One row of a ledger search: what it is, how much, and how spread out. */
     public record Tally<T>(T key, int total, int containers) {
     }

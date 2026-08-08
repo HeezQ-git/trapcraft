@@ -194,6 +194,20 @@ public final class TrapGuide {
                 .append(body("Click to buy a lot. Shift for four.\n\n"))
                 .append(body("Right-click to sell one back.\n\n"))
                 .append(warn("They buy at about a third of what they sell for."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. THE EXCHANGE\n\n"))
+                .append(body("Put emeralds away for a day, three, or a week.\n\n"))
+                .append(body("You get more back if the market rose while you waited.\n\n"))
+                .append(warn("And less if it fell. No early withdrawals."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4e. LUCKY STREAK\n\n"))
+                .append(body("Iron, gold, redstone, one diamond.\n\n"))
+                .append(body("Pull the lever. Three of a kind pays big.\n\n"))
+                .append(warn("The house keeps about "
+                        + Math.round((1.0f - TrapMath.slotReturnToPlayer()) * 100)
+                        + "% of everything staked."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {

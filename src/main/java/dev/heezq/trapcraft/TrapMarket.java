@@ -41,6 +41,7 @@ public final class TrapMarket {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             ShopStock.build();
             load(server);
+            TrapInvest.load(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             // Once a second is plenty to notice the date changed.

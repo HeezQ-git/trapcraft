@@ -47,6 +47,8 @@ public class ShopScreenHandler extends ScreenHandler {
 
     /** Two rows of four, centred, so the shelves read as a shopfront. */
     private static final int[] SHELF_SPOTS = {10, 12, 14, 16, 28, 30, 32, 34};
+    /** The exchange desk, deliberately off on its own rather than in the row. */
+    private static final int INVEST_SPOT = 22;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity shopper;
@@ -54,6 +56,8 @@ public class ShopScreenHandler extends ScreenHandler {
     private ShopStock.Category open;
     /** Some shelves carry more than one screenful. */
     private int page;
+    /** True while the exchange is open instead of a goods shelf. */
+    private boolean exchange;
 
     public ShopScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
@@ -79,6 +83,7 @@ public class ShopScreenHandler extends ScreenHandler {
     // --- pages ----------------------------------------------------------------
 
     private void showShelves() {
+        exchange = false;
         open = null;
         shown.clear();
         blank();
@@ -97,11 +102,83 @@ public class ShopScreenHandler extends ScreenHandler {
                     line(ShopStock.of(category).size() + " lines", Formatting.DARK_GRAY))));
             display.setStack(spots[i], icon);
         }
+
+        ItemStack desk = new ItemStack(Items.GOLD_INGOT);
+        desk.set(DataComponentTypes.CUSTOM_NAME,
+                plain("The Exchange").formatted(Formatting.GOLD, Formatting.BOLD));
+        int open = TrapInvest.of(shopper).size();
+        desk.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Put emeralds away and let them work.", Formatting.GRAY),
+                Text.empty(),
+                line(open == 0 ? "Nothing invested" : open + " position(s) open",
+                        Formatting.DARK_GRAY))));
+        display.setStack(INVEST_SPOT, desk);
+
+        footer();
+        sendContentUpdates();
+    }
+
+    /**
+     * The exchange: what you hold, and what you can open.
+     *
+     * Deliberately one screen with no paging. Five positions is the cap, so
+     * everything you have riding on the market is visible at once -- money you
+     * have to scroll to find is money you forget about.
+     */
+    private void showExchange() {
+        exchange = true;
+        open = null;
+        shown.clear();
+        blank();
+
+        List<TrapInvest.Position> held = TrapInvest.of(shopper);
+        long today = TrapMarket.today(shopper.getServer());
+        for (int i = 0; i < held.size(); i++) {
+            TrapInvest.Position position = held.get(i);
+            boolean ready = position.matured(today);
+            ItemStack slip = new ItemStack(ready ? Items.GOLD_INGOT : Items.PAPER);
+            slip.set(DataComponentTypes.CUSTOM_NAME,
+                    plain(position.principal() + "e for " + position.days() + "d")
+                            .formatted(ready ? Formatting.GOLD : Formatting.WHITE));
+            List<Text> lore = new ArrayList<>();
+            if (ready) {
+                lore.add(line("Matured. Worth ", Formatting.GRAY)
+                        .append(plain(TrapInvest.projected(shopper, position) + "e")
+                                .formatted(Formatting.GREEN)));
+                lore.add(Text.empty());
+                lore.add(line("Click to collect", Formatting.YELLOW));
+            } else {
+                lore.add(line((position.maturesOn() - today) + " day(s) to go",
+                        Formatting.GRAY));
+                lore.add(Text.empty());
+                lore.add(line("No early withdrawals.", Formatting.DARK_GRAY));
+            }
+            slip.set(DataComponentTypes.LORE, new LoreComponent(lore));
+            display.setStack(9 + i, slip);
+        }
+
+        int spot = 28;
+        for (TrapInvest.Term term : TrapInvest.Term.values()) {
+            for (int stake : new int[]{64, 256}) {
+                ItemStack offer = new ItemStack(Items.EMERALD, 1);
+                offer.set(DataComponentTypes.CUSTOM_NAME,
+                        plain("Invest " + stake + "e").formatted(Formatting.GREEN)
+                                .append(plain("  " + term.label).formatted(Formatting.GRAY)));
+                offer.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                        line("Locked for " + term.days + " day(s).", Formatting.GRAY),
+                        line("Pays more the longer you wait,", Formatting.DARK_GRAY),
+                        line("and more if the market rises.", Formatting.DARK_GRAY),
+                        Text.empty(),
+                        line("It can come back smaller.", Formatting.RED))));
+                display.setStack(spot++, offer);
+            }
+        }
         footer();
         sendContentUpdates();
     }
 
     private void showShelf(ShopStock.Category category, int wanted) {
+        exchange = false;
         open = category;
         shown.clear();
         shown.addAll(ShopStock.of(category));
@@ -172,7 +249,7 @@ public class ShopScreenHandler extends ScreenHandler {
                         + (page + 2) + "/" + (lastPage() + 1) + ")"));
             }
         }
-        if (open != null) {
+        if (open != null || exchange) {
             ItemStack back = new ItemStack(Items.ARROW);
             back.set(DataComponentTypes.CUSTOM_NAME,
                     plain("Back to the shelves").formatted(Formatting.WHITE));
@@ -226,7 +303,16 @@ public class ShopScreenHandler extends ScreenHandler {
         boolean shift = actionType == SlotActionType.QUICK_MOVE;
         boolean right = button == 1;
 
+        if (exchange) {
+            exchangeClick(slotIndex);
+            return;
+        }
         if (open == null) {
+            if (slotIndex == INVEST_SPOT) {
+                click(1.1F);
+                showExchange();
+                return;
+            }
             int[] spots = SHELF_SPOTS;
             for (int i = 0; i < spots.length && i < ShopStock.CATEGORIES.size(); i++) {
                 if (spots[i] == slotIndex) {
@@ -264,6 +350,68 @@ public class ShopScreenHandler extends ScreenHandler {
             buy(entry, shift ? 4 : 1);
         }
         showShelf(open, page);
+    }
+
+    private void exchangeClick(int slotIndex) {
+        if (slotIndex == BACK_SLOT) {
+            click(0.7F);
+            showShelves();
+            return;
+        }
+
+        List<TrapInvest.Position> held = TrapInvest.of(shopper);
+        int slip = slotIndex - 9;
+        if (slip >= 0 && slip < held.size()) {
+            TrapInvest.Position position = held.get(slip);
+            int paid = TrapInvest.collect(shopper, position);
+            if (paid < 0) {
+                deny();
+                shopper.sendMessage(plain("That one isn't ready yet.")
+                        .formatted(Formatting.GRAY), false);
+                return;
+            }
+            int change = paid - position.principal();
+            till();
+            shopper.sendMessage(plain("Collected ").formatted(Formatting.GRAY)
+                    .append(plain(paid + "e").formatted(Formatting.GREEN))
+                    .append(plain(change >= 0
+                                    ? "   up " + change + " on the " + position.principal() + " you put in"
+                                    : "   down " + (-change) + " on the " + position.principal() + " you put in")
+                            .formatted(change >= 0 ? Formatting.DARK_GRAY : Formatting.RED)), false);
+            showExchange();
+            return;
+        }
+
+        int offer = slotIndex - 28;
+        TrapInvest.Term[] terms = TrapInvest.Term.values();
+        if (offer < 0 || offer >= terms.length * 2) {
+            return;
+        }
+        TrapInvest.Term term = terms[offer / 2];
+        int stake = (offer % 2 == 0) ? 64 : 256;
+
+        if (!TrapInvest.canOpen(shopper)) {
+            deny();
+            shopper.sendMessage(plain("You've got as much riding on the market as they'll take.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
+        if (TrapMarket.wealthOf(shopper) < stake) {
+            deny();
+            shopper.sendMessage(plain("You'd need ").formatted(Formatting.GRAY)
+                    .append(plain(stake + "e").formatted(Formatting.RED))
+                    .append(plain(" in hand for that.").formatted(Formatting.GRAY)), false);
+            return;
+        }
+
+        TrapMarket.take(shopper, stake);
+        TrapInvest.open(shopper, stake, term);
+        till();
+        shopper.sendMessage(plain("Put ").formatted(Formatting.GRAY)
+                .append(plain(stake + "e").formatted(Formatting.GREEN))
+                .append(plain(" away for " + term.days + " day(s). Come back for it.")
+                        .formatted(Formatting.GRAY)), false);
+        showExchange();
     }
 
     private void buy(ShopStock.Entry entry, int lots) {

@@ -13,6 +13,7 @@
   "block.trapcraft.market_stall": "Market Stall",
   "block.trapcraft.mixing_station": "Mixing Station",
   "block.trapcraft.refiner": "Refiner",
+  "block.trapcraft.slot_machine": "Lucky Streak",
   "block.trapcraft.wild_cannabis": "Wild Cannabis",
   "effect.trapcraft.baked": "Baked",
   "effect.trapcraft.tolerance": "Tolerance",
@@ -58,5 +59,6 @@
   "item.trapcraft.seeds_kush": "Kush Seeds",
   "item.trapcraft.seeds_midnight": "Midnight Seeds",
   "item.trapcraft.seeds_purp": "Purp Seeds",
-  "item.trapcraft.seeds_sunset": "Sunset Seeds"
+  "item.trapcraft.seeds_sunset": "Sunset Seeds",
+  "item.trapcraft.slot_machine": "Lucky Streak"
 }
