@@ -416,6 +416,13 @@ public final class TrapGuide {
                 .append(warn("Miss it: -" + TrapContracts.FAIL_REP + " rep.\n\n"))
                 .append(hint("Rep rides the phone."))));
         pages.add(page(Text.empty()
+                .append(title("3c2. THE DROP\n\n"))
+                .append(body("Follow the compass. Get close and your buyer "
+                        + "turns up, glowing.\n\n"))
+                .append(body("Right-click them to hand it over.\n\n"))
+                .append(hint("Click them empty-handed and they'll remind you."))));
+
+        pages.add(page(Text.empty()
                 .append(title("3d. WHAT THEY TAKE\n\n"))
                 .append(body("Each job says: cured buds only, rolled joints "
                         + "only, or either.\n\n"))

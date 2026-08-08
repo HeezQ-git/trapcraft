@@ -90,7 +90,17 @@ public final class TrapContracts {
                     || !(player instanceof ServerPlayerEntity actor) || hand != Hand.MAIN_HAND) {
                 return ActionResult.PASS;
             }
-            return tryDeliver(actor, entity.getBlockPos()) ? ActionResult.SUCCESS : ActionResult.PASS;
+            boolean isContact = entity.getCommandTags().contains(CONTACT_TAG);
+            if (tryDeliver(actor, entity.getBlockPos())) {
+                return ActionResult.SUCCESS;
+            }
+            // The contact has no trades to fall back on, so a click that isn't
+            // a delivery has to say something or it reads as a broken villager.
+            if (isContact) {
+                sayWhatTheyWant(actor);
+                return ActionResult.SUCCESS;
+            }
+            return ActionResult.PASS;
         });
     }
 
@@ -221,6 +231,8 @@ public final class TrapContracts {
             return;
         }
 
+        tickContact(player, contract);
+
         int left = contract.secondsLeft(now);
         player.sendMessage(Text.literal(String.format("%s x%d %s  ·  %s+  ·  %d:%02d",
                                 contract.strainValue().display(), contract.quantity(),
@@ -240,12 +252,156 @@ public final class TrapContracts {
 
     private static void fail(ServerPlayerEntity player, ItemStack phone) {
         phone.remove(TrapComponents.contract);
+        dismissContact(player);
         adjustRep(phone, -FAIL_REP);
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 1.0F, 0.5F);
         player.sendMessage(Text.literal("You missed the drop. They won't forget it.")
                 .formatted(Formatting.RED), false);
+    }
+
+    // --- the contact ----------------------------------------------------------
+
+    /**
+     * Somebody is actually waiting for you.
+     *
+     * The job used to end at "right-click any villager near the village", and
+     * two things were wrong with that. Nothing told you a villager was the
+     * target -- you arrived, found houses, and stood there. And the village is
+     * a STRUCTURE position, so a ruined one, a raided one, or one whose
+     * villagers had wandered off left you at a correct address with nobody
+     * home.
+     *
+     * So the contract brings its own contact. Get within sight of the drop and
+     * a marked buyer is standing there, lit up, waiting. Right-click them.
+     * There is nothing to work out.
+     */
+    private static final int CONTACT_RANGE = 72;
+    private static final int CONTACT_FORGET = 160;
+    private static final String CONTACT_TAG = "trapcraft_contact";
+    private static final Map<UUID, UUID> CONTACTS = new HashMap<>();
+
+    private static void tickContact(ServerPlayerEntity player, Contract contract) {
+        ServerWorld world = player.getWorld();
+        BlockPos drop = contract.destination();
+        double flat = player.getBlockPos().getSquaredDistance(
+                drop.getX(), player.getBlockPos().getY(), drop.getZ());
+
+        VillagerEntity contact = contactOf(world, player);
+        if (flat > (double) CONTACT_FORGET * CONTACT_FORGET) {
+            if (contact != null) {
+                contact.discard();
+                CONTACTS.remove(player.getUuid());
+            }
+            return;
+        }
+        if (flat > (double) CONTACT_RANGE * CONTACT_RANGE) {
+            return;
+        }
+
+        if (contact == null) {
+            contact = placeContact(world, player, drop, contract);
+            if (contact == null) {
+                return;
+            }
+        }
+        // A column of light so they can be picked out from across a village.
+        // Finding the person is not supposed to be the puzzle.
+        if (world.getTime() % 10 == 0) {
+            for (int up = 0; up < 6; up++) {
+                world.spawnParticles(ParticleTypes.END_ROD,
+                        contact.getX(), contact.getY() + 1.2 + up * 0.55, contact.getZ(),
+                        1, 0.04, 0.04, 0.04, 0.0);
+            }
+        }
+    }
+
+    private static VillagerEntity contactOf(ServerWorld world, ServerPlayerEntity player) {
+        UUID id = CONTACTS.get(player.getUuid());
+        if (id == null) {
+            return null;
+        }
+        return world.getEntity(id) instanceof VillagerEntity found && found.isAlive()
+                ? found : null;
+    }
+
+    private static VillagerEntity placeContact(ServerWorld world, ServerPlayerEntity player,
+                                               BlockPos drop, Contract contract) {
+        BlockPos spot = world.getTopPosition(
+                net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, drop);
+        VillagerEntity contact = net.minecraft.entity.EntityType.VILLAGER.create(
+                world, net.minecraft.entity.SpawnReason.EVENT);
+        if (contact == null) {
+            return null;
+        }
+        contact.refreshPositionAndAngles(spot, 0.0F, 0.0F);
+        contact.setPersistent();
+        // Rooted and unkillable: a contact who wanders into a river, or gets
+        // shot by the village's own pillagers, is a job you cannot finish.
+        contact.setAiDisabled(true);
+        contact.setInvulnerable(true);
+        contact.setSilent(true);
+        contact.setVillagerData(contact.getVillagerData().withProfession(
+                world.getRegistryManager().getOrThrow(
+                                net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
+                        .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
+        contact.setCustomName(Text.literal("Buyer  ·  " + contract.quantity() + "x "
+                        + contract.strainValue().display())
+                .formatted(Formatting.GOLD, Formatting.BOLD));
+        contact.setCustomNameVisible(true);
+        contact.setGlowing(true);
+        contact.addCommandTag(CONTACT_TAG);
+        world.spawnEntity(contact);
+        CONTACTS.put(player.getUuid(), contact.getUuid());
+
+        world.playSound(null, spot, SoundEvents.ENTITY_VILLAGER_AMBIENT,
+                SoundCategory.NEUTRAL, 1.0F, 0.9F);
+        player.sendMessage(Text.literal("Your buyer's here. ")
+                        .formatted(Formatting.GOLD, Formatting.BOLD)
+                        .append(Text.literal("Glowing one. Right-click to hand it over.")
+                                .formatted(Formatting.GRAY)), false);
+        return contact;
+    }
+
+    /** Clicked the buyer without the goods. Tell them why nothing happened. */
+    private static void sayWhatTheyWant(ServerPlayerEntity player) {
+        ItemStack phone = findPhone(player);
+        Contract contract = phone == null ? null : phone.get(TrapComponents.contract);
+        if (contract == null) {
+            player.sendMessage(Text.literal("They're waiting on somebody else.")
+                    .formatted(Formatting.GRAY), true);
+            return;
+        }
+        int carrying = countGoods(player, contract);
+        player.sendMessage(Text.literal(contract.quantity() + "x ")
+                        .formatted(Formatting.WHITE)
+                        .append(Text.literal(contract.strainValue().display())
+                                .withColor(contract.strainValue().colour()))
+                        .append(Text.literal(", " + contract.formValue().label.toLowerCase(
+                                        java.util.Locale.ROOT) + ", "
+                                        + contract.gradeValue().display() + " or better. "
+                                        + "You've got " + carrying + ".")
+                                .formatted(Formatting.GRAY)),
+                false);
+        player.getWorld().playSound(null, player.getBlockPos(),
+                SoundEvents.ENTITY_VILLAGER_NO, SoundCategory.NEUTRAL, 0.7F, 1.0F);
+    }
+
+    /** Called when the job ends, however it ends. */
+    private static void dismissContact(ServerPlayerEntity player) {
+        UUID id = CONTACTS.remove(player.getUuid());
+        if (id == null) {
+            return;
+        }
+        for (ServerWorld world : player.getServer().getWorlds()) {
+            if (world.getEntity(id) instanceof VillagerEntity contact) {
+                world.spawnParticles(ParticleTypes.POOF,
+                        contact.getX(), contact.getY() + 0.8, contact.getZ(),
+                        10, 0.25, 0.4, 0.25, 0.01);
+                contact.discard();
+            }
+        }
     }
 
     // --- delivering -----------------------------------------------------------
@@ -285,6 +441,7 @@ public final class TrapContracts {
         takeGoods(player, contract);
 
         phone.remove(TrapComponents.contract);
+        dismissContact(player);
         adjustRep(phone, contract.rep());
         TrapMarket.pay(player, contract.payout());
 
