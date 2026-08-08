@@ -1000,9 +1000,9 @@ public final class TrapMath {
     // --- the dealer network -----------------------------------------------------
 
     /** Levels a dealer can reach. */
-    public static final int DEALER_MAX_LEVEL = 5;
+    public static final int DEALER_MAX_LEVEL = 8;
     /** Items sold to earn one level, at each level. */
-    public static final int[] DEALER_XP = {0, 40, 120, 280, 600};
+    public static final int[] DEALER_XP = {0, 40, 120, 280, 600, 1100, 1900, 3200};
 
     /** Slots a dealer of this level can carry. */
     public static int dealerSlots(int level) {
@@ -1019,12 +1019,42 @@ public final class TrapMath {
      * strictly better isn't a choice.
      */
     public static float dealerCut(int level) {
-        return 0.12f + 0.03f * Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+        return 0.12f + 0.02f * Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
     }
 
-    /** What hiring one costs up front. */
+    /**
+     * What hiring one costs up front, before your name is worth anything.
+     *
+     * Squared, so the top of the ladder is a project rather than a purchase.
+     */
     public static int dealerHireCost(int level) {
         return 180 * level * level;
+    }
+
+    /**
+     * What they'll actually take, given your standing.
+     *
+     * Rep is earned on contracts, so the courier work you did last week is
+     * what gets you a good dealer cheap this week -- which is the point of
+     * having two systems rather than two menus. Capped at 40% so reputation
+     * makes the ladder climbable, not free.
+     */
+    public static final float REP_DISCOUNT_CAP = 0.40f;
+
+    public static int dealerHireCost(int level, int rep) {
+        float off = Math.min(REP_DISCOUNT_CAP, Math.max(0, rep) * 0.01f);
+        return Math.max(1, Math.round(dealerHireCost(level) * (1.0f - off)));
+    }
+
+    /**
+     * How much faster a well-connected boss's dealers learn the streets.
+     *
+     * Same idea from the other end: rep opens doors, and a dealer working for
+     * somebody with a name gets introduced to people a nobody's dealer has to
+     * find alone.
+     */
+    public static float dealerLearnRate(int rep) {
+        return 1.0f + Math.min(1.0f, Math.max(0, rep) * 0.015f);
     }
 
     /**

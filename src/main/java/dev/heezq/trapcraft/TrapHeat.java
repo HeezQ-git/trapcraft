@@ -343,6 +343,23 @@ public final class TrapHeat {
         return Math.max(0, COOLDOWN_TICKS[tier] - (world.getTime() - last));
     }
 
+    /**
+     * Word gets around.
+     *
+     * Product moving on the street brings the next patrol forward. Not a raid
+     * on its own -- you still need a grow worth raiding -- but it means a big
+     * dealing operation is raided more often than a quiet one, which is the
+     * connection between having dealers and having a problem.
+     */
+    public static void stirTheStreet(ServerWorld world, int itemsSold) {
+        Long last = lastRaid.get(world.getRegistryKey());
+        if (last == null) {
+            return;
+        }
+        // Each item shifted ages the cooldown by an extra two seconds.
+        lastRaid.put(world.getRegistryKey(), last - itemsSold * 40L);
+    }
+
     /** Send one now, ignoring heat and cooldown. For /raid. */
     public static void force(ServerWorld world, BlockPos pos, int tier) {
         int clamped = Math.max(0, Math.min(THRESHOLDS.length - 1, tier));

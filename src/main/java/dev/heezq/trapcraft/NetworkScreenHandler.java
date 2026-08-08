@@ -35,6 +35,7 @@ public class NetworkScreenHandler extends ScreenHandler {
     private static final int SIZE = ROWS * 9;
     private static final int MINE_ROW = 0;
     private static final int HELP_SLOT = 13;
+    private static final int REROLL_SLOT = 17;
     private static final int OFFER_ROW = 2;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
@@ -79,6 +80,7 @@ public class NetworkScreenHandler extends ScreenHandler {
             display.setStack(OFFER_ROW * 9 + i, going(offers.get(i)));
         }
         display.setStack(HELP_SLOT, help());
+        display.setStack(REROLL_SLOT, rerollTag());
         sendContentUpdates();
     }
 
@@ -99,6 +101,27 @@ public class NetworkScreenHandler extends ScreenHandler {
                 line(mine.size() + " of " + TrapDealers.MAX_DEALERS + " on the books.",
                         Formatting.DARK_GRAY))));
         return tag;
+    }
+
+    private ItemStack rerollTag() {
+        boolean can = TrapMarket.wealthOf(boss) >= TrapDealers.REROLL_COST;
+        ItemStack tag = new ItemStack(can ? Items.ENDER_EYE : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Ask around").formatted(can ? Formatting.AQUA : Formatting.DARK_GRAY,
+                        Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(TrapDealers.REROLL_COST + "e for three new faces.", Formatting.GRAY),
+                Text.empty(),
+                line("The board turns over on its own every", Formatting.DARK_GRAY),
+                line("ten minutes or so anyway.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("Reputation gets you better people.", Formatting.WHITE),
+                line("Yours: " + rep() + " rep.", Formatting.DARK_GRAY))));
+        return tag;
+    }
+
+    private int rep() {
+        return TrapContracts.repOf(TrapContracts.findPhone(boss));
     }
 
     private ItemStack onTheBooks(TrapDealers.Dealer dealer) {
@@ -124,7 +147,8 @@ public class NetworkScreenHandler extends ScreenHandler {
     }
 
     private ItemStack going(TrapDealers.Dealer offer) {
-        int cost = TrapMath.dealerHireCost(offer.level);
+        int full = TrapMath.dealerHireCost(offer.level);
+        int cost = TrapMath.dealerHireCost(offer.level, rep());
         boolean can = TrapMarket.wealthOf(boss) >= cost
                 && mine.size() < TrapDealers.MAX_DEALERS;
         ItemStack tag = new ItemStack(can ? Items.PAPER : Items.GRAY_DYE);
@@ -134,7 +158,11 @@ public class NetworkScreenHandler extends ScreenHandler {
                         .append(plain("  L" + offer.level)
                                 .formatted(can ? Formatting.GOLD : Formatting.DARK_GRAY)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Wants " + cost + "e up front.", Formatting.GOLD),
+                cost < full
+                        ? line("Wants " + cost + "e up front  ", Formatting.GOLD)
+                        .append(plain("(was " + full + ", your name helps)")
+                                .formatted(Formatting.DARK_GRAY))
+                        : line("Wants " + cost + "e up front.", Formatting.GOLD),
                 line("Keeps " + Math.round(TrapMath.dealerCut(offer.level) * 100)
                         + "% of what they sell.", Formatting.GRAY),
                 line("Carries " + TrapMath.dealerSlots(offer.level) + " slots.",
@@ -170,6 +198,18 @@ public class NetworkScreenHandler extends ScreenHandler {
             } else {
                 boss.closeHandledScreen();
             }
+            return;
+        }
+        if (index == REROLL_SLOT) {
+            String no = TrapDealers.payToReroll(boss);
+            if (no != null) {
+                deny();
+                boss.sendMessage(plain(no).formatted(Formatting.GRAY), false);
+                return;
+            }
+            boss.getWorld().playSound(null, boss.getBlockPos(),
+                    SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundCategory.PLAYERS, 0.6F, 1.2F);
+            paint();
             return;
         }
         if (row == OFFER_ROW && col < offers.size()) {

@@ -50,6 +50,10 @@ public final class TrapDealers {
     public static final int MAX_DEALERS = 4;
     /** Candidates on the board at once. */
     public static final int BOARD_SIZE = 3;
+    /** What it costs to send the current lot away and ask around again. */
+    public static final int REROLL_COST = 90;
+    /** Ticks before the board turns over on its own. Ten minutes. */
+    private static final int BOARD_TICKS = 20 * 60 * 10;
 
     private static final String TAG = "trapcraft_dealer";
 
@@ -111,6 +115,8 @@ public final class TrapDealers {
     private static final List<Dealer> BOOK = new ArrayList<>();
     /** The current hiring board per player, refreshed when it runs dry. */
     private static final java.util.Map<UUID, List<Dealer>> OFFERS = new java.util.HashMap<>();
+    /** When each player's board was last drawn, so it can go stale. */
+    private static final java.util.Map<UUID, Integer> DRAWN = new java.util.HashMap<>();
     private static Path saveFile;
 
     private TrapDealers() {
@@ -180,17 +186,53 @@ public final class TrapDealers {
      * somebody's cursor while they're deciding.
      */
     public static List<Dealer> board(ServerPlayerEntity boss) {
-        return OFFERS.computeIfAbsent(boss.getUuid(), key -> {
-            var random = boss.getWorld().getRandom();
-            List<Dealer> offers = new ArrayList<>();
-            for (int i = 0; i < BOARD_SIZE; i++) {
-                String name = FIRST[random.nextInt(FIRST.length)] + " "
-                        + LAST[random.nextInt(LAST.length)];
-                offers.add(new Dealer(UUID.randomUUID(), boss.getUuid(), name,
-                        1 + random.nextInt(3)));
-            }
-            return offers;
-        });
+        int now = boss.getServer().getTicks();
+        Integer drawn = DRAWN.get(boss.getUuid());
+        // Turns over on its own, so the same three faces aren't there all
+        // week -- but only while nobody is looking at it, since a board that
+        // reshuffles under your cursor is worse than a stale one.
+        if (drawn == null || now - drawn > BOARD_TICKS) {
+            reroll(boss, false);
+        }
+        return OFFERS.getOrDefault(boss.getUuid(), List.of());
+    }
+
+    /**
+     * Draw a fresh three.
+     *
+     * The level spread widens with your reputation: a nobody gets whoever is
+     * hanging about, and somebody with a name gets introduced to people worth
+     * hiring. That is rep doing work in a second place, which is the point of
+     * having contracts and dealers in the same mod rather than side by side.
+     */
+    public static void reroll(ServerPlayerEntity boss, boolean paid) {
+        var random = boss.getWorld().getRandom();
+        int rep = TrapContracts.repOf(TrapContracts.findPhone(boss));
+        int ceiling = Math.min(TrapMath.DEALER_MAX_LEVEL, 3 + rep / 10);
+
+        List<Dealer> offers = new ArrayList<>();
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            String name = FIRST[random.nextInt(FIRST.length)] + " "
+                    + LAST[random.nextInt(LAST.length)];
+            offers.add(new Dealer(UUID.randomUUID(), boss.getUuid(), name,
+                    1 + random.nextInt(ceiling)));
+        }
+        OFFERS.put(boss.getUuid(), offers);
+        DRAWN.put(boss.getUuid(), boss.getServer().getTicks());
+        if (paid) {
+            boss.sendMessage(Text.literal("Asked around again.").formatted(Formatting.GRAY),
+                    false);
+        }
+    }
+
+    /** @return why it didn't happen, or null if the board turned over */
+    public static String payToReroll(ServerPlayerEntity boss) {
+        if (TrapMarket.wealthOf(boss) < REROLL_COST) {
+            return "Asking around costs " + REROLL_COST + "e.";
+        }
+        TrapMarket.take(boss, REROLL_COST);
+        reroll(boss, true);
+        return null;
     }
 
     /** @return why it didn't happen, or null if it did */
@@ -198,13 +240,15 @@ public final class TrapDealers {
         if (of(boss).size() >= MAX_DEALERS) {
             return "You can't run more than " + MAX_DEALERS + " at once.";
         }
-        int cost = TrapMath.dealerHireCost(offer.level);
+        int cost = TrapMath.dealerHireCost(offer.level,
+                TrapContracts.repOf(TrapContracts.findPhone(boss)));
         if (TrapMarket.wealthOf(boss) < cost) {
             return offer.name + " wants " + cost + "e up front.";
         }
         TrapMarket.take(boss, cost);
         BOOK.add(offer);
         OFFERS.remove(boss.getUuid());
+        DRAWN.remove(boss.getUuid());
         save();
 
         boss.sendMessage(Text.literal(offer.name).formatted(Formatting.GOLD, Formatting.BOLD)
@@ -234,7 +278,14 @@ public final class TrapDealers {
     /** @return why it didn't happen, or null if they're on their way */
     public static String call(ServerPlayerEntity boss, Dealer dealer) {
         if (dealer.mob != null) {
-            return dealer.name + " is already here.";
+            // Only refuse if he's really standing there. If the body is gone --
+            // killed by something before AI was disabled, lost to a chunk
+            // wipe, whatever -- the record would otherwise wedge forever with
+            // no way to call him back.
+            if (findBody(boss.getServer(), dealer) != null) {
+                return dealer.name + " is already here.";
+            }
+            dealer.mob = null;
         }
         ServerWorld world = boss.getWorld();
         VillagerEntity body = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
@@ -245,6 +296,12 @@ public final class TrapDealers {
                 world.getRandom().nextInt(7) - 3, 0, world.getRandom().nextInt(7) - 3);
         body.refreshPositionAndAngles(spot, boss.getYaw(), 0.0F);
         body.setPersistent();
+        // Standing still and unkillable while they're here. A dealer who
+        // wanders off down a ravine with your stock in his pockets is a
+        // disaster with no recovery, and he's only here for a minute anyway.
+        body.setAiDisabled(true);
+        body.setInvulnerable(true);
+        body.setSilent(true);
         body.setCustomName(Text.literal(dealer.name + "  L" + dealer.level)
                 .formatted(Formatting.GOLD));
         body.setCustomNameVisible(true);
@@ -277,18 +334,40 @@ public final class TrapDealers {
         }
     }
 
-    private static void sendHome(MinecraftServer server, Dealer dealer) {
+    private static VillagerEntity findBody(MinecraftServer server, Dealer dealer) {
         if (dealer.mob == null) {
-            return;
+            return null;
         }
         for (ServerWorld world : server.getWorlds()) {
             if (world.getEntity(dealer.mob) instanceof VillagerEntity body) {
-                world.spawnParticles(ParticleTypes.POOF,
-                        body.getX(), body.getY() + 0.8, body.getZ(), 10, 0.25, 0.4, 0.25, 0.01);
-                body.discard();
+                return body;
             }
         }
+        return null;
+    }
+
+    private static void sendHome(MinecraftServer server, Dealer dealer) {
+        VillagerEntity body = findBody(server, dealer);
+        if (body != null) {
+            body.getWorld().playSound(null, body.getBlockPos(),
+                    SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.NEUTRAL, 0.7F, 1.2F);
+            ((ServerWorld) body.getWorld()).spawnParticles(ParticleTypes.POOF,
+                    body.getX(), body.getY() + 0.8, body.getZ(), 12, 0.25, 0.4, 0.25, 0.01);
+            body.discard();
+        }
         dealer.mob = null;
+    }
+
+    /** Send them back to work now, from the button in their book. */
+    public static void sendOut(ServerPlayerEntity boss, Dealer dealer) {
+        sendHome(boss.getServer(), dealer);
+        save();
+        boss.sendMessage(Text.literal(dealer.name).formatted(Formatting.GOLD)
+                .append(Text.literal(dealer.stock.isEmpty()
+                                ? " went back out. They've got nothing to sell, mind."
+                                : " went back out with " + dealer.carrying() + " on them.")
+                        .formatted(dealer.stock.isEmpty()
+                                ? Formatting.RED : Formatting.GRAY)), false);
     }
 
     // --- the round ------------------------------------------------------------
@@ -351,7 +430,19 @@ public final class TrapDealers {
         }
         int cut = Math.round(gross * TrapMath.dealerCut(dealer.level));
         dealer.earnings += Math.max(0, gross - cut);
-        dealer.sold += moved;
+        // Rep opens doors from this end too: a dealer working for somebody
+        // with a name gets introduced to people a nobody's dealer has to find
+        // alone, so they learn the streets faster.
+        int rep = boss == null ? 0 : TrapContracts.repOf(TrapContracts.findPhone(boss));
+        dealer.sold += Math.max(1, Math.round(moved * TrapMath.dealerLearnRate(rep)));
+
+        // Product moving on the street is exactly the sort of thing that gets
+        // noticed. Selling shortens the wait before the next patrol, which is
+        // what ties this to the raids instead of leaving them two features
+        // that happen to share a world.
+        if (boss != null) {
+            TrapHeat.stirTheStreet(boss.getWorld(), moved);
+        }
 
         // Level up on the way past, so it lands the moment it's earned rather
         // than the next time somebody opens a screen.

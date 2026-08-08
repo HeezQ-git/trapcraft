@@ -751,10 +751,25 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("8h. LEVELS\n\n"))
-                .append(body("They level up by selling. Higher level = more "
-                        + "slots, faster, robbed less.\n\n"))
-                .append(body("They also keep a bigger cut.\n\n"))
-                .append(hint("Still worth it. The throughput more than pays."))));
+                .append(body("Eight levels. Higher = more slots, faster, "
+                        + "robbed less, bigger cut.\n\n"))
+                .append(body("Still worth it -- the throughput more than "
+                        + "covers the cut.\n\n"))
+                .append(hint("Level 8 carries 18 slots."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8h2. YOUR NAME\n\n"))
+                .append(body("Contract rep cuts hiring costs, up to 40%.\n\n"))
+                .append(body("It also gets better people on the board, and "
+                        + "your dealers learn faster.\n\n"))
+                .append(hint("Courier work pays twice."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8h3. THE BOARD\n\n"))
+                .append(body("Turns over on its own every ten minutes.\n\n"))
+                .append(body("Or pay " + TrapDealers.REROLL_COST
+                        + "e to ask around now.\n\n"))
+                .append(warn("Product on the street brings raids forward."))));
 
         pages.add(page(Text.empty()
                 .append(title("8i. CROWDING\n\n"))

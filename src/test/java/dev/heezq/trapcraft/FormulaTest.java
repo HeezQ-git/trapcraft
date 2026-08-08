@@ -723,6 +723,31 @@ class FormulaTest {
     }
 
     @Test
+    void everyLevelFitsTheGrid() {
+        // Slots are drawn into an 18-slot grid. A level that wanted more
+        // would silently lose the overflow.
+        assertTrue(TrapMath.dealerSlots(TrapMath.DEALER_MAX_LEVEL) <= 18,
+                "the top level wants " + TrapMath.dealerSlots(TrapMath.DEALER_MAX_LEVEL)
+                        + " slots and the grid holds 18");
+        assertEquals(TrapMath.DEALER_MAX_LEVEL, TrapMath.DEALER_XP.length,
+                "every level needs a threshold to reach it");
+    }
+
+    @Test
+    void reputationMakesTheLadderClimbable() {
+        int level = TrapMath.DEALER_MAX_LEVEL;
+        int full = TrapMath.dealerHireCost(level, 0);
+        assertEquals(full, TrapMath.dealerHireCost(level), "no rep, no discount");
+        assertTrue(TrapMath.dealerHireCost(level, 20) < full, "rep should cut the price");
+        // Capped: reputation opens the door, it doesn't hand you the keys.
+        assertTrue(TrapMath.dealerHireCost(level, 10000)
+                        >= Math.round(full * (1 - TrapMath.REP_DISCOUNT_CAP)) - 1,
+                "the discount must stay capped however much rep you have");
+        assertTrue(TrapMath.dealerLearnRate(40) > TrapMath.dealerLearnRate(0),
+                "rep should speed levelling too");
+    }
+
+    @Test
     void crowdingThePatchHasDiminishingReturns() {
         float alone = TrapMath.dealerRate(3, 1, 0);
         float four = TrapMath.dealerRate(3, 4, 0) * 4;

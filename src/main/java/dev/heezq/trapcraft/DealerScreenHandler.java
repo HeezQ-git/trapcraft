@@ -87,12 +87,20 @@ public class DealerScreenHandler extends ScreenHandler {
         paint();
     }
 
-    /** The screen's slots are the truth; push them back to the dealer. */
+    /**
+     * The screen's slots are the truth; push them back to the dealer.
+     *
+     * ONLY contraband. The locked slots are filled with grey panes so you can
+     * see they're locked, and this used to copy those panes into the dealer's
+     * stock -- which saved them to disk, filled the poor man's pockets with
+     * glass, and let a shift-click pull them out into your inventory. A pane
+     * is scenery and can never be stock.
+     */
     private void writeBack() {
         dealer.stock.clear();
-        for (int index = 0; index < pockets.size(); index++) {
+        for (int index = 0; index < dealer.slots() && index < pockets.size(); index++) {
             ItemStack stack = pockets.getStack(index);
-            if (!stack.isEmpty()) {
+            if (!stack.isEmpty() && TrapContent.isContraband(stack)) {
                 dealer.stock.add(stack);
             }
         }
@@ -192,6 +200,11 @@ public class DealerScreenHandler extends ScreenHandler {
                 boss.sendMessage(plain("Shift-click if you're sure.")
                         .formatted(Formatting.GRAY), true);
             } else if (at == SEND_OUT) {
+                // Actually send them. This used to just close the screen and
+                // leave the man standing there until his ninety seconds ran
+                // out, which read as a button that did nothing.
+                writeBack();
+                TrapDealers.sendOut(boss, dealer);
                 boss.closeHandledScreen();
             }
             return;
@@ -229,6 +242,12 @@ public class DealerScreenHandler extends ScreenHandler {
     @Override
     public ItemStack quickMove(PlayerEntity mover, int index) {
         if (index < BARS + CHROME) {
+            // A locked slot gives nothing, ever. canTakeItems already refuses a
+            // plain click; without the same check here a shift-click walked
+            // straight past it and handed the player a glass pane.
+            if (index >= dealer.slots()) {
+                return ItemStack.EMPTY;
+            }
             ItemStack stack = index < BARS ? pockets.getStack(index) : ItemStack.EMPTY;
             if (stack.isEmpty() || !this.insertItem(stack, BARS + CHROME, this.slots.size(), true)) {
                 return ItemStack.EMPTY;
