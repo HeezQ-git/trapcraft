@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "APA",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "A": "minecraft:paper",
+    "P": "#minecraft:planks",
+    "W": "minecraft:green_wool"
+  },
+  "result": {
+    "id": "trapcraft:blackjack",
+    "count": 1
+  }
+}

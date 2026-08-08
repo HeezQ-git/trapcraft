@@ -83,6 +83,10 @@ public final class TrapContent {
     public static Item plinkoItem;
     public static Block climb;
     public static Item climbItem;
+    public static Block toss;
+    public static Item tossItem;
+    public static Block blackjack;
+    public static Item blackjackItem;
     public static RegistryEntry<StatusEffect> wiredEffect;
     public static Block bong;
     public static Item bongItem;
@@ -382,6 +386,16 @@ public final class TrapContent {
         climbItem = registerItem("climb",
                 (settings, model) -> new RackItem(climb, settings, model));
 
+        toss = registerBlock("toss", TossBlock::new,
+                AbstractBlock.Settings.create().strength(2.0F).sounds(BlockSoundGroup.WOOD));
+        tossItem = registerItem("toss",
+                (settings, model) -> new RackItem(toss, settings, model));
+
+        blackjack = registerBlock("blackjack", BlackjackBlock::new,
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+        blackjackItem = registerItem("blackjack",
+                (settings, model) -> new RackItem(blackjack, settings, model));
+
         cocaSeeds = registerItem("coca_seeds",
                 (settings, model) -> new SeedsItem(cocaCrop, settings, model));
         cocaLeaves = registerItem("coca_leaves", TrapItem::new);
@@ -474,6 +488,8 @@ public final class TrapContent {
                     entries.add(rouletteItem);
                     entries.add(plinkoItem);
                     entries.add(climbItem);
+                    entries.add(tossItem);
+                    entries.add(blackjackItem);
                     entries.add(hammer);
                 })
                 .build();

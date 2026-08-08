@@ -1,4 +1,5 @@
 {
+  "block.trapcraft.blackjack": "Blackjack",
   "block.trapcraft.bong": "Bong",
   "block.trapcraft.cannabis_crop_diesel": "Diesel Plant",
   "block.trapcraft.cannabis_crop_haze": "Haze Plant",
@@ -17,11 +18,13 @@
   "block.trapcraft.refiner": "Refiner",
   "block.trapcraft.roulette": "Roulette Table",
   "block.trapcraft.slot_machine": "Lucky Streak",
+  "block.trapcraft.toss": "Coin Toss",
   "block.trapcraft.wild_cannabis": "Wild Cannabis",
   "effect.trapcraft.baked": "Baked",
   "effect.trapcraft.tolerance": "Tolerance",
   "effect.trapcraft.wired": "Wired",
   "entity.minecraft.villager.trapcraft.dealer": "Dealer",
+  "item.trapcraft.blackjack": "Blackjack",
   "item.trapcraft.blend_bud": "Blend Bud",
   "item.trapcraft.blend_joint": "Blend Joint",
   "item.trapcraft.bong": "Bong",
@@ -67,5 +70,6 @@
   "item.trapcraft.seeds_purp": "Purp Seeds",
   "item.trapcraft.seeds_sunset": "Sunset Seeds",
   "item.trapcraft.slot_machine": "Lucky Streak",
+  "item.trapcraft.toss": "Coin Toss",
   "item.trapcraft.wallet": "Wallet"
 }

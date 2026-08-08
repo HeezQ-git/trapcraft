@@ -332,7 +332,37 @@ public final class TrapGuide {
                 .append(hint("Same bet either way. Wilder, not better."))));
 
         pages.add(page(Text.empty()
-                .append(title("4k. THE HOUSE\n\n"))
+                .append(title("4k. COIN TOSS\n\n"))
+                .append(item("  -  Gold   -\nGreen Green Green\nPlank Plank Plank\n\n"))
+                .append(body("Heads, tails, or the rim.\n\n"))
+                .append(hint("The rim pays " + (int) TrapMath.TOSS_EDGE_PAY
+                        + "x and lands about "
+                        + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0 + "%."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4l. BLACKJACK\n\n"))
+                .append(item("Paper Plank Paper\nGreen Green Green\nPlank Plank Plank\n\n"))
+                .append(body("Hit, stand or double. Dealer stands on "
+                        + TrapMath.DEALER_STANDS + ".\n\n"))
+                .append(warn("Blackjack pays six to five here, not three to two."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4m. COINS\n\n"))
+                .append(body("The exchange has a second window: six coins "
+                        + "you can buy and sell whenever.\n\n"))
+                .append(body("Steady, Swingy, Degenerate.\n\n"))
+                .append(warn("The wild ones do go to zero. Permanently."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4m2. LOCKING\n\n"))
+                .append(body("Buy locked and you can't sell for "
+                        + TrapCoins.LOCK_BEATS / 2 + " minutes.\n\n"))
+                .append(body("It pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
+                        + "% extra when the term is up.\n\n"))
+                .append(warn("A rug doesn't care that you locked it."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4n. THE HOUSE\n\n"))
                 .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
                         + " spins in 100 pay, and never less than "
                         + "your stake.\n\n"))

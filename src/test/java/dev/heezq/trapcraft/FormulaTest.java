@@ -598,6 +598,138 @@ class FormulaTest {
         assertTrue(TrapMath.SELL_RATE < 0.7f, "but buying must stay the expensive side");
     }
 
+    // --- the coin market --------------------------------------------------------
+
+    @Test
+    void everyCoinStaysOnTheBoard() {
+        // A price of zero or a NaN would divide by zero somewhere in the
+        // screen, and a price is read every repaint.
+        for (long beat = 0; beat < 6000; beat += 7) {
+            for (float volatility : new float[]{0.10f, 0.30f, 0.65f}) {
+                float price = TrapMath.coinPrice(beat, "test", 100.0f, volatility, 0.0f);
+                assertTrue(price > 0.0f && Float.isFinite(price),
+                        "price went to " + price + " on beat " + beat);
+            }
+        }
+    }
+
+    @Test
+    void aWilderCoinSwingsWider() {
+        float steady = spread(0.10f);
+        float degenerate = spread(0.65f);
+        assertTrue(degenerate > steady * 2,
+                "a degenerate coin should swing far harder: " + degenerate + " vs " + steady);
+    }
+
+    private static float spread(float volatility) {
+        float low = Float.MAX_VALUE;
+        float high = 0.0f;
+        for (long beat = 0; beat < 4000; beat++) {
+            float price = TrapMath.coinPrice(beat, "spread" + volatility, 100.0f, volatility, 0.0f);
+            low = Math.min(low, price);
+            high = Math.max(high, price);
+        }
+        return high / low;
+    }
+
+    @Test
+    void aSteadyCoinNeverRugs() {
+        for (long beat = 0; beat < 20000; beat += 13) {
+            assertFalse(TrapMath.coinDead(beat, "steady", 0.0f),
+                    "a coin with no rug chance died on beat " + beat);
+        }
+    }
+
+    @Test
+    void aRuggedCoinIsNearlyWorthless() {
+        // Find an era that actually rugs, then check the price after it.
+        for (long era = 0; era < 200; era++) {
+            long rug = TrapMath.coinRugBeat(era, "doomed", 0.35f);
+            if (rug < 0) {
+                continue;
+            }
+            float before = TrapMath.coinPrice(rug - 1, "doomed", 100.0f, 0.3f, 0.35f);
+            float after = TrapMath.coinPrice(rug, "doomed", 100.0f, 0.3f, 0.35f);
+            assertTrue(after < before * 0.2f,
+                    "a rug should be a cliff, not a dip: " + before + " -> " + after);
+            assertTrue(TrapMath.coinDead(rug, "doomed", 0.35f));
+            return;
+        }
+        throw new AssertionError("no era rugged in 200 tries at 35% -- the roll is broken");
+    }
+
+    @Test
+    void theSpreadAlwaysFavoursTheHouse() {
+        // Buy and immediately sell must lose money, or the market is a faucet.
+        for (float price : new float[]{0.5f, 12.0f, 180.0f, 5000.0f}) {
+            int paid = TrapMath.coinBuyCost(price, 10);
+            int back = TrapMath.coinSellValue(price, 10);
+            assertTrue(back < paid,
+                    "round-tripping at " + price + " paid " + paid + " and returned " + back);
+        }
+    }
+
+    // --- the coin toss ----------------------------------------------------------
+
+    @Test
+    void everyCallOnTheCoinIsPricedTheSame() {
+        for (int called = 0; called < 3; called++) {
+            float rtp = TrapMath.tossReturnToPlayer(called);
+            assertTrue(rtp < 1.0f, "call " + called + " returns " + rtp + " -- the house loses");
+            assertTrue(rtp > 0.93f, "call " + called + " returns " + rtp + " -- too mean");
+        }
+    }
+
+    @Test
+    void theCoinLandsOnAllThreeAndOnlyPaysTheCaller() {
+        boolean[] seen = new boolean[3];
+        for (int i = 0; i < 1000; i++) {
+            seen[TrapMath.tossResult(i / 1000.0f)] = true;
+        }
+        assertTrue(seen[0] && seen[1] && seen[2], "all three outcomes must be reachable");
+        for (int called = 0; called < 3; called++) {
+            for (int result = 0; result < 3; result++) {
+                if (called != result) {
+                    assertEquals(0.0f, TrapMath.tossReturn(called, result), 0.0001f);
+                }
+            }
+        }
+    }
+
+    // --- blackjack --------------------------------------------------------------
+
+    @Test
+    void acesCountTheWayThatHelps() {
+        assertEquals(21, TrapMath.handValue(new int[]{1, 13}, 2), "ace and a king is 21");
+        assertEquals(12, TrapMath.handValue(new int[]{1, 1}, 2), "two aces is 12, not 22");
+        assertEquals(13, TrapMath.handValue(new int[]{1, 1, 1}, 3), "three aces is 13");
+        assertEquals(21, TrapMath.handValue(new int[]{1, 5, 5}, 3), "ace five five is 21");
+        assertEquals(16, TrapMath.handValue(new int[]{10, 5, 1}, 3),
+                "an ace that would bust you counts one");
+        assertEquals(30, TrapMath.handValue(new int[]{13, 12, 11}, 3), "no aces, no mercy");
+    }
+
+    @Test
+    void onlyTwoCardsMakeABlackjack() {
+        assertTrue(TrapMath.isBlackjack(new int[]{1, 10}, 2));
+        assertFalse(TrapMath.isBlackjack(new int[]{7, 7, 7}, 3), "21 on three cards is just 21");
+        assertFalse(TrapMath.isBlackjack(new int[]{10, 10}, 2));
+    }
+
+    @Test
+    void theDealerStandsWhereItSaysItDoes() {
+        assertTrue(TrapMath.dealerHits(new int[]{10, 6}, 2), "sixteen takes another");
+        assertFalse(TrapMath.dealerHits(new int[]{10, 7}, 2), "seventeen stands");
+        assertFalse(TrapMath.dealerHits(new int[]{1, 6}, 2), "soft seventeen stands too");
+    }
+
+    @Test
+    void blackjackPaysBetterThanAPlainWin() {
+        assertTrue(TrapMath.BLACKJACK_PAY > 2.0f, "a natural must beat an ordinary win");
+        assertTrue(TrapMath.BLACKJACK_PAY < 2.5f,
+                "but this house pays six to five, not three to two");
+    }
+
     // --- the pawn counter -------------------------------------------------------
 
     @Test

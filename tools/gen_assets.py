@@ -462,6 +462,10 @@ def lang() -> None:
         "block.trapcraft.roulette": "Roulette Table",
         "block.trapcraft.plinko": "The Drop",
         "block.trapcraft.climb": "The Climb",
+        "block.trapcraft.toss": "Coin Toss",
+        "item.trapcraft.toss": "Coin Toss",
+        "block.trapcraft.blackjack": "Blackjack",
+        "item.trapcraft.blackjack": "Blackjack",
         "item.trapcraft.climb": "The Climb",
         "item.trapcraft.plinko": "The Drop",
         "item.trapcraft.roulette": "Roulette Table",
@@ -1082,6 +1086,64 @@ def nerve_tonic_assets() -> None:
     })
 
 
+def table_model(top: str) -> dict:
+    """A full-cube gaming table: panelled sides, a felt lid.
+
+    Genuinely fills the cube, so the carrier can honestly claim FULL_BLOCK and
+    costs nothing from the thin transparent pool the roulette table and the peg
+    board are already drawing on.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "top": f"{NS}:block/{top}",
+            "side": f"{NS}:block/table_side",
+            "particle": f"{NS}:block/table_side",
+        },
+        "elements": [
+            {
+                "from": [0, 0, 0],
+                "to": [16, 16, 16],
+                "faces": {
+                    "north": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                    "south": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                    "east": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                    "west": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                    "up": {"texture": "#top", "uv": [0, 0, 16, 16]},
+                    "down": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                },
+            },
+        ],
+    }
+
+
+def table_assets(name: str, top: str, pattern, key) -> None:
+    put(f"assets/{NS}/models/block/{name}.json", table_model(top))
+    put(f"assets/{NS}/models/item/{name}.json", {"parent": f"{NS}:block/{name}"})
+    put(f"assets/{NS}/items/{name}.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+    })
+    put(f"assets/{NS}/blockstates/{name}.json", {
+        "variants": {"": {"model": f"{NS}:block/{name}"}},
+    })
+    put(f"data/{NS}/recipe/{name}.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": pattern,
+        "key": key,
+        "result": {"id": f"{NS}:{name}", "count": 1},
+    })
+    put(f"data/{NS}/loot_table/blocks/{name}.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:{name}"}],
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+        }],
+    })
+
+
 def climb_model() -> dict:
     """A full-cube strongbox: brass-banded lid, locks on the face.
 
@@ -1194,6 +1256,11 @@ def advancements() -> None:
           "minecraft:snowball", "floor", frame="goal")
     award("whole_floor", "House Money", "Win something on all four machines.",
           "minecraft:emerald", "floor", frame="challenge")
+
+    award("rim", "On The Rim", "Call the edge on the coin toss and hit it.",
+          "minecraft:nether_star", "floor", frame="challenge")
+    award("natural", "Natural", "Get dealt twenty-one on two cards.",
+          "minecraft:paper", "floor", frame="goal")
 
     award("crew", "Payroll", "Take somebody on. Wages start immediately.",
           "minecraft:villager_spawn_egg", "root", frame="goal")
@@ -1714,6 +1781,14 @@ def main() -> None:
     roulette_assets()
     plinko_assets()
     climb_assets()
+    # A gold ingot for the coin, green wool for the felt, planks for the box.
+    table_assets("toss", "toss_top", ["_G_", "WWW", "PPP"],
+                 {"G": "minecraft:gold_ingot", "W": "minecraft:green_wool",
+                  "P": "#minecraft:planks"})
+    # Paper for the cards, and a bit more of everything: it's a proper table.
+    table_assets("blackjack", "blackjack_top", ["APA", "WWW", "PPP"],
+                 {"A": "minecraft:paper", "P": "#minecraft:planks",
+                  "W": "minecraft:green_wool"})
     advancements()
     phone_assets()
     stall_assets()

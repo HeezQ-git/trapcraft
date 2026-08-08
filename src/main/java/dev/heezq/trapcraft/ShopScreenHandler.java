@@ -43,6 +43,8 @@ public class ShopScreenHandler extends ScreenHandler {
     private static final int MOOD_SLOT = FOOTER + 4;
     private static final int PURSE_SLOT = FOOTER + 8;
     private static final int PREV_SLOT = FOOTER + 2;
+    /** The way through to the coin market, on the exchange page only. */
+    private static final int COINS_SLOT = FOOTER + 6;
     private static final int NEXT_SLOT = FOOTER + 6;
 
     /**
@@ -184,6 +186,20 @@ public class ShopScreenHandler extends ScreenHandler {
         open = null;
         shown.clear();
         blank();
+
+        long beat = TrapMarket.beat();
+        ItemStack floor = new ItemStack(Items.DIAMOND);
+        floor.set(DataComponentTypes.CUSTOM_NAME,
+                plain("The Coin Market").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD));
+        int worth = TrapCoins.portfolio(shopper, beat);
+        floor.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Six listings. Buy in, sell whenever.", Formatting.GRAY),
+                line("Some of them go to nothing.", Formatting.RED),
+                Text.empty(),
+                line(worth > 0 ? "You're holding " + worth + "e of coin."
+                                : "You're not in anything.",
+                        worth > 0 ? Formatting.GREEN : Formatting.DARK_GRAY))));
+        display.setStack(COINS_SLOT, floor);
 
         List<TrapInvest.Position> held = TrapInvest.of(shopper);
         long today = TrapMarket.today(shopper.getServer());
@@ -434,6 +450,15 @@ public class ShopScreenHandler extends ScreenHandler {
         if (slotIndex == BACK_SLOT) {
             click(0.7F);
             showShelves();
+            return;
+        }
+        if (slotIndex == COINS_SLOT) {
+            click(1.3F);
+            // Its own screen: six listings with a chart and four buttons each
+            // needs the whole grid, and this page is already a list of slips.
+            shopper.openHandledScreen(new net.minecraft.screen.SimpleNamedScreenHandlerFactory(
+                    (id, inventory, ignored) -> new CoinScreenHandler(id, inventory),
+                    plain("The Coin Market").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)));
             return;
         }
 

@@ -90,6 +90,7 @@ public final class TrapMarket {
             ShopStock.build(server);
             load(server);
             TrapInvest.load(server);
+            TrapCoins.load(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (server.getTicks() % BEAT_TICKS != 0) {

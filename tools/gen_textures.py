@@ -1097,6 +1097,82 @@ kkkkkkekkkkkkkkk
 """
 
 
+# --- the coin toss and the card table -------------------------------------
+
+TABLE_PAL = {
+    "w": "#4a2f1a",     # rail
+    "W": "#69452a",     # rail, lit
+    "d": "#2e1c0f",     # rail, shadow
+    "g": "#1e6b3a",     # felt
+    "G": "#2a8c4c",     # felt, lit
+    "k": "#14472a",     # felt, shadow
+    "m": "#c9a227",     # brass / coin
+    "M": "#f0cf5a",     # brass, lit
+    "p": "#e8e8ea",     # card face
+    "r": "#b02020",     # red pip
+    "b": "#1a1a1a",     # black pip
+}
+
+# The toss box lid: a big coin embossed in the felt.
+TOSS_TOP = """
+wwwwwwwwwwwwwwww
+wggggggggggggggw
+wggggmmmmmmggggw
+wgggmMMMMMMmgggw
+wggmMMmmmmMMmggw
+wggmMmmMMmmMmggw
+wggmMmMMMMmMmggw
+wggmMmMMMMmMmggw
+wggmMmmMMmmMmggw
+wggmMMmmmmMMmggw
+wgggmMMMMMMmgggw
+wggggmmmmmmggggw
+wggggggggggggggw
+wgGggggggggggGgw
+wggggggggggggggw
+wwwwwwwwwwwwwwww
+"""
+
+# The card table lid: two cards laid out on the felt.
+CARD_TOP = """
+wwwwwwwwwwwwwwww
+wggggggggggggggw
+wgpppppgggppppgw
+wgpbppprgggpppgw
+wgpppppgggprppgw
+wgppprpgggppppgw
+wgpppppgggpbppgw
+wggggggggggggggw
+wggkgggggggggggw
+wgggggggmmgggggw
+wggggggmMMmggggw
+wggggggmMMmggggw
+wgggggggmmgggggw
+wggggggggggggggw
+wgGgggggggggggGw
+wwwwwwwwwwwwwwww
+"""
+
+# The sides of both: panelled wood with a brass rail.
+TABLE_SIDE = """
+mMwwwwwwwwwwwwMm
+MWWWWWWWWWWWWWWM
+wWdWWWWWWWWWdWWw
+wWWWWWWWWWWWWWWw
+wWWWWWdWWWWWWWWw
+wWWWWWWWWWdWWWWw
+wWdWWWWWWWWWWWWw
+wWWWWWWWWdWWWWWw
+wWWWdWWWWWWWWdWw
+wWWWWWWWWWWWWWWw
+wWWdWWWWdWWWWWWw
+wWWWWWWWWWWWdWWw
+wWWWWdWWWWWWWWWw
+wWdWWWWWWWWWWWWw
+MWWWWWWWWWWWWWWM
+mMwwwwwwwwwwwwMm
+"""
+
 # --- the climb (strongbox) ------------------------------------------------
 
 CLIMB_PAL = {
@@ -1994,6 +2070,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(TOSS_TOP, TABLE_PAL), "block", "toss_top.png")
+    write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
+    write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")
     write(render(CLIMB_FACE, CLIMB_PAL), "block", "climb_face.png")
     write(render(CLIMB_PLATE, CLIMB_PAL), "block", "climb_plate.png")
     write(render(CLIMB_LID, CLIMB_PAL), "block", "climb_lid.png")

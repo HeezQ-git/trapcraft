@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "_G_",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "W": "minecraft:green_wool",
+    "P": "#minecraft:planks"
+  },
+  "result": {
+    "id": "trapcraft:toss",
+    "count": 1
+  }
+}

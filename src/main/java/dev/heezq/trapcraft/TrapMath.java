@@ -997,6 +997,219 @@ public final class TrapMath {
         return bets;
     }
 
+    // --- the coin toss ----------------------------------------------------------
+
+    /**
+     * Heads, tails, and the third thing.
+     *
+     * A coin toss is the most boring bet there is, which is exactly why this
+     * one has an edge: about three tosses in two hundred the coin comes down
+     * on its rim, and anybody who called it takes sixty-four times their
+     * stake. Nobody wins it. Everybody tries it once.
+     *
+     * The two sensible bets and the silly one carry the same house edge to
+     * within half a percent, so calling the edge is a genuine choice about
+     * variance rather than a trap.
+     */
+    public static final float TOSS_EDGE_CHANCE = 0.015f;
+    public static final float TOSS_SIDE_PAY = 1.96f;
+    public static final float TOSS_EDGE_PAY = 64.0f;
+
+    /** 0 heads, 1 tails, 2 on its edge. */
+    public static int tossResult(float roll) {
+        if (roll < TOSS_EDGE_CHANCE) {
+            return 2;
+        }
+        return roll < TOSS_EDGE_CHANCE + (1.0f - TOSS_EDGE_CHANCE) / 2.0f ? 0 : 1;
+    }
+
+    /** What a call returns per emerald staked, including the stake. */
+    public static float tossReturn(int called, int result) {
+        if (called != result) {
+            return 0.0f;
+        }
+        return called == 2 ? TOSS_EDGE_PAY : TOSS_SIDE_PAY;
+    }
+
+    /** Long-run return for one kind of call. Exact: there are three outcomes. */
+    public static float tossReturnToPlayer(int called) {
+        float chance = called == 2
+                ? TOSS_EDGE_CHANCE : (1.0f - TOSS_EDGE_CHANCE) / 2.0f;
+        return chance * (called == 2 ? TOSS_EDGE_PAY : TOSS_SIDE_PAY);
+    }
+
+    // --- blackjack --------------------------------------------------------------
+
+    /**
+     * What a hand is worth, aces counted the way that helps you.
+     *
+     * Ranks arrive as 1..13. An ace is eleven unless that busts you, which is
+     * the only rule in blackjack that people get wrong when they write it, so
+     * it is one line here and tested rather than scattered through the screen.
+     */
+    public static int handValue(int[] ranks, int count) {
+        int total = 0;
+        int aces = 0;
+        for (int i = 0; i < count; i++) {
+            int rank = ranks[i];
+            if (rank == 1) {
+                aces++;
+                total += 11;
+            } else {
+                total += Math.min(10, rank);
+            }
+        }
+        while (total > 21 && aces > 0) {
+            total -= 10;
+            aces--;
+        }
+        return total;
+    }
+
+    /** Two cards making exactly 21. Pays better than any other 21. */
+    public static boolean isBlackjack(int[] ranks, int count) {
+        return count == 2 && handValue(ranks, count) == 21;
+    }
+
+    /**
+     * What blackjack pays.
+     *
+     * Six to five, not the three to two a real table pays. That is the single
+     * change that takes the house edge from about half a percent to about one
+     * and a half, and it is what casinos actually did when they wanted more
+     * money without changing a rule anybody reads. It fits this place.
+     */
+    public static final float BLACKJACK_PAY = 2.2f;
+    public static final int DEALER_STANDS = 17;
+
+    /** Does the dealer take another card on this hand? */
+    public static boolean dealerHits(int[] ranks, int count) {
+        return handValue(ranks, count) < DEALER_STANDS;
+    }
+
+    // --- the coin market --------------------------------------------------------
+
+    /**
+     * What a coin is worth on a given beat.
+     *
+     * A pure function of (beat, coin) rather than a running price kept in a
+     * file. That means the chart is the same for everybody, survives a restart
+     * with no state at all, and -- the useful part -- history can be READ
+     * BACKWARDS, so a sparkline of the last hour costs nothing to draw.
+     *
+     * The shape comes from stacked octaves of smoothed noise, which is how you
+     * get something that looks like a market rather than like a sine wave: a
+     * slow tide, a daily swing, and a jitter on top, each half the size and
+     * twice the speed of the one before.
+     */
+    public static final int COIN_OCTAVES = 3;
+    /** Beats in the slowest octave. At a 30s beat this is about half an hour. */
+    public static final float COIN_SLOWEST = 64.0f;
+
+    public static float coinNoise(long beat, String coin) {
+        float total = 0.0f;
+        float amplitude = 1.0f;
+        float span = COIN_SLOWEST;
+        for (int octave = 0; octave < COIN_OCTAVES; octave++) {
+            long step = Math.max(1L, (long) span);
+            long at = Math.floorDiv(beat, step);
+            float phase = Math.floorMod(beat, step) / (float) step;
+            float from = unit(at, coin + octave);
+            float to = unit(at + 1, coin + octave);
+            float eased = phase * phase * (3.0f - 2.0f * phase);
+            total += ((from + (to - from) * eased) - 0.5f) * 2.0f * amplitude;
+            amplitude *= 0.5f;
+            span *= 0.5f;
+        }
+        return total;
+    }
+
+    /** A deterministic 0..1 from any (number, key) pair. */
+    private static float unit(long value, String key) {
+        int hash = mix((int) value * 31 + key.hashCode());
+        return (hash >>> 8 & 0xFFFF) / (float) 0xFFFF;
+    }
+
+    /** How long a coin's life runs before it relists. About a day of beats. */
+    public static final int COIN_ERA = 2880;
+    /** What a rugged coin is worth: not quite nothing, which is worse. */
+    public static final float COIN_RUGGED = 0.04f;
+
+    /**
+     * The beat this coin dies on, or -1 if it survives its era.
+     *
+     * Rug pulls are drawn per ERA rather than rolled per beat. A per-beat roll
+     * with any meaningful chance makes a rug a certainty over a long enough
+     * era, which is not a risk, it's a countdown.
+     */
+    public static long coinRugBeat(long era, String coin, float rugChance) {
+        if (rugChance <= 0.0f) {
+            return -1;
+        }
+        if (unit(era, coin + ":rug") >= rugChance) {
+            return -1;
+        }
+        // Never in the first eighth of the era: a coin that relists already
+        // dead gives nobody a chance to make the mistake.
+        float when = 0.125f + unit(era, coin + ":when") * 0.875f;
+        return era * COIN_ERA + (long) (when * COIN_ERA);
+    }
+
+    /**
+     * What one unit costs right now.
+     *
+     * @param base       what it listed at
+     * @param volatility how hard it swings, roughly the log-range
+     * @param rugChance  odds of this coin dying inside any one era
+     */
+    public static float coinPrice(long beat, String coin, float base,
+                                  float volatility, float rugChance) {
+        long era = Math.floorDiv(beat, (long) COIN_ERA);
+        long rug = coinRugBeat(era, coin, rugChance);
+        float price = base * (float) Math.exp(volatility * coinNoise(beat, coin));
+        if (rug >= 0 && beat >= rug) {
+            price *= COIN_RUGGED;
+        }
+        return Math.max(0.01f, price);
+    }
+
+    /** True if this coin is dead right now and waiting to relist. */
+    public static boolean coinDead(long beat, String coin, float rugChance) {
+        long era = Math.floorDiv(beat, (long) COIN_ERA);
+        long rug = coinRugBeat(era, coin, rugChance);
+        return rug >= 0 && beat >= rug;
+    }
+
+    /** Change over the last `span` beats, as a percentage. */
+    public static int coinMove(long beat, String coin, float base, float volatility,
+                               float rugChance, int span) {
+        float now = coinPrice(beat, coin, base, volatility, rugChance);
+        float then = coinPrice(Math.max(0, beat - span), coin, base, volatility, rugChance);
+        return Math.round((now / Math.max(0.01f, then) - 1.0f) * 100.0f);
+    }
+
+    /** What the market charges to get in and out. The house always eats. */
+    public static final float COIN_SPREAD = 0.03f;
+
+    /**
+     * Buying rounds UP and selling rounds DOWN, always.
+     *
+     * Rounding both to nearest looked symmetrical and was not: on a small
+     * enough total, 1.03x and 0.97x round to the same integer and a round trip
+     * costs nothing at all. Not exploitable for profit -- you cannot round up
+     * past the buy price -- but a zero-edge trade is a hole in the one rule
+     * this market has, and cheap coins are exactly where somebody would find
+     * it. Rounding each way in the house's favour is also simply what a real
+     * exchange does.
+     */
+    public static int coinBuyCost(float price, int units) {
+        return Math.max(1, (int) Math.ceil(price * units * (1.0f + COIN_SPREAD)));
+    }
+
+    public static int coinSellValue(float price, int units) {
+        return Math.max(0, (int) Math.floor(price * units * (1.0f - COIN_SPREAD)));
+    }
+
     // --- investments ----------------------------------------------------------
 
     /**
