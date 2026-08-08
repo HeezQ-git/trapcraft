@@ -130,6 +130,7 @@ public final class TrapGuide {
         ledger(pages);
         contracts(pages);
         market(pages);
+        street(pages);
         return book("Street Handbook", pages);
     }
 
@@ -416,6 +417,28 @@ public final class TrapGuide {
                 .append(body("Whoever holds it owns the house. All of it.\n\n"))
                 .append(body("It doesn't burn.\n\n"))
                 .append(warn("It does drop when you die."))));
+    }
+
+    private static void street(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("5. HANDING OVER\n\n"))
+                .append(body("Sell to a customer or a buyer yourself and "
+                        + "somebody may follow the money back.\n\n"))
+                .append(warn("Four of them at worst luck. Eleven at your "
+                        + "worst."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. WHAT DECIDES IT\n\n"))
+                .append(body("Your name, mostly. Then heat, how much you "
+                        + "hand over at once, and how good it is.\n\n"))
+                .append(body("Daylight helps. A friend within "
+                        + TrapParanoia.COMPANY_RANGE + " blocks helps more."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. OR DON'T\n\n"))
+                .append(body("A dealer selling for you never brings one.\n\n"))
+                .append(body("That is what the cut buys.\n\n"))
+                .append(hint("/heat shows your odds."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {

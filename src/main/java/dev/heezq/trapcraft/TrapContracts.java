@@ -508,6 +508,9 @@ public final class TrapContracts {
                 player.getX(), player.getEyeY(), player.getZ(), 20, 0.5, 0.5, 0.5, 0.02);
         player.sendMessage(Text.literal("Paid. " + contract.payout() + " emeralds, +"
                         + contract.rep() + " rep.").formatted(Formatting.GREEN), false);
+        // A drop is the biggest handover in the mod and the one with a paper
+        // trail leading back to a phone, so it rolls on the whole quantity.
+        TrapStickup.afterDeal(player, contract.quantity(), contract.minGrade());
         return true;
     }
 

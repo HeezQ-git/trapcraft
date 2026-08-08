@@ -1047,6 +1047,74 @@ public final class TrapMath {
         return bets;
     }
 
+    // --- getting jumped ---------------------------------------------------------
+    //
+    // Handing product to somebody yourself is the risky way to make money, and
+    // until now it was strictly the profitable one: dealers take a cut and get
+    // robbed, customers and contracts paid full and cost nothing. This is the
+    // other side of that trade. Selling it yourself means one day somebody
+    // follows the money back to you.
+    //
+    // Deliberately NOT rolled for a dealer's sales. Paying a dealer to carry
+    // is paying somebody else to take this risk, which is the whole reason to
+    // have one.
+
+    /** Chance of a stick-up on a cold, unknown, small deal. */
+    public static final float STICKUP_BASE = 0.025f;
+    /**
+     * However bad it gets, most deals still go fine.
+     *
+     * A one-in-five sale ending in a firefight is not a risk, it is a toll,
+     * and a toll makes dealing in person the wrong move at every rep -- which
+     * would delete the feature this is meant to give teeth to.
+     */
+    public static final float STICKUP_CAP = 0.22f;
+
+    /**
+     * Odds that this deal was the one somebody was watching.
+     *
+     * Everything that makes you worth robbing pushes it up: being hot, being
+     * known, moving a lot at once, and moving good product. Two things push it
+     * down -- daylight, and not being on your own, which is the same company
+     * rule Paranoia already runs on. Standing next to a friend to make a
+     * handover should be the safe way to do it in both systems or it is a
+     * rule players cannot learn.
+     *
+     * @param units    how much changed hands in this one exchange
+     * @param gradeIndex the quality handed over, 0..n
+     */
+    public static float stickupChance(int heatTier, int rep, int units, int gradeIndex,
+                                      boolean alone, boolean night) {
+        float chance = STICKUP_BASE;
+        chance += Math.max(0, heatTier) * 0.022f;
+        chance += Math.min(0.040f, rep * 0.0016f);
+        chance += Math.min(0.035f, units * 0.0025f);
+        chance += Math.max(0, gradeIndex) * 0.006f;
+        if (night) {
+            chance *= 1.30f;
+        }
+        if (!alone) {
+            chance *= 0.60f;
+        }
+        return Math.max(0.0f, Math.min(STICKUP_CAP, chance));
+    }
+
+    /**
+     * Who turns up: {pillagers, vindicators, ravagers}.
+     *
+     * Never fewer than four bodies. Three is a patrol you walk away from and
+     * the point of this is that dealing in person has teeth; the floor is the
+     * feature, not a rounding artefact.
+     */
+    public static int[] stickupSquad(int rep, int heatTier, int gradeIndex, int units) {
+        int strength = Math.min(8, Math.max(0,
+                rep / 14 + Math.max(0, heatTier) + Math.max(0, gradeIndex) / 2 + units / 16));
+        return new int[]{
+                3 + strength / 2,
+                1 + strength / 3,
+                strength >= 8 ? 1 : 0};
+    }
+
     // --- contract drop-offs -----------------------------------------------------
 
     /**

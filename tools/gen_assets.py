@@ -1260,6 +1260,9 @@ def advancements() -> None:
     award("whole_floor", "House Money", "Win something on all four machines.",
           "minecraft:emerald", "floor", frame="challenge")
 
+    award("followed", "Followed Home",
+          "Deal in person once too often and find out who was watching.",
+          "minecraft:crossbow", "root", frame="goal")
     award("licence", "Licensed", "Get your hands on a casino licence.",
           f"{NS}:casino_card", "floor", trigger=has(f"{NS}:casino_card"))
     award("broke_the_bank", "Broke The Bank",

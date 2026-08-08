@@ -509,6 +509,10 @@ public final class TrapDealing {
                                         : "   still wants " + left)
                                 .formatted(Formatting.DARK_GRAY)),
                 false);
+        // Rolled AFTER the receipt, so the sale is on the screen before the
+        // horn goes: "you were followed" landing above the line telling you
+        // what you sold reads as the sale having failed.
+        TrapStickup.afterDeal(seller, units, TrapComponents.get(held).index());
         return true;
     }
 

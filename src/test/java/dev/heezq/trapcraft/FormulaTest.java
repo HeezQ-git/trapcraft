@@ -720,6 +720,63 @@ class FormulaTest {
         }
     }
 
+    // --- getting jumped ---------------------------------------------------------
+
+    @Test
+    void aStickUpIsAlwaysMoreThanThree() {
+        // The floor is the feature. Three raiders is a patrol you walk away
+        // from; the point of this is that dealing in person has teeth.
+        for (int rep : new int[]{0, 5, 40, 200}) {
+            for (int heat : new int[]{0, 1, 3}) {
+                for (int grade : new int[]{0, 2, 5}) {
+                    for (int units : new int[]{1, 8, 64}) {
+                        int[] squad = TrapMath.stickupSquad(rep, heat, grade, units);
+                        int bodies = squad[0] + squad[1] + squad[2];
+                        assertTrue(bodies > 3, "only " + bodies + " turned up for rep " + rep);
+                        assertTrue(bodies <= 13, bodies + " is a siege, not a robbery");
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void aBiggerNameBringsABiggerCrew() {
+        int small = total(TrapMath.stickupSquad(0, 0, 0, 4));
+        int known = total(TrapMath.stickupSquad(45, 0, 0, 4));
+        int hunted = total(TrapMath.stickupSquad(90, 3, 5, 64));
+        assertTrue(known > small, "rep should be felt: " + small + " -> " + known);
+        assertTrue(hunted > known, "everything at once should be worst: " + hunted);
+        assertEquals(0, TrapMath.stickupSquad(0, 0, 0, 1)[2], "no ravager for a nobody");
+        assertTrue(TrapMath.stickupSquad(90, 3, 5, 64)[2] > 0, "a ravager at the top end");
+    }
+
+    private static int total(int[] squad) {
+        return squad[0] + squad[1] + squad[2];
+    }
+
+    @Test
+    void mostDealsStillGoFine() {
+        // A risk you hit half the time is a tax, and nobody would ever deal in
+        // person again -- which would delete the feature this is attached to.
+        float worst = TrapMath.stickupChance(3, 500, 999, 9, true, true);
+        assertEquals(TrapMath.STICKUP_CAP, worst, 0.0001f);
+        assertTrue(worst <= 0.35f, "even the worst case has to be a minority: " + worst);
+        float quiet = TrapMath.stickupChance(0, 0, 1, 0, false, false);
+        assertTrue(quiet < 0.05f, "a small daylight deal with company: " + quiet);
+    }
+
+    @Test
+    void companyAndDaylightBothHelp() {
+        float exposed = TrapMath.stickupChance(1, 30, 8, 3, true, true);
+        float withMate = TrapMath.stickupChance(1, 30, 8, 3, false, true);
+        float byDay = TrapMath.stickupChance(1, 30, 8, 3, true, false);
+        assertTrue(withMate < exposed, "a friend nearby should help: " + withMate);
+        assertTrue(byDay < exposed, "daylight should help: " + byDay);
+        // Same direction as Paranoia's company rule, so there is one lesson.
+        assertTrue(TrapMath.stickupChance(1, 30, 8, 3, false, false) < withMate);
+    }
+
     // --- contract drop-offs -----------------------------------------------------
 
     @Test

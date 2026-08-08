@@ -158,6 +158,12 @@ public final class TrapHeat {
                     + cooling / 20 / 60 + "m " + cooling / 20 % 60 + "s.")
                     .formatted(Formatting.AQUA));
         }
+        // The other way they come for you, which has nothing to do with the
+        // farm underneath your feet and everything to do with who you are.
+        int odds = TrapStickup.oddsPercent(player, 8, 3);
+        out.append(Text.literal("\n  Dealing in person: about " + odds
+                        + "% a handful of eight brings a crew.")
+                .formatted(odds >= 12 ? Formatting.RED : Formatting.DARK_GRAY));
         player.sendMessage(out, false);
         return 1;
     }
@@ -403,9 +409,24 @@ public final class TrapHeat {
             ServerWorld world, BlockPos pos, Random random,
             EntityType<? extends net.minecraft.entity.mob.MobEntity> type,
             int count) {
+        return spawn(world, pos, random, type, count, SPAWN_MIN, SPAWN_RANGE);
+    }
+
+    /**
+     * Put armed raiders on the ground in a ring around a point.
+     *
+     * Shared with {@link TrapStickup}, which ambushes at close range rather
+     * than massing at the edge of a field. Shared rather than copied because
+     * the initialize() call below is the single most important line in the
+     * mod's combat and it has already been forgotten once.
+     */
+    public static java.util.List<net.minecraft.entity.mob.MobEntity> spawn(
+            ServerWorld world, BlockPos pos, Random random,
+            EntityType<? extends net.minecraft.entity.mob.MobEntity> type,
+            int count, int near, int spread) {
         java.util.List<net.minecraft.entity.mob.MobEntity> spawned = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
-            BlockPos spawn = findSpot(world, pos, random);
+            BlockPos spawn = findSpot(world, pos, random, near, spread);
             if (spawn == null) {
                 continue;   // nowhere safe within reach; drop this one
             }
@@ -435,9 +456,14 @@ public final class TrapHeat {
      * quietly arrived at half strength.
      */
     private static BlockPos findSpot(ServerWorld world, BlockPos pos, Random random) {
+        return findSpot(world, pos, random, SPAWN_MIN, SPAWN_RANGE);
+    }
+
+    private static BlockPos findSpot(ServerWorld world, BlockPos pos, Random random,
+                                     int near, int spread) {
         for (int attempt = 0; attempt < SPAWN_ATTEMPTS; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2;
-            int distance = SPAWN_MIN + random.nextInt(SPAWN_RANGE);
+            int distance = near + random.nextInt(Math.max(1, spread));
             int x = pos.getX() + (int) (Math.cos(angle) * distance);
             int z = pos.getZ() + (int) (Math.sin(angle) * distance);
 
@@ -446,15 +472,39 @@ public final class TrapHeat {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            BlockPos spot = new BlockPos(x, world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z), z);
-            // Three clear blocks: a ravager is two high and the squads now
-            // include one, and half-burying it would be worse than skipping it.
-            if (world.getBlockState(spot).isAir()
-                    && world.getBlockState(spot.up()).isAir()
-                    && world.getBlockState(spot.up(2)).isAir()) {
+            int surface = world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z);
+            BlockPos spot = new BlockPos(x, surface, z);
+            if (standable(world, spot)) {
                 return spot;
+            }
+            // Underground: a basement grow, a cellar, a deal done in a mine.
+            // Putting the squad on the roof thirty blocks up is the same thing
+            // as not sending one -- you hear the horn and nothing ever
+            // arrives, which is exactly what a broken raid looks like. Only
+            // when the reference really is buried, so a surface raid is
+            // unaffected.
+            if (Math.abs(surface - pos.getY()) > 10) {
+                for (int y = pos.getY() + 2; y >= pos.getY() - 6; y--) {
+                    BlockPos under = new BlockPos(x, y, z);
+                    if (standable(world, under)
+                            && world.getBlockState(under.down()).isSolidBlock(world, under.down())) {
+                        return under;
+                    }
+                }
             }
         }
         return null;
+    }
+
+    /**
+     * Three clear blocks.
+     *
+     * A ravager is two high and the squads include one, and half-burying it
+     * would be worse than skipping it.
+     */
+    private static boolean standable(ServerWorld world, BlockPos spot) {
+        return world.getBlockState(spot).isAir()
+                && world.getBlockState(spot.up()).isAir()
+                && world.getBlockState(spot.up(2)).isAir();
     }
 }
