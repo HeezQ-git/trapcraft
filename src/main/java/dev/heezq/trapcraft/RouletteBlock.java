@@ -36,7 +36,13 @@ public class RouletteBlock extends Block implements PolymerBlock, PolymerTexture
     public RouletteBlock(Settings settings) {
         super(settings);
         this.carrier = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
+                // TRANSPARENT_BLOCK, not FULL_BLOCK. The carrier is what the
+                // client believes about this block, and believing a table with
+                // legs is a solid cube makes it cull the faces of whatever is
+                // underneath -- so you stand on a floor above a cave and see
+                // straight through into it. Any model that doesn't fill the
+                // cube has to say so.
+                BlockModelType.TRANSPARENT_BLOCK,
                 PolymerBlockModel.of(Identifier.of("trapcraft:block/roulette")),
                 () -> Blocks.GREEN_TERRACOTTA.getDefaultState(), "roulette");
     }

@@ -353,17 +353,17 @@ public final class TrapContent {
                 new BurnerPhoneItem(settings.maxCount(1), model));
 
         marketStall = registerBlock("market_stall", MarketStallBlock::new,
-                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD).nonOpaque());
         marketStallItem = registerItem("market_stall",
                 (settings, model) -> new RackItem(marketStall, settings, model));
 
         slotMachine = registerBlock("slot_machine", SlotMachineBlock::new,
-                AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL));
+                AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL).nonOpaque());
         slotMachineItem = registerItem("slot_machine",
                 (settings, model) -> new RackItem(slotMachine, settings, model));
 
         roulette = registerBlock("roulette", RouletteBlock::new,
-                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD).nonOpaque());
         rouletteItem = registerItem("roulette",
                 (settings, model) -> new RackItem(roulette, settings, model));
 
@@ -374,7 +374,7 @@ public final class TrapContent {
         cocaPowder = registerItem("coca_powder", PowderItem::new);
 
         leafPress = registerBlock("leaf_press", LeafPressBlock::new,
-                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD).nonOpaque());
         leafPressItem = registerItem("leaf_press",
                 (settings, model) -> new RackItem(leafPress, settings, model));
 
