@@ -458,6 +458,7 @@ def lang() -> None:
         "item.trapcraft.blend_joint": "Blend Joint",
         "item.trapcraft.nerve_tonic": "Nerve Tonic",
         "item.trapcraft.ledger": "The Ledger",
+        "item.trapcraft.wallet": "Wallet",
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
@@ -1075,6 +1076,56 @@ def nerve_tonic_assets() -> None:
     })
 
 
+def wallet_model() -> dict:
+    """A fat leather pouch with a brass clasp and an emerald poking out.
+
+    Built as a box rather than a sprite for the same reason as the ledger: a
+    flat pouch is a brown rectangle in a hotbar next to every other brown
+    rectangle. The depth and the clasp are what make it read as a wallet, and
+    the emerald on top is what makes it read as money.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "body": f"{NS}:item/wallet_body",
+            "flap": f"{NS}:item/wallet_flap",
+            "coin": f"{NS}:item/wallet_coin",
+            "particle": f"{NS}:item/wallet_body",
+        },
+        "display": held(1.1, gui_rotation=(30, 225, 0)),
+        "elements": [
+            box([3, 2, 4], [13, 11, 12], "body", up="body", down="body"),   # the pouch
+            box([2.6, 8.5, 3.6], [13.4, 12, 12.4], "flap", up="flap"),      # flap over the top
+            box([6.5, 11.5, 7], [9.5, 14.5, 9], "coin", up="coin"),         # emerald poking out
+        ],
+    }
+
+
+def wallet_assets() -> None:
+    put(f"assets/{NS}/models/block/wallet.json", wallet_model())
+    put(f"assets/{NS}/models/item/wallet.json", {"parent": f"{NS}:block/wallet"})
+    put(f"assets/{NS}/items/wallet.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/wallet"},
+    })
+
+    # Leather for the pouch, string for the seam, gold for the clasp, and one
+    # emerald so it costs money to have somewhere to put money. Cheap on
+    # purpose: this is quality-of-life, not a reward.
+    put(f"data/{NS}/recipe/wallet.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["SGS", "LEL", "LLL"],
+        "key": {
+            "S": "minecraft:string",
+            "G": "minecraft:gold_nugget",
+            "L": "minecraft:leather",
+            "E": "minecraft:emerald",
+        },
+        "result": {"id": f"{NS}:wallet", "count": 1},
+    })
+
+
 def ledger_model() -> dict:
     """A closed book lying flat with a pencil across it.
 
@@ -1354,6 +1405,7 @@ def main() -> None:
     device_assets()
     nerve_tonic_assets()
     ledger_assets()
+    wallet_assets()
     phone_assets()
     stall_assets()
     slot_assets()

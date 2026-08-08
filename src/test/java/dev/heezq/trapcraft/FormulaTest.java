@@ -223,6 +223,31 @@ class FormulaTest {
                 TrapMath.flowFactor(-TrapMath.PRESSURE_CAP)) >= 1);
     }
 
+    @Test
+    void payingOutNeverMintsOrBurnsMoney() {
+        // The wallet's withdraw button and every shop payout go through this.
+        // If blocks*9 + loose ever drifts from the amount, the economy leaks.
+        for (int amount = 0; amount <= 5000; amount++) {
+            int[] packed = TrapMath.packEmeralds(amount);
+            assertEquals(amount, packed[0] * 9 + packed[1],
+                    "packing " + amount + " came out as " + packed[0] + " blocks + " + packed[1]);
+        }
+    }
+
+    @Test
+    void smallChangeComesAsLooseEmeralds() {
+        assertEquals(0, TrapMath.packEmeralds(63)[0]);
+        assertEquals(63, TrapMath.packEmeralds(63)[1]);
+        assertTrue(TrapMath.packEmeralds(64)[0] > 0, "a big payout should come in blocks");
+    }
+
+    @Test
+    void payingOutNothingHandsOverNothing() {
+        assertEquals(0, TrapMath.packEmeralds(0)[0]);
+        assertEquals(0, TrapMath.packEmeralds(0)[1]);
+        assertEquals(0, TrapMath.packEmeralds(-5)[1]);
+    }
+
     // --- the slot machine -----------------------------------------------------
 
     @Test

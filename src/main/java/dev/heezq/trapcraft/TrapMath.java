@@ -271,6 +271,26 @@ public final class TrapMath {
         return Math.max(1, Math.min(buyPrice - 1, Math.round(buyPrice * SELL_RATE)));
     }
 
+    /**
+     * How to hand over an amount: blocks and loose emeralds.
+     *
+     * Below a stack of blocks it's friendlier to give singles -- people spend
+     * emeralds and hoard blocks -- but above that, paying 1,150 in loose
+     * emeralds is eighteen stacks. Returns {blocks, loose}, which must always
+     * be worth exactly what was asked for: this is the wallet's withdraw path
+     * and every shop payout, so a rounding slip here quietly mints or burns
+     * money.
+     */
+    public static int[] packEmeralds(int amount) {
+        if (amount <= 0) {
+            return new int[]{0, 0};
+        }
+        if (amount < 64) {
+            return new int[]{0, amount};
+        }
+        return new int[]{amount / 9, amount % 9};
+    }
+
     // --- the slot machine -----------------------------------------------------
 
     /**

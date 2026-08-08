@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SGS",
+    "LEL",
+    "LLL"
+  ],
+  "key": {
+    "S": "minecraft:string",
+    "G": "minecraft:gold_nugget",
+    "L": "minecraft:leather",
+    "E": "minecraft:emerald"
+  },
+  "result": {
+    "id": "trapcraft:wallet",
+    "count": 1
+  }
+}

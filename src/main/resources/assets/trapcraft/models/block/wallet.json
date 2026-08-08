@@ -1,0 +1,246 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "body": "trapcraft:item/wallet_body",
+    "flap": "trapcraft:item/wallet_flap",
+    "coin": "trapcraft:item/wallet_coin",
+    "particle": "trapcraft:item/wallet_body"
+  },
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.6875,
+        0.6875,
+        0.6875
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        3,
+        0
+      ],
+      "scale": [
+        0.275,
+        0.275,
+        0.275
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.55,
+        0.55,
+        0.55
+      ]
+    },
+    "thirdperson_righthand": {
+      "rotation": [
+        75,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.4125,
+        0.4125,
+        0.4125
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        75,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.4125,
+        0.4125,
+        0.4125
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.44,
+        0.44
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.44,
+        0.44,
+        0.44
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        14,
+        0
+      ],
+      "scale": [
+        1.1,
+        1.1,
+        1.1
+      ]
+    }
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        2,
+        4
+      ],
+      "to": [
+        13,
+        11,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#body"
+        },
+        "south": {
+          "texture": "#body"
+        },
+        "east": {
+          "texture": "#body"
+        },
+        "west": {
+          "texture": "#body"
+        },
+        "up": {
+          "texture": "#body"
+        },
+        "down": {
+          "texture": "#body"
+        }
+      }
+    },
+    {
+      "from": [
+        2.6,
+        8.5,
+        3.6
+      ],
+      "to": [
+        13.4,
+        12,
+        12.4
+      ],
+      "faces": {
+        "north": {
+          "texture": "#flap"
+        },
+        "south": {
+          "texture": "#flap"
+        },
+        "east": {
+          "texture": "#flap"
+        },
+        "west": {
+          "texture": "#flap"
+        },
+        "up": {
+          "texture": "#flap"
+        },
+        "down": {
+          "texture": "#flap"
+        }
+      }
+    },
+    {
+      "from": [
+        6.5,
+        11.5,
+        7
+      ],
+      "to": [
+        9.5,
+        14.5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#coin"
+        },
+        "south": {
+          "texture": "#coin"
+        },
+        "east": {
+          "texture": "#coin"
+        },
+        "west": {
+          "texture": "#coin"
+        },
+        "up": {
+          "texture": "#coin"
+        },
+        "down": {
+          "texture": "#coin"
+        }
+      }
+    }
+  ]
+}

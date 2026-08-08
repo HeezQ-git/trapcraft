@@ -71,6 +71,7 @@ public final class TrapContent {
     public static Item refinerItem;
     public static Item nerveTonic;
     public static Item ledger;
+    public static Item wallet;
     public static Item burnerPhone;
     public static Block marketStall;
     public static Item marketStallItem;
@@ -340,6 +341,10 @@ public final class TrapContent {
         nerveTonic = registerItem("nerve_tonic", NerveTonicItem::new);
         ledger = registerItem("ledger", (settings, model) ->
                 new LedgerItem(settings.maxCount(1), model));
+        // maxCount 1: the balance rides on the stack, and two stacked wallets
+        // would merge into whichever balance won.
+        wallet = registerItem("wallet", (settings, model) ->
+                new WalletItem(settings.maxCount(1), model));
         // maxCount 1: rep rides on the stack, and stacking phones would merge
         // two different standings into whichever one won.
         burnerPhone = registerItem("burner_phone", (settings, model) ->
@@ -440,6 +445,7 @@ public final class TrapContent {
                             Quality.LOUD.index())));
                     entries.add(nerveTonic);
                     entries.add(ledger);
+                    entries.add(wallet());
                     entries.add(burnerPhone);
                     entries.add(marketStallItem);
                     entries.add(slotMachineItem);
@@ -466,6 +472,18 @@ public final class TrapContent {
     private static Block registerBlock(String path, BlockFactory factory, AbstractBlock.Settings settings) {
         RegistryKey<Block> key = RegistryKey.of(RegistryKeys.BLOCK, TrapCraft.id(path));
         return Registry.register(Registries.BLOCK, key, factory.create(settings.registryKey(key)));
+    }
+
+    /**
+     * A fresh, empty wallet with its balance already written on it.
+     *
+     * A bare `new ItemStack(wallet)` has no balance component and so reads as
+     * a blank leather pouch with no lore -- same trap as the graded buds.
+     */
+    public static ItemStack wallet() {
+        ItemStack stack = new ItemStack(wallet);
+        WalletItem.setBalance(stack, 0);
+        return stack;
     }
 
     private static Item registerItem(String path, ItemFactory factory) {

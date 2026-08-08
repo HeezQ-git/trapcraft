@@ -6,9 +6,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.WorldSavePath;
+
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.chunk.WorldChunk;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,6 +62,24 @@ public final class TrapMarket {
     private static long lastDay = -1;
     /** Order flow per item id. Absent means settled. */
     private static final Map<String, Float> PRESSURE = new HashMap<>();
+    /**
+     * What each chunk was last seen holding in its containers.
+     *
+     * Keyed by CHUNK rather than by player, which matters as soon as two
+     * people share a base: keyed by player they would each report the same
+     * chests and the money supply would count them twice.
+     *
+     * Remembered rather than recomputed on demand, because a stash doesn't
+     * stop existing when its owner walks away, and it certainly doesn't stop
+     * existing when they log off. Entries survive restarts, so emeralds banked
+     * by someone who never logs in again are still part of the pool -- which
+     * is the truth of it.
+     */
+    private static final Map<String, Integer> VAULTS = new HashMap<>();
+    /** Beats between container censuses. Four minutes. */
+    private static final int CENSUS_EVERY = 8;
+    /** How far around a player their stash is looked for. */
+    private static final int VAULT_RADIUS = 48;
     private static Path saveFile;
 
     private TrapMarket() {
@@ -71,6 +96,9 @@ public final class TrapMarket {
                 return;
             }
             beat++;
+            if (beat % CENSUS_EVERY == 0) {
+                census(server);
+            }
             resample(server);
             settle();
             ShopScreenHandler.refreshAll();
@@ -217,23 +245,108 @@ public final class TrapMarket {
         for (ServerPlayerEntity player : online) {
             counted += wealthOf(player);
         }
+        for (int stashed : VAULTS.values()) {
+            counted += stashed;
+        }
         supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
+    }
+
+    /**
+     * Count what people have put away in chests.
+     *
+     * Emeralds in a chest are still emeralds -- they are part of the pool
+     * whether they're in your pocket or on a shelf in your base -- so the
+     * index has to see them or it is measuring petty cash and calling it the
+     * economy.
+     *
+     * There is no way to walk every loaded chunk in the world, so this walks
+     * the chunks around each online player, which is where bases are. The
+     * reading is REMEMBERED per player rather than summed fresh, so wandering
+     * off doesn't crash the economy and logging off doesn't delete your
+     * savings. Run every few minutes, not every beat: it is the expensive one.
+     */
+    private static void census(MinecraftServer server) {
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            ServerWorld world = player.getWorld();
+            String dimension = world.getRegistryKey().getValue().toString();
+            BlockPos centre = player.getBlockPos();
+
+            for (int cx = (centre.getX() - VAULT_RADIUS) >> 4;
+                 cx <= (centre.getX() + VAULT_RADIUS) >> 4; cx++) {
+                for (int cz = (centre.getZ() - VAULT_RADIUS) >> 4;
+                     cz <= (centre.getZ() + VAULT_RADIUS) >> 4; cz++) {
+                    WorldChunk chunk = world.getChunkManager().getWorldChunk(cx, cz);
+                    if (chunk == null) {
+                        continue;
+                    }
+                    int found = 0;
+                    for (BlockEntity block : chunk.getBlockEntities().values()) {
+                        if (block instanceof Inventory container) {
+                            found += moneyIn(container);
+                        }
+                    }
+                    // Recorded per chunk we actually looked at, so emptying a
+                    // chest shows up as the money leaving rather than being
+                    // remembered forever.
+                    String key = dimension + " " + cx + " " + cz;
+                    if (found > 0) {
+                        VAULTS.put(key, found);
+                    } else {
+                        VAULTS.remove(key);
+                    }
+                }
+            }
+        }
+    }
+
+    /** What one container is holding, shulker boxes on the shelf included. */
+    private static int moneyIn(Inventory container) {
+        int total = 0;
+        for (int slot = 0; slot < container.size(); slot++) {
+            ItemStack stack = container.getStack(slot);
+            total += valueOf(stack);
+            // A shulker box of emeralds in a chest is still a chest full of
+            // emeralds. One level down is enough -- shulkers don't nest.
+            var packed = stack.get(DataComponentTypes.CONTAINER);
+            if (packed != null) {
+                for (ItemStack inside : packed.stream().toList()) {
+                    total += valueOf(inside);
+                }
+            }
+        }
+        return total;
     }
 
     /** Whoever ticked us last, so a price shock can find the player list. */
     private static MinecraftServer lastServer;
 
-    /** Emeralds plus emerald blocks, which are just nine emeralds in a coat. */
+    /**
+     * What one stack is worth as money.
+     *
+     * An emerald block is nine emeralds in a coat, and a wallet is however
+     * many you put in it. Everything that counts money -- the purse, the
+     * shelves, the world census -- goes through here, so there is one answer
+     * to "is this money" rather than three that can disagree.
+     */
+    public static int valueOf(ItemStack stack) {
+        if (stack.isOf(Items.EMERALD)) {
+            return stack.getCount();
+        }
+        if (stack.isOf(Items.EMERALD_BLOCK)) {
+            return stack.getCount() * 9;
+        }
+        if (stack.isOf(TrapContent.wallet)) {
+            return WalletItem.balanceOf(stack);
+        }
+        return 0;
+    }
+
+    /** Everything the player can spend, wallets included. */
     public static int wealthOf(ServerPlayerEntity player) {
         int total = 0;
         var inventory = player.getInventory();
         for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.isOf(Items.EMERALD)) {
-                total += stack.getCount();
-            } else if (stack.isOf(Items.EMERALD_BLOCK)) {
-                total += stack.getCount() * 9;
-            }
+            total += valueOf(inventory.getStack(slot));
         }
         return total;
     }
@@ -302,6 +415,17 @@ public final class TrapMarket {
      */
     public static void take(ServerPlayerEntity player, int amount) {
         circulate(-amount);
+        collect(player, amount);
+    }
+
+    /**
+     * Move emeralds off a player without touching the economy.
+     *
+     * Separate from {@link #take} because putting money in your own wallet is
+     * not spending it -- the emeralds are still yours and still counted. Only
+     * take/pay report to {@link #circulate}.
+     */
+    public static void collect(ServerPlayerEntity player, int amount) {
         var inventory = player.getInventory();
         int owed = amount;
 
@@ -323,8 +447,19 @@ public final class TrapMarket {
             stack.decrement(blocks);
             owed -= blocks * 9;
         }
+        // Then wallets, which is what makes them a purse rather than a
+        // shoebox: money you've put away is still money you can spend.
+        for (int slot = 0; slot < inventory.size() && owed > 0; slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (!stack.isOf(TrapContent.wallet)) {
+                continue;
+            }
+            int drawn = Math.min(owed, WalletItem.balanceOf(stack));
+            WalletItem.setBalance(stack, WalletItem.balanceOf(stack) - drawn);
+            owed -= drawn;
+        }
         if (owed < 0) {
-            pay(player, -owed);   // change from the last broken block
+            handOver(player, -owed);   // change from the last broken block
         }
     }
 
@@ -335,14 +470,14 @@ public final class TrapMarket {
      */
     public static void pay(ServerPlayerEntity player, int amount) {
         circulate(amount);
-        int blocks = amount / 9;
-        int loose = amount % 9;
-        // Below a stack of blocks it's friendlier to hand over singles --
-        // people spend emeralds, they hoard blocks.
-        if (amount < 64) {
-            blocks = 0;
-            loose = amount;
-        }
+        handOver(player, amount);
+    }
+
+    /** Hand over emeralds without touching the economy. See {@link #collect}. */
+    public static void handOver(ServerPlayerEntity player, int amount) {
+        int[] packed = TrapMath.packEmeralds(amount);
+        int blocks = packed[0];
+        int loose = packed[1];
         while (blocks > 0) {
             int give = Math.min(64, blocks);
             player.getInventory().offerOrDrop(new ItemStack(Items.EMERALD_BLOCK, give));
@@ -386,7 +521,8 @@ public final class TrapMarket {
     // --- persistence ----------------------------------------------------------
 
     /**
-     * Header line, then one line per item still carrying order flow.
+     * Header line, then one line per item carrying order flow and one per
+     * player's remembered stash.
      *
      * Settled lines aren't written, so the file stays the size of what is
      * actually being traded rather than the size of the catalogue. A file from
@@ -405,9 +541,13 @@ public final class TrapMarket {
             beat = header.length > 2 ? Long.parseLong(header[2]) : 0;
 
             PRESSURE.clear();
+            VAULTS.clear();
             for (String held : lines.subList(1, lines.size())) {
                 String[] parts = held.trim().split("\\s+");
-                if (parts.length == 2) {
+                if (parts.length == 5 && parts[0].equals("vault")) {
+                    VAULTS.put(parts[1] + " " + parts[2] + " " + parts[3],
+                            Integer.parseInt(parts[4]));
+                } else if (parts.length == 2) {
                     PRESSURE.put(parts[0], Float.parseFloat(parts[1]));
                 }
             }
@@ -426,6 +566,10 @@ public final class TrapMarket {
                     .append(supply).append(' ').append(lastDay).append(' ').append(beat);
             PRESSURE.forEach((id, held) ->
                     out.append('\n').append(id).append(' ').append(held));
+            // Tagged, because an item id always has a namespace colon in it
+            // and so can never be mistaken for the word "vault".
+            VAULTS.forEach((where, stashed) ->
+                    out.append("\nvault ").append(where).append(' ').append(stashed));
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't save the market: {}", failure.toString());

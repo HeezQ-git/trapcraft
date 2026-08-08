@@ -134,11 +134,17 @@ public final class TrapDealing {
                         root.then(net.minecraft.server.command.CommandManager
                                 .literal(strain.id())
                                 .executes(context -> summon(context.getSource().getPlayer(),
-                                        new Craving(strain, false))));
+                                        Craving.of(strain))));
                     }
                     root.then(net.minecraft.server.command.CommandManager.literal("powder")
                             .executes(context -> summon(context.getSource().getPlayer(),
-                                    new Craving(null, true))));
+                                    Craving.forPowder())));
+                    // "any mix" rather than a name: the named blends are data,
+                    // and a test command that only works for blends you happen
+                    // to have already discovered isn't much of a test command.
+                    root.then(net.minecraft.server.command.CommandManager.literal("mix")
+                            .executes(context -> summon(context.getSource().getPlayer(),
+                                    Craving.mixed(""))));
                     dispatcher.register(root);
                 });
     }
@@ -427,6 +433,12 @@ public final class TrapDealing {
                 return false;
             }
             each = premium(TrapComponents.getPurity(held).emeralds() * 2);
+        } else if (craving.isMix()) {
+            Blend blend = matchingMix(held, craving);
+            if (blend == null) {
+                return false;
+            }
+            each = mixPrice(blend, held.isOf(TrapContent.blendJointItem));
         } else if (held.isOf(TrapContent.driedBud(craving.strain()))) {
             each = budPrice(TrapComponents.get(held));
         } else if (held.isOf(TrapContent.joint(craving.strain()))) {
@@ -510,6 +522,12 @@ public final class TrapDealing {
         } else if (craving.powder()) {
             message = Text.literal("They want powder. Put some in your hand.")
                     .formatted(Formatting.GRAY);
+        } else if (craving.isMix()) {
+            message = Text.literal("They want ").formatted(Formatting.GRAY)
+                    .append(Text.literal(craving.isNamedMix() ? craving.mix() : "any mix")
+                            .formatted(Formatting.LIGHT_PURPLE))
+                    .append(Text.literal(" -- in your hand.  Sneak-click to send them off.")
+                            .formatted(Formatting.GRAY));
         } else {
             message = Text.literal("They want ").formatted(Formatting.GRAY)
                     .append(Text.literal(craving.strain().display())
@@ -527,8 +545,52 @@ public final class TrapDealing {
         if (craving.powder()) {
             return lowestPurity(seller) != null;
         }
+        if (craving.isMix()) {
+            var inventory = seller.getInventory();
+            for (int slot = 0; slot < inventory.size(); slot++) {
+                if (matchingMix(inventory.getStack(slot), craving) != null) {
+                    return true;
+                }
+            }
+            return false;
+        }
         return lowestQuality(seller, TrapContent.driedBud(craving.strain())) != null
                 || lowestQuality(seller, TrapContent.joint(craving.strain())) != null;
+    }
+
+    /** The blend on this stack if it's what they asked for, else null. */
+    private static Blend matchingMix(ItemStack stack, Craving craving) {
+        if (!stack.isOf(TrapContent.blendBudItem) && !stack.isOf(TrapContent.blendJointItem)) {
+            return null;
+        }
+        Blend blend = TrapComponents.getBlend(stack);
+        if (blend == null) {
+            return null;
+        }
+        // "Any mix" takes whatever you've got; a named request takes only that
+        // blend, because otherwise asking by name means nothing.
+        if (craving.isNamedMix() && !craving.mix().equals(blend.display())) {
+            return null;
+        }
+        return blend;
+    }
+
+    /**
+     * What a mix fetches, per item.
+     *
+     * Priced off the joint curve rather than invented from scratch, then
+     * scaled by how much work went in: more parts is more buds spent, and a
+     * named blend is the thing somebody actually went looking for. A four-part
+     * named Fire mix comes out at roughly three times a plain Fire joint,
+     * which is about right for four Fire buds plus knowing the recipe.
+     */
+    private static int mixPrice(Blend blend, boolean rolled) {
+        int base = rolled
+                ? jointPrice(blend.quality())
+                : budPrice(blend.quality());
+        float parts = 0.55f + 0.22f * blend.parts().size();
+        float fame = blend.named() != null ? 1.45f : 1.0f;
+        return Math.max(1, Math.round(base * parts * fame));
     }
 
     /** The poorest grade of this item the player has on them, or null. */
@@ -649,17 +711,58 @@ public final class TrapDealing {
 
     // --- what they want ------------------------------------------------------
 
-    /** Either a strain of weed or powder. Never both -- one craving each. */
-    private record Craving(Strain strain, boolean powder) {
+    /**
+     * What one customer turned up for. Exactly one of the three.
+     *
+     * `mix` is a blend's display name, or the empty string for "any mix at
+     * all". Named blends are asked for specifically because that is the payoff
+     * for having found one -- a customer who walks up asking for Trinity by
+     * name is worth more than the arithmetic says.
+     */
+    private record Craving(Strain strain, boolean powder, String mix) {
+        static Craving of(Strain strain) {
+            return new Craving(strain, false, null);
+        }
+
+        static Craving forPowder() {
+            return new Craving(null, true, null);
+        }
+
+        static Craving mixed(String name) {
+            return new Craving(null, false, name);
+        }
+
+        boolean isMix() {
+            return mix != null;
+        }
+
+        /** True if they asked for one blend in particular rather than any. */
+        boolean isNamedMix() {
+            return mix != null && !mix.isEmpty();
+        }
+
         /** On the nameplate, so you can tell from across a field whether it's worth walking over. */
         String title() {
-            return powder ? "Customer (powder)" : "Customer (" + strain.display() + ")";
+            if (powder) {
+                return "Customer (powder)";
+            }
+            if (isMix()) {
+                return "Customer (" + (isNamedMix() ? mix : "any mix") + ")";
+            }
+            return "Customer (" + strain.display() + ")";
         }
 
         String greeting() {
-            return powder
-                    ? "Somebody's heading your way. They want powder."
-                    : "Somebody's heading your way. They're after " + strain.display() + ".";
+            if (powder) {
+                return "Somebody's heading your way. They want powder.";
+            }
+            if (isNamedMix()) {
+                return "Somebody's heading your way. They're asking for " + mix + " by name.";
+            }
+            if (isMix()) {
+                return "Somebody's heading your way. They want something mixed.";
+            }
+            return "Somebody's heading your way. They're after " + strain.display() + ".";
         }
     }
 
@@ -674,16 +777,49 @@ public final class TrapDealing {
         for (Strain strain : Strain.values()) {
             if (carries(player, TrapContent.driedBud(strain))
                     || carries(player, TrapContent.joint(strain))) {
-                options.add(new Craving(strain, false));
+                options.add(Craving.of(strain));
             }
         }
         if (carries(player, TrapContent.cocaPowder)) {
-            options.add(new Craving(null, true));
+            options.add(Craving.forPowder());
+        }
+        // Mixes are drawn from what you're actually holding, same as strains,
+        // and a named one is listed twice: it's rarer to be carrying, and
+        // being asked for Trinity by name should feel like the point of having
+        // made it rather than a coin flip.
+        for (String name : mixesCarried(player)) {
+            options.add(Craving.mixed(name));
+            if (!name.isEmpty()) {
+                options.add(Craving.mixed(name));
+            }
         }
         if (options.isEmpty()) {
             return null;
         }
         return options.get(player.getWorld().getRandom().nextInt(options.size()));
+    }
+
+    /**
+     * Distinct blends the player is carrying, by display name.
+     *
+     * Named blends come back as their name; everything else collapses to the
+     * empty string, which reads as "any mix" -- there is no point in a
+     * customer demanding "Kush + Purp" by its generated title.
+     */
+    private static java.util.List<String> mixesCarried(ServerPlayerEntity player) {
+        var found = new java.util.LinkedHashSet<String>();
+        var inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (!stack.isOf(TrapContent.blendBudItem) && !stack.isOf(TrapContent.blendJointItem)) {
+                continue;
+            }
+            Blend blend = TrapComponents.getBlend(stack);
+            if (blend != null) {
+                found.add(blend.named() != null ? blend.display() : "");
+            }
+        }
+        return java.util.List.copyOf(found);
     }
 
     private static boolean carries(ServerPlayerEntity player, net.minecraft.item.Item item) {

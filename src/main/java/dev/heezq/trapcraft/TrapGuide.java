@@ -192,9 +192,22 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("4c. THE INDEX\n\n"))
                 .append(body("More emeralds about means dearer everything.\n\n"))
-                .append(body("Spending and losing take them out. Customers "
-                        + "and jackpots put them in.\n\n"))
-                .append(hint("Somebody's jackpot is your price rise."))));
+                .append(body("Spending and losing take them out. Getting "
+                        + "paid puts them in.\n\n"))
+                .append(hint("Chests count. Hoarding is not hiding."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c2. THE WALLET\n\n"))
+                .append(item("String Nugget String\nLeather Emrld Leather\nLeather Leather Leather\n\n"))
+                .append(body("Holds any amount in one slot.\n\n"))
+                .append(hint("Right-click it to open."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c3. BANKING\n\n"))
+                .append(body("One button puts every emerald you're carrying "
+                        + "away. Buttons take it back out.\n\n"))
+                .append(body("Blocks count as nine, both ways.\n\n"))
+                .append(warn("Money in it still spends. Shops take it."))));
 
         pages.add(page(Text.empty()
                 .append(title("4d. ORDER FLOW\n\n"))
@@ -407,9 +420,15 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("4e. MIXING\n\n"))
                 .append(item("Bottle Bowl Bottle\nCopper Iron Copper\nLog    Log  Log\n\n"))
-                .append(body("Lay " + Blend.MIN_PARTS + "-" + Blend.MAX_PARTS
-                        + " cured buds in the grid. It shows the blend first.\n\n"))
+                .append(body("Buds in the four slots, then click the jar.\n\n"))
                 .append(hint("Any log will do."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4e2. THE JAR\n\n"))
+                .append(body("The jar on the right shows what you'd get before "
+                        + "you commit.\n\n"))
+                .append(body("It says why when it can't.\n\n"))
+                .append(hint("Close it and your buds come back."))));
 
         pages.add(page(Text.empty()
                 .append(title("4f. BLENDS\n\n"))
@@ -561,9 +580,17 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("9c. CUSTOMERS\n\n"))
-                .append(body("Carry product and somebody eventually walks up wanting one strain.\n\n"))
-                .append(body("They pay well over the trader.\n\n"))
+                .append(body("Carry product and somebody walks up wanting it.\n\n"))
+                .append(body("A strain, powder, or a mix.\n\n"))
                 .append(hint("Their name says what they're after."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9c2. MIXES\n\n"))
+                .append(body("Some ask for any mix. Some ask for a known "
+                        + "blend by name.\n\n"))
+                .append(body("Both pay more than a single strain. Named pays "
+                        + "most.\n\n"))
+                .append(hint("More parts, more money."))));
 
         pages.add(page(Text.empty()
                 .append(title("9d. DEALING\n\n"))
