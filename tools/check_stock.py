@@ -11,6 +11,9 @@ doesn't have what you expected -- and neither logs anything useful:
     which throws mid-spin on a live server.
   * A roulette wheel missing a pocket, which lands the ball on one number
     while the table pays out on another.
+  * Two catalogue lines for the same item id. DECLARED is a map, so the
+    second silently overwrites the first and one of the two prices is dead
+    code nobody will ever see quoted.
   * A registered block or item with no name in the language file, which
     shows up in game as "item.trapcraft.whatever".
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
@@ -112,6 +115,22 @@ def roulette_wheel() -> list[str]:
     return problems
 
 
+def duplicate_lines(source: str) -> list[str]:
+    """One id, one price. The map keeps whichever was declared last."""
+    seen = {}
+    problems = []
+    for ident in re.findall(r'\n\s+add\([A-Za-z]+, "([^"]+)"', source):
+        # Concatenated ids (the per-strain lines) expand at runtime and are
+        # not real duplicates of each other.
+        if ident.endswith(":"):
+            continue
+        seen[ident] = seen.get(ident, 0) + 1
+    for ident, count in sorted(seen.items()):
+        if count > 1:
+            problems.append(f"{ident} is listed {count} times -- only the last price counts")
+    return problems
+
+
 def names() -> list[str]:
     """Everything registered must have a name in en_us.json.
 
@@ -163,6 +182,7 @@ def main() -> int:
     problems.extend(slot_reel())
     problems.extend(roulette_wheel())
     problems.extend(names())
+    problems.extend(duplicate_lines(source))
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

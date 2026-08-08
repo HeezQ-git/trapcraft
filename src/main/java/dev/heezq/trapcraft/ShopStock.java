@@ -426,7 +426,6 @@ public final class ShopStock {
 
     private static void seeds() {
         Category c = FARMING;
-        add(c, "minecraft:wheat_seeds", 16, 3);
         add(c, "minecraft:beetroot_seeds", 16, 3);
         add(c, "minecraft:melon_seeds", 8, 5);
         add(c, "minecraft:pumpkin_seeds", 8, 5);
@@ -442,7 +441,6 @@ public final class ShopStock {
         add(c, "minecraft:sweet_berries", 16, 5);
         add(c, "minecraft:glow_berries", 16, 9);
         add(c, "minecraft:bone_meal", 32, 9);
-        add(c, "minecraft:honeycomb", 8, 16);
         add(c, "minecraft:hay_block", 8, 10);
         add(c, "minecraft:egg", 16, 5);
         add(c, "minecraft:wheat_seeds", 16, 3);
@@ -505,7 +503,6 @@ public final class ShopStock {
         add(c, "minecraft:beetroot_soup", 2, 23);
         add(c, "minecraft:suspicious_stew", 2, 18);
         add(c, "minecraft:golden_carrot", 8, 46);
-        add(c, "minecraft:golden_apple", 1, 60);
         add(c, "minecraft:milk_bucket", 1, 12);
         add(c, "minecraft:honey_bottle", 2, 36);
         add(c, "minecraft:sugar", 8, 13);
