@@ -42,11 +42,18 @@ public class ShopScreenHandler extends ScreenHandler {
     private static final int BACK_SLOT = FOOTER;
     private static final int MOOD_SLOT = FOOTER + 4;
     private static final int PURSE_SLOT = FOOTER + 8;
+    private static final int PREV_SLOT = FOOTER + 2;
+    private static final int NEXT_SLOT = FOOTER + 6;
+
+    /** Two rows of four, centred, so the shelves read as a shopfront. */
+    private static final int[] SHELF_SPOTS = {10, 12, 14, 16, 28, 30, 32, 34};
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity shopper;
     private final List<ShopStock.Entry> shown = new ArrayList<>();
     private ShopStock.Category open;
+    /** Some shelves carry more than one screenful. */
+    private int page;
 
     public ShopScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
@@ -78,7 +85,7 @@ public class ShopScreenHandler extends ScreenHandler {
 
         // Two rows of three, centred, so the shelves read as a shopfront rather
         // than a list.
-        int[] spots = {11, 13, 15, 29, 31, 33};
+        int[] spots = SHELF_SPOTS;
         for (int i = 0; i < ShopStock.CATEGORIES.size() && i < spots.length; i++) {
             ShopStock.Category category = ShopStock.CATEGORIES.get(i);
             ItemStack icon = new ItemStack(category.icon());
@@ -94,14 +101,16 @@ public class ShopScreenHandler extends ScreenHandler {
         sendContentUpdates();
     }
 
-    private void showShelf(ShopStock.Category category) {
+    private void showShelf(ShopStock.Category category, int wanted) {
         open = category;
         shown.clear();
         shown.addAll(ShopStock.of(category));
+        page = Math.max(0, Math.min(wanted, lastPage()));
         blank();
 
-        for (int i = 0; i < shown.size() && i < FOOTER; i++) {
-            display.setStack(i, priceTag(shown.get(i)));
+        int from = page * FOOTER;
+        for (int i = 0; i + from < shown.size() && i < FOOTER; i++) {
+            display.setStack(i, priceTag(shown.get(i + from)));
         }
         footer();
         sendContentUpdates();
@@ -148,7 +157,21 @@ public class ShopScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /** Zero-based index of the final page of the open shelf. */
+    private int lastPage() {
+        return shown.isEmpty() ? 0 : (shown.size() - 1) / FOOTER;
+    }
+
     private void footer() {
+        if (open != null) {
+            if (page > 0) {
+                display.setStack(PREV_SLOT, arrow("Previous page"));
+            }
+            if (page < lastPage()) {
+                display.setStack(NEXT_SLOT, arrow("Next page  ("
+                        + (page + 2) + "/" + (lastPage() + 1) + ")"));
+            }
+        }
         if (open != null) {
             ItemStack back = new ItemStack(Items.ARROW);
             back.set(DataComponentTypes.CUSTOM_NAME,
@@ -179,6 +202,12 @@ public class ShopScreenHandler extends ScreenHandler {
         display.setStack(PURSE_SLOT, wallet);
     }
 
+    private ItemStack arrow(String label) {
+        ItemStack stack = new ItemStack(Items.SPECTRAL_ARROW);
+        stack.set(DataComponentTypes.CUSTOM_NAME, plain(label).formatted(Formatting.WHITE));
+        return stack;
+    }
+
     private void blank() {
         ItemStack pane = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
         pane.set(DataComponentTypes.CUSTOM_NAME, Text.empty());
@@ -198,11 +227,11 @@ public class ShopScreenHandler extends ScreenHandler {
         boolean right = button == 1;
 
         if (open == null) {
-            int[] spots = {11, 13, 15, 29, 31, 33};
+            int[] spots = SHELF_SPOTS;
             for (int i = 0; i < spots.length && i < ShopStock.CATEGORIES.size(); i++) {
                 if (spots[i] == slotIndex) {
                     click(0.9F);
-                    showShelf(ShopStock.CATEGORIES.get(i));
+                    showShelf(ShopStock.CATEGORIES.get(i), 0);
                     return;
                 }
             }
@@ -213,17 +242,28 @@ public class ShopScreenHandler extends ScreenHandler {
             showShelves();
             return;
         }
-        if (slotIndex >= shown.size()) {
+        if (slotIndex == PREV_SLOT && page > 0) {
+            click(0.8F);
+            showShelf(open, page - 1);
+            return;
+        }
+        if (slotIndex == NEXT_SLOT && page < lastPage()) {
+            click(1.0F);
+            showShelf(open, page + 1);
+            return;
+        }
+        int index = page * FOOTER + slotIndex;
+        if (slotIndex >= FOOTER || index >= shown.size()) {
             return;
         }
 
-        ShopStock.Entry entry = shown.get(slotIndex);
+        ShopStock.Entry entry = shown.get(index);
         if (right) {
             sell(entry);
         } else {
             buy(entry, shift ? 4 : 1);
         }
-        showShelf(open);
+        showShelf(open, page);
     }
 
     private void buy(ShopStock.Entry entry, int lots) {

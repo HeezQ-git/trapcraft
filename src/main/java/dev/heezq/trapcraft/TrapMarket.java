@@ -38,7 +38,10 @@ public final class TrapMarket {
     }
 
     public static void register() {
-        ServerLifecycleEvents.SERVER_STARTED.register(TrapMarket::load);
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            ShopStock.build();
+            load(server);
+        });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             // Once a second is plenty to notice the date changed.
             if (server.getOverworld().getTime() % 20 != 0) {
