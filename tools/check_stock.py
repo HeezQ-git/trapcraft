@@ -11,6 +11,8 @@ doesn't have what you expected -- and neither logs anything useful:
     which throws mid-spin on a live server.
   * A roulette wheel missing a pocket, which lands the ball on one number
     while the table pays out on another.
+  * A registered block or item with no name in the language file, which
+    shows up in game as "item.trapcraft.whatever".
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
     below 2e, and the daily index can push a 2e line under that on a bad day.
     That is the "it's not rentable" complaint: you farm a bundle, walk to the
@@ -110,6 +112,37 @@ def roulette_wheel() -> list[str]:
     return problems
 
 
+def names() -> list[str]:
+    """Everything registered must have a name in en_us.json.
+
+    A missing entry is not an error anywhere -- the game just renders the
+    translation key, so the item is called "item.trapcraft.roulette" in the
+    creative tab and nobody notices until a screenshot. Blocks need BOTH keys:
+    the block form for the placed block and the item form for the thing in
+    your hand.
+    """
+    content = (ROOT / "src/main/java/dev/heezq/trapcraft/TrapContent.java").read_text()
+    lang = json.loads((ROOT / "src/main/resources/assets/trapcraft/lang/en_us.json").read_text())
+
+    # Only whole-literal names. The per-strain registrations build their id by
+    # concatenation -- registerItem("seeds_" + strain.id(), ...) -- and their
+    # language keys are generated per strain, so matching the prefix would
+    # report six phantom gaps and teach everyone to ignore this check.
+    items = set(re.findall(r'registerItem\("([a-z0-9_]+)"\s*,', content))
+    blocks = set(re.findall(r'registerBlock\("([a-z0-9_]+)"\s*,', content))
+
+    problems = []
+    for name in sorted(items):
+        if f"item.trapcraft.{name}" not in lang:
+            problems.append(f"no name for item.trapcraft.{name}")
+    for name in sorted(blocks):
+        # Crops are registered as blocks with no item form of their own, so
+        # only the block key is required unless an item was registered too.
+        if f"block.trapcraft.{name}" not in lang:
+            problems.append(f"no name for block.trapcraft.{name}")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -129,6 +162,7 @@ def main() -> int:
 
     problems.extend(slot_reel())
     problems.extend(roulette_wheel())
+    problems.extend(names())
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

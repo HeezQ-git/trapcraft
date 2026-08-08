@@ -460,6 +460,7 @@ def lang() -> None:
         "item.trapcraft.ledger": "The Ledger",
         "item.trapcraft.wallet": "Wallet",
         "block.trapcraft.roulette": "Roulette Table",
+        "item.trapcraft.roulette": "Roulette Table",
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
