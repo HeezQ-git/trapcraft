@@ -360,10 +360,57 @@ public final class TrapMath {
 
     // --- the slot machine -----------------------------------------------------
 
-    /** The grid is square. */
+    /**
+     * Four cabinets in one.
+     *
+     * The 5x5 is the machine this started as. The smaller windows are not
+     * shrunk versions of it -- they are different games that happen to share a
+     * lever. A 2x2 is a coin flip you watch, over in two seconds and paying
+     * something one spin in four; a 5x5 is a board you read, paying one in
+     * three but hiding a forty-to-one somewhere in it. Which one is in front
+     * of you is a button, because the interesting thing about a floor is
+     * having a choice on it.
+     *
+     * Everything below takes the size as an argument rather than reading a
+     * constant. The shapes, the lines, the reel width, the odds and the
+     * measured return are all per size, and the tests re-measure every one of
+     * them on every build.
+     */
+    public static final int[] SLOT_SIZES = {2, 3, 4, 5};
+    public static final String[] SLOT_CABINETS = {"Pocket", "Corner", "Parlour", "Grand"};
+
+    /** The widest grid, and the length of the reel strip the cabinet draws. */
     public static final int SLOT_SIZE = 5;
-    /** How many different symbols the reels carry. */
+    /** How many different symbols the biggest reels carry. */
     public static final int SLOT_FACES = 22;
+
+    /**
+     * Reel width for one cabinet.
+     *
+     * Narrower on a small grid, and it has to be. A 2x2 drawing from
+     * twenty-two faces matches a line one spin in twenty-two, which is a game
+     * where nothing ever happens; a 5x5 drawing from eight would be a board
+     * that accidentally wins every time. The width is what keeps the number of
+     * coincidences roughly constant as the window grows.
+     */
+    public static int slotFaces(int size) {
+        return switch (size) {
+            case 2 -> 8;
+            case 3 -> 12;
+            case 4 -> 16;
+            default -> SLOT_FACES;
+        };
+    }
+
+    /** Which cabinet this is called, for the plate on the front. */
+    public static String slotCabinet(int size) {
+        for (int i = 0; i < SLOT_SIZES.length; i++) {
+            if (SLOT_SIZES[i] == size) {
+                return SLOT_CABINETS[i];
+            }
+        }
+        return size + "x" + size;
+    }
 
     /**
      * What each way of winning pays, as a multiple of the stake.
@@ -381,6 +428,7 @@ public final class TrapMath {
      * SLOT_PLAN_ODDS. There is no third option -- the return is exactly the
      * sum of frequency times pay, and the tests measure it.
      */
+    public static final float PAY_RUN2 = 1.5f;
     public static final float PAY_RUN3 = 1.0f;
     public static final float PAY_RUN4 = 4.0f;
     public static final float PAY_RUN5 = 30.0f;
@@ -402,112 +450,140 @@ public final class TrapMath {
     public record SlotShape(String name, int[] cells, float pay) {
     }
 
-    private static int cellAt(int row, int col) {
-        return row * SLOT_SIZE + col;
+    private static int cellAt(int row, int col, int size) {
+        return row * size + col;
     }
 
     /**
-     * Every line worth reading: rows, columns, and EVERY diagonal of three or
-     * more -- not just the two long ones. The short diagonals either side of
-     * the middle are the ones players see and expect to count.
+     * Every line worth reading: rows, columns, and EVERY diagonal long enough
+     * to score -- not just the two long ones. The short diagonals either side
+     * of the middle are the ones players see and expect to count.
      */
-    public static int[][] slotLines() {
+    public static int[][] slotLines(int size) {
         List<int[]> lines = new ArrayList<>();
-        for (int row = 0; row < SLOT_SIZE; row++) {
-            int[] cells = new int[SLOT_SIZE];
-            for (int col = 0; col < SLOT_SIZE; col++) {
-                cells[col] = cellAt(row, col);
+        for (int row = 0; row < size; row++) {
+            int[] cells = new int[size];
+            for (int col = 0; col < size; col++) {
+                cells[col] = cellAt(row, col, size);
             }
             lines.add(cells);
         }
-        for (int col = 0; col < SLOT_SIZE; col++) {
-            int[] cells = new int[SLOT_SIZE];
-            for (int row = 0; row < SLOT_SIZE; row++) {
-                cells[row] = cellAt(row, col);
+        for (int col = 0; col < size; col++) {
+            int[] cells = new int[size];
+            for (int row = 0; row < size; row++) {
+                cells[row] = cellAt(row, col, size);
             }
             lines.add(cells);
         }
-        // Both diagonal directions at every offset that still leaves three
-        // cells on the board.
-        for (int offset = -(SLOT_SIZE - 3); offset <= SLOT_SIZE - 3; offset++) {
+        int shortest = slotRunFloor(size);
+        for (int offset = -(size - shortest); offset <= size - shortest; offset++) {
             List<Integer> down = new ArrayList<>();
             List<Integer> up = new ArrayList<>();
-            for (int i = 0; i < SLOT_SIZE; i++) {
+            for (int i = 0; i < size; i++) {
                 int right = i + offset;
-                int left = SLOT_SIZE - 1 - i + offset;
-                if (right >= 0 && right < SLOT_SIZE) {
-                    down.add(cellAt(i, right));
+                int left = size - 1 - i + offset;
+                if (right >= 0 && right < size) {
+                    down.add(cellAt(i, right, size));
                 }
-                if (left >= 0 && left < SLOT_SIZE) {
-                    up.add(cellAt(i, left));
+                if (left >= 0 && left < size) {
+                    up.add(cellAt(i, left, size));
                 }
             }
-            lines.add(toArray(down));
-            lines.add(toArray(up));
+            if (down.size() >= shortest) {
+                lines.add(down.stream().mapToInt(Integer::intValue).toArray());
+            }
+            if (up.size() >= shortest) {
+                lines.add(up.stream().mapToInt(Integer::intValue).toArray());
+            }
         }
         return lines.toArray(new int[0][]);
     }
 
-    private static int[] toArray(List<Integer> values) {
-        int[] out = new int[values.size()];
-        for (int i = 0; i < out.length; i++) {
-            out[i] = values.get(i);
-        }
-        return out;
+    /**
+     * The shortest run that scores on this grid.
+     *
+     * Three everywhere except the 2x2, where three does not fit and a pair is
+     * the whole game. Guarded rather than left to fall out of the arithmetic
+     * because paying for pairs on a 5x5 would hand over money on essentially
+     * every spin.
+     */
+    public static int slotRunFloor(int size) {
+        return size <= 2 ? 2 : 3;
     }
 
     /**
-     * The shapes that are not straight lines, every placement of each.
+     * Every named shape that fits on this grid.
      *
-     * Built rather than written out, so a 7x7 machine would need no new
-     * literals and so a typo can't put a shape half off the board.
+     * Shapes are dropped rather than squashed when the window is too small for
+     * them, and dropped when they would land on the same cells as a
+     * better-paying shape -- a Diamond on a 3x3 is a Cross, and two names for
+     * one event is how a paytable starts lying.
      */
-    public static List<SlotShape> slotShapes() {
+    public static List<SlotShape> slotShapes(int size) {
         List<SlotShape> shapes = new ArrayList<>();
-
-        for (int row = 0; row + 1 < SLOT_SIZE; row++) {
-            for (int col = 0; col + 1 < SLOT_SIZE; col++) {
-                shapes.add(new SlotShape("Block", new int[]{
-                        cellAt(row, col), cellAt(row, col + 1),
-                        cellAt(row + 1, col), cellAt(row + 1, col + 1)}, PAY_SQUARE));
+        // A 2x2 block of the same face. On a 2x2 grid that is the whole
+        // window, which is what Four Corners already pays for.
+        if (size > 2) {
+            for (int row = 0; row + 1 < size; row++) {
+                for (int col = 0; col + 1 < size; col++) {
+                    shapes.add(new SlotShape("Block", new int[]{
+                            cellAt(row, col, size), cellAt(row, col + 1, size),
+                            cellAt(row + 1, col, size), cellAt(row + 1, col + 1, size)},
+                            PAY_SQUARE));
+                }
             }
         }
-        for (int row = 1; row + 1 < SLOT_SIZE; row++) {
-            for (int col = 1; col + 1 < SLOT_SIZE; col++) {
+        for (int row = 1; row + 1 < size; row++) {
+            for (int col = 1; col + 1 < size; col++) {
                 shapes.add(new SlotShape("Cross", new int[]{
-                        cellAt(row - 1, col), cellAt(row, col - 1), cellAt(row, col),
-                        cellAt(row, col + 1), cellAt(row + 1, col)}, PAY_PLUS));
+                        cellAt(row - 1, col, size), cellAt(row, col - 1, size),
+                        cellAt(row, col, size), cellAt(row, col + 1, size),
+                        cellAt(row + 1, col, size)}, PAY_PLUS));
                 shapes.add(new SlotShape("Star", new int[]{
-                        cellAt(row - 1, col - 1), cellAt(row - 1, col + 1), cellAt(row, col),
-                        cellAt(row + 1, col - 1), cellAt(row + 1, col + 1)}, PAY_CROSS));
+                        cellAt(row - 1, col - 1, size), cellAt(row - 1, col + 1, size),
+                        cellAt(row, col, size),
+                        cellAt(row + 1, col - 1, size), cellAt(row + 1, col + 1, size)},
+                        PAY_CROSS));
                 // A Z: across the top, back down the diagonal, across the
                 // bottom. Seven cells, which is why it pays what it does.
                 shapes.add(new SlotShape("Zed", new int[]{
-                        cellAt(row - 1, col - 1), cellAt(row - 1, col), cellAt(row - 1, col + 1),
-                        cellAt(row, col),
-                        cellAt(row + 1, col - 1), cellAt(row + 1, col), cellAt(row + 1, col + 1)},
+                        cellAt(row - 1, col - 1, size), cellAt(row - 1, col, size),
+                        cellAt(row - 1, col + 1, size),
+                        cellAt(row, col, size),
+                        cellAt(row + 1, col - 1, size), cellAt(row + 1, col, size),
+                        cellAt(row + 1, col + 1, size)},
                         PAY_ZED));
             }
         }
-        shapes.add(new SlotShape("Diamond", new int[]{
-                cellAt(0, 2), cellAt(2, 0), cellAt(2, 2), cellAt(2, 4), cellAt(4, 2)},
-                PAY_DIAMOND));
+        // The diamond needs a middle to hang off and room between it and the
+        // edge, so it only exists on odd grids of five or more. On a 3x3 its
+        // cells are exactly a Cross.
+        if (size >= 5 && size % 2 == 1) {
+            int mid = size / 2;
+            shapes.add(new SlotShape("Diamond", new int[]{
+                    cellAt(0, mid, size), cellAt(mid, 0, size), cellAt(mid, mid, size),
+                    cellAt(mid, size - 1, size), cellAt(size - 1, mid, size)},
+                    PAY_DIAMOND));
+        }
         shapes.add(new SlotShape("Four Corners", new int[]{
-                cellAt(0, 0), cellAt(0, SLOT_SIZE - 1),
-                cellAt(SLOT_SIZE - 1, 0), cellAt(SLOT_SIZE - 1, SLOT_SIZE - 1)},
+                cellAt(0, 0, size), cellAt(0, size - 1, size),
+                cellAt(size - 1, 0, size), cellAt(size - 1, size - 1, size)},
                 PAY_CORNERS));
         return shapes;
     }
 
-    /** What a run of this length pays. Zero if it isn't long enough. */
-    public static float slotPayForRun(int run) {
+    /** What a run of this length pays on this grid. Zero if it isn't long enough. */
+    public static float slotPayForRun(int run, int size) {
         if (run >= 5) {
             return PAY_RUN5;
         }
         if (run == 4) {
             return PAY_RUN4;
         }
-        return run == 3 ? PAY_RUN3 : 0.0f;
+        if (run == 3) {
+            return PAY_RUN3;
+        }
+        return run == 2 && slotRunFloor(size) == 2 ? PAY_RUN2 : 0.0f;
     }
 
     /** Everything one board won: total multiplier, the cells, and the names. */
@@ -530,34 +606,41 @@ public final class TrapMath {
      * highlight can never disagree with the payout: if a cell lights up, it is
      * a cell that paid.
      */
-    public static SlotScore slotScore(int[] grid) {
+    public static SlotScore slotScore(int[] grid, int size) {
         // Collect every win the board contains, best first.
         List<SlotShape> found = new ArrayList<>();
-        for (int[] line : slotLines()) {
+        for (int[] line : slotLines(size)) {
             int[] run = longestRun(grid, line);
-            float worth = slotPayForRun(run[0]);
+            float worth = slotPayForRun(run[0], size);
             if (worth > 0.0f) {
                 int[] cells = new int[run[0]];
                 System.arraycopy(line, run[1], cells, 0, run[0]);
                 found.add(new SlotShape(run[0] + " in a row", cells, worth));
             }
         }
-        for (SlotShape shape : slotShapes()) {
-            if (uniform(grid, shape.cells())) {
+        for (SlotShape shape : slotShapes(size)) {
+            int face = grid[shape.cells()[0]];
+            boolean all = true;
+            for (int cell : shape.cells()) {
+                if (grid[cell] != face) {
+                    all = false;
+                    break;
+                }
+            }
+            if (all) {
                 found.add(shape);
             }
         }
-        found.sort((a, b) -> Float.compare(b.pay(), a.pay()));
 
-        // Each square pays once. A Cross IS a three-across and a three-down,
-        // and paying it as all three made shapes fund their own line wins --
-        // which ate so much of the return that a bare three could only be
-        // priced at a third of the stake. Taking the best win on a square and
-        // moving on is both fairer to read and what frees up the budget for
-        // multipliers worth chasing.
+        // Each square pays once. Sorted by worth so the best claim on a cell
+        // wins it: without this a Cross scored as a Cross AND as the two
+        // three-runs crossing through it, and paying the same cells three
+        // times was most of a 2.7x return.
+        found.sort((a, b) -> Float.compare(b.pay(), a.pay()));
+        boolean[] claimed = new boolean[grid.length];
         float pay = 0.0f;
         List<String> names = new ArrayList<>();
-        boolean[] claimed = new boolean[grid.length];
+        List<Integer> lit = new ArrayList<>();
         for (SlotShape win : found) {
             boolean fresh = false;
             for (int cell : win.cells()) {
@@ -572,51 +655,40 @@ public final class TrapMath {
             pay += win.pay();
             names.add(win.name());
             for (int cell : win.cells()) {
-                claimed[cell] = true;
+                if (!claimed[cell]) {
+                    claimed[cell] = true;
+                    lit.add(cell);
+                }
             }
         }
-
-        List<Integer> cells = new ArrayList<>();
-        for (int cell = 0; cell < claimed.length; cell++) {
-            if (claimed[cell]) {
-                cells.add(cell);
-            }
-        }
-        return new SlotScore(pay, toArray(cells), names);
-    }
-
-    private static boolean uniform(int[] grid, int[] cells) {
-        for (int i = 1; i < cells.length; i++) {
-            if (grid[cells[i]] != grid[cells[0]]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** Longest run of identical symbols on one line, and where it starts. */
-    public static int[] longestRun(int[] grid, int[] line) {
-        int best = 1;
-        int bestStart = 0;
-        int run = 1;
-        int start = 0;
-        for (int i = 1; i < line.length; i++) {
-            if (grid[line[i]] == grid[line[i - 1]]) {
-                run++;
-            } else {
-                run = 1;
-                start = i;
-            }
-            if (run > best) {
-                best = run;
-                bestStart = start;
-            }
-        }
-        return new int[]{best, bestStart};
+        return new SlotScore(pay, lit.stream().mapToInt(Integer::intValue).toArray(), names);
     }
 
     /**
-     * How often each planted outcome is aimed for, and what it plants.
+     * The longest stretch of one face along a line: {length, where it starts}.
+     */
+    private static int[] longestRun(int[] grid, int[] line) {
+        int best = 0;
+        int bestAt = 0;
+        int run = 1;
+        int at = 0;
+        for (int i = 1; i <= line.length; i++) {
+            if (i < line.length && grid[line[i]] == grid[line[i - 1]]) {
+                run++;
+            } else {
+                if (run > best) {
+                    best = run;
+                    bestAt = at;
+                }
+                run = 1;
+                at = i;
+            }
+        }
+        return new int[]{best, bestAt};
+    }
+
+    /**
+     * What the machine aims at, and how often.
      *
      * The machine picks the outcome first and then draws a board that agrees
      * with it, which is how real ones work and what makes the return a number
@@ -624,42 +696,85 @@ public final class TrapMath {
      * fill happens to add on top is a bonus, and {@link #slotScore} pays for
      * it -- so the measured return sits a little above this table. The
      * Monte Carlo in the tests is what says by how much.
+     *
+     * One row per cabinet, because the same odds on a smaller window are a
+     * different game: a plan that can only be planted one way on a 3x3 has
+     * sixteen places to land on a 5x5, and the accidental extras that come
+     * with the fill scale with the window too.
      */
-    public static final String[] SLOT_PLANS = {
-            "run3", "square", "cross", "star", "run4", "zed", "diamond", "corners", "run5",
-    };
-    public static final float[] SLOT_PLAN_ODDS = {
-            0.150f, 0.052f, 0.036f, 0.036f, 0.022f, 0.010f, 0.008f, 0.006f, 0.0030f,
-    };
+    public static String[] slotPlans(int size) {
+        return switch (size) {
+            case 2 -> new String[]{"run2", "corners"};
+            case 3 -> new String[]{"run3", "cross", "star", "zed", "corners"};
+            case 4 -> new String[]{"run3", "square", "cross", "star", "run4",
+                    "zed", "corners"};
+            default -> new String[]{"run3", "square", "cross", "star", "run4",
+                    "zed", "diamond", "corners", "run5"};
+        };
+    }
+
+    public static float[] slotPlanOdds(int size) {
+        return switch (size) {
+            // Solved, not chosen. Each row is the base mix scaled until the
+            // cabinet measures ~95%, because the same odds on a smaller window
+            // are a different return: shapes overlap far more when there is
+            // less board, and a Zed on a 3x3 contains all four corners.
+            case 2 -> new float[]{0.3551f, 0.0107f};
+            case 3 -> new float[]{0.2018f, 0.0269f, 0.0269f, 0.0040f, 0.0040f};
+            case 4 -> new float[]{0.1919f, 0.0640f, 0.0435f, 0.0435f, 0.0256f,
+                    0.0102f, 0.0077f};
+            default -> new float[]{0.150f, 0.052f, 0.036f, 0.036f, 0.022f,
+                    0.010f, 0.008f, 0.006f, 0.0030f};
+        };
+    }
 
     /**
-     * What the machine actually returns, measured not asserted.
+     * What each cabinet actually returns, measured not asserted.
      *
      * There is no closed form once wins stack, so these come from
-     * {@link #slotMeasure} over 300k spins and the test suite re-measures them
-     * on every build. If a pay or an odd is edited without updating these, the
-     * test fails -- which is the point, because the paytable in the cabinet
-     * quotes them to the player.
+     * {@link #slotMeasure} and the test suite re-measures them on every build.
+     * If a pay or an odd is edited without updating these, the test fails --
+     * which is the point, because the paytable in the cabinet quotes them to
+     * the player. Indexed by SLOT_SIZES.
      */
-    public static final float SLOT_MEASURED_RTP = 0.976f;
-    public static final float SLOT_MEASURED_WIN_RATE = 0.324f;
+    public static final float[] SLOT_MEASURED_RTP = {0.951f, 0.962f, 0.954f, 0.971f};
+    public static final float[] SLOT_MEASURED_WIN_RATE = {0.367f, 0.264f, 0.386f, 0.324f};
+
+    private static int cabinetIndex(int size) {
+        for (int i = 0; i < SLOT_SIZES.length; i++) {
+            if (SLOT_SIZES[i] == size) {
+                return i;
+            }
+        }
+        return SLOT_SIZES.length - 1;
+    }
+
+    public static float slotRtp(int size) {
+        return SLOT_MEASURED_RTP[cabinetIndex(size)];
+    }
+
+    public static float slotWinRate(int size) {
+        return SLOT_MEASURED_WIN_RATE[cabinetIndex(size)];
+    }
 
     /** How often a spin is aimed at paying anything at all. */
-    public static float slotWinChance() {
+    public static float slotWinChance(int size) {
         float chance = 0;
-        for (float odds : SLOT_PLAN_ODDS) {
+        for (float odds : slotPlanOdds(size)) {
             chance += odds;
         }
         return chance;
     }
 
     /** Which plan a uniform 0..1 draw selects, or null for a losing board. */
-    public static String slotPlan(float roll) {
+    public static String slotPlan(float roll, int size) {
+        String[] plans = slotPlans(size);
+        float[] odds = slotPlanOdds(size);
         float floor = 0.0f;
-        for (int i = 0; i < SLOT_PLAN_ODDS.length; i++) {
-            floor += SLOT_PLAN_ODDS[i];
+        for (int i = 0; i < odds.length; i++) {
+            floor += odds[i];
             if (roll < floor) {
-                return SLOT_PLANS[i];
+                return plans[i];
             }
         }
         return null;
@@ -674,19 +789,20 @@ public final class TrapMath {
      * common, and paying nothing for a board that visibly won is the single
      * worst thing this machine could do.
      */
-    public static int[] slotBoard(Random rng, String plan) {
-        int[] grid = new int[SLOT_SIZE * SLOT_SIZE];
-        List<SlotShape> shapes = slotShapes();
-        int[][] lines = slotLines();
+    public static int[] slotBoard(Random rng, String plan, int size) {
+        int[] grid = new int[size * size];
+        List<SlotShape> shapes = slotShapes(size);
+        int[][] lines = slotLines(size);
+        int faces = slotFaces(size);
 
         for (int attempt = 0; attempt < 400; attempt++) {
             for (int cell = 0; cell < grid.length; cell++) {
-                grid[cell] = rng.nextInt(SLOT_FACES);
+                grid[cell] = rng.nextInt(faces);
             }
             if (plan != null) {
-                plant(rng, grid, plan, lines, shapes);
+                plant(rng, grid, plan, lines, shapes, size);
             }
-            boolean won = slotScore(grid).won();
+            boolean won = slotScore(grid, size).won();
             if (plan == null ? !won : won) {
                 return grid;
             }
@@ -695,9 +811,11 @@ public final class TrapMath {
     }
 
     private static void plant(Random rng, int[] grid, String plan,
-                              int[][] lines, List<SlotShape> shapes) {
-        int symbol = rng.nextInt(SLOT_FACES);
+                              int[][] lines, List<SlotShape> shapes, int size) {
+        int faces = slotFaces(size);
+        int symbol = rng.nextInt(faces);
         int run = switch (plan) {
+            case "run2" -> 2;
             case "run3" -> 3;
             case "run4" -> 4;
             case "run5" -> 5;
@@ -720,10 +838,10 @@ public final class TrapMath {
             // about a third of the time, and those pay seven and forty -- it
             // was most of a 2.7x return, which is to say the house was losing.
             if (start > 0) {
-                grid[line[start - 1]] = (symbol + 1) % SLOT_FACES;
+                grid[line[start - 1]] = (symbol + 1) % faces;
             }
             if (start + run < line.length) {
-                grid[line[start + run]] = (symbol + 1) % SLOT_FACES;
+                grid[line[start + run]] = (symbol + 1) % faces;
             }
             return;
         }
@@ -742,6 +860,9 @@ public final class TrapMath {
                 matching.add(shape);
             }
         }
+        if (matching.isEmpty()) {
+            return;   // this cabinet has no such shape; the fill decides it
+        }
         for (int cell : matching.get(rng.nextInt(matching.size())).cells()) {
             grid[cell] = symbol;
         }
@@ -754,13 +875,13 @@ public final class TrapMath {
      * Deterministic from the seed, so the number in the tests is the number
      * you get.
      */
-    public static float slotMeasure(long seed, int spins, float[] winRateOut) {
+    public static float slotMeasure(long seed, int spins, int size, float[] winRateOut) {
         Random rng = new Random(seed);
         float paid = 0.0f;
         int won = 0;
         for (int spin = 0; spin < spins; spin++) {
-            int[] grid = slotBoard(rng, slotPlan(rng.nextFloat()));
-            SlotScore score = slotScore(grid);
+            int[] grid = slotBoard(rng, slotPlan(rng.nextFloat(), size), size);
+            SlotScore score = slotScore(grid, size);
             paid += score.pay();
             if (score.won()) {
                 won++;
@@ -771,6 +892,7 @@ public final class TrapMath {
         }
         return paid / spins;
     }
+
 
     // --- the climb --------------------------------------------------------------
 
@@ -1045,6 +1167,51 @@ public final class TrapMath {
             bets.add(String.valueOf(number));
         }
         return bets;
+    }
+
+    // --- punters ------------------------------------------------------------------
+    //
+    // Villagers who wander in, play a few rounds and leave. What they are
+    // doing is MODELLED rather than replayed: a punter does not open a screen,
+    // so there is no board to draw and nobody to show it to. What the room
+    // sees is somebody standing at a machine, the occasional cheer, and the
+    // vault moving -- and for that, a distribution with the right mean and a
+    // believable shape is the whole requirement.
+    //
+    // The mean is the machine's own return, so a floor full of punters drifts
+    // the vault upward at exactly the edge the cabinet advertises. Anything
+    // else would have the books disagree with the paytable.
+
+    /**
+     * What one punter round returns, as a multiple of what they staked.
+     *
+     * Mostly nothing, often a small win, rarely a big one -- the shape every
+     * machine on the floor has. Scaled so the mean comes out at `rtp`.
+     */
+    public static float punterRound(float rtp, Random rng) {
+        float roll = rng.nextFloat();
+        // Base shape, mean 0.955: 0.25*2 + 0.045*6 + 0.005*37 = 0.955.
+        float multiple;
+        if (roll < 0.700f) {
+            multiple = 0.0f;
+        } else if (roll < 0.950f) {
+            multiple = 2.0f;
+        } else if (roll < 0.995f) {
+            multiple = 6.0f;
+        } else {
+            multiple = 37.0f;
+        }
+        return multiple * (rtp / 0.955f);
+    }
+
+    /** Long-run return of the punter model, so the tests can hold it honest. */
+    public static float punterMeasure(float rtp, long seed, int rounds) {
+        Random rng = new Random(seed);
+        float paid = 0.0f;
+        for (int round = 0; round < rounds; round++) {
+            paid += punterRound(rtp, rng);
+        }
+        return paid / rounds;
     }
 
     // --- scratchcards -----------------------------------------------------------

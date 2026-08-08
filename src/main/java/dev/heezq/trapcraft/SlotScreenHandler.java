@@ -42,23 +42,21 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     private static final int ROWS = 6;
     private static final int SIZE = ROWS * 9;
 
-    /** Five reels, five rows, filling columns 2..6 of rows 0..4. */
-    private static final int REELS = 5;
-    private static final int WINDOW_ROWS = 5;
-    private static final int WINDOW_LEFT = 2;
-    /** Row 2 of the window is the payline. */
-    private static final int PAYLINE_ROW = 2;
+    /**
+     * The window, which is square and which the player chooses.
+     *
+     * Four cabinets share one cabinet: 2x2 through 5x5, switched with the
+     * button in the tray. They are genuinely different games -- see
+     * TrapMath.SLOT_SIZES -- and the reel width, the shapes, the odds and the
+     * return all change with the window rather than being the 5x5's numbers
+     * stretched over a smaller grid.
+     */
+    private int size = 5;
 
     private static final int STAKE_SLOT = 47;
     private static final int PURSE_SLOT = 51;
-    /**
-     * The arm, on the right-hand edge level with the middle of the reels.
-     *
-     * Column 8 of row 2 -- outside the 5x5 window, where the surround panes
-     * are -- so it reads as the arm on the side of the cabinet rather than
-     * another button in the tray.
-     */
-    private static final int LEVER_SLOT = 26;
+    /** The button that swaps cabinets, in the tray next to the stake. */
+    private static final int SIZE_SLOT = 45;
 
     /**
      * Reel faces, worst to best. The last is the jackpot.
@@ -91,7 +89,6 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
 
     /** Ticks each reel spins before it locks, first to last. */
     private static final int[] STOPS = {24, 32, 40, 48, 58};
-    private static final int SPIN_TICKS = 62;
     /** Flashing after the reels stop, before the machine admits anything. */
     private static final int CELEBRATE_TICKS = 26;
     /** A win this big earns the full show. */
@@ -114,13 +111,13 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
      * left the other twenty random, which is why the board looked full of
      * matches that paid nothing.
      */
-    private final int[] grid = new int[REELS * WINDOW_ROWS];
+    private int[] grid = new int[25];
     private int[] winners = new int[0];
 
     /** Where each reel has come to rest, once it has. */
-    private final int[] landed = new int[REELS];
+    private int[] landed = new int[5];
     /** Scroll offset per reel while it's still moving. */
-    private final int[] offset = new int[REELS];
+    private int[] offset = new int[5];
     /** Ticks of noise left after the reels have settled. */
     private int celebrating;
     private int flash;
@@ -153,10 +150,51 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 161 + (ROWS - 4) * 18));
         }
 
-        for (int reel = 0; reel < REELS; reel++) {
-            landed[reel] = reel % FACES.length;
-        }
+        fit();
         repaint();
+    }
+
+    // --- the window -----------------------------------------------------------
+
+    /** Reshape everything that depends on the window. */
+    private void fit() {
+        grid = new int[size * size];
+        landed = new int[size];
+        offset = new int[size];
+        for (int reel = 0; reel < size; reel++) {
+            landed[reel] = reel % faces();
+        }
+        winners = new int[0];
+        ways = List.of();
+        pending = 0.0f;
+        lastWon = 0;
+    }
+
+    private int faces() {
+        return TrapMath.slotFaces(size);
+    }
+
+    /** Left-hand column of the window, so a small grid sits centred. */
+    private int windowLeft() {
+        return (9 - size) / 2;
+    }
+
+    /**
+     * Which of the twenty-two drawn symbols face n of this cabinet is.
+     *
+     * Spread across the whole strip rather than truncated, so the narrow reels
+     * still run from coal to the star. Truncating would have left the 2x2
+     * topping out at iron nugget, and a jackpot symbol you cannot ever see is
+     * a jackpot nobody believes in.
+     */
+    private int drawn(int symbol) {
+        int count = faces();
+        return count <= 1 ? 0 : symbol * (FACES.length - 1) / (count - 1);
+    }
+
+    /** Last reel stops here, plus a beat. Small windows are quick on purpose. */
+    private int spinTicks() {
+        return STOPS[size - 1] + 4;
     }
 
     // --- painting -------------------------------------------------------------
@@ -166,11 +204,12 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             display.setStack(index, pane(surround(index)));
         }
         for (int cell = 0; cell < grid.length; cell++) {
-            int slot = (cell / REELS) * 9 + WINDOW_LEFT + (cell % REELS);
+            int slot = (cell / size) * 9 + windowLeft() + (cell % size);
             display.setStack(slot, face(cell));
         }
+        display.setStack(SIZE_SLOT, sizeTag());
         display.setStack(STAKE_SLOT, stakeTag());
-        display.setStack(LEVER_SLOT, leverTag());
+        display.setStack(leverSlot(), leverTag());
         display.setStack(PURSE_SLOT, purseTag());
         sendContentUpdates();
     }
@@ -192,8 +231,6 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             // Corners is four cells and worth thirty times a lone three, and
             // lighting it the same colour would be a lie the player can see.
             if (pending >= JACKPOT_PAY) {
-            TrapAwards.grant(player, "jackpot");
-            TrapCasino.won(player, "slot");
                 Item[] rainbow = {Items.RED_STAINED_GLASS_PANE, Items.ORANGE_STAINED_GLASS_PANE,
                         Items.YELLOW_STAINED_GLASS_PANE, Items.LIME_STAINED_GLASS_PANE,
                         Items.LIGHT_BLUE_STAINED_GLASS_PANE, Items.PURPLE_STAINED_GLASS_PANE};
@@ -210,15 +247,26 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
                 ? Items.GRAY_STAINED_GLASS_PANE : Items.BLACK_STAINED_GLASS_PANE;
     }
 
+    /**
+     * The arm, on the right-hand edge level with the middle of the window.
+     *
+     * Outside the grid whatever its size, where the surround panes are, so it
+     * reads as the arm on the side of the cabinet rather than another button
+     * in the tray.
+     */
+    private int leverSlot() {
+        return (size / 2) * 9 + 8;
+    }
+
     /** One cell of the board, lit if it was part of the win. */
     private ItemStack face(int cell) {
-        int reel = cell % REELS;
-        boolean moving = spinning > 0 && spinning > SPIN_TICKS - STOPS[reel];
+        int reel = cell % size;
+        boolean moving = spinning > 0 && spinning > spinTicks() - STOPS[reel];
         int symbol = moving
-                ? Math.floorMod(offset[reel] + cell / REELS, FACES.length)
+                ? Math.floorMod(offset[reel] + cell / size, faces())
                 : grid[cell];
 
-        ItemStack tag = new ItemStack(FACES[symbol]);
+        ItemStack tag = new ItemStack(FACES[drawn(symbol)]);
         boolean won = !moving && contains(winners, cell);
         if (won) {
             // Enchantment glint: the winning line is unmistakable without
@@ -226,7 +274,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             tag.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
         }
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(FACE_NAMES[symbol]).formatted(
+                plain(FACE_NAMES[drawn(symbol)]).formatted(
                         won ? Formatting.GOLD : Formatting.DARK_GRAY,
                         won ? Formatting.BOLD : Formatting.ITALIC));
         return tag;
@@ -258,6 +306,39 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         return tag;
     }
 
+    /** The button that swaps cabinets. */
+    private ItemStack sizeTag() {
+        ItemStack tag = new ItemStack(switch (size) {
+            case 2 -> Items.IRON_NUGGET;
+            case 3 -> Items.COPPER_INGOT;
+            case 4 -> Items.GOLD_INGOT;
+            default -> Items.DIAMOND;
+        });
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(TrapMath.slotCabinet(size)).formatted(Formatting.AQUA, Formatting.BOLD)
+                        .append(plain("   " + size + "x" + size).formatted(Formatting.WHITE)));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line(faces() + " symbols on the reels.", Formatting.GRAY));
+        lore.add(line(Math.round(TrapMath.slotWinRate(size) * 100)
+                + " spins in 100 pay. House keeps "
+                + Math.round((1 - TrapMath.slotRtp(size)) * 100) + "%.", Formatting.GRAY));
+        lore.add(Text.empty());
+        // Said plainly, because the obvious guess -- that a big window is just
+        // a small one with more room -- is wrong in both directions. A 2x2
+        // pays more often per emerald in the sense that its top prize is
+        // reachable, and less often in the sense that most spins are nothing.
+        lore.add(line(switch (size) {
+            case 2 -> "Two seconds a spin. Pairs pay.";
+            case 3 -> "Quick. Lines and the odd shape.";
+            case 4 -> "Room for blocks and fours.";
+            default -> "The full board. Everything is on it.";
+        }, Formatting.WHITE));
+        lore.add(Text.empty());
+        lore.add(line("Click for the next cabinet.", Formatting.YELLOW));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack leverTag() {
         ItemStack tag = new ItemStack(spinning > 0 ? Items.REDSTONE_TORCH : Items.LEVER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -267,7 +348,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         List<Text> lore = new ArrayList<>();
         // Best first. A paytable you have to scan for the big number is a
         // paytable nobody reads.
-        for (Text row : paytable()) {
+        for (Text row : paytable(size)) {
             lore.add(row);
         }
         lore.add(Text.empty());
@@ -275,30 +356,62 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         lore.add(line("Separate wins add up.", Formatting.WHITE));
         lore.add(line("Winning symbols glow.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
+        lore.add(line("About " + Math.round(TrapMath.slotWinRate(size) * 100)
                 + " spins in 100 pay, and a", Formatting.DARK_GRAY));
         lore.add(line("win never returns less than the stake.", Formatting.DARK_GRAY));
         lore.add(line("The house keeps about "
-                + Math.round((1 - TrapMath.SLOT_MEASURED_RTP) * 100)
+                + Math.round((1 - TrapMath.slotRtp(size)) * 100)
                 + "% over time.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
-    /** Every way to win, biggest multiplier first. */
-    private static List<Text> paytable() {
+    /**
+     * Every way THIS cabinet can win, biggest multiplier first.
+     *
+     * Built from the shapes the window actually contains rather than from a
+     * fixed list, so a 3x3 never advertises a Diamond it has no room for. A
+     * paytable quoting a prize the machine cannot pay is worse than no
+     * paytable at all.
+     */
+    private static List<Text> paytable(int size) {
         record Row(String name, float pay) {
         }
-        List<Row> rows = new ArrayList<>(List.of(
-                new Row("Five in a line", TrapMath.PAY_RUN5),
-                new Row("Four Corners", TrapMath.PAY_CORNERS),
-                new Row("Diamond", TrapMath.PAY_DIAMOND),
-                new Row("Zed  Z", TrapMath.PAY_ZED),
-                new Row("Four in a line", TrapMath.PAY_RUN4),
-                new Row("Star  X", TrapMath.PAY_CROSS),
-                new Row("Cross  +", TrapMath.PAY_PLUS),
-                new Row("Block  2x2", TrapMath.PAY_SQUARE),
-                new Row("Three in a line", TrapMath.PAY_RUN3)));
+        java.util.Set<String> present = new java.util.HashSet<>();
+        for (TrapMath.SlotShape shape : TrapMath.slotShapes(size)) {
+            present.add(shape.name());
+        }
+        List<Row> rows = new ArrayList<>();
+        if (size >= 5) {
+            rows.add(new Row("Five in a line", TrapMath.PAY_RUN5));
+        }
+        if (present.contains("Four Corners")) {
+            rows.add(new Row("Four Corners", TrapMath.PAY_CORNERS));
+        }
+        if (present.contains("Diamond")) {
+            rows.add(new Row("Diamond", TrapMath.PAY_DIAMOND));
+        }
+        if (present.contains("Zed")) {
+            rows.add(new Row("Zed  Z", TrapMath.PAY_ZED));
+        }
+        if (size >= 4) {
+            rows.add(new Row("Four in a line", TrapMath.PAY_RUN4));
+        }
+        if (present.contains("Star")) {
+            rows.add(new Row("Star  X", TrapMath.PAY_CROSS));
+        }
+        if (present.contains("Cross")) {
+            rows.add(new Row("Cross  +", TrapMath.PAY_PLUS));
+        }
+        if (present.contains("Block")) {
+            rows.add(new Row("Block  2x2", TrapMath.PAY_SQUARE));
+        }
+        if (size >= 3) {
+            rows.add(new Row("Three in a line", TrapMath.PAY_RUN3));
+        }
+        if (TrapMath.slotRunFloor(size) == 2) {
+            rows.add(new Row("Two in a line", TrapMath.PAY_RUN2));
+        }
         // Sorted rather than hand-ordered, so retuning a pay can never leave
         // the cabinet advertising them out of order.
         rows.sort((a, b) -> Float.compare(b.pay(), a.pay()));
@@ -342,7 +455,20 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             repaint();
             return;
         }
-        if (slotIndex != LEVER_SLOT) {
+        if (slotIndex == SIZE_SLOT) {
+            int next = 0;
+            for (int i = 0; i < TrapMath.SLOT_SIZES.length; i++) {
+                if (TrapMath.SLOT_SIZES[i] == size) {
+                    next = (i + 1) % TrapMath.SLOT_SIZES.length;
+                }
+            }
+            size = TrapMath.SLOT_SIZES[next];
+            fit();
+            beep(1.0F + next * 0.2F);
+            repaint();
+            return;
+        }
+        if (slotIndex != leverSlot()) {
             return;
         }
 
@@ -367,7 +493,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
 
         TrapHouse.stake(player, house, stake);
         buildBoard();
-        spinning = SPIN_TICKS;
+        spinning = spinTicks();
         SlotMachineBlock.watch(this);
 
         player.getWorld().playSound(null, player.getBlockPos(),
@@ -394,12 +520,12 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
      */
     private void buildBoard() {
         var random = new java.util.Random(player.getWorld().getRandom().nextLong());
-        grid(TrapMath.slotBoard(random, TrapMath.slotPlan(random.nextFloat())));
+        grid(TrapMath.slotBoard(random, TrapMath.slotPlan(random.nextFloat(), size), size));
     }
 
     private void grid(int[] drawn) {
         System.arraycopy(drawn, 0, grid, 0, grid.length);
-        TrapMath.SlotScore score = TrapMath.slotScore(grid);
+        TrapMath.SlotScore score = TrapMath.slotScore(grid, size);
         winners = score.cells();
         pending = score.pay();
         ways = score.names();
@@ -439,10 +565,10 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         }
         spinning--;
 
-        for (int reel = 0; reel < REELS; reel++) {
-            boolean stillMoving = spinning > SPIN_TICKS - STOPS[reel];
+        for (int reel = 0; reel < size; reel++) {
+            boolean stillMoving = spinning > spinTicks() - STOPS[reel];
             if (stillMoving) {
-                offset[reel] = Math.floorMod(offset[reel] + 1, FACES.length);
+                offset[reel] = Math.floorMod(offset[reel] + 1, faces());
             } else if (offset[reel] != landed[reel]) {
                 offset[reel] = landed[reel];
                 beep(0.7F + reel * 0.18F);

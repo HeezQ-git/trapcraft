@@ -314,7 +314,7 @@ class FormulaTest {
     @Test
     void theHouseKeepsItsEdge() {
         float[] rate = new float[1];
-        float rtp = TrapMath.slotMeasure(20260808L, 120_000, rate);
+        float rtp = TrapMath.slotMeasure(20260808L, 120_000, 5, rate);
 
         // The one line that must never go: the house has to win long-run, or
         // the machine is an emerald fountain and the market inflates off it.
@@ -327,10 +327,10 @@ class FormulaTest {
 
         // What the cabinet and the guide print. Loose enough for sampling
         // noise, tight enough that an edited pay table trips it.
-        assertEquals(TrapMath.SLOT_MEASURED_RTP, rtp, 0.02f,
-                "SLOT_MEASURED_RTP is stale -- the machine now returns " + rtp);
-        assertEquals(TrapMath.SLOT_MEASURED_WIN_RATE, rate[0], 0.02f,
-                "SLOT_MEASURED_WIN_RATE is stale -- now " + rate[0]);
+        assertEquals(TrapMath.slotRtp(5), rtp, 0.02f,
+                "the 5x5 return constant is stale -- the machine now returns " + rtp);
+        assertEquals(TrapMath.slotWinRate(5), rate[0], 0.02f,
+                "the 5x5 win rate constant is stale -- now " + rate[0]);
     }
 
     @Test
@@ -339,7 +339,7 @@ class FormulaTest {
         // you put in is a loss wearing a party hat, and a machine full of them
         // is one nobody can tell they are losing at.
         float smallest = Float.MAX_VALUE;
-        for (TrapMath.SlotShape shape : TrapMath.slotShapes()) {
+        for (TrapMath.SlotShape shape : TrapMath.slotShapes(5)) {
             smallest = Math.min(smallest, shape.pay());
         }
         smallest = Math.min(smallest, TrapMath.PAY_RUN3);
@@ -364,8 +364,8 @@ class FormulaTest {
     @Test
     void everyDiagonalCountsNotJustTheLongTwo() {
         // 5 rows + 5 columns + 5 down-right + 5 down-left.
-        assertEquals(20, TrapMath.slotLines().length);
-        for (int[] line : TrapMath.slotLines()) {
+        assertEquals(20, TrapMath.slotLines(5).length);
+        for (int[] line : TrapMath.slotLines(5)) {
             assertTrue(line.length >= 3, "a line shorter than three can never win");
             for (int cell : line) {
                 assertTrue(cell >= 0 && cell < 25, "line ran off the board at " + cell);
@@ -375,7 +375,7 @@ class FormulaTest {
 
     @Test
     void everyShapeFitsOnTheBoard() {
-        for (TrapMath.SlotShape shape : TrapMath.slotShapes()) {
+        for (TrapMath.SlotShape shape : TrapMath.slotShapes(5)) {
             assertTrue(shape.pay() > 0, shape.name() + " pays nothing");
             for (int cell : shape.cells()) {
                 assertTrue(cell >= 0 && cell < 25,
@@ -386,7 +386,7 @@ class FormulaTest {
 
     @Test
     void aQuietBoardWinsNothing() {
-        assertFalse(TrapMath.slotScore(quietGrid()).won(),
+        assertFalse(TrapMath.slotScore(quietGrid(), 5).won(),
                 "the no-run grid must not win, or every other slot test is meaningless");
     }
 
@@ -398,13 +398,13 @@ class FormulaTest {
         for (int col = 0; col < 3; col++) {
             grid[4 * 5 + col] = 7;
         }
-        float bottomOnly = TrapMath.slotScore(grid).pay();
+        float bottomOnly = TrapMath.slotScore(grid, 5).pay();
         assertTrue(bottomOnly > 0, "three along the bottom should pay");
 
         for (int row = 0; row < 3; row++) {
             grid[row * 5 + 3] = 6;
         }
-        TrapMath.SlotScore both = TrapMath.slotScore(grid);
+        TrapMath.SlotScore both = TrapMath.slotScore(grid, 5);
         assertTrue(both.pay() > bottomOnly,
                 "a second line must add to the payout, got " + both.pay()
                         + " for two wins against " + bottomOnly + " for one");
@@ -419,7 +419,7 @@ class FormulaTest {
         grid[1] = 7;
         grid[5] = 7;
         grid[6] = 7;
-        TrapMath.SlotScore score = TrapMath.slotScore(grid);
+        TrapMath.SlotScore score = TrapMath.slotScore(grid, 5);
         assertTrue(score.won(), "a 2x2 block should pay");
         assertTrue(score.names().contains("Block"), "and should say so: " + score.names());
     }
@@ -430,7 +430,7 @@ class FormulaTest {
         for (int col = 0; col < 4; col++) {
             grid[2 * 5 + col] = 7;
         }
-        TrapMath.SlotScore score = TrapMath.slotScore(grid);
+        TrapMath.SlotScore score = TrapMath.slotScore(grid, 5);
         assertTrue(score.won());
         for (int cell : score.cells()) {
             assertEquals(7, grid[cell],
@@ -444,19 +444,97 @@ class FormulaTest {
         // paid nothing, so the generator must never hand one back.
         java.util.Random rng = new java.util.Random(99L);
         for (int spin = 0; spin < 3000; spin++) {
-            int[] grid = TrapMath.slotBoard(rng, null);
-            assertFalse(TrapMath.slotScore(grid).won(),
+            int[] grid = TrapMath.slotBoard(rng, null, 5);
+            assertFalse(TrapMath.slotScore(grid, 5).won(),
                     "generator produced a losing board that actually won");
+        }
+    }
+
+    @Test
+    void everyCabinetKeepsItsEdge() {
+        // Four windows, four different games, four returns the cabinet quotes
+        // to the player. Editing a pay or an odd without re-measuring makes
+        // the plate on the front a lie, which is what this catches.
+        for (int size : TrapMath.SLOT_SIZES) {
+            float[] rate = new float[1];
+            float rtp = TrapMath.slotMeasure(20260808L + size, 60_000, size, rate);
+            assertTrue(rtp > 0.90f && rtp < 1.0f,
+                    size + "x" + size + " returns " + rtp);
+            assertEquals(TrapMath.slotRtp(size), rtp, 0.02f,
+                    size + "x" + size + " return constant is stale -- now " + rtp);
+            assertEquals(TrapMath.slotWinRate(size), rate[0], 0.02f,
+                    size + "x" + size + " win rate constant is stale -- now " + rate[0]);
+        }
+    }
+
+    @Test
+    void aWinIsNeverWorseThanTheStake() {
+        // The cabinet says so on the lever. A pay below 1.0 would make most
+        // "wins" quiet losses, which is the one thing a slot machine must not
+        // do to somebody who is watching the lights.
+        for (int size : TrapMath.SLOT_SIZES) {
+            for (int run = TrapMath.slotRunFloor(size); run <= size; run++) {
+                assertTrue(TrapMath.slotPayForRun(run, size) >= 1.0f,
+                        size + "x" + size + " pays " + TrapMath.slotPayForRun(run, size)
+                                + " for a run of " + run);
+            }
+            for (TrapMath.SlotShape shape : TrapMath.slotShapes(size)) {
+                assertTrue(shape.pay() >= 1.0f, shape.name() + " pays " + shape.pay());
+            }
+        }
+    }
+
+    @Test
+    void noCabinetAdvertisesTheSameCellsTwice() {
+        // A Diamond on a 3x3 is a Cross, and two names for one event is how a
+        // paytable starts lying. Shapes must differ in their CELLS, not just
+        // in what they are called.
+        for (int size : TrapMath.SLOT_SIZES) {
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (TrapMath.SlotShape shape : TrapMath.slotShapes(size)) {
+                int[] cells = shape.cells().clone();
+                java.util.Arrays.sort(cells);
+                assertTrue(seen.add(java.util.Arrays.toString(cells)),
+                        size + "x" + size + ": " + shape.name()
+                                + " covers cells another shape already claims");
+            }
+        }
+    }
+
+    @Test
+    void everyWindowFitsItsGrid() {
+        for (int size : TrapMath.SLOT_SIZES) {
+            int cells = size * size;
+            for (int[] line : TrapMath.slotLines(size)) {
+                assertTrue(line.length >= TrapMath.slotRunFloor(size),
+                        size + "x" + size + " has a line too short to score");
+                for (int cell : line) {
+                    assertTrue(cell >= 0 && cell < cells, "line cell " + cell + " off the grid");
+                }
+            }
+            for (TrapMath.SlotShape shape : TrapMath.slotShapes(size)) {
+                for (int cell : shape.cells()) {
+                    assertTrue(cell >= 0 && cell < cells,
+                            shape.name() + " cell " + cell + " off a " + size + "x" + size);
+                }
+            }
+            assertTrue(TrapMath.slotFaces(size) >= 2, "a reel needs faces");
+            assertTrue(TrapMath.slotWinChance(size) < 1.0f,
+                    size + "x" + size + " aims to win more often than it spins");
         }
     }
 
     @Test
     void aWinningBoardReallyWins() {
         java.util.Random rng = new java.util.Random(1234L);
-        for (String plan : TrapMath.SLOT_PLANS) {
-            for (int spin = 0; spin < 200; spin++) {
-                assertTrue(TrapMath.slotScore(TrapMath.slotBoard(rng, plan)).won(),
-                        "plan " + plan + " produced a board that pays nothing");
+        for (int size : TrapMath.SLOT_SIZES) {
+            for (String plan : TrapMath.slotPlans(size)) {
+                for (int spin = 0; spin < 200; spin++) {
+                    assertTrue(TrapMath.slotScore(
+                                    TrapMath.slotBoard(rng, plan, size), size).won(),
+                            size + "x" + size + " plan " + plan
+                                    + " produced a board that pays nothing");
+                }
             }
         }
     }
@@ -718,6 +796,37 @@ class FormulaTest {
             assertTrue(back < paid,
                     "round-tripping at " + price + " paid " + paid + " and returned " + back);
         }
+    }
+
+    // --- punters ------------------------------------------------------------------
+
+    @Test
+    void aPunterLosesAtTheAdvertisedRate() {
+        // The whole point of modelling them rather than replaying the game is
+        // that the mean has to be the machine's own return. If it drifts, a
+        // casino's books quietly stop matching the plate on its cabinets.
+        for (float rtp : new float[]{TrapMath.slotRtp(2), TrapMath.slotRtp(5),
+                TrapMath.SCRATCH_MEASURED_RTP, TrapMath.CLIMB_RETURN, 0.97f}) {
+            float measured = TrapMath.punterMeasure(rtp, 4242L, 400_000);
+            assertEquals(rtp, measured, 0.02f,
+                    "punters against a " + rtp + " machine returned " + measured);
+            assertTrue(measured < 1.0f, "a punter must not be a money printer");
+        }
+    }
+
+    @Test
+    void punterRoundsAreMostlyNothing() {
+        // A villager who wins every other round is a villager the owner
+        // watches drain their vault, which is the opposite of the feature.
+        java.util.Random rng = new java.util.Random(7);
+        int paying = 0;
+        for (int round = 0; round < 100_000; round++) {
+            if (TrapMath.punterRound(0.95f, rng) > 0) {
+                paying++;
+            }
+        }
+        assertTrue(paying < 40_000, "punters won " + paying + " rounds in 100k");
+        assertTrue(paying > 20_000, "punters won only " + paying + " rounds in 100k");
     }
 
     // --- scratchcards -------------------------------------------------------------

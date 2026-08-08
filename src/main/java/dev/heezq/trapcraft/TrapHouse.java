@@ -173,6 +173,57 @@ public final class TrapHouse {
         return total;
     }
 
+    /** Every wired machine, as "dimension x y z" -> casino id. Read-only. */
+    public static Map<String, UUID> wires() {
+        return java.util.Collections.unmodifiableMap(WIRES);
+    }
+
+    /** Turn a wire key back into a position. Null if it isn't one. */
+    public static BlockPos posOf(String wire) {
+        String[] parts = wire.split(" ");
+        if (parts.length != 4) {
+            return null;
+        }
+        try {
+            return new BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
+                    Integer.parseInt(parts[3]));
+        } catch (NumberFormatException malformed) {
+            return null;
+        }
+    }
+
+    /** The dimension half of a wire key. */
+    public static String worldOf(String wire) {
+        int space = wire.indexOf(' ');
+        return space < 0 ? wire : wire.substring(0, space);
+    }
+
+    /**
+     * Money a punter brought in from outside, or took away with them.
+     *
+     * Deliberately NOT routed through TrapMarket. A punter's emeralds were
+     * never in a player's pocket, so there is nothing to collect and nothing
+     * to hand over -- the vault simply grows, and the census in
+     * {@link TrapMarket#resample} sees it grow because a casino float is
+     * counted as money. Which makes a busy floor mildly inflationary, exactly
+     * as a real one is, and the moving anchor absorbs it.
+     */
+    public static void punterStaked(House house, int amount) {
+        house.balance += amount;
+        house.handle += amount;
+        house.plays++;
+        save();
+    }
+
+    /** What a punter walked out with. Never more than the vault holds. */
+    public static int punterWon(House house, int amount) {
+        int given = (int) Math.min(Math.max(0, amount), house.balance);
+        house.balance -= given;
+        house.paid += given;
+        save();
+        return given;
+    }
+
     /** Where this casino's machines are, for the plaque. */
     public static List<String> machinesOf(House house) {
         List<String> found = new ArrayList<>();
@@ -227,7 +278,7 @@ public final class TrapHouse {
      * The slot machine is two blocks tall, and a wire on the upper half would
      * be a second, invisible machine that never pays anybody.
      */
-    private static BlockPos floorOf(World world, BlockPos pos) {
+    public static BlockPos floorOf(World world, BlockPos pos) {
         return floorOf(world.getBlockState(pos), pos);
     }
 

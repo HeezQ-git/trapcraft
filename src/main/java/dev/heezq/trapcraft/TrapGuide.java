@@ -383,13 +383,21 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4n. THE HOUSE\n\n"))
-                .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
+                .append(body("About " + Math.round(TrapMath.slotWinRate(5) * 100)
                         + " spins in 100 pay, and never less than "
                         + "your stake.\n\n"))
                 .append(body("Rainbow panes and fireworks mean a big one.\n\n"))
                 .append(warn("The house still keeps about "
-                        + Math.round((1.0f - TrapMath.SLOT_MEASURED_RTP) * 100)
+                        + Math.round((1.0f - TrapMath.slotRtp(5)) * 100)
                         + "%. It always does."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4n1. FOUR CABINETS\n\n"))
+                .append(body("The button by the stake swaps the window: "
+                        + "2x2, 3x3, 4x4, 5x5.\n\n"))
+                .append(body("Small is quick and pays pairs. Big holds "
+                        + "every shape there is.\n\n"))
+                .append(hint("Each has its own reels and odds."))));
 
         pages.add(page(Text.empty()
                 .append(title("4o. YOUR CASINO\n\n"))
@@ -428,6 +436,20 @@ public final class TrapGuide {
                 .append(body("A jackpot makes things dear for an hour. "
                         + "Then it's just normal.\n\n"))
                 .append(hint("/market shows it."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4b. PUNTERS\n\n"))
+                .append(body("Villagers wander in to wired machines and play "
+                        + "with their own money.\n\n"))
+                .append(body("They lose at the rate the cabinet says. That's "
+                        + "your wage.\n\n"))
+                .append(hint("Empty vault, nobody comes."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4c. ONE AT A TIME\n\n"))
+                .append(body("A machine takes one player. Walk away or close "
+                        + "the screen and it frees up.\n\n"))
+                .append(warn("A punter on it means you wait too."))));
 
         pages.add(page(Text.empty()
                 .append(title("4o5. THE CARD\n\n"))
