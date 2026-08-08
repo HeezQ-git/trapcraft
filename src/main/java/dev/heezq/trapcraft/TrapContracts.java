@@ -8,7 +8,6 @@ import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.StructureTags;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -39,15 +38,26 @@ import java.util.UUID;
 public final class TrapContracts {
     /** How long a delivery run is allowed to take, before distance. */
     public static final int BASE_SECONDS = 240;
-    /** Extra seconds granted per 100 blocks to the village. */
+    /** Extra seconds granted per 100 blocks to the drop. */
     public static final int SECONDS_PER_100 = 45;
 
     /** Heat carried after taking a job, and how long it lingers. */
     public static final int JOB_HEAT = 2;
     public static final int JOB_HEAT_TICKS = 20 * 60 * 6;
 
-    /** How far from the village centre a delivery is accepted. */
+    /** How close to the drop a delivery is accepted. */
     public static final int DELIVERY_RANGE = 64;
+
+    /**
+     * How far a drop can be from where you took the job.
+     *
+     * A minimum because a buyer standing in your own farm is not a delivery,
+     * it is a shop -- and every job pointing at the same place made it one
+     * shop, which you could stand next to and empty your stash into. A maximum
+     * because the deadline has to be survivable without an elytra.
+     */
+    public static final int MIN_DROP = 250;
+    public static final int MAX_DROP = 800;
 
     /** Rep lost by letting a job run out. */
     public static final int FAIL_REP = 2;
@@ -60,17 +70,6 @@ public final class TrapContracts {
      * have nowhere to be shown.
      */
     public static final int BOARD_SIZE = 5;
-
-    /**
-     * Chunk radius for the village search.
-     *
-     * ponytail: one locateStructure per player per day (see villageFor), so
-     * every job on a given day points at the same village. Searching per slot
-     * would give three or five destinations at three or five times the cost of
-     * an already-blocking call. If variety matters more, search per-slot and
-     * cache the whole board rather than just the destination.
-     */
-    private static final int SEARCH_CHUNKS = 40;
 
     private TrapContracts() {
     }
@@ -115,14 +114,14 @@ public final class TrapContracts {
         long day = world.getTimeOfDay() / 24000L;
         Random random = Random.create(day * 8191L + world.getSeed());
 
-        BlockPos village = villageFor(world, player, day);
-        if (village == null) {
-            return List.of();
-        }
+        BlockPos anchor = anchorFor(player, day);
 
-        int distance = (int) Math.sqrt(player.getBlockPos().getSquaredDistance(village));
         List<Contract> jobs = new ArrayList<>(BOARD_SIZE);
         for (int slot = 0; slot < BOARD_SIZE; slot++) {
+            // Its own place, its own distance, its own money and its own
+            // clock. Five jobs used to be five orders for one address.
+            BlockPos drop = dropFor(anchor, day, player, slot);
+            int distance = (int) Math.sqrt(anchor.getSquaredDistance(drop));
             Strain strain = Strain.values()[random.nextInt(Strain.values().length)];
             // Better rep gets asked for better product in bigger amounts --
             // that is the whole progression, so it has to key off rep.
@@ -145,39 +144,56 @@ public final class TrapContracts {
             int seconds = BASE_SECONDS + distance / 100 * SECONDS_PER_100;
 
             jobs.add(new Contract(strain.ordinal(), grade, quantity,
-                    village.getX(), village.getZ(),
+                    drop.getX(), drop.getZ(),
                     world.getTime() + seconds * 20L,
                     payout, 2 + grade, form));
         }
         return jobs;
     }
 
-    private record Destination(long day, BlockPos village) {
+    private record Destination(long day, BlockPos anchor) {
     }
 
     private static final Map<UUID, Destination> DESTINATIONS = new HashMap<>();
 
     /**
-     * The day's village, looked up at most once per player per day.
+     * Where today's board was drawn from.
      *
-     * locateStructure over {@value #SEARCH_CHUNKS} chunks is a blocking
-     * main-thread search. Running it on every right-click -- which is what
-     * this did before the cache existed -- stalls the whole server each time
-     * somebody opens the board, and opening the board is the single most
-     * common thing you do with the phone.
-     *
-     * A null result is cached too: no village in range does not become cheaper
-     * if you ask again, and the retry is what would hurt.
+     * The drops are measured from here rather than from wherever you happen to
+     * be standing, or the board would slide across the map as you walked and
+     * the job you were looking at a second ago would be somewhere else. Cached
+     * per player per day, which is the same lifetime the board itself has.
      */
-    private static BlockPos villageFor(ServerWorld world, ServerPlayerEntity player, long day) {
+    private static BlockPos anchorFor(ServerPlayerEntity player, long day) {
         Destination cached = DESTINATIONS.get(player.getUuid());
         if (cached != null && cached.day() == day) {
-            return cached.village();
+            return cached.anchor();
         }
-        BlockPos village = world.locateStructure(
-                StructureTags.VILLAGE, player.getBlockPos(), SEARCH_CHUNKS, false);
-        DESTINATIONS.put(player.getUuid(), new Destination(day, village));
-        return village;
+        BlockPos here = player.getBlockPos();
+        DESTINATIONS.put(player.getUuid(), new Destination(day, here));
+        return here;
+    }
+
+    /**
+     * One job's drop: a random bearing, a random distance inside the band.
+     *
+     * No structure search. It used to find the nearest village and send every
+     * job on the board there, which cost a blocking locateStructure and bought
+     * a delivery run you could do without moving. A buyer waiting in a clearing
+     * a few hundred blocks out is both cheaper and more like the job.
+     *
+     * Seeded from the day, the player and the slot, so the board is identical
+     * across relogs -- a job list that reshuffles when you close it is a slot
+     * machine. The Y is thrown away: {@link #placeContact} drops the buyer on
+     * whatever the surface turns out to be.
+     */
+    private static BlockPos dropFor(BlockPos anchor, long day,
+                                    ServerPlayerEntity player, int slot) {
+        int[] offset = TrapMath.dropOffset(day * 131071L
+                        + player.getUuid().getLeastSignificantBits() * 31L + slot * 7919L,
+                MIN_DROP, MAX_DROP);
+        return new BlockPos(anchor.getX() + offset[0], anchor.getY(),
+                anchor.getZ() + offset[1]);
     }
 
     // --- accepting ------------------------------------------------------------

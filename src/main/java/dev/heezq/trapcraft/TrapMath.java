@@ -119,8 +119,38 @@ public final class TrapMath {
 
     // --- the market -----------------------------------------------------------
 
-    /** Emeralds in circulation that the catalogue is priced against. */
+    /**
+     * What a brand new world's prices are anchored to.
+     *
+     * A STARTING value, not a constant the market is measured against forever
+     * -- see {@link #baselineAfter}. It was the latter until 2026-08-08, and
+     * the consequence was that three players with a working farm pushed the
+     * supply to seven times this figure inside a fortnight, welded the index
+     * to {@link #INDEX_MAX}, and left it there. Losing every emerald you owned
+     * in a casino moved the supply by a third and the prices by nothing at
+     * all, because a third of the way down from 13,000 is still miles above
+     * 2,000. "The market stays very very high and doesn't come back down" is
+     * what a saturated clamp feels like from inside the game.
+     */
     public static final float MARKET_BASELINE = 2000.0f;
+    /**
+     * The least the anchor may fall to.
+     *
+     * Without it, an economy that emptied out would divide by something near
+     * zero and the first emerald anybody mined would send prices to the cap.
+     */
+    public static final float BASELINE_FLOOR = 500.0f;
+    /**
+     * How much of the gap to the current supply the anchor closes each beat.
+     *
+     * Beats are thirty seconds, so this is a half-life of about thirty-five
+     * minutes of play. Slow enough that a jackpot is still being felt an hour
+     * later -- which is the entire point of having an index -- and fast enough
+     * that a session can watch a shock arrive and go.
+     */
+    public static final float BASELINE_DRAG = 0.010f;
+    /** How hard a given change in the money supply pushes prices. */
+    public static final float INDEX_SENSITIVITY = 0.5f;
     /** How far the index may swing on supply alone. */
     public static final float INDEX_MIN = 0.65f;
     public static final float INDEX_MAX = 1.85f;
@@ -155,13 +185,33 @@ public final class TrapMath {
      * fixed price list that gets cheaper in real terms every day somebody
      * farms a customer.
      *
+     * Measured against a MOVING anchor, not a fixed one. What matters to a
+     * price is whether there is more money about than there was lately, not
+     * whether there is more than there was on the first day -- the second
+     * question only ever has one answer, and a market whose answer never
+     * changes is a price list.
+     *
      * Clamped hard at both ends. An unbounded index turns a good week into
      * prices nobody can pay, and the point is a market that breathes, not one
      * that runs away.
      */
-    public static float marketIndex(float supply) {
-        float raw = 1.0f + (supply - MARKET_BASELINE) / (MARKET_BASELINE * 2.0f);
+    public static float marketIndex(float supply, float baseline) {
+        float anchor = Math.max(BASELINE_FLOOR, baseline);
+        float raw = 1.0f + (supply / anchor - 1.0f) * INDEX_SENSITIVITY;
         return Math.max(INDEX_MIN, Math.min(INDEX_MAX, raw));
+    }
+
+    /**
+     * One beat of the anchor catching up with the money supply.
+     *
+     * This is the mean reversion, and it is the whole difference between a
+     * market and a ratchet. Print money and everything gets dear; leave it
+     * alone and an hour later the same amount of money is simply the new
+     * normal and prices have come back to where they were. Burn money and the
+     * reverse. Nothing has to be capped, reset or nudged by hand.
+     */
+    public static float baselineAfter(float baseline, float supply) {
+        return Math.max(BASELINE_FLOOR, baseline + (supply - baseline) * BASELINE_DRAG);
     }
 
     /**
@@ -995,6 +1045,30 @@ public final class TrapMath {
             bets.add(String.valueOf(number));
         }
         return bets;
+    }
+
+    // --- contract drop-offs -----------------------------------------------------
+
+    /**
+     * Where one job's buyer is waiting, as an offset from where the board was
+     * drawn.
+     *
+     * A bearing and a distance rather than a random point in a square: a
+     * square gives you corners, which means the far jobs cluster diagonally
+     * and the near ones cluster on the axes. This is uniform in direction and
+     * uniform in distance, which is what "somewhere out there, but not
+     * absurdly far" actually means.
+     *
+     * Seeded rather than free-running so the board is the same board after a
+     * relog. See TrapContracts.dropFor for what goes into the seed.
+     */
+    public static int[] dropOffset(long seed, int min, int max) {
+        Random rng = new Random(seed);
+        double bearing = rng.nextDouble() * Math.PI * 2.0;
+        int range = min + rng.nextInt(max - min + 1);
+        return new int[]{
+                (int) Math.round(Math.cos(bearing) * range),
+                (int) Math.round(Math.sin(bearing) * range)};
     }
 
     // --- the casino floor -------------------------------------------------------

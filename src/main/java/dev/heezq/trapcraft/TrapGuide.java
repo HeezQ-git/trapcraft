@@ -404,6 +404,14 @@ public final class TrapGuide {
                         + "clean you out. It's rare. It happens."))));
 
         pages.add(page(Text.empty()
+                .append(title("4n2. THE INDEX\n\n"))
+                .append(body("Prices track how much money is about lately, "
+                        + "not how much on day one.\n\n"))
+                .append(body("A jackpot makes things dear for an hour. "
+                        + "Then it's just normal.\n\n"))
+                .append(hint("/market shows it."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4o5. THE CARD\n\n"))
                 .append(body("Whoever holds it owns the house. All of it.\n\n"))
                 .append(body("It doesn't burn.\n\n"))
@@ -431,9 +439,10 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("3. CONTRACTS\n\n"))
                 .append(body("A burner phone gets work. "
-                        + TrapContracts.BOARD_SIZE + " jobs a day.\n\n"))
-                .append(body("Deliver before the clock runs out. A compass "
-                        + "points the way.\n\n"))
+                        + TrapContracts.BOARD_SIZE + " jobs a day, each to its "
+                        + "own drop " + TrapContracts.MIN_DROP + "-"
+                        + TrapContracts.MAX_DROP + " out.\n\n"))
+                .append(body("A compass points the way. Beat the clock.\n\n"))
                 .append(hint("Copper + amethyst + redstone."))));
 
         pages.add(page(Text.empty()
@@ -446,7 +455,7 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("3c. GETTING PAID\n\n"))
-                .append(body("Right-click a villager within "
+                .append(body("Right-click your buyer, within "
                         + TrapContracts.DELIVERY_RANGE + " blocks of the drop.\n\n"))
                 .append(body("Emeralds and rep.\n\n"))
                 .append(warn("Miss it: -" + TrapContracts.FAIL_REP + " rep.\n\n"))

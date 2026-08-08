@@ -58,6 +58,12 @@ public final class TrapMarket {
     private static final float SHOCK = 0.06f;
 
     private static float supply = TrapMath.MARKET_BASELINE;
+    /**
+     * What the supply is currently considered "normal", which the index is
+     * measured against. Follows the supply at a crawl -- see
+     * {@link TrapMath#baselineAfter}.
+     */
+    private static float baseline = TrapMath.MARKET_BASELINE;
     private static long beat = 0;
     private static long lastDay = -1;
     /** Order flow per item id. Absent means settled. */
@@ -86,6 +92,7 @@ public final class TrapMarket {
     }
 
     public static void register() {
+        registerCommand();
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             ShopStock.build(server);
             load(server);
@@ -116,17 +123,74 @@ public final class TrapMarket {
         });
     }
 
+    /**
+     * /market -- why everything costs what it costs.
+     *
+     * Same reason /heat exists. An index pinned at its cap and an index
+     * sitting quietly at 1.0 look identical from inside the game: you see
+     * prices, you don't see why, and "the market feels wrong" is not
+     * something anybody can act on. This prints the three numbers the whole
+     * board is computed from, so the next time it feels wrong there is
+     * something to point at.
+     */
+    private static void registerCommand() {
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, access, env) -> dispatcher.register(
+                        net.minecraft.server.command.CommandManager.literal("market")
+                                .executes(context -> {
+                                    report(context.getSource());
+                                    return 1;
+                                })));
+    }
+
+    private static void report(net.minecraft.server.command.ServerCommandSource source) {
+        float index = index();
+        int percent = Math.round((index - 1.0f) * 100.0f);
+        boolean pinned = index >= TrapMath.INDEX_MAX - 0.001f
+                || index <= TrapMath.INDEX_MIN + 0.001f;
+
+        String mood = percent > 25 ? "Everything's dear."
+                : percent < -15 ? "Money's tight, so prices are soft."
+                : "Prices are about normal.";
+
+        Text line = Text.literal("Market  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(mood).formatted(Formatting.GRAY))
+                .append(Text.literal("\n  Everything costs ").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal((percent >= 0 ? "+" : "") + percent + "%")
+                        .formatted(percent > 0 ? Formatting.RED
+                                : percent < 0 ? Formatting.GREEN : Formatting.WHITE))
+                .append(Text.literal(pinned ? "  (at the limit)" : "")
+                        .formatted(Formatting.RED))
+                .append(Text.literal("\n  " + Math.round(supply) + "e about, against "
+                                + Math.round(baseline) + "e of normal")
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  " + (supply > baseline
+                                ? "Easing back as the new normal sets in."
+                                : supply < baseline
+                                ? "Climbing back as the money drains away."
+                                : "Settled."))
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  " + PRESSURE.size() + " lines still moving from trade")
+                        .formatted(Formatting.DARK_GRAY));
+        source.sendFeedback(() -> line, false);
+    }
+
     public static long today(MinecraftServer server) {
         return server.getOverworld().getTimeOfDay() / 24000L;
     }
 
     /** The current cost multiplier from the money supply. */
     public static float index() {
-        return TrapMath.marketIndex(supply);
+        return TrapMath.marketIndex(supply, baseline);
     }
 
     public static float supply() {
         return supply;
+    }
+
+    /** What the market currently thinks a normal amount of money is. */
+    public static float baseline() {
+        return baseline;
     }
 
     public static long beat() {
@@ -257,6 +321,10 @@ public final class TrapMarket {
         // by the whole vault the moment somebody opened a casino.
         counted += TrapHouse.floatHeld();
         supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
+        // Inside resample so it inherits the nobody-online guard: an anchor
+        // that kept drifting overnight would have the whole server wake up to
+        // a market that had quietly decided their savings were normal.
+        baseline = TrapMath.baselineAfter(baseline, supply);
     }
 
     /**
@@ -558,6 +626,14 @@ public final class TrapMarket {
             supply = Float.parseFloat(header[0]);
             lastDay = Long.parseLong(header[1]);
             beat = header.length > 2 ? Long.parseLong(header[2]) : 0;
+            // A file written before the anchor existed leaves it at the old
+            // constant, which is exactly right: the market then eases down
+            // over the next couple of hours of play instead of halving every
+            // price on the board between one tick and the next. Players are
+            // holding contracts and stock priced at the old numbers, and an
+            // instant 46% correction is a worse bug than the one it fixes.
+            baseline = header.length > 3
+                    ? Float.parseFloat(header[3]) : TrapMath.MARKET_BASELINE;
 
             PRESSURE.clear();
             VAULTS.clear();
@@ -582,7 +658,8 @@ public final class TrapMarket {
         }
         try {
             StringBuilder out = new StringBuilder()
-                    .append(supply).append(' ').append(lastDay).append(' ').append(beat);
+                    .append(supply).append(' ').append(lastDay).append(' ').append(beat)
+                    .append(' ').append(baseline);
             PRESSURE.forEach((id, held) ->
                     out.append('\n').append(id).append(' ').append(held));
             // Tagged, because an item id always has a namespace colon in it

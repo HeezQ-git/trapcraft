@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -101,13 +102,63 @@ class FormulaTest {
 
     @Test
     void moreMoneyInCirculationMeansHigherPrices() {
-        assertTrue(TrapMath.marketIndex(6000f) > TrapMath.marketIndex(500f));
+        float anchor = TrapMath.MARKET_BASELINE;
+        assertTrue(TrapMath.marketIndex(6000f, anchor) > TrapMath.marketIndex(500f, anchor));
     }
 
     @Test
     void theIndexCannotRunAway() {
-        assertEquals(TrapMath.INDEX_MAX, TrapMath.marketIndex(9_000_000f), 0.001f);
-        assertEquals(TrapMath.INDEX_MIN, TrapMath.marketIndex(0f), 0.001f);
+        float anchor = TrapMath.MARKET_BASELINE;
+        assertEquals(TrapMath.INDEX_MAX, TrapMath.marketIndex(9_000_000f, anchor), 0.001f);
+        assertEquals(TrapMath.INDEX_MIN, TrapMath.marketIndex(0f, anchor), 0.001f);
+    }
+
+    @Test
+    void aRicherWorldIsNotAPermanentlyDearerOne() {
+        // The bug this replaced: the anchor was a constant, so an economy that
+        // grew past ~7x it sat on INDEX_MAX forever and losing every emerald
+        // you had moved prices by nothing. Whatever the money supply settles
+        // at, prices must come back to normal on their own.
+        for (float settled : new float[]{800f, 2000f, 13_000f, 250_000f}) {
+            float anchor = TrapMath.MARKET_BASELINE;
+            for (int beat = 0; beat < 4000; beat++) {
+                anchor = TrapMath.baselineAfter(anchor, settled);
+            }
+            assertEquals(1.0f, TrapMath.marketIndex(settled, anchor), 0.01f,
+                    "an economy resting at " + settled + "e should read as normal");
+        }
+    }
+
+    @Test
+    void aShockIsFeltAndThenForgotten() {
+        // A jackpot has to move the board, or the index is decoration...
+        float settled = 13_000f;
+        float anchor = settled;
+        float shocked = settled * 1.6f;
+        float spike = TrapMath.marketIndex(shocked, anchor);
+        assertTrue(spike > 1.2f, "a 60% jump in the money supply should bite: " + spike);
+
+        // ...and it has to fade, or it is a ratchet. Half-life is about an
+        // hour of play, so two hours should be most of the way home.
+        for (int beat = 0; beat < 240; beat++) {
+            anchor = TrapMath.baselineAfter(anchor, shocked);
+        }
+        float after = TrapMath.marketIndex(shocked, anchor);
+        assertTrue(after < 1.0f + (spike - 1.0f) * 0.35f,
+                "two hours on, the spike should be mostly gone: " + spike + " -> " + after);
+        assertTrue(after > 1.0f, "but not gone early: " + after);
+    }
+
+    @Test
+    void theAnchorNeverCollapses() {
+        // Divide-by-nothing guard: an economy that empties out must not make
+        // the next emerald anybody mines worth a price spike.
+        float anchor = TrapMath.MARKET_BASELINE;
+        for (int beat = 0; beat < 10_000; beat++) {
+            anchor = TrapMath.baselineAfter(anchor, 0f);
+        }
+        assertEquals(TrapMath.BASELINE_FLOOR, anchor, 0.001f);
+        assertTrue(TrapMath.marketIndex(1f, anchor) >= TrapMath.INDEX_MIN);
     }
 
     @Test
@@ -666,6 +717,40 @@ class FormulaTest {
             int back = TrapMath.coinSellValue(price, 10);
             assertTrue(back < paid,
                     "round-tripping at " + price + " paid " + paid + " and returned " + back);
+        }
+    }
+
+    // --- contract drop-offs -----------------------------------------------------
+
+    @Test
+    void everyJobOnTheBoardGoesSomewhereElse() {
+        // The bug: one village lookup per player per day meant all five jobs
+        // pointed at the same place, so you could stand next to it and sell
+        // your whole stash to one man without ever making a delivery.
+        int min = 250;
+        int max = 800;
+        for (long day = 0; day < 200; day++) {
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (int slot = 0; slot < 5; slot++) {
+                int[] at = TrapMath.dropOffset(day * 131071L + 4242L * 31L + slot * 7919L,
+                        min, max);
+                double away = Math.sqrt((double) at[0] * at[0] + (double) at[1] * at[1]);
+                assertTrue(away >= min - 1 && away <= max + 1,
+                        "drop " + away + " blocks out, band is " + min + ".." + max);
+                seen.add(at[0] + "," + at[1]);
+            }
+            assertEquals(5, seen.size(), "day " + day + " put two jobs in one place");
+        }
+    }
+
+    @Test
+    void theBoardIsTheSameBoardAfterARelog() {
+        // Re-seeded from the day and the slot, so closing the phone and
+        // reopening it must not reshuffle the work.
+        for (int slot = 0; slot < 5; slot++) {
+            long seed = 7L * 131071L + 99L * 31L + slot * 7919L;
+            assertArrayEquals(TrapMath.dropOffset(seed, 250, 800),
+                    TrapMath.dropOffset(seed, 250, 800));
         }
     }
 
