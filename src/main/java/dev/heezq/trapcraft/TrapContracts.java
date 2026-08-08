@@ -212,6 +212,10 @@ public final class TrapContracts {
                 10, 0.3, 0.3, 0.3, 0.02);
         player.sendMessage(Text.literal("Job on. Clock's running.")
                 .formatted(Formatting.GOLD), false);
+        // The compass points at it, but a waypoint survives you putting the
+        // compass down and shows on the world map as well.
+        TrapWaypoints.offer(player, "Drop  " + contract.strainValue().display(),
+                contract.destination().withY(player.getBlockPos().getY()), TrapWaypoints.GOLD);
     }
 
     // --- running --------------------------------------------------------------

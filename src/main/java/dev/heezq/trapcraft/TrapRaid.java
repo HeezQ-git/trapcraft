@@ -201,6 +201,10 @@ public final class TrapRaid {
             if (player.getBlockPos().isWithinDistance(pos, 96)) {
                 player.sendMessage(line, false);
                 TrapAwards.grant(player, "raided");
+                // Worth a pin: a chest they emptied is somewhere you want to
+                // find again, and "somewhere in the basement" is not a
+                // location when the basement is forty blocks long.
+                TrapWaypoints.offer(player, "Raided", pos, TrapWaypoints.RED);
             }
         }
     }
