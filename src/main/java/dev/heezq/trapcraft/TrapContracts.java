@@ -255,8 +255,15 @@ public final class TrapContracts {
     }
 
     private static void fail(ServerPlayerEntity player, ItemStack phone) {
+        Contract lost = phone.get(TrapComponents.contract);
         phone.remove(TrapComponents.contract);
         dismissContact(player);
+        if (lost != null) {
+            // Failed jobs leave litter too. A pocket full of compasses
+            // pointing at villages you never reached is its own kind of
+            // punishment, and not the interesting kind.
+            takeCompass(player, lost);
+        }
         adjustRep(phone, -FAIL_REP);
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -368,6 +375,32 @@ public final class TrapContracts {
         return contact;
     }
 
+    /**
+     * Take back the drop-off compass when the job is over.
+     *
+     * Matched on where it POINTS, not on its name, so it can only ever eat
+     * the compass this job handed out -- a player's own lodestone compass, or
+     * one from a different job, points somewhere else and is left alone.
+     */
+    private static void takeCompass(ServerPlayerEntity player, Contract contract) {
+        var inventory = player.getInventory();
+        BlockPos drop = contract.destination();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (!stack.isOf(Items.COMPASS)) {
+                continue;
+            }
+            var tracker = stack.get(DataComponentTypes.LODESTONE_TRACKER);
+            if (tracker == null || tracker.target().isEmpty()) {
+                continue;
+            }
+            BlockPos at = tracker.target().get().pos();
+            if (at.getX() == drop.getX() && at.getZ() == drop.getZ()) {
+                inventory.setStack(slot, ItemStack.EMPTY);
+            }
+        }
+    }
+
     /** Clicked the buyer without the goods. Tell them why nothing happened. */
     private static void sayWhatTheyWant(ServerPlayerEntity player) {
         ItemStack phone = findPhone(player);
@@ -446,6 +479,7 @@ public final class TrapContracts {
 
         phone.remove(TrapComponents.contract);
         dismissContact(player);
+        takeCompass(player, contract);
         adjustRep(phone, contract.rep());
         TrapMarket.pay(player, contract.payout());
 
