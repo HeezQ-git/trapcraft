@@ -417,11 +417,10 @@ public final class TrapGuide {
                 .append(hint("Rep rides the phone."))));
         pages.add(page(Text.empty()
                 .append(title("3c2. THE DROP\n\n"))
-                .append(body("A compass, and a waypoint you can click to "
-                        + "keep.\n\n"))
+                .append(body("A compass, and a waypoint to click.\n\n"))
                 .append(body("Get close and your buyer turns up, glowing. "
-                        + "Right-click to hand it over.\n\n"))
-                .append(hint("Empty-handed, they'll remind you what they want."))));
+                        + "Right-click to hand over.\n\n"))
+                .append(hint("Empty-handed, they'll remind you."))));
 
         pages.add(page(Text.empty()
                 .append(title("3d. WHAT THEY TAKE\n\n"))

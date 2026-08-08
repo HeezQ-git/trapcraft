@@ -30,6 +30,8 @@ PAGES_URL = "https://heezq-git.github.io/trappack/pack.toml"
 
 
 def main() -> None:
+    gate()
+
     jars = sorted((HERE / "build/libs").glob("trapcraft-*.jar"))
     jars = [j for j in jars if "sources" not in j.name]
     if not jars:
@@ -72,6 +74,30 @@ def main() -> None:
         publish(new_version)
 
     print("restart the server: docker compose restart mc")
+
+
+CHECKS = ["check_models.py", "check_pages.py", "check_stock.py",
+          "check_shaders.py", "trip_check.py"]
+
+
+def gate() -> None:
+    """Refuse to ship if any checker is unhappy.
+
+    Three times running I read past check_pages saying a guide page was over
+    the limit and shipped it anyway -- an over-limit page truncates silently
+    in the book, which is the exact failure that checker exists to catch. A
+    warning a human can skim past is not a check; a non-zero exit that stops
+    the deploy is. Override with --force if you genuinely mean it.
+    """
+    if "--force" in sys.argv:
+        print("--force: skipping the checkers")
+        return
+    here = Path(__file__).resolve().parent
+    for check in CHECKS:
+        result = run([sys.executable, str(here / check)], check=False)
+        if result.returncode != 0:
+            print(f"\n{check} failed -- not shipping. Fix it, or pass --force.")
+            sys.exit(1)
 
 
 def publish(version: str) -> None:
