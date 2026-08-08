@@ -70,6 +70,8 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     private boolean busted;
     private int celebrating;
     private int flash;
+    /** Set when the screen closes, so the tick loop lets go. */
+    private boolean closed;
 
     public ClimbScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
@@ -382,7 +384,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     @Override
     public boolean tick() {
         flash++;
-        if (celebrating <= 0) {
+        if (closed || celebrating <= 0) {
             return false;
         }
         celebrating--;
@@ -416,14 +418,31 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         return false;
     }
 
-    /** A climb in progress is paid out rather than lost when you close the menu. */
+    /**
+     * Close the menu mid-climb and you are paid what you were holding.
+     *
+     * A door already opened is resolved honestly on the way out rather than
+     * forfeited: the result was decided the moment you clicked it, so a
+     * survived door still counts and a bad one still ends the run. Without
+     * this, closing during the second of flashing lights either lost you the
+     * money outright or -- on the last rung, where tick() calls cashOut() --
+     * paid you anyway, which is two different answers to the same question.
+     */
     @Override
     public void onClosed(PlayerEntity closer) {
         super.onClosed(closer);
-        if (climbing && rung > 0 && celebrating <= 0) {
-            TrapMarket.pay(player,
-                    Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung)));
+        closed = true;
+        if (climbing) {
+            if (celebrating > 0 && !busted) {
+                rung++;   // the door was already open and already good
+            }
+            boolean lost = celebrating > 0 && busted;
+            if (!lost && rung > 0) {
+                TrapMarket.pay(player,
+                        Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung)));
+            }
         }
+        celebrating = 0;
         reset();
     }
 
