@@ -8,7 +8,7 @@
   ],
   "key": {
     "L": "minecraft:smooth_stone",
-    "S": "minecraft:oak_log",
+    "S": "#minecraft:logs",
     "I": "minecraft:iron_ingot"
   },
   "result": {

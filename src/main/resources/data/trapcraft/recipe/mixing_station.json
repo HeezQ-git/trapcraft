@@ -11,7 +11,7 @@
     "G": "minecraft:bowl",
     "C": "minecraft:copper_ingot",
     "I": "minecraft:iron_ingot",
-    "L": "minecraft:oak_log"
+    "L": "#minecraft:logs"
   },
   "result": {
     "id": "trapcraft:mixing_station",

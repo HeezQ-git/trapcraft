@@ -740,7 +740,10 @@ def coca_assets() -> None:
         "type": "minecraft:crafting_shaped",
         "category": "misc",
         "pattern": ["LLL", "SIS", "SSS"],
-        "key": {"L": "minecraft:smooth_stone", "S": "minecraft:oak_log",
+        # #minecraft:logs, not oak specifically. A recipe that silently refuses
+        # spruce is indistinguishable from a recipe that doesn't exist, and the
+        # guide only ever said "logs".
+        "key": {"L": "minecraft:smooth_stone", "S": "#minecraft:logs",
                 "I": "minecraft:iron_ingot"},
         "result": {"id": f"{NS}:leaf_press", "count": 1},
     })
@@ -792,7 +795,8 @@ def mixing_station_assets() -> None:
         "pattern": ["BGB", "CIC", "LLL"],
         "key": {"B": "minecraft:glass_bottle", "G": "minecraft:bowl",
                 "C": "minecraft:copper_ingot", "I": "minecraft:iron_ingot",
-                "L": "minecraft:oak_log"},
+                # Any log -- see the note on the leaf press recipe.
+                "L": "#minecraft:logs"},
         "result": {"id": f"{NS}:mixing_station", "count": 1},
     })
 

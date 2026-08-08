@@ -346,11 +346,10 @@ public final class TrapGuide {
     private static void mixing(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("4e. MIXING\n\n"))
-                .append(body("Bottles, bowl, copper, iron, logs.\n\n"))
+                .append(item("Bottle Bowl Bottle\nCopper Iron Copper\nLog    Log  Log\n\n"))
                 .append(body("Lay " + Blend.MIN_PARTS + "-" + Blend.MAX_PARTS
-                        + " cured buds in the grid. The blend shows in the result "
-                        + "slot before you commit.\n\n"))
-                .append(hint("Take it to keep it. Nothing is spent until you do."))));
+                        + " cured buds in the grid. It shows the blend first.\n\n"))
+                .append(hint("Any log will do."))));
 
         pages.add(page(Text.empty()
                 .append(title("4f. BLENDS\n\n"))
