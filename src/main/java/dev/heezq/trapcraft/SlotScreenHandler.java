@@ -50,26 +50,41 @@ public class SlotScreenHandler extends ScreenHandler {
     private static final int PAYLINE_ROW = 2;
 
     private static final int STAKE_SLOT = 47;
-    private static final int LEVER_SLOT = 49;
     private static final int PURSE_SLOT = 51;
+    /**
+     * The arm, on the right-hand edge level with the middle of the reels.
+     *
+     * Column 8 of row 2 -- outside the 5x5 window, where the surround panes
+     * are -- so it reads as the arm on the side of the cabinet rather than
+     * another button in the tray.
+     */
+    private static final int LEVER_SLOT = 26;
 
     /**
      * Reel faces, worst to best. The last is the jackpot.
      *
-     * Ten of them, not six. On a 5x5 board with six symbols roughly two thirds
-     * of random boards contain a three-in-a-line by pure chance, which made
-     * accidental wins the majority of what the machine paid out and put the
-     * return over 100% -- the house was losing money. Every face added is
-     * fewer coincidences. Must stay in step with TrapMath.SLOT_FACES.
+     * Twenty-two of them, not six. On a 5x5 board a narrow reel means most
+     * boards contain a three-in-a-line by pure chance, and those accidents
+     * were the majority of what the machine paid -- so much of the budget that
+     * a deliberate three could only be priced below the stake. Every face
+     * added is fewer coincidences and more room in the paytable, which is what
+     * paid for the multipliers being what they are.
+     *
+     * Must stay in step with TrapMath.SLOT_FACES; check_stock.py enforces it.
      */
     private static final Item[] FACES = {
-            Items.COAL, Items.COPPER_INGOT, Items.IRON_INGOT, Items.REDSTONE,
-            Items.LAPIS_LAZULI, Items.QUARTZ, Items.GOLD_INGOT, Items.AMETHYST_SHARD,
-            Items.DIAMOND, Items.NETHER_STAR,
+            Items.COAL, Items.FLINT, Items.CLAY_BALL, Items.GUNPOWDER,
+            Items.IRON_NUGGET, Items.GLOWSTONE_DUST, Items.REDSTONE, Items.BRICK,
+            Items.COPPER_INGOT, Items.GOLD_NUGGET, Items.QUARTZ, Items.LAPIS_LAZULI,
+            Items.PRISMARINE_SHARD, Items.IRON_INGOT, Items.PRISMARINE_CRYSTALS,
+            Items.AMETHYST_SHARD, Items.PHANTOM_MEMBRANE, Items.BLAZE_ROD,
+            Items.GOLD_INGOT, Items.ENDER_PEARL, Items.DIAMOND, Items.NETHER_STAR,
     };
     private static final String[] FACE_NAMES = {
-            "Coal", "Copper", "Iron", "Redstone", "Lapis",
-            "Quartz", "Gold", "Amethyst", "Diamond", "Star",
+            "Coal", "Flint", "Clay", "Gunpowder", "Iron Nugget", "Glowstone",
+            "Redstone", "Brick", "Copper", "Gold Nugget", "Quartz", "Lapis",
+            "Prismarine", "Iron", "Crystals", "Amethyst", "Membrane", "Blaze Rod",
+            "Gold", "Ender Pearl", "Diamond", "Star",
     };
 
     private static final int[] STAKES = {8, 32, 128};
@@ -241,29 +256,50 @@ public class SlotScreenHandler extends ScreenHandler {
                 plain(spinning > 0 ? "Spinning" : "PULL")
                         .formatted(spinning > 0 ? Formatting.GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
-        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                pay("Three in a line", TrapMath.PAY_RUN3),
-                pay("Four in a line", TrapMath.PAY_RUN4),
-                pay("Five in a line", TrapMath.PAY_RUN5),
-                pay("Block  2x2", TrapMath.PAY_SQUARE),
-                pay("Cross  +", TrapMath.PAY_PLUS),
-                pay("Star  X", TrapMath.PAY_CROSS),
-                pay("Zed  Z", TrapMath.PAY_ZED),
-                pay("Diamond", TrapMath.PAY_DIAMOND),
-                pay("Four Corners", TrapMath.PAY_CORNERS),
-                Text.empty(),
-                line("Rows, columns and EVERY diagonal.", Formatting.GRAY),
-                line("Every win on the board is paid, and", Formatting.WHITE),
-                line("they add up. Two at once is double.", Formatting.WHITE),
-                line("Winning symbols glow.", Formatting.GRAY),
-                Text.empty(),
-                line("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
-                        + " spins in 100 pay something,", Formatting.DARK_GRAY),
-                line("but a lone three only returns part of", Formatting.DARK_GRAY),
-                line("your stake. The house keeps about "
-                        + Math.round((1 - TrapMath.SLOT_MEASURED_RTP) * 100)
-                        + "%.", Formatting.DARK_GRAY))));
+        List<Text> lore = new ArrayList<>();
+        // Best first. A paytable you have to scan for the big number is a
+        // paytable nobody reads.
+        for (Text row : paytable()) {
+            lore.add(row);
+        }
+        lore.add(Text.empty());
+        lore.add(line("Rows, columns and EVERY diagonal.", Formatting.GRAY));
+        lore.add(line("Separate wins add up.", Formatting.WHITE));
+        lore.add(line("Winning symbols glow.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(line("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
+                + " spins in 100 pay, and a", Formatting.DARK_GRAY));
+        lore.add(line("win never returns less than the stake.", Formatting.DARK_GRAY));
+        lore.add(line("The house keeps about "
+                + Math.round((1 - TrapMath.SLOT_MEASURED_RTP) * 100)
+                + "% over time.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
+    }
+
+    /** Every way to win, biggest multiplier first. */
+    private static List<Text> paytable() {
+        record Row(String name, float pay) {
+        }
+        List<Row> rows = new ArrayList<>(List.of(
+                new Row("Five in a line", TrapMath.PAY_RUN5),
+                new Row("Four Corners", TrapMath.PAY_CORNERS),
+                new Row("Diamond", TrapMath.PAY_DIAMOND),
+                new Row("Zed  Z", TrapMath.PAY_ZED),
+                new Row("Four in a line", TrapMath.PAY_RUN4),
+                new Row("Star  X", TrapMath.PAY_CROSS),
+                new Row("Cross  +", TrapMath.PAY_PLUS),
+                new Row("Block  2x2", TrapMath.PAY_SQUARE),
+                new Row("Three in a line", TrapMath.PAY_RUN3)));
+        // Sorted rather than hand-ordered, so retuning a pay can never leave
+        // the cabinet advertising them out of order.
+        rows.sort((a, b) -> Float.compare(b.pay(), a.pay()));
+
+        List<Text> out = new ArrayList<>();
+        for (Row row : rows) {
+            out.add(pay(row.name(), row.pay()));
+        }
+        return out;
     }
 
     /** One paytable row: what it's called, and what it multiplies your stake by. */

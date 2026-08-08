@@ -265,9 +265,14 @@ class FormulaTest {
         float[] rate = new float[1];
         float rtp = TrapMath.slotMeasure(20260808L, 120_000, rate);
 
-        assertTrue(rtp < 0.95f, "the house must win long-run, got " + rtp);
-        assertTrue(rtp > 0.70f, "but not so hard nobody plays, got " + rtp);
-        assertTrue(rate[0] > 0.40f, "wins should feel common, got " + rate[0]);
+        // The one line that must never go: the house has to win long-run, or
+        // the machine is an emerald fountain and the market inflates off it.
+        // The margin is thin by design -- the complaint was that players were
+        // always down -- so this is deterministic from a fixed seed rather
+        // than a sample that could stray over the line on a lucky run.
+        assertTrue(rtp < 1.0f, "the house must win long-run, got " + rtp);
+        assertTrue(rtp > 0.90f, "but the bleed should stay gentle, got " + rtp);
+        assertTrue(rate[0] > 0.25f, "wins should still feel reachable, got " + rate[0]);
 
         // What the cabinet and the guide print. Loose enough for sampling
         // noise, tight enough that an edited pay table trips it.
@@ -278,10 +283,31 @@ class FormulaTest {
     }
 
     @Test
-    void aLoneThreeIsNotAProfit() {
-        // The whole shape of the thing: winning is common, profiting is not.
-        assertTrue(TrapMath.PAY_RUN3 < 1.0f,
-                "a single three must return less than the stake, else the tail cannot pay");
+    void aWinIsNeverAlsoALoss() {
+        // The smallest win must return at least the stake. Paying less than
+        // you put in is a loss wearing a party hat, and a machine full of them
+        // is one nobody can tell they are losing at.
+        float smallest = Float.MAX_VALUE;
+        for (TrapMath.SlotShape shape : TrapMath.slotShapes()) {
+            smallest = Math.min(smallest, shape.pay());
+        }
+        smallest = Math.min(smallest, TrapMath.PAY_RUN3);
+        assertTrue(smallest >= 1.0f,
+                "the cheapest way to win pays " + smallest + "x -- that is a loss with lights on");
+    }
+
+    @Test
+    void theBigPrizesAreWorthChasing() {
+        // Ordering the cabinet advertises. If a rarer shape ever pays less
+        // than a commoner one, the paytable is lying to the player.
+        assertTrue(TrapMath.PAY_RUN5 > TrapMath.PAY_CORNERS);
+        assertTrue(TrapMath.PAY_CORNERS > TrapMath.PAY_DIAMOND);
+        assertTrue(TrapMath.PAY_DIAMOND > TrapMath.PAY_ZED);
+        assertTrue(TrapMath.PAY_ZED > TrapMath.PAY_RUN4);
+        assertTrue(TrapMath.PAY_RUN4 > TrapMath.PAY_CROSS);
+        assertTrue(TrapMath.PAY_CROSS >= TrapMath.PAY_PLUS);
+        assertTrue(TrapMath.PAY_PLUS > TrapMath.PAY_SQUARE);
+        assertTrue(TrapMath.PAY_SQUARE > TrapMath.PAY_RUN3);
     }
 
     @Test

@@ -297,26 +297,33 @@ public final class TrapMath {
     /** The grid is square. */
     public static final int SLOT_SIZE = 5;
     /** How many different symbols the reels carry. */
-    public static final int SLOT_FACES = 10;
+    public static final int SLOT_FACES = 22;
 
     /**
      * What each way of winning pays, as a multiple of the stake.
      *
-     * Note that a plain three-in-a-line pays your money BACK and no more.
-     * That is deliberate and it is how real machines feel: the board lights
-     * up, a sound plays, emeralds land in your hand, and you are exactly where
-     * you started. The profit is in stacking -- two lines at once is twice the
-     * stake, and the shapes are where the real money is.
+     * The floor is your stake back. A win that hands over less than you put
+     * in is a loss wearing a party hat, and a machine full of those is one
+     * nobody can tell they are losing at -- which was the complaint.
+     *
+     * Everything above the floor is priced so each tier contributes about the
+     * same share of the payout: a Four Corners lands roughly a fortieth as
+     * often as a three, so it pays roughly forty times as much. That is why
+     * the numbers look the way they do rather than being picked for feel.
+     *
+     * Raising these means lowering the odds or the return; see the note on
+     * SLOT_PLAN_ODDS. There is no third option -- the return is exactly the
+     * sum of frequency times pay, and the tests measure it.
      */
-    public static final float PAY_RUN3 = 0.4f;
+    public static final float PAY_RUN3 = 1.0f;
     public static final float PAY_RUN4 = 4.0f;
-    public static final float PAY_RUN5 = 25.0f;
-    public static final float PAY_SQUARE = 1.2f;
+    public static final float PAY_RUN5 = 30.0f;
+    public static final float PAY_SQUARE = 1.5f;
     public static final float PAY_PLUS = 2.5f;
     public static final float PAY_CROSS = 2.5f;
     public static final float PAY_ZED = 8.0f;
-    public static final float PAY_DIAMOND = 6.0f;
-    public static final float PAY_CORNERS = 12.0f;
+    public static final float PAY_DIAMOND = 10.0f;
+    public static final float PAY_CORNERS = 15.0f;
 
     /**
      * One way of winning: which cells, what it's called, what it pays.
@@ -458,37 +465,54 @@ public final class TrapMath {
      * a cell that paid.
      */
     public static SlotScore slotScore(int[] grid) {
-        float pay = 0.0f;
-        List<String> names = new ArrayList<>();
-        boolean[] lit = new boolean[grid.length];
-
+        // Collect every win the board contains, best first.
+        List<SlotShape> found = new ArrayList<>();
         for (int[] line : slotLines()) {
-            int[] found = longestRun(grid, line);
-            float worth = slotPayForRun(found[0]);
-            if (worth <= 0.0f) {
-                continue;
-            }
-            pay += worth;
-            names.add(found[0] + " in a row");
-            for (int i = 0; i < found[0]; i++) {
-                lit[line[found[1] + i]] = true;
+            int[] run = longestRun(grid, line);
+            float worth = slotPayForRun(run[0]);
+            if (worth > 0.0f) {
+                int[] cells = new int[run[0]];
+                System.arraycopy(line, run[1], cells, 0, run[0]);
+                found.add(new SlotShape(run[0] + " in a row", cells, worth));
             }
         }
-
         for (SlotShape shape : slotShapes()) {
-            if (!uniform(grid, shape.cells())) {
+            if (uniform(grid, shape.cells())) {
+                found.add(shape);
+            }
+        }
+        found.sort((a, b) -> Float.compare(b.pay(), a.pay()));
+
+        // Each square pays once. A Cross IS a three-across and a three-down,
+        // and paying it as all three made shapes fund their own line wins --
+        // which ate so much of the return that a bare three could only be
+        // priced at a third of the stake. Taking the best win on a square and
+        // moving on is both fairer to read and what frees up the budget for
+        // multipliers worth chasing.
+        float pay = 0.0f;
+        List<String> names = new ArrayList<>();
+        boolean[] claimed = new boolean[grid.length];
+        for (SlotShape win : found) {
+            boolean fresh = false;
+            for (int cell : win.cells()) {
+                if (!claimed[cell]) {
+                    fresh = true;
+                    break;
+                }
+            }
+            if (!fresh) {
                 continue;
             }
-            pay += shape.pay();
-            names.add(shape.name());
-            for (int cell : shape.cells()) {
-                lit[cell] = true;
+            pay += win.pay();
+            names.add(win.name());
+            for (int cell : win.cells()) {
+                claimed[cell] = true;
             }
         }
 
         List<Integer> cells = new ArrayList<>();
-        for (int cell = 0; cell < lit.length; cell++) {
-            if (lit[cell]) {
+        for (int cell = 0; cell < claimed.length; cell++) {
+            if (claimed[cell]) {
                 cells.add(cell);
             }
         }
@@ -539,7 +563,7 @@ public final class TrapMath {
             "run3", "square", "cross", "star", "run4", "zed", "diamond", "corners", "run5",
     };
     public static final float[] SLOT_PLAN_ODDS = {
-            0.400f, 0.055f, 0.020f, 0.018f, 0.012f, 0.004f, 0.0035f, 0.0018f, 0.0010f,
+            0.150f, 0.052f, 0.036f, 0.036f, 0.022f, 0.010f, 0.008f, 0.006f, 0.0030f,
     };
 
     /**
@@ -551,8 +575,8 @@ public final class TrapMath {
      * test fails -- which is the point, because the paytable in the cabinet
      * quotes them to the player.
      */
-    public static final float SLOT_MEASURED_RTP = 0.838f;
-    public static final float SLOT_MEASURED_WIN_RATE = 0.517f;
+    public static final float SLOT_MEASURED_RTP = 0.976f;
+    public static final float SLOT_MEASURED_WIN_RATE = 0.324f;
 
     /** How often a spin is aimed at paying anything at all. */
     public static float slotWinChance() {

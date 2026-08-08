@@ -237,18 +237,18 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4g2. COMBOS\n\n"))
-                .append(body("Every win on the board is paid, and they add "
-                        + "up.\n\n"))
+                .append(body("Separate wins on one board both pay.\n\n"))
                 .append(body("Three diamonds across and three stars down is "
                         + "two wins, not one.\n\n"))
-                .append(warn("A lone three only returns part of your stake."))));
+                .append(hint("A shape pays once, not for its own lines too."))));
 
         pages.add(page(Text.empty()
                 .append(title("4h. THE HOUSE\n\n"))
                 .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
-                        + " spins in 100 pay something.\n\n"))
-                .append(body("Rainbow panes and fireworks mean a real one.\n\n"))
-                .append(warn("The house keeps about "
+                        + " spins in 100 pay, and never less than "
+                        + "your stake.\n\n"))
+                .append(body("Rainbow panes and fireworks mean a big one.\n\n"))
+                .append(warn("The house still keeps about "
                         + Math.round((1.0f - TrapMath.SLOT_MEASURED_RTP) * 100)
                         + "%. It always does."))));
     }
