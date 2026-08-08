@@ -266,6 +266,7 @@ public final class TrapMarket {
      * savings. Run every few minutes, not every beat: it is the expensive one.
      */
     private static void census(MinecraftServer server) {
+        int chunksRead = 0;
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             ServerWorld world = player.getWorld();
             String dimension = world.getRegistryKey().getValue().toString();
@@ -279,6 +280,7 @@ public final class TrapMarket {
                     if (chunk == null) {
                         continue;
                     }
+                    chunksRead++;
                     int found = 0;
                     for (BlockEntity block : chunk.getBlockEntities().values()) {
                         if (block instanceof Inventory container) {
@@ -297,6 +299,15 @@ public final class TrapMarket {
                 }
             }
         }
+        // Instrumented on purpose: "no stashes found" and "the scan never ran"
+        // look identical from outside, and an empty vault ledger is exactly
+        // what a broken census produces.
+        int stashed = 0;
+        for (int held : VAULTS.values()) {
+            stashed += held;
+        }
+        TrapCraft.LOGGER.info("census: {} chunks read, {} chunks holding money, {}e stashed",
+                chunksRead, VAULTS.size(), stashed);
     }
 
     /** What one container is holding, shulker boxes on the shelf included. */
