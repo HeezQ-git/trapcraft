@@ -427,6 +427,64 @@ class FormulaTest {
         return grid;
     }
 
+    // --- the pawn counter -------------------------------------------------------
+
+    @Test
+    void aStackOfAnythingIsWorthSomething() {
+        // Individually junk is worth a fraction of an emerald, which is the
+        // point -- but a full stack of it must always come to at least one, or
+        // the counter refuses ordinary items with no explanation it can give.
+        for (int nutrition = 0; nutrition <= 20; nutrition++) {
+            for (int rarity = 0; rarity < 4; rarity++) {
+                float stack = TrapMath.scrapPrice(nutrition, nutrition * 0.6f, rarity, 0, 64) * 64;
+                assertTrue(Math.round(stack) >= 1,
+                        "a stack priced at nothing: food " + nutrition + " rarity " + rarity);
+            }
+        }
+    }
+
+    @Test
+    void plainJunkIsWorthUnderAnEmeraldEach() {
+        // The trap this pricing exists to avoid. One log makes four planks
+        // makes eight sticks. Round an ordinary stackable item up to one
+        // emerald apiece and a crafting table out-earns every other way of
+        // making money in this mod, forever.
+        //
+        // A whole stack of sticks may be worth a couple of emeralds; a stick
+        // may not be worth one.
+        float junk = TrapMath.scrapPrice(0, 0, 0, 0, 64);
+        assertTrue(junk < 0.5f, "plain junk is priced at " + junk + " each -- that is a money loop");
+        assertTrue(junk > 0.0f, "but it must still be worth something in bulk");
+    }
+
+    @Test
+    void theCounterPaysLessThanTheShelf() {
+        // It is a pawn counter. One that paid the market price would make the
+        // shelves pointless and every price on them a suggestion.
+        assertTrue(TrapMath.SCRAP_RATE < 1.0f);
+        assertTrue(TrapMath.SCRAP_RATE > 0.2f, "but not so mean nobody bothers");
+    }
+
+    @Test
+    void betterThingsFetchMore() {
+        float plain = TrapMath.scrapPrice(0, 0, 0, 0, 64);
+        assertTrue(TrapMath.scrapPrice(0, 0, 1, 0, 64) > plain, "uncommon should beat common");
+        assertTrue(TrapMath.scrapPrice(0, 0, 3, 0, 64)
+                > TrapMath.scrapPrice(0, 0, 2, 0, 64), "epic should beat rare");
+        assertTrue(TrapMath.scrapPrice(0, 0, 0, 1561, 1)
+                > TrapMath.scrapPrice(0, 0, 0, 59, 1), "diamond tools beat wooden ones");
+        assertTrue(TrapMath.scrapPrice(8, 12.8f, 0, 0, 64) > plain, "food beats not-food");
+    }
+
+    @Test
+    void aBetterBookIsWorthMore() {
+        assertTrue(TrapMath.scrapBookPrice(5, 1) > TrapMath.scrapBookPrice(1, 1),
+                "Sharpness V should beat Sharpness I");
+        assertTrue(TrapMath.scrapBookPrice(6, 2) > TrapMath.scrapBookPrice(5, 1),
+                "two enchantments should beat one");
+        assertTrue(TrapMath.scrapBookPrice(0, 0) >= 2, "even a nothing book is worth something");
+    }
+
     // --- roulette -------------------------------------------------------------
 
     @Test

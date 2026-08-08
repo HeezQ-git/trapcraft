@@ -706,6 +706,65 @@ public final class TrapMath {
         return paid / spins;
     }
 
+    // --- the pawn counter -------------------------------------------------------
+
+    /** What the counter pays, as a share of what a listed item would fetch. */
+    public static final float SCRAP_RATE = 0.6f;
+
+    /**
+     * What something the catalogue doesn't list is worth, per item.
+     *
+     * The shop's shelves are a curated list and always will be, but a player
+     * with a chest of odds and ends wants to turn it into emeralds without
+     * caring whether somebody wrote a line for it. So anything not listed gets
+     * valued from what the game itself says about it -- how filling it is, how
+     * rare it is, how much use is in it -- which works for modded items nobody
+     * has ever heard of just as well as for vanilla.
+     *
+     * Deliberately worse than the shelves. A listed item has a price the
+     * market moves; this is a pawn counter, and a pawn counter that pays full
+     * value is just a shop with extra steps.
+     *
+     * @param nutrition  food value, 0 if it isn't food
+     * @param saturation food saturation, 0 if it isn't food
+     * @param rarity     0 common, 1 uncommon, 2 rare, 3 epic
+     * @param maxDamage  durability, 0 if it isn't a tool
+     * @param maxCount   stack size, as a hint at how special the thing is
+     * @return emeralds per item, which may be a fraction of one
+     */
+    public static float scrapPrice(int nutrition, float saturation, int rarity,
+                                   int maxDamage, int maxCount) {
+        // A FRACTION of an emerald for ordinary stackable junk, and the caller
+        // multiplies by the stack. A flat "at least one each" floor would have
+        // made a stick worth more than a share of the log it came from, and a
+        // log is eight sticks -- an afternoon at a crafting table would have
+        // out-earned everything else in this mod put together.
+        float worth = 0.05f;
+        worth += nutrition * 0.35f + saturation * 0.2f;
+        // Durability stands in for "how much work went into it": a netherite
+        // pickaxe and a wooden one differ by thirty times here, which is about
+        // right without knowing anything about either.
+        worth += maxDamage / 60.0f;
+        // Something that won't stack and isn't a tool is a one-off.
+        if (maxCount <= 1 && maxDamage <= 0) {
+            worth += 4.0f;
+        }
+        float[] byRarity = {1.0f, 2.2f, 5.0f, 11.0f};
+        worth *= byRarity[Math.max(0, Math.min(byRarity.length - 1, rarity))];
+        return worth * SCRAP_RATE;
+    }
+
+    /**
+     * What an enchanted book the catalogue doesn't list is worth.
+     *
+     * Priced off the levels on it, so a modded enchantment or a level nobody
+     * wrote a shelf line for still fetches something sensible instead of
+     * falling through to "a book, worth nothing".
+     */
+    public static int scrapBookPrice(int totalLevels, int enchantments) {
+        return Math.max(2, Math.round((totalLevels * 22.0f + enchantments * 15.0f) * SCRAP_RATE));
+    }
+
     // --- roulette ---------------------------------------------------------------
 
     /**

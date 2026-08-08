@@ -53,8 +53,9 @@ public class ShopScreenHandler extends ScreenHandler {
      * invisible.
      */
     private static final int[] SHELF_SPOTS = {11, 13, 15, 20, 22, 24, 29, 31, 33};
-    /** The exchange desk, deliberately off on its own rather than in the block. */
-    private static final int INVEST_SPOT = 40;
+    /** The counter and the exchange desk, off on their own below the shelves. */
+    private static final int SELL_SPOT = 38;
+    private static final int INVEST_SPOT = 42;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity shopper;
@@ -145,6 +146,16 @@ public class ShopScreenHandler extends ScreenHandler {
                     line(ShopStock.of(category).size() + " lines", Formatting.DARK_GRAY))));
             display.setStack(spots[i], icon);
         }
+
+        ItemStack counter = new ItemStack(Items.HOPPER);
+        counter.set(DataComponentTypes.CUSTOM_NAME,
+                plain("The Counter").formatted(Formatting.YELLOW, Formatting.BOLD));
+        counter.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Sell anything, not just what's listed.", Formatting.GRAY),
+                Text.empty(),
+                line("Tip the lot in and sell it in one go.", Formatting.DARK_GRAY),
+                line("Whatever it won't take comes back.", Formatting.DARK_GRAY))));
+        display.setStack(SELL_SPOT, counter);
 
         ItemStack desk = new ItemStack(Items.GOLD_INGOT);
         desk.set(DataComponentTypes.CUSTOM_NAME,
@@ -368,6 +379,16 @@ public class ShopScreenHandler extends ScreenHandler {
             if (slotIndex == INVEST_SPOT) {
                 click(1.1F);
                 showExchange();
+                return;
+            }
+            if (slotIndex == SELL_SPOT) {
+                click(1.3F);
+                // Its own screen rather than another page of this one: it
+                // needs forty-five real slots, and this handler's are all
+                // read-only by design.
+                shopper.openHandledScreen(new net.minecraft.screen.SimpleNamedScreenHandlerFactory(
+                        (id, inventory, ignored) -> new SellScreenHandler(id, inventory),
+                        plain("The Counter").formatted(Formatting.GOLD, Formatting.BOLD)));
                 return;
             }
             int[] spots = SHELF_SPOTS;

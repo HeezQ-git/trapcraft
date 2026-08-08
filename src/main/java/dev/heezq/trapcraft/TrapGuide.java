@@ -218,6 +218,27 @@ public final class TrapGuide {
                 .append(warn("It fades. Come back later."))));
 
         pages.add(page(Text.empty()
+                .append(title("4d2. THE COUNTER\n\n"))
+                .append(body("The hopper on the shopfront takes anything, "
+                        + "not just what's listed.\n\n"))
+                .append(body("Tip it all in, sell in one go.\n\n"))
+                .append(hint("Shift-click fills it fast."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d3. WHAT IT PAYS\n\n"))
+                .append(body("Listed goods fetch the market price.\n\n"))
+                .append(body("Anything else is valued on the spot, at "
+                        + Math.round(TrapMath.SCRAP_RATE * 100) + "%.\n\n"))
+                .append(warn("Junk is worth pennies. Sell it by the stack."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d4. REFUSALS\n\n"))
+                .append(body("It won't take money, a full wallet, a loaded "
+                        + "shulker, or damaged gear.\n\n"))
+                .append(body("Those come straight back.\n\n"))
+                .append(hint("It tells you why in chat."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4e. DEALING\n\n"))
                 .append(body("Click to buy a lot. Shift for four.\n\n"))
                 .append(body("Right-click to sell one back.\n\n"))

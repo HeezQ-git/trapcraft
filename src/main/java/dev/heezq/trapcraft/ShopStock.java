@@ -1,7 +1,11 @@
 package dev.heezq.trapcraft;
 
+import net.minecraft.block.CropBlock;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.FoodComponent;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.item.BlockItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -176,8 +180,70 @@ public final class ShopStock {
             STOCK.add(new Entry((Category) spec[0], item, declaration.getKey(),
                     count, (Integer) spec[2], prototype, label));
         }
-        TrapCraft.LOGGER.info("market: {} lines stocked, {} skipped (mod not present)",
-                STOCK.size(), missing);
+        int listed = STOCK.size();
+        stockTheKitchen();
+        TrapCraft.LOGGER.info(
+                "market: {} lines stocked ({} listed, {} found in the registry), {} skipped",
+                STOCK.size(), listed, STOCK.size() - listed, missing);
+    }
+
+    /**
+     * Items the auto-stocker must never put on a shelf.
+     *
+     * Mostly things that are food by the game's reckoning but would be a joke
+     * or a trap on a shelf. Currency is already refused by add().
+     */
+    private static final List<String> NEVER_STOCK = List.of(
+            "minecraft:poisonous_potato", "minecraft:pufferfish", "minecraft:spider_eye",
+            "minecraft:rotten_flesh", "minecraft:chicken", "minecraft:chorus_fruit",
+            "minecraft:suspicious_stew", "minecraft:enchanted_golden_apple",
+            "minecraft:golden_apple", "minecraft:cake");
+
+    /**
+     * Put every food and seed in the game on the shelves.
+     *
+     * Sixteen food mods are installed and between them they add hundreds of
+     * ingredients, dishes and crops. Listing those by hand would be a
+     * thousand lines that goes stale the moment a mod updates, and every id I
+     * typed wrong would be silently dropped as "mod not present" -- so this
+     * asks the registry instead. Anything with a food component is a food and
+     * anything the villagers will plant is a seed, whoever added it.
+     *
+     * Hand-written lines always win: this only fills gaps, so the entries that
+     * have been tuned against what this server actually earns keep their
+     * prices and everything else gets a reasonable one.
+     */
+    private static void stockTheKitchen() {
+        int foods = 0;
+        int seeds = 0;
+        for (Item item : Registries.ITEM) {
+            String id = Registries.ITEM.getId(item).toString();
+            if (DECLARED.containsKey(id) || NEVER_STOCK.contains(id) || CURRENCY.contains(id)) {
+                continue;
+            }
+            FoodComponent food = item.getComponents().get(DataComponentTypes.FOOD);
+            if (food != null) {
+                int count = food.nutrition() >= 8 ? 1 : food.nutrition() >= 5 ? 2 : 4;
+                int base = Math.max(3, Math.round(count
+                        * (food.nutrition() * 0.8f + food.saturation() * 0.5f + 1.0f)));
+                STOCK.add(new Entry(FOOD, item, id, count, base,
+                        new ItemStack(item, count), item.getName().getString()));
+                foods++;
+            } else if (plantable(item)) {
+                STOCK.add(new Entry(FARMING, item, id, 8, 14,
+                        new ItemStack(item, 8), item.getName().getString()));
+                seeds++;
+            }
+        }
+        TrapCraft.LOGGER.info("market: found {} foods and {} seeds in the registry", foods, seeds);
+    }
+
+    /** Anything a villager would plant, or that places a crop. */
+    private static boolean plantable(Item item) {
+        if (item.getDefaultStack().isIn(ItemTags.VILLAGER_PLANTABLE_SEEDS)) {
+            return true;
+        }
+        return item instanceof BlockItem placed && placed.getBlock() instanceof CropBlock;
     }
 
     static {
@@ -653,6 +719,21 @@ public final class ShopStock {
 
     public static List<Entry> all() {
         return STOCK;
+    }
+
+    /**
+     * The catalogue line this stack would sell as, or null.
+     *
+     * Matches on components as well as item, so a Sharpness V book finds the
+     * Sharpness V line and not the Sharpness I one.
+     */
+    public static Entry matching(ItemStack stack) {
+        for (Entry entry : STOCK) {
+            if (entry.matches(stack)) {
+                return entry;
+            }
+        }
+        return null;
     }
 
     public static List<Entry> of(Category category) {
