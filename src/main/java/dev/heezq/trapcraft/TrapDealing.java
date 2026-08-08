@@ -898,6 +898,36 @@ public final class TrapDealing {
      *   bud        1     2     4     7
      *   joint      2     4     8    13
      */
+    /**
+     * What one of these fetches on the street.
+     *
+     * Public because the dealers sell the same product to the same market and
+     * must quote the same number. Two price curves for one commodity is how you
+     * end up with an arbitrage between your own features.
+     */
+    public static int streetPrice(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return 0;
+        }
+        var item = stack.getItem();
+        if (item == TrapContent.cocaPowder) {
+            return premium(TrapComponents.getPurity(stack).emeralds() * 2);
+        }
+        if (item == TrapContent.blendBudItem || item == TrapContent.blendJointItem) {
+            Blend blend = TrapComponents.getBlend(stack);
+            return blend == null ? 1 : mixPrice(blend, item == TrapContent.blendJointItem);
+        }
+        for (Strain strain : Strain.values()) {
+            if (item == TrapContent.joint(strain)) {
+                return jointPrice(TrapComponents.get(stack));
+            }
+            if (item == TrapContent.driedBud(strain)) {
+                return budPrice(TrapComponents.get(stack));
+            }
+        }
+        return 0;
+    }
+
     private static int budPrice(Quality grade) {
         return Math.max(1, Math.round(premium(grade.emeralds()) / 2.0F));
     }

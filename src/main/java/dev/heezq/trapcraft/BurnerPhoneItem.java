@@ -53,6 +53,17 @@ public class BurnerPhoneItem extends Item implements PolymerItem {
         }
         ItemStack phone = user.getStackInHand(hand);
 
+        // Sneak for the network. The jobs board is what you reach for most, so
+        // it keeps the plain click; the dealers are the deliberate trip.
+        if (player.isSneaking()) {
+            server.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundCategory.PLAYERS, 0.5F, 1.2F);
+            player.openHandledScreen(new SimpleNamedScreenHandlerFactory(
+                    (syncId, inventory, ignored) -> new NetworkScreenHandler(syncId, inventory),
+                    Text.literal("The Network").formatted(Formatting.GOLD, Formatting.BOLD)));
+            return ActionResult.SUCCESS;
+        }
+
         Contract active = phone.get(TrapComponents.contract);
         if (active != null) {
             player.sendMessage(Text.literal("You've already got a job on.")

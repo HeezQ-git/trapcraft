@@ -1262,6 +1262,11 @@ def advancements() -> None:
     award("natural", "Natural", "Get dealt twenty-one on two cards.",
           "minecraft:paper", "floor", frame="goal")
 
+    award("network", "The Network", "Put somebody on the street selling for you.",
+          "minecraft:player_head", "root", frame="goal")
+    award("kingpin", "Kingpin", "Bring a dealer up to level five.",
+          "minecraft:golden_helmet", "network", frame="challenge")
+
     award("crew", "Payroll", "Take somebody on. Wages start immediately.",
           "minecraft:villager_spawn_egg", "root", frame="goal")
     award("raided", "They Found It", "Have a raid walk out with your product.",

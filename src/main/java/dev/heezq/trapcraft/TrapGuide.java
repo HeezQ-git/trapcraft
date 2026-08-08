@@ -103,6 +103,7 @@ public final class TrapGuide {
         breeding(pages);
         heat(pages);
         crew(pages);
+        network(pages);
         supply(pages);
         return book("Grower's Handbook", pages);
     }
@@ -713,6 +714,43 @@ public final class TrapGuide {
                         + "your chests and take product.\n\n"))
                 .append(body("Only product. Seeds and gear are safe.\n\n"))
                 .append(hint("Bury it, split it, or stand in the way."))));
+    }
+
+    private static void network(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("8e. THE NETWORK\n\n"))
+                .append(body("Sneak + right-click the phone.\n\n"))
+                .append(body("Hire up to " + TrapDealers.MAX_DEALERS
+                        + " dealers. They sell while you're away.\n\n"))
+                .append(hint("Click one to call them in."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8f. LOADING UP\n\n"))
+                .append(body("Right-click a called dealer to open their "
+                        + "book.\n\n"))
+                .append(body("Drop product in. Take the money out.\n\n"))
+                .append(warn("They sell nothing while stood in front of you."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8g. THE HOURS\n\n"))
+                .append(body("They shift about three times as much at "
+                        + "midnight as at noon.\n\n"))
+                .append(body("Load them in the evening, collect in the "
+                        + "morning.\n\n"))
+                .append(hint("Heat slows them. It doesn't stop them."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8h. LEVELS\n\n"))
+                .append(body("They level up by selling. Higher level = more "
+                        + "slots, faster, robbed less.\n\n"))
+                .append(body("They also keep a bigger cut.\n\n"))
+                .append(hint("Still worth it. The throughput more than pays."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8i. CROWDING\n\n"))
+                .append(body("Every extra dealer on the same patch sells "
+                        + "less than the last.\n\n"))
+                .append(warn("Four are worth less than four times one."))));
     }
 
     private static void supply(List<RawFilteredPair<Text>> pages) {

@@ -997,6 +997,100 @@ public final class TrapMath {
         return bets;
     }
 
+    // --- the dealer network -----------------------------------------------------
+
+    /** Levels a dealer can reach. */
+    public static final int DEALER_MAX_LEVEL = 5;
+    /** Items sold to earn one level, at each level. */
+    public static final int[] DEALER_XP = {0, 40, 120, 280, 600};
+
+    /** Slots a dealer of this level can carry. */
+    public static int dealerSlots(int level) {
+        return 2 + Math.max(1, Math.min(DEALER_MAX_LEVEL, level)) * 2;
+    }
+
+    /**
+     * What a dealer takes off the top, as a share of what they sell.
+     *
+     * Rises with level. A better dealer costs more to hire AND keeps more of
+     * every sale -- but shifts so much more product that they still leave you
+     * further ahead. Making the cut fall with level would have meant there was
+     * never a reason to keep a cheap one, and a market where one option is
+     * strictly better isn't a choice.
+     */
+    public static float dealerCut(int level) {
+        return 0.12f + 0.03f * Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+    }
+
+    /** What hiring one costs up front. */
+    public static int dealerHireCost(int level) {
+        return 180 * level * level;
+    }
+
+    /**
+     * How briskly trade moves at this hour, as a multiplier.
+     *
+     * Peaks around midnight and bottoms out at noon. Nobody buys anything off
+     * a street dealer at lunchtime, and the whole point of the trade running
+     * while you are not watching is that it has a rhythm you can plan around:
+     * load them up in the evening, collect in the morning.
+     *
+     * @param timeOfDay the world's 0..23999
+     */
+    public static float dealerHourFactor(long timeOfDay) {
+        // 0 is sunrise in Minecraft, 18000 is midnight.
+        double phase = (timeOfDay % 24000L) / 24000.0 * Math.PI * 2.0;
+        // Trough at 6000 (noon), peak at 18000 (midnight).
+        return 1.0f + 0.55f * (float) -Math.sin(phase);
+    }
+
+    /**
+     * Everything else that decides how fast a dealer moves product.
+     *
+     * Saturation is the important one: each extra dealer working the same
+     * patch sells less than the last, so a fourth is worth much less than a
+     * first. Without it the only strategy is "hire the maximum", which is not
+     * a strategy.
+     *
+     * @param level    theirs, 1..MAX
+     * @param crowd    how many dealers this player has out, including this one
+     * @param heatTier 0..3, how much attention the operation is drawing
+     */
+    public static float dealerRate(int level, int crowd, int heatTier) {
+        float skill = 0.25f + 0.25f * level;
+        float saturation = 1.0f / (1.0f + 0.45f * Math.max(0, crowd - 1));
+        // Heat doesn't stop trade, it makes people careful about being seen
+        // buying. A raid is the punishment; this is the drag.
+        float caution = 1.0f - 0.12f * Math.max(0, Math.min(3, heatTier));
+        return skill * saturation * caution;
+    }
+
+    /**
+     * Items a dealer shifts in one round, given everything.
+     *
+     * Rounded stochastically off `roll` rather than truncated: a rate of 0.4
+     * has to mean "two rounds in five" and not "nothing, ever", or a level one
+     * dealer at noon would look broken rather than slow.
+     */
+    public static int dealerSold(float rate, float hourFactor, float roll) {
+        float expected = rate * hourFactor;
+        int whole = (int) expected;
+        return whole + (roll < expected - whole ? 1 : 0);
+    }
+
+    /**
+     * Odds a dealer gets taken off for part of what they're carrying, per round.
+     *
+     * Per ROUND, and rounds are five minutes apart -- so a level one runs
+     * about a seven percent risk over an hour on the street and a level five
+     * about one. Often enough that a cheap dealer carrying your best product
+     * is a bad idea, rare enough that it reads as bad luck rather than as a
+     * tax.
+     */
+    public static float dealerRobChance(int level) {
+        return 0.006f / Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+    }
+
     // --- the coin toss ----------------------------------------------------------
 
     /**

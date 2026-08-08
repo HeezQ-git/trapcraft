@@ -669,6 +669,86 @@ class FormulaTest {
         }
     }
 
+    // --- the dealer network -----------------------------------------------------
+
+    @Test
+    void dealersSellBestAtNight() {
+        float midnight = TrapMath.dealerHourFactor(18000);
+        float noon = TrapMath.dealerHourFactor(6000);
+        assertTrue(midnight > noon * 2,
+                "night should be worth far more than noon: " + midnight + " vs " + noon);
+        assertTrue(noon > 0.0f, "but trade never stops entirely");
+        // Dawn and dusk are the crossover, and must match -- an asymmetric
+        // curve would mean one of them was secretly better for no reason.
+        assertEquals(TrapMath.dealerHourFactor(0), TrapMath.dealerHourFactor(12000), 0.02f);
+    }
+
+    @Test
+    void theHourCurveIsBoundedAllDay() {
+        for (long time = 0; time < 24000; time += 137) {
+            float factor = TrapMath.dealerHourFactor(time);
+            assertTrue(factor > 0.4f && factor < 1.6f,
+                    "hour factor went to " + factor + " at " + time);
+        }
+    }
+
+    @Test
+    void betterDealersAreBetterButCostlier() {
+        for (int level = 2; level <= TrapMath.DEALER_MAX_LEVEL; level++) {
+            assertTrue(TrapMath.dealerRate(level, 1, 0) > TrapMath.dealerRate(level - 1, 1, 0),
+                    "level " + level + " should shift more");
+            assertTrue(TrapMath.dealerSlots(level) > TrapMath.dealerSlots(level - 1),
+                    "level " + level + " should carry more");
+            assertTrue(TrapMath.dealerHireCost(level) > TrapMath.dealerHireCost(level - 1),
+                    "level " + level + " should cost more");
+            assertTrue(TrapMath.dealerCut(level) > TrapMath.dealerCut(level - 1),
+                    "level " + level + " should keep a bigger share");
+            assertTrue(TrapMath.dealerRobChance(level) < TrapMath.dealerRobChance(level - 1),
+                    "level " + level + " should be robbed less");
+        }
+    }
+
+    @Test
+    void aBetterDealerStillLeavesYouAhead() {
+        // The cut rises with level, so it has to be checked that the extra
+        // throughput more than covers it -- otherwise the expensive ones are a
+        // trap and the whole progression is fake.
+        for (int level = 2; level <= TrapMath.DEALER_MAX_LEVEL; level++) {
+            float better = TrapMath.dealerRate(level, 1, 0) * (1 - TrapMath.dealerCut(level));
+            float worse = TrapMath.dealerRate(level - 1, 1, 0)
+                    * (1 - TrapMath.dealerCut(level - 1));
+            assertTrue(better > worse,
+                    "a level " + level + " nets you " + better + " against " + worse);
+        }
+    }
+
+    @Test
+    void crowdingThePatchHasDiminishingReturns() {
+        float alone = TrapMath.dealerRate(3, 1, 0);
+        float four = TrapMath.dealerRate(3, 4, 0) * 4;
+        assertTrue(four > alone, "four should still beat one in total");
+        assertTrue(four < alone * 2.5f,
+                "but four must not be four times as good, got " + four / alone + "x");
+    }
+
+    @Test
+    void heatSlowsTradeWithoutStoppingIt() {
+        assertTrue(TrapMath.dealerRate(3, 1, 3) < TrapMath.dealerRate(3, 1, 0));
+        assertTrue(TrapMath.dealerRate(3, 1, 3) > 0.0f, "heat must never freeze the street");
+    }
+
+    @Test
+    void aFractionalRateStillSellsSometimes() {
+        // A rate under one has to mean "sometimes", not "never" -- truncating
+        // would make a level one at noon look broken rather than slow.
+        int sold = 0;
+        for (int i = 0; i < 1000; i++) {
+            sold += TrapMath.dealerSold(0.4f, 1.0f, i / 1000.0f);
+        }
+        assertTrue(sold > 300 && sold < 500,
+                "a rate of 0.4 over 1000 rounds sold " + sold + ", expected about 400");
+    }
+
     // --- the coin toss ----------------------------------------------------------
 
     @Test
