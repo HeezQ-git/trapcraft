@@ -2,8 +2,6 @@ package dev.heezq.trapcraft;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -14,7 +12,6 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.WorldChunk;
 
@@ -206,15 +203,5 @@ public final class TrapRaid {
                 TrapAwards.grant(player, "raided");
             }
         }
-    }
-
-    /** Entities the raid brought, for {@link #begin}. */
-    public static List<MobEntity> mobsAround(ServerWorld world, BlockPos site, int radius) {
-        List<MobEntity> found = new ArrayList<>();
-        for (Entity entity : world.getEntitiesByClass(MobEntity.class,
-                new Box(site).expand(radius), mob -> mob.isAlive())) {
-            found.add((MobEntity) entity);
-        }
-        return found;
     }
 }

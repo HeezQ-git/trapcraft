@@ -149,21 +149,43 @@ public class CannabisCropBlock extends CropBlock implements PolymerTexturedBlock
             return ActionResult.PASS;
         }
         if (world instanceof ServerWorld server) {
-            Random random = server.getRandom();
-            Quality grade = gradeAt(server, pos, state);
-            // Better grow = more buds AND better ones, so effort compounds.
-            int count = 1 + random.nextInt(2) + (grade.index() >= Quality.LOUD.index() ? 1 : 0);
-            dropStack(world, pos, TrapComponents.apply(
-                    new ItemStack(TrapContent.rawBud(strain), count), grade));
-            if (random.nextInt(3) == 0) {
-                dropStack(world, pos, new ItemStack(TrapContent.seeds(strain), 1));
+            for (ItemStack picked : harvest(server, pos, state)) {
+                dropStack(world, pos, picked);
             }
-            // Back to age 0 rather than removed -- replanting every harvest is
-            // the tedium this is meant to remove.
-            world.setBlockState(pos, withAge(0), Block.NOTIFY_LISTENERS);
             world.playSound(null, pos, SoundEvents.ITEM_CROP_PLANT, SoundCategory.BLOCKS, 1.0F, 0.9F);
         }
         return ActionResult.SUCCESS;
+    }
+
+    /**
+     * Pick a mature plant and leave it standing, reset to a seedling.
+     *
+     * The ONLY place a bud comes from. Breaking the block runs the loot table
+     * and gives back a seed, which is deliberate -- but it means anything that
+     * wants the produce has to come through here rather than reaching for
+     * getDroppedStacks. The crew learned that the hard way: it was demolishing
+     * plants and stashing seeds.
+     *
+     * @return what came off the plant, for the caller to drop or store
+     */
+    public java.util.List<ItemStack> harvest(ServerWorld world, BlockPos pos, BlockState state) {
+        java.util.List<ItemStack> picked = new java.util.ArrayList<>();
+        if (!isMature(state)) {
+            return picked;
+        }
+        Random random = world.getRandom();
+        Quality grade = gradeAt(world, pos, state);
+        // Better grow = more buds AND better ones, so effort compounds.
+        int count = 1 + random.nextInt(2) + (grade.index() >= Quality.LOUD.index() ? 1 : 0);
+        picked.add(TrapComponents.apply(
+                new ItemStack(TrapContent.rawBud(strain), count), grade));
+        if (random.nextInt(3) == 0) {
+            picked.add(new ItemStack(TrapContent.seeds(strain), 1));
+        }
+        // Back to age 0 rather than removed -- replanting every harvest is
+        // the tedium this is meant to remove.
+        world.setBlockState(pos, withAge(0), Block.NOTIFY_LISTENERS);
+        return picked;
     }
 
     /**

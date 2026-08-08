@@ -134,7 +134,7 @@ public final class TrapDealing {
                         root.then(net.minecraft.server.command.CommandManager
                                 .literal(strain.id())
                                 .executes(context -> summon(context.getSource().getPlayer(),
-                                        Craving.of(strain))));
+                                        Craving.of(strain, Contract.Form.EITHER))));
                     }
                     root.then(net.minecraft.server.command.CommandManager.literal("powder")
                             .executes(context -> summon(context.getSource().getPlayer(),
@@ -289,8 +289,14 @@ public final class TrapDealing {
             var entity = findCustomer(server, entry.getKey());
 
             if (entity == null) {
+                // Killed, despawned or unloaded. leave() never runs on this
+                // path, so its bookkeeping has to be cleared here or DEALT and
+                // APPETITE grow a row per lost customer for the life of the
+                // server.
                 LEAVING.remove(entry.getKey());
-                return true;    // killed, despawned, or unloaded
+                DEALT.remove(entry.getKey());
+                APPETITE.remove(entry.getKey());
+                return true;
             }
 
             // Already walking off: let them finish, then they're gone.
@@ -439,9 +445,9 @@ public final class TrapDealing {
                 return false;
             }
             each = mixPrice(blend, held.isOf(TrapContent.blendJointItem));
-        } else if (held.isOf(TrapContent.driedBud(craving.strain()))) {
+        } else if (craving.takesBuds() && held.isOf(TrapContent.driedBud(craving.strain()))) {
             each = budPrice(TrapComponents.get(held));
-        } else if (held.isOf(TrapContent.joint(craving.strain()))) {
+        } else if (craving.takesJoints() && held.isOf(TrapContent.joint(craving.strain()))) {
             each = jointPrice(TrapComponents.get(held));
         } else {
             return false;
@@ -532,8 +538,11 @@ public final class TrapDealing {
             message = Text.literal("They want ").formatted(Formatting.GRAY)
                     .append(Text.literal(craving.strain().display())
                             .withColor(craving.strain().colour()))
-                    .append(Text.literal(" -- in your hand.  Sneak-click to send them off.")
-                            .formatted(Formatting.GRAY));
+                    .append(Text.literal(" -- " + craving.form().label.toLowerCase(
+                            java.util.Locale.ROOT) + ", in your hand.")
+                            .formatted(Formatting.GRAY))
+                    .append(Text.literal("  Sneak-click to send them off.")
+                            .formatted(Formatting.DARK_GRAY));
         }
         seller.sendMessage(message, true);
         seller.getWorld().playSound(null, customer.getBlockPos(),
@@ -554,8 +563,10 @@ public final class TrapDealing {
             }
             return false;
         }
-        return lowestQuality(seller, TrapContent.driedBud(craving.strain())) != null
-                || lowestQuality(seller, TrapContent.joint(craving.strain())) != null;
+        return (craving.takesBuds()
+                && lowestQuality(seller, TrapContent.driedBud(craving.strain())) != null)
+                || (craving.takesJoints()
+                && lowestQuality(seller, TrapContent.joint(craving.strain())) != null);
     }
 
     /** The blend on this stack if it's what they asked for, else null. */
@@ -719,17 +730,34 @@ public final class TrapDealing {
      * for having found one -- a customer who walks up asking for Trinity by
      * name is worth more than the arithmetic says.
      */
-    private record Craving(Strain strain, boolean powder, String mix) {
-        static Craving of(Strain strain) {
-            return new Craving(strain, false, null);
+    private record Craving(Strain strain, boolean powder, String mix, Contract.Form form) {
+        static Craving of(Strain strain, Contract.Form form) {
+            return new Craving(strain, false, null, form);
         }
 
         static Craving forPowder() {
-            return new Craving(null, true, null);
+            return new Craving(null, true, null, Contract.Form.EITHER);
         }
 
         static Craving mixed(String name) {
-            return new Craving(null, false, name);
+            return new Craving(null, false, name, Contract.Form.EITHER);
+        }
+
+        boolean takesBuds() {
+            return form != Contract.Form.JOINTS;
+        }
+
+        boolean takesJoints() {
+            return form != Contract.Form.BUDS;
+        }
+
+        /** Short enough for a nameplate. */
+        String formWord() {
+            return switch (form) {
+                case BUDS -> "bud";
+                case JOINTS -> "joints";
+                case EITHER -> "any";
+            };
         }
 
         boolean isMix() {
@@ -749,7 +777,7 @@ public final class TrapDealing {
             if (isMix()) {
                 return "Customer (" + (isNamedMix() ? mix : "any mix") + ")";
             }
-            return "Customer (" + strain.display() + ")";
+            return "Customer (" + strain.display() + ", " + formWord() + ")";
         }
 
         String greeting() {
@@ -762,7 +790,8 @@ public final class TrapDealing {
             if (isMix()) {
                 return "Somebody's heading your way. They want something mixed.";
             }
-            return "Somebody's heading your way. They're after " + strain.display() + ".";
+            return "Somebody's heading your way. They're after " + strain.display()
+                    + " -- " + form.label.toLowerCase(java.util.Locale.ROOT) + ".";
         }
     }
 
@@ -774,11 +803,27 @@ public final class TrapDealing {
      */
     private static Craving cravingFor(ServerPlayerEntity player) {
         var options = new java.util.ArrayList<Craving>();
+        var random = player.getWorld().getRandom();
         for (Strain strain : Strain.values()) {
-            if (carries(player, TrapContent.driedBud(strain))
-                    || carries(player, TrapContent.joint(strain))) {
-                options.add(Craving.of(strain));
+            boolean buds = carries(player, TrapContent.driedBud(strain));
+            boolean joints = carries(player, TrapContent.joint(strain));
+            if (!buds && !joints) {
+                continue;
             }
+            // Only ask for a form they could actually satisfy. A customer who
+            // turns up demanding joints from somebody holding nothing but buds
+            // is a wasted visit, and visits are rare enough to matter.
+            Contract.Form form;
+            if (buds && joints) {
+                form = switch (random.nextInt(4)) {
+                    case 0 -> Contract.Form.BUDS;
+                    case 1 -> Contract.Form.JOINTS;
+                    default -> Contract.Form.EITHER;
+                };
+            } else {
+                form = buds ? Contract.Form.BUDS : Contract.Form.JOINTS;
+            }
+            options.add(Craving.of(strain, form));
         }
         if (carries(player, TrapContent.cocaPowder)) {
             options.add(Craving.forPowder());

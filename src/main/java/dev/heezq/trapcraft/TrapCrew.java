@@ -17,7 +17,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.WorldSavePath;
 
 import java.nio.file.Files;
@@ -104,9 +103,14 @@ public final class TrapCrew {
         hand.setAiDisabled(false);
         hand.setCustomName(Text.literal("Hand").formatted(Formatting.YELLOW));
         hand.setCustomNameVisible(true);
-        // No trades: this is staff, not a shop. A villager you can barter with
-        // would undercut the market stall by accident.
-        hand.setInvulnerable(false);
+        // NITWIT, and not merely "no profession". A professionless villager
+        // takes a job from any workstation it wanders past and becomes a
+        // trader -- which would undercut the market stall by accident, exactly
+        // what this was supposed to avoid. A nitwit never takes one.
+        hand.setVillagerData(hand.getVillagerData().withProfession(
+                world.getRegistryManager()
+                        .getOrThrow(net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
+                        .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
         world.spawnEntity(hand);
 
         CREW.add(new Hand(boss.getUuid(), hand.getUuid(),
@@ -229,11 +233,20 @@ public final class TrapCrew {
                 continue;   // still walking over; pick it next pass
             }
 
-            List<ItemStack> picked = net.minecraft.block.Block.getDroppedStacks(
-                    world.getBlockState(ripe), world, ripe, null);
-            world.breakBlock(ripe, false);
+            // Through the block's own harvest, not getDroppedStacks: breaking
+            // one of these runs the loot table and returns a SEED. The buds
+            // only come off a right-click, and a hand that broke the plant was
+            // demolishing the farm and stashing seeds.
+            BlockState state = world.getBlockState(ripe);
+            List<ItemStack> picked = state.getBlock() instanceof CannabisCropBlock weed
+                    ? weed.harvest(world, ripe, state)
+                    : ((CocaCropBlock) state.getBlock()).harvest(world, ripe, state);
+            // The chest is found ONCE per harvest, not once per stack: that
+            // search walks five and a half thousand positions, and a harvest
+            // drops two or three things.
+            net.minecraft.inventory.Inventory box = nearestBox(world, hand.patch());
             for (ItemStack drop : picked) {
-                if (!store(world, hand.patch(), drop)) {
+                if (box == null || !store(box, drop)) {
                     net.minecraft.block.Block.dropStack(world, ripe, drop);
                 }
             }
@@ -259,25 +272,30 @@ public final class TrapCrew {
         return null;
     }
 
-    /** Put a drop in the nearest container. False if there's nowhere to put it. */
-    private static boolean store(ServerWorld world, BlockPos patch, ItemStack drop) {
+    /** The closest container to the patch, or null if there isn't one. */
+    private static net.minecraft.inventory.Inventory nearestBox(ServerWorld world, BlockPos patch) {
         for (BlockPos pos : BlockPos.iterateOutwards(patch, REACH, 4, REACH)) {
-            if (!(world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory box)) {
-                continue;
+            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory box) {
+                return box;
             }
-            for (int slot = 0; slot < box.size(); slot++) {
-                ItemStack there = box.getStack(slot);
-                if (there.isEmpty()) {
-                    box.setStack(slot, drop.copy());
-                    box.markDirty();
-                    return true;
-                }
-                if (ItemStack.areItemsAndComponentsEqual(there, drop)
-                        && there.getCount() + drop.getCount() <= there.getMaxCount()) {
-                    there.increment(drop.getCount());
-                    box.markDirty();
-                    return true;
-                }
+        }
+        return null;
+    }
+
+    /** Put a drop away. False if it wouldn't fit. */
+    private static boolean store(net.minecraft.inventory.Inventory box, ItemStack drop) {
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack there = box.getStack(slot);
+            if (there.isEmpty()) {
+                box.setStack(slot, drop.copy());
+                box.markDirty();
+                return true;
+            }
+            if (ItemStack.areItemsAndComponentsEqual(there, drop)
+                    && there.getCount() + drop.getCount() <= there.getMaxCount()) {
+                there.increment(drop.getCount());
+                box.markDirty();
+                return true;
             }
         }
         return false;
@@ -298,6 +316,13 @@ public final class TrapCrew {
             ServerPlayerEntity boss = server.getPlayerManager().getPlayer(hand.boss());
             if (boss == null) {
                 continue;   // nobody home; wages wait until they log in
+            }
+            if (find(server, hand) == null) {
+                // Dead, or in a chunk nobody is loading. Either way they did no
+                // work this shift, so they don't get paid for it -- and a hand
+                // a zombie got was otherwise charging wages forever with
+                // nothing to show and no way to notice.
+                continue;
             }
             if (TrapMarket.wealthOf(boss) < WAGE) {
                 quit.add(hand);
@@ -334,12 +359,6 @@ public final class TrapCrew {
             }
         }
         return null;
-    }
-
-    /** Anything of ours standing around here, for the hire command's sanity check. */
-    public static boolean crowded(ServerWorld world, BlockPos patch) {
-        return !world.getEntitiesByClass(VillagerEntity.class,
-                new Box(patch).expand(4), villager -> villager.hasCustomName()).isEmpty();
     }
 
     // --- persistence ----------------------------------------------------------

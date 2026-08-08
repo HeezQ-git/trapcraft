@@ -109,17 +109,29 @@ public class CocaCropBlock extends CropBlock implements PolymerTexturedBlock {
             return ActionResult.PASS;
         }
         if (world instanceof ServerWorld server) {
-            Random random = server.getRandom();
-            // Generous leaf yield -- it takes 3 to make one paste, so this
-            // should feel like the easy part of a long chain.
-            dropStack(world, pos, new ItemStack(TrapContent.cocaLeaves, 2 + random.nextInt(3)));
-            if (random.nextInt(4) == 0) {
-                dropStack(world, pos, new ItemStack(TrapContent.cocaSeeds, 1));
+            for (ItemStack picked : harvest(server, pos, state)) {
+                dropStack(world, pos, picked);
             }
-            world.setBlockState(pos, withAge(0), Block.NOTIFY_LISTENERS);
             world.playSound(null, pos, SoundEvents.ITEM_CROP_PLANT, SoundCategory.BLOCKS, 1.0F, 1.1F);
         }
         return ActionResult.SUCCESS;
+    }
+
+    /** Pick it and leave it standing. See the note on the cannabis version. */
+    public java.util.List<ItemStack> harvest(ServerWorld world, BlockPos pos, BlockState state) {
+        java.util.List<ItemStack> picked = new java.util.ArrayList<>();
+        if (!isMature(state)) {
+            return picked;
+        }
+        Random random = world.getRandom();
+        // Generous leaf yield -- it takes 3 to make one paste, so this
+        // should feel like the easy part of a long chain.
+        picked.add(new ItemStack(TrapContent.cocaLeaves, 2 + random.nextInt(3)));
+        if (random.nextInt(4) == 0) {
+            picked.add(new ItemStack(TrapContent.cocaSeeds, 1));
+        }
+        world.setBlockState(pos, withAge(0), Block.NOTIFY_LISTENERS);
+        return picked;
     }
 
     @Override

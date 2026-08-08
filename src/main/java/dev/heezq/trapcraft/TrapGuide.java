@@ -738,6 +738,13 @@ public final class TrapGuide {
                 .append(hint("Their name says what they're after."))));
 
         pages.add(page(Text.empty()
+                .append(title("9c1. THE FORM\n\n"))
+                .append(body("Their name says the strain AND whether they "
+                        + "want bud, joints, or any.\n\n"))
+                .append(body("They only ask for what you're carrying.\n\n"))
+                .append(hint("Right-click with the wrong form does nothing."))));
+
+        pages.add(page(Text.empty()
                 .append(title("9c2. MIXES\n\n"))
                 .append(body("Some ask for any mix. Some ask for a known "
                         + "blend by name.\n\n"))
