@@ -46,6 +46,10 @@ public class HouseScreenHandler extends ScreenHandler {
     private static final int TAKE_ALL_SLOT = 17;
     private static final int FLOOR_SLOT = 18;
     private static final int BOOKS_SLOT = 26;
+    private static final int BOSS_SLOT = 0;
+    private static final int COMP_SLOT = 8;
+    private static final int LOOSE_SLOT = 22;
+    private static final int CONDITION_SLOT = 19;
 
     private static final int[] STEPS = {10, 100, 1000, 10000};
     private static final int[] STEP_SLOTS = {20, 21, 23, 24};
@@ -103,6 +107,10 @@ public class HouseScreenHandler extends ScreenHandler {
         display.setStack(VAULT_SLOT, vault(house));
         display.setStack(FLOOR_SLOT, floor(house));
         display.setStack(BOOKS_SLOT, books(house));
+        display.setStack(BOSS_SLOT, bossTag(house));
+        display.setStack(COMP_SLOT, compTag(house));
+        display.setStack(LOOSE_SLOT, looseTag(house));
+        display.setStack(CONDITION_SLOT, conditionTag(house));
 
         ItemStack deposit = new ItemStack(loose > 0 ? Items.HOPPER : Items.GRAY_DYE);
         deposit.set(DataComponentTypes.CUSTOM_NAME,
@@ -269,6 +277,128 @@ public class HouseScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    private ItemStack bossTag(TrapHouse.House house) {
+        ItemStack tag = new ItemStack(house.pitBoss ? Items.IRON_HELMET : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(house.pitBoss ? "Pit boss on the floor" : "Nobody watching")
+                        .formatted(house.pitBoss ? Formatting.AQUA : Formatting.RED,
+                                Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(house.pitBoss
+                                ? TrapMath.PIT_BOSS_WAGE + "e a beat in wages."
+                                : "The staff take "
+                                + trim(TrapMath.SKIM_RATE * 100) + "% off the top.",
+                        house.pitBoss ? Formatting.GRAY : Formatting.RED),
+                line(house.pitBoss
+                                ? "Cheats get shown the door."
+                                : "About one punter in " + Math.round(1 / TrapMath.CHEAT_CHANCE)
+                                + " is counting.",
+                        house.pitBoss ? Formatting.GRAY : Formatting.RED),
+                Text.empty(),
+                // The wage is flat and the skim is proportional, so this is a
+                // real decision and not an upgrade you always take.
+                line("A wage is the same whatever the night", Formatting.WHITE),
+                line("does. A cut isn't. Above about "
+                        + (TrapMath.PIT_BOSS_WAGE * 2 * 60
+                        / TrapMath.SKIM_RATE / 60) + "e", Formatting.WHITE),
+                line("of trade an hour they pay for themselves.", Formatting.WHITE),
+                Text.empty(),
+                line(house.pitBoss
+                                ? "Click to let them go."
+                                : "Click to take somebody on. "
+                                + TrapMath.PIT_BOSS_HIRE + "e up front.",
+                        Formatting.YELLOW))));
+        return tag;
+    }
+
+    private ItemStack compTag(TrapHouse.House house) {
+        int machines = Math.max(1, TrapHouse.machineCount(house));
+        int cost = machines * TrapMath.COMP_COST_PER_MACHINE;
+        boolean can = house.compCooldown <= 0 && house.balance >= cost;
+        ItemStack tag = new ItemStack(can ? Items.HONEY_BOTTLE : Items.GLASS_BOTTLE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Stand a round").formatted(can ? Formatting.LIGHT_PURPLE
+                        : Formatting.DARK_GRAY, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(cost + "e out of the vault for nothing", Formatting.GRAY),
+                line("you can point at. +" + TrapMath.COMP_ADDICTION
+                        + " regulars.", Formatting.GRAY),
+                Text.empty(),
+                line(house.compCooldown > 0
+                                ? "Another " + house.compCooldown / 2 + " min before the next."
+                                : "Click to put one on.",
+                        house.compCooldown > 0 ? Formatting.DARK_GRAY : Formatting.YELLOW))));
+        return tag;
+    }
+
+    private ItemStack looseTag(TrapHouse.House house) {
+        boolean running = house.loose();
+        boolean can = !running && house.looseCooldown <= 0;
+        ItemStack tag = new ItemStack(running ? Items.GLOWSTONE
+                : can ? Items.FIREWORK_ROCKET : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(running ? "RUNNING LOOSE" : "Run it loose")
+                        .formatted(running ? Formatting.GOLD
+                                : can ? Formatting.YELLOW : Formatting.DARK_GRAY,
+                                Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("The machines pay over the odds for "
+                        + TrapMath.LOOSE_BEATS / 2 + " minutes.", Formatting.GRAY),
+                line("You lose money. On purpose.", Formatting.RED),
+                Text.empty(),
+                line("+" + TrapMath.LOOSE_REP_BONUS + " to your name while it runs,",
+                        Formatting.WHITE),
+                line("and the regulars build twice as fast.", Formatting.WHITE),
+                Text.empty(),
+                line(running ? house.looseBeats / 2 + " minutes left."
+                                : house.looseCooldown > 0
+                                ? "Not for another " + house.looseCooldown / 2 + " min."
+                                : "Click to call one.",
+                        running ? Formatting.GOLD
+                                : can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
+        return tag;
+    }
+
+    private ItemStack conditionTag(TrapHouse.House house) {
+        int wear = TrapHouse.averageWear(house);
+        ItemStack tag = new ItemStack(wear >= 60 ? Items.NETHERITE_SCRAP : Items.IRON_INGOT);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Condition").formatted(Formatting.GRAY, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(bar("Worn", wear, wear >= 60 ? Formatting.RED : Formatting.WHITE));
+        lore.add(line(wear >= 60 ? "  A shabby room, and it shows in the name."
+                        : "  Holding up.",
+                wear >= 60 ? Formatting.RED : Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        int broken = 0;
+        for (String where : TrapHouse.machinesOf(house)) {
+            if (TrapHouse.wearAt(where) >= TrapMath.WEAR_BROKEN) {
+                String[] parts = where.split(" ");
+                if (broken < 6) {
+                    lore.add(line("  OUT OF ORDER  " + parts[1] + ", " + parts[2]
+                            + ", " + parts[3], Formatting.RED));
+                }
+                broken++;
+            }
+        }
+        if (broken == 0) {
+            lore.add(line("Nothing out of order.", Formatting.GREEN));
+        } else if (broken > 6) {
+            lore.add(line("  ...and " + (broken - 6) + " more", Formatting.RED));
+        }
+        lore.add(Text.empty());
+        lore.add(line("Hit a machine with a Miner's Hammer to", Formatting.YELLOW));
+        lore.add(line("put it right. The house pays for parts.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
+    /** 1.5 rather than 1.5000001, for a percentage in a lore line. */
+    private static String trim(float value) {
+        return value == Math.rint(value) ? String.valueOf((int) value)
+                : String.format("%.1f", value);
+    }
+
     private ItemStack books(TrapHouse.House house) {
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -346,6 +476,60 @@ public class HouseScreenHandler extends ScreenHandler {
 
         if (index == TAKE_ALL_SLOT) {
             draw(house, house.balance);
+            return;
+        }
+        if (index == BOSS_SLOT) {
+            if (house.pitBoss) {
+                TrapHouse.sackPitBoss(house);
+                owner.sendMessage(plain("Let them go. Watch your own floor.")
+                        .formatted(Formatting.GRAY), false);
+                chime(0.8F);
+            } else {
+                String no = TrapHouse.hirePitBoss(house);
+                if (no != null) {
+                    deny();
+                    owner.sendMessage(plain(no).formatted(Formatting.GRAY), false);
+                } else {
+                    chime(1.3F);
+                    owner.sendMessage(plain("They start tonight.")
+                            .formatted(Formatting.GREEN), false);
+                }
+            }
+            CasinoCardItem.restamp(card, house);
+            paint();
+            return;
+        }
+        if (index == COMP_SLOT) {
+            String no = TrapHouse.comp(house, TrapHouse.machineCount(house));
+            if (no != null) {
+                deny();
+                owner.sendMessage(plain(no).formatted(Formatting.GRAY), false);
+            } else {
+                chime(1.5F);
+                owner.getWorld().playSound(null, owner.getBlockPos(),
+                        SoundEvents.ENTITY_VILLAGER_CELEBRATE,
+                        SoundCategory.PLAYERS, 0.8F, 1.0F);
+                owner.sendMessage(plain("Drinks on the house.")
+                        .formatted(Formatting.LIGHT_PURPLE), false);
+            }
+            CasinoCardItem.restamp(card, house);
+            paint();
+            return;
+        }
+        if (index == LOOSE_SLOT) {
+            String no = TrapHouse.runLoose(house);
+            if (no != null) {
+                deny();
+                owner.sendMessage(plain(no).formatted(Formatting.GRAY), false);
+            } else {
+                chime(1.7F);
+                owner.getWorld().playSound(null, owner.getBlockPos(),
+                        SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.7F, 1.4F);
+                owner.sendMessage(plain("Loose for the next "
+                        + TrapMath.LOOSE_BEATS / 2 + " minutes. It'll cost you.")
+                        .formatted(Formatting.GOLD), false);
+            }
+            paint();
             return;
         }
 

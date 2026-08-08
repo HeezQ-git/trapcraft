@@ -937,6 +937,48 @@ class FormulaTest {
     }
 
     @Test
+    void aPitBossIsADecisionRatherThanAnUpgrade() {
+        // The wage is flat and the skim is proportional, so the answer changes
+        // with how busy you are. If it did not, it would not be a choice.
+        long wagePerCycle = TrapMath.PIT_BOSS_WAGE * 2L * 20;
+        long quiet = 6_000;
+        long busy = 40_000;
+        assertTrue(TrapMath.skimOn(quiet) < wagePerCycle,
+                "a quiet room is better off without one: " + TrapMath.skimOn(quiet));
+        assertTrue(TrapMath.skimOn(busy) > wagePerCycle * 2,
+                "a busy one is not: " + TrapMath.skimOn(busy));
+        // And a cheat has to actually be a problem, or spotting them is not
+        // worth anything either.
+        assertTrue(TrapMath.CHEAT_RETURN > 1.0f, "an advantage player wins");
+        assertTrue(TrapMath.CHEAT_CHANCE > 0.0f && TrapMath.CHEAT_CHANCE < 0.2f,
+                "but not so often that the room is all of them");
+    }
+
+    @Test
+    void aLooseSpellReallyCosts() {
+        // It has to be a loss, or it is not a decision -- it is a button you
+        // press whenever it is off cooldown.
+        assertTrue(TrapMath.LOOSE_RETURN > 1.0f,
+                "running loose must lose money: " + TrapMath.LOOSE_RETURN);
+        assertTrue(TrapMath.punterMeasure(TrapMath.LOOSE_RETURN, 11L, 200_000) > 1.0f,
+                "and lose it in practice, not just on paper");
+        assertTrue(TrapMath.LOOSE_COOLDOWN_BEATS > TrapMath.LOOSE_BEATS * 2,
+                "and it cannot simply be left on");
+    }
+
+    @Test
+    void machinesWearOutOftenEnoughToMatter() {
+        // A busy ten-machine floor should throw up something to fix every ten
+        // minutes or so: a job, not the only job.
+        double roundsPerMinutePerMachine = 60.0 / 3.5;
+        double wearPerMinute = roundsPerMinutePerMachine / TrapMath.WEAR_PER_ROUNDS;
+        double minutesToBreak = TrapMath.WEAR_BROKEN / wearPerMinute;
+        double acrossTen = minutesToBreak / 10;
+        assertTrue(acrossTen > 4 && acrossTen < 25,
+                "one machine down every " + Math.round(acrossTen) + " minutes");
+    }
+
+    @Test
     void neitherStatIsARatchet() {
         // Both used to be counters that filled up and stayed there, which made
         // a casino a thing you switch on rather than a thing you run. Left
@@ -944,7 +986,7 @@ class FormulaTest {
         int rep = TrapMath.HOUSE_STAT_MAX;
         int addiction = TrapMath.HOUSE_STAT_MAX;
         for (int beat = 0; beat < 200; beat++) {
-            rep = TrapMath.repAfter(rep, TrapMath.houseRepTarget(0, 0, 0, 0, 0));
+            rep = TrapMath.repAfter(rep, TrapMath.houseRepTarget(0, 0, 0, 0, 0, 0, false));
             addiction = TrapMath.addictionAfter(addiction, 0);
         }
         assertEquals(0, rep, "an abandoned floor keeps its name forever");
@@ -966,17 +1008,24 @@ class FormulaTest {
 
     @Test
     void aQueueAtTheDoorIsTheWorstThing() {
-        int kept = TrapMath.houseRepTarget(7, 10, 8000, 5, 0);
-        int full = TrapMath.houseRepTarget(7, 10, 8000, 0, 0);
-        int queued = TrapMath.houseRepTarget(7, 10, 8000, 0, 3);
+        int kept = TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, false);
+        int full = TrapMath.houseRepTarget(7, 10, 8000, 0, 0, 0, false);
+        int queued = TrapMath.houseRepTarget(7, 10, 8000, 0, 3, 0, false);
         assertTrue(full < kept, "no room to play should cost something");
         assertTrue(queued < full - 25,
                 "turning people away should hurt far more: " + full + " -> " + queued);
         // And every lever is a decision somebody has to keep making.
-        assertTrue(TrapMath.houseRepTarget(1, 10, 8000, 5, 0) < kept, "variety matters");
-        assertTrue(TrapMath.houseRepTarget(7, 10, 100, 5, 0) < kept, "the float matters");
-        assertEquals(0, TrapMath.houseRepTarget(0, 0, 99999, 9, 0),
+        assertTrue(TrapMath.houseRepTarget(1, 10, 8000, 5, 0, 0, false) < kept, "variety matters");
+        assertTrue(TrapMath.houseRepTarget(7, 10, 100, 5, 0, 0, false) < kept, "the float matters");
+        assertEquals(0, TrapMath.houseRepTarget(0, 0, 99999, 9, 0, 0, false),
                 "a casino with no machines is not a casino");
+        // The two new levers, both of which the owner has to keep pulling.
+        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, TrapMath.WEAR_BROKEN, false)
+                        < kept - 20,
+                "a floor held together with tape should cost you");
+        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, true) > kept
+                        || kept >= TrapMath.HOUSE_STAT_MAX,
+                "running loose should be worth something");
     }
 
     @Test

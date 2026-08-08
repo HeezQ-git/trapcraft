@@ -47,7 +47,9 @@ public final class TrapGuide {
                         .then(CommandManager.literal("refiner")
                                 .executes(context -> give(context.getSource(), createCoca())))
                         .then(CommandManager.literal("street")
-                                .executes(context -> give(context.getSource(), createStreet())))));
+                                .executes(context -> give(context.getSource(), createStreet())))
+                        .then(CommandManager.literal("casino")
+                                .executes(context -> give(context.getSource(), createCasino())))));
     }
 
     /** Bare /guide lists the three rather than erroring at you. */
@@ -56,7 +58,8 @@ public final class TrapGuide {
                 .append(Text.literal("The Trap House\n").formatted(Formatting.DARK_GREEN, Formatting.BOLD))
                 .append(pick("grower", "growing, curing, rolling, heat"))
                 .append(pick("refiner", "the coca line"))
-                .append(pick("street", "paranoia, the ledger, contracts")), false);
+                .append(pick("street", "paranoia, the ledger, contracts"))
+                .append(pick("casino", "running a floor")), false);
         return 1;
     }
 
@@ -123,6 +126,132 @@ public final class TrapGuide {
      * putting them in either handbook would have meant writing them twice or
      * hiding them in the wrong one.
      */
+    /**
+     * The fourth book: running a floor.
+     *
+     * Split out because the casino stopped being a machine you place and
+     * became a business with staff, running costs, a reputation and a
+     * maintenance schedule -- and eleven pages of that buried in the middle of
+     * the street handbook is eleven pages nobody finds.
+     */
+    public static ItemStack createCasino() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("THE HOUSE"))
+                .append(Text.literal("\ncasino handbook\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("Seven games, a vault, and a name you can lose "
+                        + "in an evening.\n\n"))
+                .append(hint("Machines: /guide street"))));
+        casino(pages);
+        return book("The House", pages);
+    }
+
+    private static void casino(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. OPENING UP\n\n"))
+                .append(body("Craft a "))
+                .append(item("Casino Licence"))
+                .append(body(" and right-click the air.\n\n"))
+                .append(body("Name it in an anvil first and the house takes "
+                        + "that name.\n\n"))
+                .append(hint("Whoever holds it owns the place."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. WIRING UP\n\n"))
+                .append(body("Right-click any machine holding the card and it "
+                        + "pays into your vault.\n\n"))
+                .append(body("Every loss lands there. Every win comes out of "
+                        + "it.\n\n"))
+                .append(hint("Right-click again to cut it loose."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. THE FLOAT\n\n"))
+                .append(body("A machine won't take a bet it can't pay off.\n\n"))
+                .append(body("Keep " + TrapMath.FLOAT_PER_MACHINE
+                        + "e a machine behind them. It's most of your "
+                        + "name as well as your table limit.\n\n"))
+                .append(warn("Thin vault, small tables, no trade."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. WHAT IT COSTS\n\n"))
+                .append(body("Every machine: " + TrapMath.MACHINE_UPKEEP
+                        + "e every 30s, lit or not.\n\n"))
+                .append(body("Somebody takes "
+                        + Math.round(TrapMath.PROTECTION_RATE * 100)
+                        + "% of everything played, win or lose.\n\n"))
+                .append(warn("Miss the cut three times and they visit."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. THE PUNTERS\n\n"))
+                .append(body("Villagers wander in and play with their own "
+                        + "money.\n\n"))
+                .append(body("Busy after dark. At noon they're at work.\n\n"))
+                .append(hint("/floor shows the room."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. THE ROOM\n\n"))
+                .append(body("Quiet floor, big bets -- up to "
+                        + TrapMath.PUNTER_MAX_STAKE + "e.\n\n"))
+                .append(body("Packed floor, " + TrapMath.PUNTER_MIN_STAKE
+                        + "e a go. But a lot of them.\n\n"))
+                .append(hint("One machine, one player."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. YOUR NAME\n\n"))
+                .append(body("Different games. A full vault. A machine free "
+                        + "when somebody walks in.\n\n"))
+                .append(warn("A queue at the door costs you most.\n\n"))
+                .append(hint("It falls twice as fast as it climbs."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. THE REGULARS\n\n"))
+                .append(body("Held up by trade, forgotten in the quiet.\n\n"))
+                .append(body("Half an hour of nothing and they're gone.\n\n"))
+                .append(hint("Nobody keeps it at 100."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7. WEAR\n\n"))
+                .append(body("Machines break. A broken one takes no bets.\n\n"))
+                .append(body("Hit it with a "))
+                .append(item("Miner's Hammer"))
+                .append(body(". The house pays.\n\n"))
+                .append(hint("Cheaper before it goes."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8. A PIT BOSS\n\n"))
+                .append(body(TrapMath.PIT_BOSS_HIRE + "e up front, "
+                        + TrapMath.PIT_BOSS_WAGE + "e a beat.\n\n"))
+                .append(body("Without one the staff skim and about one punter "
+                        + "in " + Math.round(1 / TrapMath.CHEAT_CHANCE)
+                        + " is counting.\n\n"))
+                .append(hint("A wage is flat. A cut isn't."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. STANDING A ROUND\n\n"))
+                .append(body(TrapMath.COMP_COST_PER_MACHINE + "e a machine, "
+                        + "straight out of the vault.\n\n"))
+                .append(body("Buys +" + TrapMath.COMP_ADDICTION
+                        + " regulars and nothing else.\n\n"))
+                .append(hint("That is what a comp is."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. RUNNING LOOSE\n\n"))
+                .append(body("The machines pay over the odds for "
+                        + TrapMath.LOOSE_BEATS / 2 + " minutes.\n\n"))
+                .append(body("+" + TrapMath.LOOSE_REP_BONUS + " to your name, "
+                        + "and the regulars build twice as fast.\n\n"))
+                .append(warn("You lose money. That's the point."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11. THE NUMBERS\n\n"))
+                .append(body("The villagers hand over about 3%. The lights "
+                        + "eat most of it.\n\n"))
+                .append(body("Your own play is kept out of the books. It's "
+                        + "your money in a circle.\n\n"))
+                .append(warn("A bad night really can lose money."))));
+    }
+
     public static ItemStack createStreet() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         streetCover(pages);
@@ -399,86 +528,8 @@ public final class TrapGuide {
                         + "every shape there is.\n\n"))
                 .append(hint("Each has its own reels and odds."))));
 
-        pages.add(page(Text.empty()
-                .append(title("4o. YOUR CASINO\n\n"))
-                .append(body("Craft a "))
-                .append(item("Casino Licence"))
-                .append(body(" and right-click the air. That opens a house.\n\n"))
-                .append(body("Name the card in an anvil first and the house "
-                        + "takes that name."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o2. WIRING UP\n\n"))
-                .append(body("Right-click any machine holding the card and it "
-                        + "pays into your vault.\n\n"))
-                .append(body("Every loss lands there. Every win comes out of "
-                        + "it.\n\n"))
-                .append(body("Right-click again to cut it loose."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o3. THE FLOAT\n\n"))
-                .append(body("A machine won't take a bet it can't pay off.\n\n"))
-                .append(body("Keep money in the vault or your floor is shut. "
-                        + "Take it all out and it's shut too.\n\n"))
-                .append(warn("Thin vault, small tables."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4. THE EDGE\n\n"))
-                .append(body("The machines run 1-4% your way. Over a night "
-                        + "that's a wage. Over one spin it's nothing.\n\n"))
-                .append(warn("The Streak can land several lines at once and "
-                        + "clean you out. It's rare. It happens."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4n2. THE INDEX\n\n"))
-                .append(body("Prices track how much money is about lately, "
-                        + "not how much on day one.\n\n"))
-                .append(body("A jackpot makes things dear for an hour. "
-                        + "Then it's just normal.\n\n"))
-                .append(hint("/market shows it."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4b. PUNTERS\n\n"))
-                .append(body("Villagers wander in to wired machines and play "
-                        + "with their own money.\n\n"))
-                .append(body("They lose at the rate the cabinet says. That's "
-                        + "your wage.\n\n"))
-                .append(hint("Busy after dark. Quiet at noon."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4b2. YOUR NAME\n\n"))
-                .append(body("Different games, a full vault, and a machine "
-                        + "free when somebody walks in.\n\n"))
-                .append(warn("A queue at the door costs you most."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4b3. UPKEEP\n\n"))
-                .append(body("Every machine costs "
-                        + TrapMath.MACHINE_UPKEEP + "e every 30s, lit or "
-                        + "not.\n\n"))
-                .append(body("Somebody takes "
-                        + Math.round(TrapMath.PROTECTION_RATE * 100)
-                        + "% of everything played, win or lose.\n\n"))
-                .append(warn("Miss it three times and they visit."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4b4. THE ROOM\n\n"))
-                .append(body("A quiet floor gets big bets. A packed one gets "
-                        + "8e a go -- but a lot of them.\n\n"))
-                .append(hint("/floor shows both."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o4c. ONE AT A TIME\n\n"))
-                .append(body("A machine takes one player. Walk away or close "
-                        + "the screen and it frees up.\n\n"))
-                .append(warn("A punter on it means you wait too."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4o5. THE CARD\n\n"))
-                .append(body("Whoever holds it owns the house. All of it.\n\n"))
-                .append(body("It doesn't burn.\n\n"))
-                .append(warn("It does drop when you die."))));
     }
+
 
     private static void street(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()

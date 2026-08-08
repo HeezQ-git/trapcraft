@@ -189,6 +189,8 @@ public final class TrapFloor {
         final int stake;
         /** Where they stand to play it. Beside the machine, never on it. */
         final BlockPos stand;
+        /** An advantage player, if nobody was watching the door. */
+        boolean cheat;
         int roundsLeft;
         int wait;
         int won;
@@ -354,6 +356,19 @@ public final class TrapFloor {
             }
             // The slot machine's upper half is the same machine as its lower.
             BlockPos seat = TrapHouse.floorOf(server, pos);
+            net.minecraft.item.ItemStack held = player.getStackInHand(hand);
+
+            if (held.isOf(TrapContent.hammer)) {
+                mend(server, seat, gambler);
+                return ActionResult.SUCCESS;
+            }
+            if (TrapHouse.broken(server, seat)) {
+                gambler.sendMessage(Text.literal("Out of order. It wants a hammer.")
+                        .formatted(Formatting.RED), true);
+                world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                        SoundCategory.BLOCKS, 0.6F, 0.5F);
+                return ActionResult.SUCCESS;
+            }
             UUID on = occupant(server, seat);
             if (on != null && !on.equals(gambler.getUuid())) {
                 gambler.sendMessage(Text.literal(who(server, on) + " is on that one.")
@@ -394,6 +409,38 @@ public final class TrapFloor {
                 beat(server);
             }
         });
+    }
+
+    /**
+     * Put a machine right with a hammer.
+     *
+     * Anybody can do it, and the house pays -- charging whoever is holding the
+     * hammer would make the sensible move never to pick one up, and a floor
+     * where fixing things is somebody else's problem is a floor that stays
+     * broken.
+     */
+    private static void mend(ServerWorld world, BlockPos pos, ServerPlayerEntity mender) {
+        int worn = TrapHouse.wearAt(world, pos);
+        if (worn <= 0) {
+            mender.sendMessage(Text.literal("Nothing wrong with it.")
+                    .formatted(Formatting.GRAY), true);
+            return;
+        }
+        int cost = TrapHouse.repair(world, pos);
+        if (cost < 0) {
+            mender.sendMessage(Text.literal("The vault can't cover the parts. It stays broken.")
+                    .formatted(Formatting.RED), false);
+            world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                    SoundCategory.BLOCKS, 0.7F, 0.5F);
+            return;
+        }
+        mender.sendMessage(Text.literal("Put right.").formatted(Formatting.GREEN)
+                .append(Text.literal("  " + worn + " points of wear, " + cost + "e of parts.")
+                        .formatted(Formatting.DARK_GRAY)), false);
+        world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_USE,
+                SoundCategory.BLOCKS, 0.7F, 1.3F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
+                pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 12, 0.4, 0.4, 0.4, 0.02);
     }
 
     private static String who(ServerWorld world, UUID id) {
@@ -441,7 +488,7 @@ public final class TrapFloor {
                     || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
                 return;
             }
-            if (occupant(world, pos) == null) {
+            if (occupant(world, pos) == null && !TrapHouse.broken(world, pos)) {
                 open.add(at);
             }
         });
@@ -557,6 +604,14 @@ public final class TrapFloor {
         // ledge -- tickPunters puts them at the machine anyway, because a
         // punter stuck on the wrong side of a fence is a machine that never
         // frees up.
+        // Somebody watching the floor spots them on the way in. Without one,
+        // about one punter in sixteen is playing at better than even money and
+        // the vault just quietly leaks.
+        if (!house.pitBoss && random.nextFloat() < TrapMath.CHEAT_CHANCE) {
+            session.cheat = true;
+            punter.setCustomName(Text.literal("Punter  ·  " + stake + "e a go")
+                    .formatted(Formatting.WHITE));
+        }
         punter.getNavigation().startMovingTo(
                 stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 0.5);
         claim(world, pos, punter.getUuid(), false);
@@ -626,9 +681,33 @@ public final class TrapFloor {
                              TrapHouse.House house) {
         TrapHouse.punterStaked(house, punter.stake);
         float rtp = returnOf(world.getBlockState(pos).getBlock());
+        if (house.loose()) {
+            rtp = TrapMath.LOOSE_RETURN;
+        } else if (punter.cheat) {
+            rtp = TrapMath.CHEAT_RETURN;
+        }
         int back = Math.round(punter.stake
                 * TrapMath.punterRound(rtp, new java.util.Random(world.getRandom().nextLong())));
         int paid = TrapHouse.punterWon(house, back);
+
+        // Machines wear out. A busy floor throws up something to fix every ten
+        // minutes or so, and a shabby one is worth less to its own name --
+        // which is what stops the hammer being a chore with no consequence.
+        if (world.getRandom().nextInt(TrapMath.WEAR_PER_ROUNDS) == 0
+                && TrapHouse.wearOne(TrapHouse.wireAt(world, pos))) {
+            world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_LAND,
+                    SoundCategory.BLOCKS, 0.6F, 0.6F);
+            world.spawnParticles(ParticleTypes.LARGE_SMOKE,
+                    pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
+                    25, 0.35, 0.35, 0.35, 0.02);
+            for (ServerPlayerEntity nearby : world.getPlayers()) {
+                if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
+                    nearby.sendMessage(Text.literal("A machine's gone down at "
+                                    + pos.getX() + ", " + pos.getZ() + ". It wants a hammer.")
+                            .formatted(Formatting.RED), false);
+                }
+            }
+        }
 
         if (paid > punter.stake) {
             punter.won += paid - punter.stake;
@@ -796,9 +875,12 @@ public final class TrapFloor {
                         .formatted(Formatting.DARK_GRAY));
         for (TrapHouse.House house : TrapHouse.all()) {
             out.append(Text.literal("\n  " + house.name + "  name "
-                            + house.rep + ", regulars " + house.addiction + "  ->  "
-                            + String.format("%.2f", house.pull()) + "x")
-                    .formatted(Formatting.DARK_GRAY));
+                            + house.rep + ", regulars " + house.addiction
+                            + ", worn " + TrapHouse.averageWear(house) + "  ->  "
+                            + String.format("%.2f", house.pull()) + "x"
+                            + (house.pitBoss ? "  [boss]" : "")
+                            + (house.loose() ? "  [LOOSE " + house.looseBeats / 2 + "m]" : ""))
+                    .formatted(house.loose() ? Formatting.GOLD : Formatting.DARK_GRAY));
         }
         Text shown = out;
         source.sendFeedback(() -> shown, false);

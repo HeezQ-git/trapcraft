@@ -1290,6 +1290,54 @@ public final class TrapMath {
      */
     public static final float PROTECTION_RATE = 0.01f;
 
+    /**
+     * Wear a machine takes per round, as one chance in this many.
+     *
+     * Sized so a busy ten-machine floor throws up something to fix every ten
+     * minutes or so: often enough to be a job, rare enough not to be the only
+     * job.
+     */
+    public static final int WEAR_PER_ROUNDS = 15;
+    /** Past this a machine is out of order and takes no bets. */
+    public static final int WEAR_BROKEN = 100;
+    /** What putting one right takes out of the vault, per point of wear. */
+    public static final int REPAIR_COST_PER_POINT = 3;
+
+    /**
+     * What a pit boss costs per beat, and what going without costs instead.
+     *
+     * The wage is FLAT and the skim is PROPORTIONAL, which is the whole point:
+     * below about ten thousand emeralds of trade a cycle you are better off
+     * without one, and above it you are not. A small quiet room and a big busy
+     * one want different answers, and that is a decision rather than an
+     * upgrade.
+     */
+    public static final int PIT_BOSS_WAGE = 4;
+    public static final float SKIM_RATE = 0.015f;
+    public static final int PIT_BOSS_HIRE = 600;
+
+    /** How often a punter is an advantage player, with nobody watching. */
+    public static final float CHEAT_CHANCE = 0.06f;
+    /** What a cheat plays at. Over one, which is the problem. */
+    public static final float CHEAT_RETURN = 1.18f;
+
+    /** What a round of drinks costs per machine, and what it buys. */
+    public static final int COMP_COST_PER_MACHINE = 30;
+    public static final int COMP_ADDICTION = 9;
+    /** Beats before you can stand another round. */
+    public static final int COMP_COOLDOWN_BEATS = 8;
+
+    /** How long a loose spell runs, and what it does. */
+    public static final int LOOSE_BEATS = 12;
+    public static final float LOOSE_RETURN = 1.03f;
+    public static final int LOOSE_REP_BONUS = 22;
+    public static final int LOOSE_COOLDOWN_BEATS = 40;
+
+    /** What the skim comes to on this much play. */
+    public static int skimOn(long handleThisBeat) {
+        return (int) Math.max(0, Math.round(Math.max(0, handleThisBeat) * SKIM_RATE));
+    }
+
     /** What the cut comes to on this much play. */
     public static int protectionOn(long handleThisBeat) {
         return (int) Math.max(0, Math.round(Math.max(0, handleThisBeat) * PROTECTION_RATE));
@@ -1320,9 +1368,12 @@ public final class TrapMath {
      * @param balance    what's in the vault
      * @param free       machines standing empty right now
      * @param turnedAway punters sent away since the last beat
+     * @param avgWear    average condition of the floor, 0 fresh .. 100 broken
+     * @param loose      whether the floor is running generous right now
      */
     public static int houseRepTarget(int varieties, int machines, long balance,
-                                     int free, int turnedAway) {
+                                     int free, int turnedAway, int avgWear,
+                                     boolean loose) {
         if (machines <= 0) {
             return 0;
         }
@@ -1331,6 +1382,13 @@ public final class TrapMath {
         score += (int) Math.min(33, Math.max(0, balance) * 33 / needed);
         score += Math.min(25, Math.max(0, free) * 9);
         score -= Math.min(60, Math.max(0, turnedAway) * 12);
+        // A shabby room is a shabby room. Nobody is impressed by a floor of
+        // machines held together with tape, and this is what makes the hammer
+        // part of running the place rather than a chore with no consequence.
+        score -= Math.min(30, Math.max(0, avgWear) * 30 / WEAR_BROKEN);
+        if (loose) {
+            score += LOOSE_REP_BONUS;
+        }
         return Math.max(0, Math.min(HOUSE_STAT_MAX, score));
     }
 

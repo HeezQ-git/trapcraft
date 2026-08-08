@@ -111,6 +111,13 @@ public final class TrapHouse {
         public long ownPlay;
         /** Beats running with the cut unpaid. Somebody comes for the third. */
         int owing;
+        /** Somebody watching the floor. Stops the skim and spots the cheats. */
+        public boolean pitBoss;
+        /** Beats left of running generous. See TrapMath.LOOSE_BEATS. */
+        public int looseBeats;
+        /** Beats until another spell can be called, or another round stood. */
+        public int looseCooldown;
+        public int compCooldown;
 
         House(UUID id, String founder, String name) {
             this.id = id;
@@ -145,6 +152,11 @@ public final class TrapHouse {
             return TrapMath.floorPull(rep, addiction);
         }
 
+        /** Is the floor running generous right now? */
+        public boolean loose() {
+            return looseBeats > 0;
+        }
+
         void nudge(int repDelta, int addictionDelta) {
             rep = Math.max(0, Math.min(TrapMath.HOUSE_STAT_MAX, rep + repDelta));
             addiction = Math.max(0, Math.min(TrapMath.HOUSE_STAT_MAX,
@@ -155,6 +167,15 @@ public final class TrapHouse {
     private static final Map<UUID, House> HOUSES = new LinkedHashMap<>();
     /** "dimension x y z" -> casino id. */
     private static final Map<String, UUID> WIRES = new HashMap<>();
+    /**
+     * How worn each machine is, keyed the same way as a wire.
+     *
+     * On the MACHINE rather than the house, because a floor's condition is the
+     * condition of the particular cabinets on it -- the one in the corner
+     * nobody plays stays fresh while the one by the door falls apart, and
+     * walking round finding out which is which is the job.
+     */
+    private static final Map<String, Integer> WEAR = new HashMap<>();
     private static Path saveFile;
 
     private TrapHouse() {
@@ -219,6 +240,78 @@ public final class TrapHouse {
             total += house.balance;
         }
         return total;
+    }
+
+    /** The wire key for whatever machine is at this position. */
+    public static String wireAt(World world, BlockPos pos) {
+        return key(world, floorOf(world, pos));
+    }
+
+    /** How worn the machine at this wire is, 0 fresh .. 100 out of order. */
+    public static int wearAt(String wire) {
+        return WEAR.getOrDefault(wire, 0);
+    }
+
+    public static int wearAt(World world, BlockPos pos) {
+        return wearAt(key(world, floorOf(world, pos)));
+    }
+
+    public static boolean broken(World world, BlockPos pos) {
+        return wearAt(world, pos) >= TrapMath.WEAR_BROKEN;
+    }
+
+    /** One round's worth of use. Returns true if that was the one that broke it. */
+    public static boolean wearOne(String wire) {
+        int worn = Math.min(TrapMath.WEAR_BROKEN, wearAt(wire) + 1);
+        WEAR.put(wire, worn);
+        save();
+        return worn >= TrapMath.WEAR_BROKEN;
+    }
+
+    /** What putting this one right would cost. */
+    public static int repairCost(World world, BlockPos pos) {
+        return wearAt(world, pos) * TrapMath.REPAIR_COST_PER_POINT;
+    }
+
+    /**
+     * Put a machine right, on the house.
+     *
+     * Paid out of the vault rather than the mechanic's pocket, because it is a
+     * business expense and because charging whoever happens to be holding the
+     * hammer would mean the sensible move is never to pick one up.
+     *
+     * @return what it cost, or -1 if the vault couldn't cover it
+     */
+    public static int repair(World world, BlockPos pos) {
+        String wire = key(world, floorOf(world, pos));
+        House house = HOUSES.get(WIRES.get(wire));
+        int cost = wearAt(wire) * TrapMath.REPAIR_COST_PER_POINT;
+        if (cost <= 0) {
+            return 0;
+        }
+        if (house != null) {
+            if (house.balance < cost) {
+                return -1;
+            }
+            house.balance -= cost;
+            house.costs += cost;
+        }
+        WEAR.remove(wire);
+        save();
+        return cost;
+    }
+
+    /** Average condition of this floor, 0 fresh .. 100 in pieces. */
+    public static int averageWear(House house) {
+        int total = 0;
+        int machines = 0;
+        for (Map.Entry<String, UUID> wire : WIRES.entrySet()) {
+            if (wire.getValue().equals(house.id)) {
+                total += wearAt(wire.getKey());
+                machines++;
+            }
+        }
+        return machines == 0 ? 0 : total / machines;
     }
 
     /** Every wired machine, as "dimension x y z" -> casino id. Read-only. */
@@ -313,7 +406,8 @@ public final class TrapHouse {
      */
     public static void beat(House house, int varieties, int machines, int free) {
         int bill = machines * TrapMath.MACHINE_UPKEEP
-                + TrapMath.protectionOn(house.handleThisBeat);
+                + TrapMath.protectionOn(house.handleThisBeat)
+                + (house.pitBoss ? TrapMath.PIT_BOSS_WAGE : 0);
         house.handleThisBeat = 0;
         if (house.balance >= bill) {
             house.balance -= bill;
@@ -328,10 +422,23 @@ public final class TrapHouse {
             house.nudge(-6, 0);
         }
         house.rep = TrapMath.repAfter(house.rep, TrapMath.houseRepTarget(
-                varieties, machines, house.balance, free, house.turnedAwayThisBeat));
-        house.addiction = TrapMath.addictionAfter(house.addiction, house.roundsThisBeat);
+                varieties, machines, house.balance, free, house.turnedAwayThisBeat,
+                averageWear(house), house.loose()));
+        // A loose spell is worth double to the regulars, which is most of why
+        // anybody would ever call one.
+        house.addiction = TrapMath.addictionAfter(house.addiction,
+                house.loose() ? house.roundsThisBeat * 2 : house.roundsThisBeat);
         house.roundsThisBeat = 0;
         house.turnedAwayThisBeat = 0;
+        if (house.looseBeats > 0) {
+            house.looseBeats--;
+        }
+        if (house.looseCooldown > 0) {
+            house.looseCooldown--;
+        }
+        if (house.compCooldown > 0) {
+            house.compCooldown--;
+        }
         save();
     }
 
@@ -644,7 +751,9 @@ public final class TrapHouse {
             // floorOf(world, pos) would read AIR here -- the block is already
             // gone by AFTER. The state we were handed is the one that broke,
             // so an upper half still resolves to the machine's own square.
-            if (WIRES.remove(key(world, floorOf(state, pos))) != null) {
+            String wire = key(world, floorOf(state, pos));
+            WEAR.remove(wire);
+            if (WIRES.remove(wire) != null) {
                 save();
             }
         });
@@ -751,8 +860,12 @@ public final class TrapHouse {
             for (House house : HOUSES.values()) {
                 lines.add("costs " + house.id + " " + house.costs
                         + " " + house.ownPlay);
+                lines.add("staff " + house.id + " " + (house.pitBoss ? 1 : 0)
+                        + " " + house.looseBeats + " " + house.looseCooldown
+                        + " " + house.compCooldown);
             }
             WIRES.forEach((where, id) -> lines.add("wire " + where + " " + id));
+            WEAR.forEach((where, worn) -> lines.add("wear " + where + " " + worn));
             Files.write(saveFile, lines);
         } catch (Exception failure) {
             TrapCraft.LOGGER.error("couldn't save the casinos: {}", failure.toString());
@@ -763,6 +876,7 @@ public final class TrapHouse {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-houses.txt");
         HOUSES.clear();
         WIRES.clear();
+        WEAR.clear();
         try {
             if (!Files.exists(saveFile)) {
                 return;
@@ -808,6 +922,17 @@ public final class TrapHouse {
                             house.ownPlay = Long.parseLong(parts[3]);
                         }
                     }
+                } else if (parts.length == 6 && parts[0].equals("staff")) {
+                    House house = HOUSES.get(UUID.fromString(parts[1]));
+                    if (house != null) {
+                        house.pitBoss = "1".equals(parts[2]);
+                        house.looseBeats = Integer.parseInt(parts[3]);
+                        house.looseCooldown = Integer.parseInt(parts[4]);
+                        house.compCooldown = Integer.parseInt(parts[5]);
+                    }
+                } else if (parts.length == 6 && parts[0].equals("wear")) {
+                    WEAR.put(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4],
+                            Integer.parseInt(parts[5]));
                 } else if (parts.length == 6 && parts[0].equals("wire")) {
                     WIRES.put(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4],
                             UUID.fromString(parts[5]));
@@ -824,6 +949,79 @@ public final class TrapHouse {
             TrapCraft.LOGGER.error("couldn't read the casinos -- vaults may be lost: {}",
                     failure.toString());
         }
+    }
+
+    /**
+     * Take somebody on to watch the floor.
+     *
+     * @return why not, or null if they start tonight
+     */
+    public static String hirePitBoss(House house) {
+        if (house.pitBoss) {
+            return "You've already got somebody on the floor.";
+        }
+        if (house.balance < TrapMath.PIT_BOSS_HIRE) {
+            return "That's " + TrapMath.PIT_BOSS_HIRE + "e up front and the vault's short.";
+        }
+        house.balance -= TrapMath.PIT_BOSS_HIRE;
+        house.costs += TrapMath.PIT_BOSS_HIRE;
+        house.pitBoss = true;
+        save();
+        return null;
+    }
+
+    public static void sackPitBoss(House house) {
+        house.pitBoss = false;
+        save();
+    }
+
+    /**
+     * Stand the room a round.
+     *
+     * Money straight out of the vault for nothing you can point at, which is
+     * exactly what a comp is. What it buys is the regulars staying regular.
+     */
+    public static String comp(House house, int machines) {
+        if (house.compCooldown > 0) {
+            return "You've only just stood one. Give it "
+                    + house.compCooldown / 2 + " minutes.";
+        }
+        int cost = Math.max(TrapMath.COMP_COST_PER_MACHINE,
+                machines * TrapMath.COMP_COST_PER_MACHINE);
+        if (house.balance < cost) {
+            return "A round for this lot is " + cost + "e. The vault's short.";
+        }
+        house.balance -= cost;
+        house.costs += cost;
+        house.nudge(0, TrapMath.COMP_ADDICTION);
+        house.compCooldown = TrapMath.COMP_COOLDOWN_BEATS;
+        save();
+        return null;
+    }
+
+    /**
+     * Run the floor generous for a while.
+     *
+     * A deliberate loss. The machines pay over the odds, the vault goes
+     * backwards, and in exchange the room fills and the name climbs. Which is
+     * the most business-like decision in the whole thing: spending money on
+     * something that only pays back later, and only if you keep the rest of
+     * the place worth coming to.
+     */
+    public static String runLoose(House house) {
+        if (house.loose()) {
+            return "It's already running loose.";
+        }
+        if (house.looseCooldown > 0) {
+            return "Not yet. Another " + house.looseCooldown / 2 + " minutes.";
+        }
+        if (house.balance < TrapMath.FLOAT_PER_MACHINE) {
+            return "Not on a vault this thin. It's a loss on purpose.";
+        }
+        house.looseBeats = TrapMath.LOOSE_BEATS;
+        house.looseCooldown = TrapMath.LOOSE_COOLDOWN_BEATS;
+        save();
+        return null;
     }
 
     /** How many beats this floor has been behind on what it owes. */
