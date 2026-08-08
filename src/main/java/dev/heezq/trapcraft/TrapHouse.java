@@ -126,6 +126,15 @@ public final class TrapHouse {
     public static final int TOP_CLIMB = 12;
     public static final int TOP_TOSS = (int) TrapMath.TOSS_EDGE_PAY;
     public static final int TOP_BLACKJACK = 5;
+    /**
+     * Scratchers, at a card that actually turns up.
+     *
+     * A card can theoretically reach 210x. About one in six thousand beats
+     * this and empties the vault, which is the same bargain the slot makes
+     * and for the same reason: limiting at the ceiling would put a 32e card
+     * out of reach of any casino anybody will actually build.
+     */
+    public static final int TOP_SCRATCH = 60;
 
     // --- lookups --------------------------------------------------------------
 
@@ -208,7 +217,8 @@ public final class TrapHouse {
     public static boolean isMachine(Block block) {
         return block == TrapContent.slotMachine || block == TrapContent.roulette
                 || block == TrapContent.plinko || block == TrapContent.climb
-                || block == TrapContent.toss || block == TrapContent.blackjack;
+                || block == TrapContent.toss || block == TrapContent.blackjack
+                || block == TrapContent.scratch;
     }
 
     /**

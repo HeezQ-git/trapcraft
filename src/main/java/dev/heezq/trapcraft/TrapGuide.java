@@ -350,6 +350,23 @@ public final class TrapGuide {
                 .append(warn("Blackjack pays six to five here, not three to two."))));
 
         pages.add(page(Text.empty()
+                .append(title("4l2. SCRATCHERS\n\n"))
+                .append(body("Buy a card. Click the nine panels in any "
+                        + "order.\n\n"))
+                .append(body("Three of a kind pays. Four pays x"
+                        + (int) TrapMath.SCRATCH_SIZES[4] + ", five x"
+                        + (int) TrapMath.SCRATCH_SIZES[5] + ".\n\n"))
+                .append(hint("Three in a line pays double."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4l3. THE ODDS\n\n"))
+                .append(body(Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
+                        + " cards in 100 pay something.\n\n"))
+                .append(warn("Most of those pay back less than the card "
+                        + "cost.\n\n"))
+                .append(hint("One prize a card. The best on it."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4m. COINS\n\n"))
                 .append(body("The exchange has a second window: six coins "
                         + "you can buy and sell whenever.\n\n"))

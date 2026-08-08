@@ -1478,6 +1478,44 @@ WALLET_COIN = """
 ................
 """
 
+# --- the scratchers counter -----------------------------------------------
+
+SCRATCH_PAL = {
+    "r": "#8c2230",     # counter felt, red
+    "R": "#b03040",     # felt, lit
+    "d": "#5e1420",     # felt, shadow
+    "c": "#d9d3c2",     # card stock
+    "C": "#f2eee2",     # card, lit
+    "s": "#a8a8a8",     # silver foil, unscratched
+    "S": "#cfcfcf",     # foil, lit
+    "g": "#c9a227",     # gold trim
+    "G": "#f0cf5a",     # gold, lit
+    "k": "#2b1d16",     # outline
+}
+
+# The counter top seen from above: three tickets fanned out on red felt, one
+# already scratched. Read at 16px what has to survive is the LAYOUT -- three
+# pale rectangles on red -- so the panels are drawn big and blocky rather than
+# detailed.
+SCRATCH_TOP = """
+gggggggggggggggg
+gdrrrrrrrrrrrrdg
+grkccckkccckkccg
+grkcCckkcCckkcCg
+grkssckkssckksck
+grkSsckkSsckkSsg
+grkssckkssckkscg
+grkccckkccckkccg
+grrrrrrrrrrrrrrg
+grkcccccckkGGkrg
+grkCcccccckgGkrg
+grksssssssckkkrg
+grkSssssssckrrrg
+grkccccccccckrrg
+gdrrrrrrrrrrrrdg
+gggggggggggggggg
+"""
+
 # --- the owner's card -----------------------------------------------------
 
 CARD_PAL = {
@@ -2163,6 +2201,7 @@ def main() -> None:
     write(render(WALLET_BODY, WALLET_PAL), "item", "wallet_body.png")
     write(render(WALLET_FLAP, WALLET_PAL), "item", "wallet_flap.png")
     write(render(WALLET_COIN, WALLET_PAL), "item", "wallet_coin.png")
+    write(render(SCRATCH_TOP, SCRATCH_PAL), "block", "scratch_top.png")
     write(render(CARD_FACE, CARD_PAL), "item", "card_face.png")
     write(render(CARD_EDGE, CARD_PAL), "item", "card_edge.png")
     write(render(CARD_CHIP, CARD_PAL), "item", "card_chip.png")

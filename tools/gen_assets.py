@@ -468,6 +468,8 @@ def lang() -> None:
         "block.trapcraft.toss": "Coin Toss",
         "item.trapcraft.toss": "Coin Toss",
         "block.trapcraft.blackjack": "Blackjack",
+        "block.trapcraft.scratch": "Scratchers",
+        "item.trapcraft.scratch": "Scratchers",
         "item.trapcraft.blackjack": "Blackjack",
         "item.trapcraft.climb": "The Climb",
         "item.trapcraft.plinko": "The Drop",
@@ -1858,6 +1860,10 @@ def main() -> None:
     table_assets("blackjack", "blackjack_top", ["APA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "P": "#minecraft:planks",
                   "W": "minecraft:green_wool"})
+    # Paper and gold leaf on red: a newsagent's counter, not a card table.
+    table_assets("scratch", "scratch_top", ["AGA", "WWW", "PPP"],
+                 {"A": "minecraft:paper", "G": "minecraft:gold_ingot",
+                  "P": "#minecraft:planks", "W": "minecraft:red_wool"})
     advancements()
     phone_assets()
     stall_assets()

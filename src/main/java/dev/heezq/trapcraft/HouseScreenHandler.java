@@ -178,6 +178,7 @@ public class HouseScreenHandler extends ScreenHandler {
         lore.add(limit("The Climb", TrapHouse.TOP_CLIMB, house));
         lore.add(limit("Coin Toss", TrapHouse.TOP_TOSS, house));
         lore.add(limit("Blackjack", TrapHouse.TOP_BLACKJACK, house));
+        lore.add(limit("Scratchers", TrapHouse.TOP_SCRATCH, house));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }

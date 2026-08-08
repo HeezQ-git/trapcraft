@@ -720,6 +720,79 @@ class FormulaTest {
         }
     }
 
+    // --- scratchcards -------------------------------------------------------------
+
+    @Test
+    void theScratchersKeepTheirEdge() {
+        java.util.Random rng = new java.util.Random(90210);
+        double paid = 0;
+        int wins = 0;
+        int rounds = 400_000;
+        for (int card = 0; card < rounds; card++) {
+            float pay = TrapMath.scratchPay(TrapMath.scratchCard(rng));
+            paid += pay;
+            if (pay > 0) {
+                wins++;
+            }
+        }
+        double rtp = paid / rounds;
+        double rate = wins / (double) rounds;
+        // A machine that pays more than it takes is a money printer, and one
+        // that pays far less is a machine nobody plays twice.
+        assertTrue(rtp > 0.90 && rtp < 0.99, "scratchcard RTP is " + rtp);
+        assertEquals(TrapMath.SCRATCH_MEASURED_RTP, rtp, 0.01,
+                "the number the counter prints has drifted from the truth");
+        assertEquals(TrapMath.SCRATCH_MEASURED_WIN_RATE, rate, 0.01,
+                "the win rate the counter prints has drifted from the truth");
+    }
+
+    @Test
+    void aCardPaysOnceForItsBestFace() {
+        // Three nuggets AND three stars is a star card, not both. Paying both
+        // is exactly how the slot machine's return got to 2.69.
+        int[] both = {1, 1, 1, 5, 5, 5, 0, 0, 0};
+        assertEquals(5, TrapMath.scratchWinner(both));
+        // Row 1 is 5,5,5 -- three in a line, so double.
+        assertEquals(TrapMath.SCRATCH_PRIZES[5] * TrapMath.SCRATCH_LINE_BONUS,
+                TrapMath.scratchPay(both), 0.001f);
+    }
+
+    @Test
+    void twoOfAKindIsNothing() {
+        int[] near = {4, 4, 0, 3, 3, 0, 2, 2, 1};
+        assertEquals(0.0f, TrapMath.scratchPay(near), 0.0001f);
+        assertEquals(-1, TrapMath.scratchWinner(near));
+    }
+
+    @Test
+    void theLineBonusOnlyAppliesToExactlyThree() {
+        // Four of a face is already paid for by the size multiplier. Stacking
+        // both put the top of the tail somewhere no vault could cover.
+        int[] three = {3, 3, 3, 0, 0, 0, 0, 0, 1};       // a row
+        int[] four = {3, 3, 3, 3, 0, 0, 0, 0, 1};        // a row, plus a spare
+        assertEquals(TrapMath.SCRATCH_PRIZES[3] * TrapMath.SCRATCH_LINE_BONUS,
+                TrapMath.scratchPay(three), 0.001f);
+        assertEquals(TrapMath.SCRATCH_PRIZES[3] * TrapMath.SCRATCH_SIZES[4],
+                TrapMath.scratchPay(four), 0.001f);
+    }
+
+    @Test
+    void everyPanelComesFromTheSameBag() {
+        // No position is special and no face is missing from the bag, or the
+        // published odds are describing a different game to the one on screen.
+        java.util.Random rng = new java.util.Random(5);
+        int[] seen = new int[TrapMath.SCRATCH_FACES];
+        for (int card = 0; card < 60_000; card++) {
+            for (int face : TrapMath.scratchCard(rng)) {
+                assertTrue(face >= 0 && face < TrapMath.SCRATCH_FACES, "bad face " + face);
+                seen[face]++;
+            }
+        }
+        for (int face = 0; face < TrapMath.SCRATCH_FACES; face++) {
+            assertTrue(seen[face] > 0, "face " + face + " never came up");
+        }
+    }
+
     // --- getting jumped ---------------------------------------------------------
 
     @Test

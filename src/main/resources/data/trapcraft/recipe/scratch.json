@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "AGA",
+    "WWW",
+    "PPP"
+  ],
+  "key": {
+    "A": "minecraft:paper",
+    "G": "minecraft:gold_ingot",
+    "P": "#minecraft:planks",
+    "W": "minecraft:red_wool"
+  },
+  "result": {
+    "id": "trapcraft:scratch",
+    "count": 1
+  }
+}

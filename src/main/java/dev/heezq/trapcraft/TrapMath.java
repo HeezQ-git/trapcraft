@@ -1047,6 +1047,137 @@ public final class TrapMath {
         return bets;
     }
 
+    // --- scratchcards -----------------------------------------------------------
+    //
+    // Nine panels, six faces, and no reels. The whole appeal is that you find
+    // out one square at a time: two matching and seven still silver is the
+    // best thirty seconds on the floor, and it costs nothing to build because
+    // the card was already decided the moment you paid for it.
+    //
+    // It is deliberately the loosest machine on the floor by win rate and the
+    // tightest by return -- four cards in ten pay SOMETHING and most of those
+    // pay back less than the card cost. That is what a scratchcard is, and it
+    // is a different feeling from the slot next to it, which is the only
+    // reason to have both.
+
+    public static final int SCRATCH_PANELS = 9;
+    /** Blank, nugget, emerald, bell, diamond, star. */
+    public static final int SCRATCH_FACES = 6;
+    /** Out of 1000. Blanks are half the card, which is what makes a match news. */
+    public static final int[] SCRATCH_WEIGHTS = {500, 200, 130, 90, 60, 20};
+    /** What three of each is worth, as a multiple of the card. */
+    public static final float[] SCRATCH_PRIZES = {0.0f, 0.5f, 1.4f, 4.25f, 11.5f, 35.0f};
+    /** And what finding more than three multiplies it by. */
+    public static final float[] SCRATCH_SIZES = {0, 0, 0, 1.0f, 3.0f, 6.0f, 12.0f};
+    /** Three of a kind that also fall in a line pay double. */
+    public static final float SCRATCH_LINE_BONUS = 2.0f;
+    /** Measured over two million cards. See FormulaTest. */
+    public static final float SCRATCH_MEASURED_RTP = 0.944f;
+    public static final float SCRATCH_MEASURED_WIN_RATE = 0.396f;
+
+    /** Rows, columns and both diagonals of the 3x3 face. */
+    public static final int[][] SCRATCH_LINES = {
+            {0, 1, 2}, {3, 4, 5}, {6, 7, 8},
+            {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
+            {0, 4, 8}, {2, 4, 6},
+    };
+
+    /**
+     * Print a card.
+     *
+     * Every panel drawn independently from the same bag, which is what makes
+     * the odds computable rather than tuned by feel -- and what stops the card
+     * ever being able to "decide" you have had enough.
+     */
+    public static int[] scratchCard(Random rng) {
+        int total = 0;
+        for (int weight : SCRATCH_WEIGHTS) {
+            total += weight;
+        }
+        int[] card = new int[SCRATCH_PANELS];
+        for (int panel = 0; panel < SCRATCH_PANELS; panel++) {
+            int roll = rng.nextInt(total);
+            int face = 0;
+            while (roll >= SCRATCH_WEIGHTS[face]) {
+                roll -= SCRATCH_WEIGHTS[face];
+                face++;
+            }
+            card[panel] = face;
+        }
+        return card;
+    }
+
+    /** Is this face sitting in a full row, column or diagonal? */
+    public static boolean scratchInLine(int[] card, int face) {
+        for (int[] line : SCRATCH_LINES) {
+            if (card[line[0]] == face && card[line[1]] == face && card[line[2]] == face) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** How many of one face are on the card. */
+    public static int scratchCount(int[] card, int face) {
+        int found = 0;
+        for (int panel : card) {
+            if (panel == face) {
+                found++;
+            }
+        }
+        return found;
+    }
+
+    /**
+     * The best thing on this card, as a multiple of what it cost.
+     *
+     * One prize per card, not one per matching face. A card holding three
+     * nuggets AND three diamonds pays the diamonds and nothing else, the same
+     * way a real ticket has one prize printed on it -- and, less romantically,
+     * because paying both is how the slot machine's return got to 2.69 before
+     * it was rewritten.
+     */
+    public static float scratchPay(int[] card) {
+        float best = 0.0f;
+        for (int face = 1; face < SCRATCH_FACES; face++) {
+            int count = scratchCount(card, face);
+            if (count < 3) {
+                continue;
+            }
+            float pay = SCRATCH_PRIZES[face] * SCRATCH_SIZES[Math.min(count, 6)];
+            // The line bonus is for exactly three, where finding them lined up
+            // is the whole event. Four or more is already being paid for by
+            // the size multiplier, and stacking both put the tail somewhere no
+            // player-owned vault could ever cover.
+            if (count == 3 && scratchInLine(card, face)) {
+                pay *= SCRATCH_LINE_BONUS;
+            }
+            best = Math.max(best, pay);
+        }
+        return best;
+    }
+
+    /** Which face won, or -1 for a dud. Kept in step with scratchPay by construction. */
+    public static int scratchWinner(int[] card) {
+        int winner = -1;
+        float best = 0.0f;
+        for (int face = 1; face < SCRATCH_FACES; face++) {
+            int count = scratchCount(card, face);
+            if (count < 3) {
+                continue;
+            }
+            float pay = SCRATCH_PRIZES[face] * SCRATCH_SIZES[Math.min(count, 6)];
+            if (count == 3 && scratchInLine(card, face)) {
+                pay *= SCRATCH_LINE_BONUS;
+            }
+            if (pay > best) {
+                best = pay;
+                winner = face;
+            }
+        }
+        return winner;
+    }
+
     // --- getting jumped ---------------------------------------------------------
     //
     // Handing product to somebody yourself is the risky way to make money, and
