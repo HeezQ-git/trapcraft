@@ -95,6 +95,9 @@ public final class TrapHouse {
         public int rep;
         /** How hooked the regulars are, 0..100. Built by play, decays quietly. */
         public int addiction;
+        /** Counted between beats, then folded into the two stats and reset. */
+        int roundsThisBeat;
+        int turnedAwayThisBeat;
 
         House(UUID id, String founder, String name) {
             this.id = id;
@@ -232,8 +235,7 @@ public final class TrapHouse {
         house.balance += amount;
         house.handle += amount;
         house.plays++;
-        // Every round played is another round the regulars wanted.
-        house.nudge(0, 1);
+        house.roundsThisBeat++;
         save();
     }
 
@@ -249,24 +251,54 @@ public final class TrapHouse {
         int given = (int) Math.min(Math.max(0, amount), house.balance);
         house.balance -= given;
         house.paid += given;
-        if (given > 0) {
-            house.nudge(1, 0);
-        }
         save();
         return given;
     }
 
-    /** Somebody walked up and the table wouldn't take their money. */
+    /**
+     * Somebody walked up and couldn't play -- no free machine, or a vault too
+     * thin to cover the smallest bet there is.
+     *
+     * The single most expensive thing that can happen to a floor's name, and
+     * deliberately so: a queue at the door is what a room that has outgrown
+     * itself looks like from outside, and it is the one problem the owner can
+     * always fix by building another cabinet or putting money behind the ones
+     * they have.
+     */
     public static void turnedAway(House house) {
-        house.nudge(-2, 0);
+        house.turnedAwayThisBeat++;
+        house.nudge(-3, 0);
         save();
     }
 
-    /** One beat of a quiet room forgetting about itself. */
-    public static void cool() {
-        for (House house : HOUSES.values()) {
-            house.nudge(house.rep > 0 ? -1 : 0, house.addiction > 0 ? -1 : 0);
+    /**
+     * One beat of running a casino.
+     *
+     * The lights, the felt and whoever sweeps up cost money whether or not
+     * anybody plays, so an over-built floor with no trade bleeds and a floor
+     * nobody visits in the daytime runs at a loss until the evening. That
+     * standing cost is what makes the number of machines a DECISION rather
+     * than something to maximise.
+     *
+     * Then both stats are moved towards what the floor currently deserves --
+     * see {@link TrapMath#houseRepTarget} and {@link TrapMath#addictionAfter}.
+     *
+     * @param free how many of this house's machines are standing empty
+     */
+    public static void beat(House house, int varieties, int machines, int free) {
+        int upkeep = machines * TrapMath.MACHINE_UPKEEP;
+        if (house.balance >= upkeep) {
+            house.balance -= upkeep;
+        } else {
+            // Couldn't pay the bill. The room goes dark and word travels.
+            house.balance = 0;
+            house.nudge(-6, 0);
         }
+        house.rep = TrapMath.repAfter(house.rep, TrapMath.houseRepTarget(
+                varieties, machines, house.balance, free, house.turnedAwayThisBeat));
+        house.addiction = TrapMath.addictionAfter(house.addiction, house.roundsThisBeat);
+        house.roundsThisBeat = 0;
+        house.turnedAwayThisBeat = 0;
         save();
     }
 

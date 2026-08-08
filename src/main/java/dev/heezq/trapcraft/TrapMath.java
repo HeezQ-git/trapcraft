@@ -1254,23 +1254,90 @@ public final class TrapMath {
     /**
      * How much the floor's own name and its regulars' habits pull people in.
      *
-     * Two stats, and they are earned in opposite ways on purpose.
+     * Neither of these is a counter that fills up. Both were, for about a day,
+     * and both hit a hundred inside a couple of hours of trade and stayed
+     * there -- which made a casino a thing you switch on rather than a thing
+     * you run. They are now an EQUILIBRIUM: each is pulled towards a level
+     * that describes how the place is being kept, and each falls on its own
+     * when it isn't.
      *
-     * REPUTATION is bought with payouts. A casino that never pays anybody
-     * gets talked about as a casino that never pays anybody, and word of a
-     * winner is the only advertising a room like that has. Which means the
-     * loop cannot be gamed by simply hoarding: a thin, tight house empties
-     * out, and a bad run of luck -- expensive as it is -- is what fills it
-     * again.
-     *
-     * ADDICTION is built by the regulars playing, and it makes them play
-     * longer and come back sooner. It decays if the room goes quiet, so it is
-     * a thing you keep going rather than a thing you finish.
+     * See {@link #houseRepTarget} for what a name is worth and
+     * {@link #addictionAfter} for why the regulars leave.
      */
     public static float floorPull(int rep, int addiction) {
         float known = Math.max(0, Math.min(HOUSE_STAT_MAX, rep)) / (float) HOUSE_STAT_MAX;
         float hooked = Math.max(0, Math.min(HOUSE_STAT_MAX, addiction)) / (float) HOUSE_STAT_MAX;
         return 0.55f + 0.85f * known + 0.60f * hooked;
+    }
+
+    /** What one wired machine costs to keep lit, per beat. */
+    public static final int MACHINE_UPKEEP = 2;
+    /** The float a floor is expected to hold behind each machine. */
+    public static final int FLOAT_PER_MACHINE = 800;
+    /** How fast a name travels towards what the floor deserves, per beat. */
+    public static final int REP_DRIFT = 2;
+
+    /**
+     * Where this floor's name settles, given how it is actually being kept.
+     *
+     * A target rather than a total, so the number describes the place as it
+     * stands this minute. Stop looking after it and it comes back down on its
+     * own -- which is the whole difference between a business and a counter.
+     *
+     * Three things, and all three are decisions somebody has to keep making:
+     *
+     *  - VARIETY. Seven different games is a floor. Seven slot machines is a
+     *    room with a slot machine in it seven times.
+     *  - FLOAT. A vault holding what its machines are worth is a floor that
+     *    can take a bet. One running on fumes is a rumour waiting to start.
+     *  - ROOM. Somewhere to actually play. A queue at the door is the fastest
+     *    way there is to lose a name, which is why turnedAway bites hardest.
+     *
+     * @param varieties  how many DIFFERENT games are wired, 0..7
+     * @param machines   how many machines in total
+     * @param balance    what's in the vault
+     * @param free       machines standing empty right now
+     * @param turnedAway punters sent away since the last beat
+     */
+    public static int houseRepTarget(int varieties, int machines, long balance,
+                                     int free, int turnedAway) {
+        if (machines <= 0) {
+            return 0;
+        }
+        int score = Math.min(42, Math.max(0, varieties) * 6);
+        long needed = Math.max(1L, (long) machines * FLOAT_PER_MACHINE);
+        score += (int) Math.min(33, Math.max(0, balance) * 33 / needed);
+        score += Math.min(25, Math.max(0, free) * 9);
+        score -= Math.min(60, Math.max(0, turnedAway) * 12);
+        return Math.max(0, Math.min(HOUSE_STAT_MAX, score));
+    }
+
+    /** One beat of a name moving towards what the floor has earned. */
+    public static int repAfter(int rep, int target) {
+        if (rep < target) {
+            return Math.min(target, rep + REP_DRIFT);
+        }
+        // Falls twice as fast as it climbs. A reputation is easier to lose.
+        return Math.max(target, rep - REP_DRIFT * 2);
+    }
+
+    /**
+     * One beat of the regulars, given how much play there has been.
+     *
+     * Diminishing on the way up and bleeding on the way down, so every level
+     * is an equilibrium between how busy the room is and how quickly people
+     * forget about it. A maximally busy floor settles somewhere in the
+     * seventies; a hundred is not a number anybody holds, and an empty room
+     * is back to nothing inside half an hour.
+     */
+    public static int addictionAfter(int addiction, int roundsThisBeat) {
+        int held = Math.max(0, Math.min(HOUSE_STAT_MAX, addiction));
+        float headroom = 1.0f - held / (float) HOUSE_STAT_MAX;
+        int gain = Math.round(Math.min(10.0f, Math.max(0, roundsThisBeat) * 0.25f) * headroom);
+        // Bleeds faster the higher it is, which is what makes the top of the
+        // range a thing you hold rather than a thing you reach.
+        int bleed = 1 + held / 25;
+        return Math.max(0, Math.min(HOUSE_STAT_MAX, held + gain - bleed));
     }
 
     /** Rounds a punter stays for, given how hooked the regulars are. */

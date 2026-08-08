@@ -447,12 +447,19 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4o4b2. YOUR NAME\n\n"))
-                .append(body("Paying winners is what gets the place talked "
-                        + "about. Turning people away is too.\n\n"))
-                .append(warn("A room that never pays empties out."))));
+                .append(body("Different games, a full vault, and a machine "
+                        + "free when somebody walks in.\n\n"))
+                .append(warn("A queue at the door costs you most."))));
 
         pages.add(page(Text.empty()
-                .append(title("4o4b3. THE ROOM\n\n"))
+                .append(title("4o4b3. UPKEEP\n\n"))
+                .append(body("Every wired machine costs "
+                        + TrapMath.MACHINE_UPKEEP + "e every 30s, lit or "
+                        + "not.\n\n"))
+                .append(warn("Build more than your trade and you bleed."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4b4. THE ROOM\n\n"))
                 .append(body("A quiet floor gets big bets. A packed one gets "
                         + "8e a go -- but a lot of them.\n\n"))
                 .append(hint("/floor shows both."))));

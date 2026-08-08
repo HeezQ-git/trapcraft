@@ -178,6 +178,8 @@ public final class TrapFloor {
     private static final int APPROACH = 6;
     /** Rounds spent trying to reach the machine before giving up and being there. */
     private static final int WALK_ROUNDS = 3;
+    /** Ticks between one round of the books. Half a minute, like the market. */
+    private static final int BEAT_TICKS = 600;
 
     /** One punter mid-session. */
     private static final class Punter {
@@ -214,12 +216,71 @@ public final class TrapFloor {
     private static final List<Punter> PUNTERS = new ArrayList<>();
 
     /**
+     * One beat of every floor paying its bills and being judged on how it is
+     * kept.
+     *
+     * Counted here rather than in TrapHouse because only the floor knows what
+     * is standing empty and what kinds of machine are wired -- and both of
+     * those are the things the owner is actually being asked to look after.
+     */
+    private static void beat(MinecraftServer server) {
+        for (TrapHouse.House house : TrapHouse.all()) {
+            java.util.Set<net.minecraft.block.Block> games = new java.util.HashSet<>();
+            int machines = 0;
+            int free = 0;
+            for (Map.Entry<String, UUID> wire : TrapHouse.wires().entrySet()) {
+                if (!wire.getValue().equals(house.id)) {
+                    continue;
+                }
+                machines++;
+                ServerWorld world = worldOf(server, wire.getKey());
+                BlockPos pos = TrapHouse.posOf(wire.getKey());
+                if (world == null || pos == null) {
+                    continue;
+                }
+                games.add(world.getBlockState(pos).getBlock());
+                if (occupant(world, pos) == null) {
+                    free++;
+                }
+            }
+            TrapHouse.beat(house, games.size(), machines, free);
+        }
+    }
+
+    /**
      * The draw of the best-regarded floor with a machine free.
      *
      * One number for the server rather than one per house, because arrivals
      * are one attempt for everybody -- and taking the best means a good room
      * next door does not have its trade throttled by a bad one.
      */
+    /** The draw of whoever owns the machine at this wire. */
+    private static float pullOf(String wire) {
+        TrapHouse.House house = TrapHouse.byId(TrapHouse.wires().get(wire));
+        return house == null ? 0.55f : house.pull();
+    }
+
+    /** Has this floor got machines that are loaded but every one of them busy? */
+    private static boolean busyHouse(MinecraftServer server, TrapHouse.House house) {
+        boolean any = false;
+        for (Map.Entry<String, UUID> wire : TrapHouse.wires().entrySet()) {
+            if (!wire.getValue().equals(house.id)) {
+                continue;
+            }
+            ServerWorld world = worldOf(server, wire.getKey());
+            BlockPos pos = TrapHouse.posOf(wire.getKey());
+            if (world == null || pos == null
+                    || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+                continue;
+            }
+            any = true;
+            if (occupant(world, pos) == null) {
+                return false;   // there was room here after all
+            }
+        }
+        return any;
+    }
+
     private static float bestPull() {
         float best = 0.55f;
         for (TrapHouse.House house : TrapHouse.all()) {
@@ -290,11 +351,9 @@ public final class TrapFloor {
             if (server.getTicks() % ARRIVAL_TICKS == 0) {
                 maybeArrive(server);
             }
-            // A minute of quiet is a minute the regulars spend not thinking
-            // about the place. Only when the room is genuinely empty, so a
-            // busy floor never goes backwards.
-            if (server.getTicks() % 1200 == 0 && PUNTERS.isEmpty()) {
-                TrapHouse.cool();
+            // The books. Same half-minute beat the market runs on.
+            if (server.getTicks() % BEAT_TICKS == 0) {
+                beat(server);
             }
         });
     }
@@ -349,9 +408,36 @@ public final class TrapFloor {
             }
         });
         if (open.isEmpty()) {
+            // Somebody came and there was nowhere to play. This is the one the
+            // owner is meant to feel: it is what a floor that has outgrown
+            // itself looks like from the pavement, and every one of these
+            // takes a bite out of the name that brought them.
+            for (TrapHouse.House house : TrapHouse.all()) {
+                if (busyHouse(server, house)) {
+                    TrapHouse.turnedAway(house);
+                }
+            }
             return;
         }
-        String at = open.get(server.getOverworld().getRandom().nextInt(open.size()));
+        // Weighted by each floor's own draw, squared -- so two casinos on one
+        // server genuinely compete for the same customers, and the better-run
+        // room takes most of them rather than both riding on whichever name is
+        // best. Which is the whole point of a friend opening one next door.
+        float total = 0;
+        for (String candidate : open) {
+            float pull = pullOf(candidate);
+            total += pull * pull;
+        }
+        float roll = server.getOverworld().getRandom().nextFloat() * total;
+        String at = open.get(open.size() - 1);
+        for (String candidate : open) {
+            float pull = pullOf(candidate);
+            roll -= pull * pull;
+            if (roll <= 0) {
+                at = candidate;
+                break;
+            }
+        }
         arrive(server, at);
     }
 

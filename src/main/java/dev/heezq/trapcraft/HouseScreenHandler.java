@@ -156,10 +156,12 @@ public class HouseScreenHandler extends ScreenHandler {
                 line("Opened by " + house.founder, Formatting.DARK_GRAY),
                 Text.empty(),
                 bar("Name", house.rep, Formatting.GOLD),
-                line("  Bought with payouts. A room that never", Formatting.DARK_GRAY),
-                line("  pays gets talked about as one.", Formatting.DARK_GRAY),
+                line("  Different games, a full vault, and a", Formatting.DARK_GRAY),
+                line("  machine free when somebody walks in.", Formatting.DARK_GRAY),
+                line("  A queue at the door costs you most.", Formatting.RED),
                 bar("Regulars", house.addiction, Formatting.LIGHT_PURPLE),
-                line("  Built by play, forgotten in the quiet.", Formatting.DARK_GRAY),
+                line("  Held up by trade. Gone in half an hour", Formatting.DARK_GRAY),
+                line("  of quiet. Nobody keeps it at 100.", Formatting.DARK_GRAY),
                 Text.empty(),
                 plain("Draws ").formatted(Formatting.GRAY)
                         .append(plain(String.format("%.2fx", house.pull()))
@@ -188,9 +190,27 @@ public class HouseScreenHandler extends ScreenHandler {
                         .append(plain(house.balance + "e")
                                 .formatted(house.balance > 0 ? Formatting.GREEN : Formatting.RED,
                                         Formatting.BOLD)));
+        int machines = TrapHouse.machineCount(house);
+        int upkeep = machines * TrapMath.MACHINE_UPKEEP;
         List<Text> lore = new ArrayList<>();
         lore.add(line("Every bet lost on your machines lands", Formatting.GRAY));
         lore.add(line("here. Every win is paid out of it.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(plain("Upkeep  ").formatted(Formatting.GRAY)
+                .append(plain(upkeep + "e").formatted(Formatting.RED, Formatting.BOLD))
+                .append(plain(" every 30s").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("  " + machines + " machines, lit whether or not", Formatting.DARK_GRAY));
+        lore.add(line("  anybody is playing them.", Formatting.DARK_GRAY));
+        lore.add(line("  Your vault covers " + (upkeep <= 0 ? "forever"
+                        : (house.balance / upkeep / 2) + " min") + " of quiet.",
+                Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        lore.add(line("A full vault is also most of your name:", Formatting.WHITE));
+        lore.add(line("  " + TrapMath.FLOAT_PER_MACHINE + "e a machine is what it",
+                Formatting.DARK_GRAY));
+        lore.add(line("  wants to see. You hold "
+                        + (machines <= 0 ? 0 : house.balance / machines) + "e.",
+                Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(line("Biggest bet each game will take:", Formatting.WHITE));
         lore.add(limit("Lucky Streak", TrapHouse.TOP_SLOT, house));

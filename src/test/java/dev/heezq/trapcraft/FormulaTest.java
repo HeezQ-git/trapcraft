@@ -889,6 +889,59 @@ class FormulaTest {
     }
 
     @Test
+    void neitherStatIsARatchet() {
+        // Both used to be counters that filled up and stayed there, which made
+        // a casino a thing you switch on rather than a thing you run. Left
+        // alone, both must come back down on their own.
+        int rep = TrapMath.HOUSE_STAT_MAX;
+        int addiction = TrapMath.HOUSE_STAT_MAX;
+        for (int beat = 0; beat < 200; beat++) {
+            rep = TrapMath.repAfter(rep, TrapMath.houseRepTarget(0, 0, 0, 0, 0));
+            addiction = TrapMath.addictionAfter(addiction, 0);
+        }
+        assertEquals(0, rep, "an abandoned floor keeps its name forever");
+        assertEquals(0, addiction, "the regulars never forget about the place");
+    }
+
+    @Test
+    void aBusyFloorCannotHoldTheTop() {
+        // A hundred should not be a number anybody sits at. However hard the
+        // room is worked, the bleed catches up.
+        int addiction = 0;
+        for (int beat = 0; beat < 500; beat++) {
+            addiction = TrapMath.addictionAfter(addiction, 10_000);
+        }
+        assertTrue(addiction < TrapMath.HOUSE_STAT_MAX,
+                "a maximally busy floor settled at " + addiction);
+        assertTrue(addiction > 50, "but a busy floor should still be well up: " + addiction);
+    }
+
+    @Test
+    void aQueueAtTheDoorIsTheWorstThing() {
+        int kept = TrapMath.houseRepTarget(7, 10, 8000, 5, 0);
+        int full = TrapMath.houseRepTarget(7, 10, 8000, 0, 0);
+        int queued = TrapMath.houseRepTarget(7, 10, 8000, 0, 3);
+        assertTrue(full < kept, "no room to play should cost something");
+        assertTrue(queued < full - 25,
+                "turning people away should hurt far more: " + full + " -> " + queued);
+        // And every lever is a decision somebody has to keep making.
+        assertTrue(TrapMath.houseRepTarget(1, 10, 8000, 5, 0) < kept, "variety matters");
+        assertTrue(TrapMath.houseRepTarget(7, 10, 100, 5, 0) < kept, "the float matters");
+        assertEquals(0, TrapMath.houseRepTarget(0, 0, 99999, 9, 0),
+                "a casino with no machines is not a casino");
+    }
+
+    @Test
+    void aNameFallsFasterThanItClimbs() {
+        assertEquals(TrapMath.REP_DRIFT, TrapMath.repAfter(50, 100) - 50);
+        assertEquals(TrapMath.REP_DRIFT * 2, 50 - TrapMath.repAfter(50, 0));
+        // And never overshoots its target in either direction.
+        assertEquals(51, TrapMath.repAfter(51, 51));
+        assertEquals(52, TrapMath.repAfter(51, 52));
+        assertEquals(50, TrapMath.repAfter(51, 50));
+    }
+
+    @Test
     void hookedRegularsStayLonger() {
         java.util.Random rng = new java.util.Random(99);
         int cold = 0;
