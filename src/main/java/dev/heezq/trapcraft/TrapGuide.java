@@ -413,6 +413,12 @@ public final class TrapGuide {
                 .append(body("Emeralds and rep.\n\n"))
                 .append(warn("Miss it: -" + TrapContracts.FAIL_REP + " rep.\n\n"))
                 .append(hint("Rep rides the phone."))));
+        pages.add(page(Text.empty()
+                .append(title("3d. WHAT THEY TAKE\n\n"))
+                .append(body("Each job says: cured buds only, rolled joints "
+                        + "only, or either.\n\n"))
+                .append(body("A joint counts as one bud.\n\n"))
+                .append(hint("Check before you roll the batch.")))); 
     }
 
     private static ItemStack book(String title, List<RawFilteredPair<Text>> pages) {

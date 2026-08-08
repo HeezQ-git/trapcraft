@@ -119,6 +119,16 @@ public final class TrapContracts {
             int grade = Math.min(Quality.THRESHOLDS.length - 1,
                     1 + random.nextInt(2) + rep / 12);
             int quantity = 4 + random.nextInt(5) + rep / 8;
+            // Half the board takes either, so most jobs are flexible, and the
+            // two strict kinds split the rest. A board of nothing but "either"
+            // would make the field noise, and a board of nothing but strict
+            // ones would mean rolling a joint at the wrong moment loses a job
+            // you had already earned.
+            int form = switch (random.nextInt(4)) {
+                case 0 -> Contract.Form.BUDS.ordinal();
+                case 1 -> Contract.Form.JOINTS.ordinal();
+                default -> Contract.Form.EITHER.ordinal();
+            };
 
             int heatTier = TrapHeat.carryingHeat(player);
             int payout = TrapMath.payout(distance, quantity, grade, heatTier, rep);
@@ -127,7 +137,7 @@ public final class TrapContracts {
             jobs.add(new Contract(strain.ordinal(), grade, quantity,
                     village.getX(), village.getZ(),
                     world.getTime() + seconds * 20L,
-                    payout, 2 + grade));
+                    payout, 2 + grade, form));
         }
         return jobs;
     }
@@ -169,7 +179,7 @@ public final class TrapContracts {
         Contract live = new Contract(contract.strain(), contract.minGrade(), contract.quantity(),
                 contract.destX(), contract.destZ(),
                 player.getWorld().getTime() + seconds * 20L,
-                contract.payout(), contract.rep());
+                contract.payout(), contract.rep(), contract.form());
         phone.set(TrapComponents.contract, live);
 
         ItemStack compass = new ItemStack(Items.COMPASS);
@@ -212,10 +222,20 @@ public final class TrapContracts {
         }
 
         int left = contract.secondsLeft(now);
-        player.sendMessage(Text.literal(String.format("%s x%d  ·  %s+  ·  %d:%02d",
+        player.sendMessage(Text.literal(String.format("%s x%d %s  ·  %s+  ·  %d:%02d",
                                 contract.strainValue().display(), contract.quantity(),
-                                contract.gradeValue().display(), left / 60, left % 60))
+                                shortForm(contract), contract.gradeValue().display(),
+                                left / 60, left % 60))
                 .formatted(left <= 30 ? Formatting.RED : Formatting.GRAY), true);
+    }
+
+    /** Three characters for the actionbar, where there is no room for a sentence. */
+    private static String shortForm(Contract contract) {
+        return switch (contract.formValue()) {
+            case BUDS -> "bud";
+            case JOINTS -> "joint";
+            case EITHER -> "any";
+        };
     }
 
     private static void fail(ServerPlayerEntity player, ItemStack phone) {
@@ -256,7 +276,8 @@ public final class TrapContracts {
             return false;
         }
         if (carrying < contract.quantity()) {
-            player.sendMessage(Text.literal("They want " + contract.quantity()
+            player.sendMessage(Text.literal("They want " + contract.quantity() + " "
+                            + contract.formValue().label.toLowerCase(java.util.Locale.ROOT)
                             + ", you've got " + carrying + ".")
                     .formatted(Formatting.RED), true);
             return true;
@@ -279,16 +300,33 @@ public final class TrapContracts {
         return true;
     }
 
-    /** How much matching product the player is carrying, grade included. */
+    /**
+     * Does this stack settle the contract?
+     *
+     * Right strain, right form, at or above the grade. A joint counts as one
+     * bud rather than as anything cleverer: it costs exactly one bud to roll,
+     * so counting it as one keeps an EITHER job worth the same either way and
+     * leaves rolling a decision about the customers next door rather than a
+     * tax or a bonus here.
+     */
+    private static boolean settles(ItemStack stack, Contract contract) {
+        if (stack.isEmpty() || TrapComponents.get(stack).index() < contract.minGrade()) {
+            return false;
+        }
+        var item = stack.getItem();
+        if (contract.takesBuds() && item == TrapContent.driedBud(contract.strainValue())) {
+            return true;
+        }
+        return contract.takesJoints() && item == TrapContent.joint(contract.strainValue());
+    }
+
+    /** How much matching product the player is carrying, grade and form included. */
     private static int countGoods(ServerPlayerEntity player, Contract contract) {
         var inventory = player.getInventory();
-        var wanted = TrapContent.driedBud(contract.strainValue());
         int available = 0;
         for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.getItem() == wanted
-                    && TrapComponents.get(stack).index() >= contract.minGrade()) {
-                available += stack.getCount();
+            if (settles(inventory.getStack(slot), contract)) {
+                available += inventory.getStack(slot).getCount();
             }
         }
         return available;
@@ -303,12 +341,10 @@ public final class TrapContracts {
      */
     private static void takeGoods(ServerPlayerEntity player, Contract contract) {
         var inventory = player.getInventory();
-        var wanted = TrapContent.driedBud(contract.strainValue());
         int remaining = contract.quantity();
         for (int slot = 0; slot < inventory.size() && remaining > 0; slot++) {
             ItemStack stack = inventory.getStack(slot);
-            if (stack.getItem() != wanted
-                    || TrapComponents.get(stack).index() < contract.minGrade()) {
+            if (!settles(stack, contract)) {
                 continue;
             }
             int taken = Math.min(remaining, stack.getCount());

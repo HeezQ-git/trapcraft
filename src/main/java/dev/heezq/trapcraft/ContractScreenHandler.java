@@ -84,6 +84,9 @@ public class ContractScreenHandler extends ScreenHandler {
                             .withColor(job.strainValue().colour()));
             paper.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                     rule(),
+                    field("Wants", job.formValue().label,
+                            job.formValue() == Contract.Form.EITHER
+                                    ? Formatting.WHITE : Formatting.YELLOW),
                     field("Grade", job.gradeValue().display() + " or better",
                             job.gradeValue().colour()),
                     field("Distance", distance + " blocks", Formatting.WHITE),
