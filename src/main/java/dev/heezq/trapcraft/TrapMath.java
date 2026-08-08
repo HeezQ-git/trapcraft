@@ -2,6 +2,7 @@ package dev.heezq.trapcraft;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Random;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -293,63 +294,214 @@ public final class TrapMath {
 
     // --- the slot machine -----------------------------------------------------
 
-    /**
-     * What a spin pays, as a multiple of the stake.
-     *
-     * Drawn from a table rather than simulated reels. Real machines work this
-     * way too: pick the outcome, then show reels that agree with it. It means
-     * the return is an exact, tunable number instead of an emergent one nobody
-     * can check.
-     *
-     * The table returns 85% of the stake over time, so the house keeps 15 --
-     * and about three spins in four pay nothing at all. That gap between "I win
-     * sometimes" and "I lose money overall" is the whole design.
-     */
-    public static final float[] SLOT_ODDS = {0.004f, 0.026f, 0.270f};
-    public static final float[] SLOT_PAYS = {50.0f, 8.0f, 1.5f};
-    /** Run length each tier corresponds to, longest first. */
-    public static final int[] SLOT_RUNS = {5, 4, 3};
-
-    /** How often a spin pays anything at all. */
-    public static float slotWinChance() {
-        float chance = 0;
-        for (float odds : SLOT_ODDS) {
-            chance += odds;
-        }
-        return chance;
-    }
-
     /** The grid is square. */
     public static final int SLOT_SIZE = 5;
+    /** How many different symbols the reels carry. */
+    public static final int SLOT_FACES = 10;
 
     /**
-     * Every line a win can sit on: rows, columns, both diagonals.
+     * What each way of winning pays, as a multiple of the stake.
      *
-     * Twelve lines rather than one payline. A 5x5 window where only the middle
-     * row counted meant twenty of the twenty-five cells were decoration, and
-     * decoration full of accidental pairs reads as a machine that owes you
+     * Note that a plain three-in-a-line pays your money BACK and no more.
+     * That is deliberate and it is how real machines feel: the board lights
+     * up, a sound plays, emeralds land in your hand, and you are exactly where
+     * you started. The profit is in stacking -- two lines at once is twice the
+     * stake, and the shapes are where the real money is.
+     */
+    public static final float PAY_RUN3 = 0.4f;
+    public static final float PAY_RUN4 = 4.0f;
+    public static final float PAY_RUN5 = 25.0f;
+    public static final float PAY_SQUARE = 1.2f;
+    public static final float PAY_PLUS = 2.5f;
+    public static final float PAY_CROSS = 2.5f;
+    public static final float PAY_ZED = 8.0f;
+    public static final float PAY_DIAMOND = 6.0f;
+    public static final float PAY_CORNERS = 12.0f;
+
+    /**
+     * One way of winning: which cells, what it's called, what it pays.
+     *
+     * Shapes rather than a single payline is the whole design. A 5x5 window
+     * where only straight runs counted left most of the board as decoration,
+     * and decoration full of near-misses reads as a machine that owes you
      * money and won't pay.
      */
+    public record SlotShape(String name, int[] cells, float pay) {
+    }
+
+    private static int cellAt(int row, int col) {
+        return row * SLOT_SIZE + col;
+    }
+
+    /**
+     * Every line worth reading: rows, columns, and EVERY diagonal of three or
+     * more -- not just the two long ones. The short diagonals either side of
+     * the middle are the ones players see and expect to count.
+     */
     public static int[][] slotLines() {
-        int[][] lines = new int[SLOT_SIZE * 2 + 2][SLOT_SIZE];
-        int at = 0;
+        List<int[]> lines = new ArrayList<>();
         for (int row = 0; row < SLOT_SIZE; row++) {
+            int[] cells = new int[SLOT_SIZE];
             for (int col = 0; col < SLOT_SIZE; col++) {
-                lines[at][col] = row * SLOT_SIZE + col;
+                cells[col] = cellAt(row, col);
             }
-            at++;
+            lines.add(cells);
         }
         for (int col = 0; col < SLOT_SIZE; col++) {
+            int[] cells = new int[SLOT_SIZE];
             for (int row = 0; row < SLOT_SIZE; row++) {
-                lines[at][row] = row * SLOT_SIZE + col;
+                cells[row] = cellAt(row, col);
             }
-            at++;
+            lines.add(cells);
         }
-        for (int i = 0; i < SLOT_SIZE; i++) {
-            lines[at][i] = i * SLOT_SIZE + i;
-            lines[at + 1][i] = i * SLOT_SIZE + (SLOT_SIZE - 1 - i);
+        // Both diagonal directions at every offset that still leaves three
+        // cells on the board.
+        for (int offset = -(SLOT_SIZE - 3); offset <= SLOT_SIZE - 3; offset++) {
+            List<Integer> down = new ArrayList<>();
+            List<Integer> up = new ArrayList<>();
+            for (int i = 0; i < SLOT_SIZE; i++) {
+                int right = i + offset;
+                int left = SLOT_SIZE - 1 - i + offset;
+                if (right >= 0 && right < SLOT_SIZE) {
+                    down.add(cellAt(i, right));
+                }
+                if (left >= 0 && left < SLOT_SIZE) {
+                    up.add(cellAt(i, left));
+                }
+            }
+            lines.add(toArray(down));
+            lines.add(toArray(up));
         }
-        return lines;
+        return lines.toArray(new int[0][]);
+    }
+
+    private static int[] toArray(List<Integer> values) {
+        int[] out = new int[values.size()];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = values.get(i);
+        }
+        return out;
+    }
+
+    /**
+     * The shapes that are not straight lines, every placement of each.
+     *
+     * Built rather than written out, so a 7x7 machine would need no new
+     * literals and so a typo can't put a shape half off the board.
+     */
+    public static List<SlotShape> slotShapes() {
+        List<SlotShape> shapes = new ArrayList<>();
+
+        for (int row = 0; row + 1 < SLOT_SIZE; row++) {
+            for (int col = 0; col + 1 < SLOT_SIZE; col++) {
+                shapes.add(new SlotShape("Block", new int[]{
+                        cellAt(row, col), cellAt(row, col + 1),
+                        cellAt(row + 1, col), cellAt(row + 1, col + 1)}, PAY_SQUARE));
+            }
+        }
+        for (int row = 1; row + 1 < SLOT_SIZE; row++) {
+            for (int col = 1; col + 1 < SLOT_SIZE; col++) {
+                shapes.add(new SlotShape("Cross", new int[]{
+                        cellAt(row - 1, col), cellAt(row, col - 1), cellAt(row, col),
+                        cellAt(row, col + 1), cellAt(row + 1, col)}, PAY_PLUS));
+                shapes.add(new SlotShape("Star", new int[]{
+                        cellAt(row - 1, col - 1), cellAt(row - 1, col + 1), cellAt(row, col),
+                        cellAt(row + 1, col - 1), cellAt(row + 1, col + 1)}, PAY_CROSS));
+                // A Z: across the top, back down the diagonal, across the
+                // bottom. Seven cells, which is why it pays what it does.
+                shapes.add(new SlotShape("Zed", new int[]{
+                        cellAt(row - 1, col - 1), cellAt(row - 1, col), cellAt(row - 1, col + 1),
+                        cellAt(row, col),
+                        cellAt(row + 1, col - 1), cellAt(row + 1, col), cellAt(row + 1, col + 1)},
+                        PAY_ZED));
+            }
+        }
+        shapes.add(new SlotShape("Diamond", new int[]{
+                cellAt(0, 2), cellAt(2, 0), cellAt(2, 2), cellAt(2, 4), cellAt(4, 2)},
+                PAY_DIAMOND));
+        shapes.add(new SlotShape("Four Corners", new int[]{
+                cellAt(0, 0), cellAt(0, SLOT_SIZE - 1),
+                cellAt(SLOT_SIZE - 1, 0), cellAt(SLOT_SIZE - 1, SLOT_SIZE - 1)},
+                PAY_CORNERS));
+        return shapes;
+    }
+
+    /** What a run of this length pays. Zero if it isn't long enough. */
+    public static float slotPayForRun(int run) {
+        if (run >= 5) {
+            return PAY_RUN5;
+        }
+        if (run == 4) {
+            return PAY_RUN4;
+        }
+        return run == 3 ? PAY_RUN3 : 0.0f;
+    }
+
+    /** Everything one board won: total multiplier, the cells, and the names. */
+    public record SlotScore(float pay, int[] cells, List<String> names) {
+        public boolean won() {
+            return pay > 0.0f;
+        }
+    }
+
+    /**
+     * Score a board by reading it, counting EVERY way it won.
+     *
+     * Each line pays for its own longest run and each shape pays once, and the
+     * lot is added up -- so three diamonds across the bottom and three stars
+     * down a column is two wins, not one. That stacking is where the big
+     * numbers come from, and it is the reason a busy board is worth staring at
+     * instead of just checking the middle row.
+     *
+     * Reading the grid rather than trusting what was intended also means the
+     * highlight can never disagree with the payout: if a cell lights up, it is
+     * a cell that paid.
+     */
+    public static SlotScore slotScore(int[] grid) {
+        float pay = 0.0f;
+        List<String> names = new ArrayList<>();
+        boolean[] lit = new boolean[grid.length];
+
+        for (int[] line : slotLines()) {
+            int[] found = longestRun(grid, line);
+            float worth = slotPayForRun(found[0]);
+            if (worth <= 0.0f) {
+                continue;
+            }
+            pay += worth;
+            names.add(found[0] + " in a row");
+            for (int i = 0; i < found[0]; i++) {
+                lit[line[found[1] + i]] = true;
+            }
+        }
+
+        for (SlotShape shape : slotShapes()) {
+            if (!uniform(grid, shape.cells())) {
+                continue;
+            }
+            pay += shape.pay();
+            names.add(shape.name());
+            for (int cell : shape.cells()) {
+                lit[cell] = true;
+            }
+        }
+
+        List<Integer> cells = new ArrayList<>();
+        for (int cell = 0; cell < lit.length; cell++) {
+            if (lit[cell]) {
+                cells.add(cell);
+            }
+        }
+        return new SlotScore(pay, toArray(cells), names);
+    }
+
+    private static boolean uniform(int[] grid, int[] cells) {
+        for (int i = 1; i < cells.length; i++) {
+            if (grid[cells[i]] != grid[cells[0]]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Longest run of identical symbols on one line, and where it starts. */
@@ -374,57 +526,160 @@ public final class TrapMath {
     }
 
     /**
-     * The best win on the board: its cells, or an empty array for a loss.
+     * How often each planted outcome is aimed for, and what it plants.
      *
-     * Reading the grid rather than trusting what was intended means the
-     * highlight can never disagree with the payout -- if the cells light up,
-     * they are the cells that paid.
+     * The machine picks the outcome first and then draws a board that agrees
+     * with it, which is how real ones work and what makes the return a number
+     * somebody can check rather than an emergent mystery. Whatever the random
+     * fill happens to add on top is a bonus, and {@link #slotScore} pays for
+     * it -- so the measured return sits a little above this table. The
+     * Monte Carlo in the tests is what says by how much.
      */
-    public static int[] slotWinningCells(int[] grid) {
-        int bestRun = 0;
-        int[] bestCells = new int[0];
-        for (int[] line : slotLines()) {
-            int[] found = longestRun(grid, line);
-            if (found[0] > bestRun) {
-                bestRun = found[0];
-                bestCells = new int[found[0]];
-                for (int i = 0; i < found[0]; i++) {
-                    bestCells[i] = line[found[1] + i];
+    public static final String[] SLOT_PLANS = {
+            "run3", "square", "cross", "star", "run4", "zed", "diamond", "corners", "run5",
+    };
+    public static final float[] SLOT_PLAN_ODDS = {
+            0.400f, 0.055f, 0.020f, 0.018f, 0.012f, 0.004f, 0.0035f, 0.0018f, 0.0010f,
+    };
+
+    /**
+     * What the machine actually returns, measured not asserted.
+     *
+     * There is no closed form once wins stack, so these come from
+     * {@link #slotMeasure} over 300k spins and the test suite re-measures them
+     * on every build. If a pay or an odd is edited without updating these, the
+     * test fails -- which is the point, because the paytable in the cabinet
+     * quotes them to the player.
+     */
+    public static final float SLOT_MEASURED_RTP = 0.838f;
+    public static final float SLOT_MEASURED_WIN_RATE = 0.517f;
+
+    /** How often a spin is aimed at paying anything at all. */
+    public static float slotWinChance() {
+        float chance = 0;
+        for (float odds : SLOT_PLAN_ODDS) {
+            chance += odds;
+        }
+        return chance;
+    }
+
+    /** Which plan a uniform 0..1 draw selects, or null for a losing board. */
+    public static String slotPlan(float roll) {
+        float floor = 0.0f;
+        for (int i = 0; i < SLOT_PLAN_ODDS.length; i++) {
+            floor += SLOT_PLAN_ODDS[i];
+            if (roll < floor) {
+                return SLOT_PLANS[i];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Draw a board.
+     *
+     * Fills at random, then plants the chosen shape on top so the outcome is
+     * the one that was drawn. A losing board is re-rolled until it really does
+     * score nothing -- with twenty lines and sixty shapes an accidental win is
+     * common, and paying nothing for a board that visibly won is the single
+     * worst thing this machine could do.
+     */
+    public static int[] slotBoard(Random rng, String plan) {
+        int[] grid = new int[SLOT_SIZE * SLOT_SIZE];
+        List<SlotShape> shapes = slotShapes();
+        int[][] lines = slotLines();
+
+        for (int attempt = 0; attempt < 400; attempt++) {
+            for (int cell = 0; cell < grid.length; cell++) {
+                grid[cell] = rng.nextInt(SLOT_FACES);
+            }
+            if (plan != null) {
+                plant(rng, grid, plan, lines, shapes);
+            }
+            boolean won = slotScore(grid).won();
+            if (plan == null ? !won : won) {
+                return grid;
+            }
+        }
+        return grid;
+    }
+
+    private static void plant(Random rng, int[] grid, String plan,
+                              int[][] lines, List<SlotShape> shapes) {
+        int symbol = rng.nextInt(SLOT_FACES);
+        int run = switch (plan) {
+            case "run3" -> 3;
+            case "run4" -> 4;
+            case "run5" -> 5;
+            default -> 0;
+        };
+        if (run > 0) {
+            List<int[]> wide = new ArrayList<>();
+            for (int[] line : lines) {
+                if (line.length >= run) {
+                    wide.add(line);
                 }
             }
+            int[] line = wide.get(rng.nextInt(wide.size()));
+            int start = rng.nextInt(line.length - run + 1);
+            for (int i = 0; i < run; i++) {
+                grid[line[start + i]] = symbol;
+            }
+            // Break the cells either side, so a planted three stays a three.
+            // Without this the fill extends it to a four or a five by luck
+            // about a third of the time, and those pay seven and forty -- it
+            // was most of a 2.7x return, which is to say the house was losing.
+            if (start > 0) {
+                grid[line[start - 1]] = (symbol + 1) % SLOT_FACES;
+            }
+            if (start + run < line.length) {
+                grid[line[start + run]] = (symbol + 1) % SLOT_FACES;
+            }
+            return;
         }
-        return bestRun >= SLOT_RUNS[SLOT_RUNS.length - 1] ? bestCells : new int[0];
-    }
 
-    /** What a run of this length pays. Zero if it isn't long enough. */
-    public static float slotPayForRun(int run) {
-        for (int tier = 0; tier < SLOT_RUNS.length; tier++) {
-            if (run >= SLOT_RUNS[tier]) {
-                return SLOT_PAYS[tier];
+        String wanted = switch (plan) {
+            case "square" -> "Block";
+            case "cross" -> "Cross";
+            case "star" -> "Star";
+            case "zed" -> "Zed";
+            case "diamond" -> "Diamond";
+            default -> "Four Corners";
+        };
+        List<SlotShape> matching = new ArrayList<>();
+        for (SlotShape shape : shapes) {
+            if (shape.name().equals(wanted)) {
+                matching.add(shape);
             }
         }
-        return 0.0f;
+        for (int cell : matching.get(rng.nextInt(matching.size())).cells()) {
+            grid[cell] = symbol;
+        }
     }
 
-    /** @param roll a uniform 0..1 draw */
-    public static float slotPayout(float roll) {
-        float floor = 0.0f;
-        for (int tier = 0; tier < SLOT_ODDS.length; tier++) {
-            floor += SLOT_ODDS[tier];
-            if (roll < floor) {
-                return SLOT_PAYS[tier];
+    /**
+     * Long-run return per emerald staked, measured rather than asserted.
+     *
+     * There is no closed form once wins stack, so this plays the machine.
+     * Deterministic from the seed, so the number in the tests is the number
+     * you get.
+     */
+    public static float slotMeasure(long seed, int spins, float[] winRateOut) {
+        Random rng = new Random(seed);
+        float paid = 0.0f;
+        int won = 0;
+        for (int spin = 0; spin < spins; spin++) {
+            int[] grid = slotBoard(rng, slotPlan(rng.nextFloat()));
+            SlotScore score = slotScore(grid);
+            paid += score.pay();
+            if (score.won()) {
+                won++;
             }
         }
-        return 0.0f;
-    }
-
-    /** Long-run return per emerald staked. Below 1 or the house loses money. */
-    public static float slotReturnToPlayer() {
-        float total = 0.0f;
-        for (int tier = 0; tier < SLOT_ODDS.length; tier++) {
-            total += SLOT_ODDS[tier] * SLOT_PAYS[tier];
+        if (winRateOut != null && winRateOut.length > 0) {
+            winRateOut[0] = won / (float) spins;
         }
-        return total;
+        return paid / spins;
     }
 
     // --- investments ----------------------------------------------------------

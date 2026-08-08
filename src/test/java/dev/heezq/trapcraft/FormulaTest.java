@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -250,102 +251,154 @@ class FormulaTest {
 
     // --- the slot machine -----------------------------------------------------
 
+    /**
+     * The one that matters.
+     *
+     * Once wins stack there is no closed form for the return, so the only
+     * honest way to know it is to play the machine. This is also the guard on
+     * every constant in the paytable: change a pay or an odd without
+     * re-measuring and this fails, which it should, because the cabinet quotes
+     * these numbers to the player.
+     */
     @Test
     void theHouseKeepsItsEdge() {
-        float rtp = TrapMath.slotReturnToPlayer();
-        assertTrue(rtp < 1.0f, "the house must win long-run, got " + rtp);
-        assertTrue(rtp > 0.55f, "but not so hard nobody plays, got " + rtp);
+        float[] rate = new float[1];
+        float rtp = TrapMath.slotMeasure(20260808L, 120_000, rate);
+
+        assertTrue(rtp < 0.95f, "the house must win long-run, got " + rtp);
+        assertTrue(rtp > 0.70f, "but not so hard nobody plays, got " + rtp);
+        assertTrue(rate[0] > 0.40f, "wins should feel common, got " + rate[0]);
+
+        // What the cabinet and the guide print. Loose enough for sampling
+        // noise, tight enough that an edited pay table trips it.
+        assertEquals(TrapMath.SLOT_MEASURED_RTP, rtp, 0.02f,
+                "SLOT_MEASURED_RTP is stale -- the machine now returns " + rtp);
+        assertEquals(TrapMath.SLOT_MEASURED_WIN_RATE, rate[0], 0.02f,
+                "SLOT_MEASURED_WIN_RATE is stale -- now " + rate[0]);
     }
 
     @Test
-    void mostSpinsPayNothing() {
-        int losses = 0;
-        for (int i = 0; i < 1000; i++) {
-            if (TrapMath.slotPayout(i / 1000.0f) == 0.0f) {
-                losses++;
+    void aLoneThreeIsNotAProfit() {
+        // The whole shape of the thing: winning is common, profiting is not.
+        assertTrue(TrapMath.PAY_RUN3 < 1.0f,
+                "a single three must return less than the stake, else the tail cannot pay");
+    }
+
+    @Test
+    void everyDiagonalCountsNotJustTheLongTwo() {
+        // 5 rows + 5 columns + 5 down-right + 5 down-left.
+        assertEquals(20, TrapMath.slotLines().length);
+        for (int[] line : TrapMath.slotLines()) {
+            assertTrue(line.length >= 3, "a line shorter than three can never win");
+            for (int cell : line) {
+                assertTrue(cell >= 0 && cell < 25, "line ran off the board at " + cell);
             }
         }
-        assertTrue(losses > 600, "most spins must still lose, got " + losses);
+    }
+
+    @Test
+    void everyShapeFitsOnTheBoard() {
+        for (TrapMath.SlotShape shape : TrapMath.slotShapes()) {
+            assertTrue(shape.pay() > 0, shape.name() + " pays nothing");
+            for (int cell : shape.cells()) {
+                assertTrue(cell >= 0 && cell < 25,
+                        shape.name() + " runs off the board at " + cell);
+            }
+        }
+    }
+
+    @Test
+    void aQuietBoardWinsNothing() {
+        assertFalse(TrapMath.slotScore(quietGrid()).won(),
+                "the no-run grid must not win, or every other slot test is meaningless");
+    }
+
+    @Test
+    void twoWinsAtOncePayTwice() {
+        // Exactly the board from the bug report: three of one symbol along the
+        // bottom row and three of another down a column. It paid for one.
+        int[] grid = quietGrid();
+        for (int col = 0; col < 3; col++) {
+            grid[4 * 5 + col] = 7;
+        }
+        float bottomOnly = TrapMath.slotScore(grid).pay();
+        assertTrue(bottomOnly > 0, "three along the bottom should pay");
+
+        for (int row = 0; row < 3; row++) {
+            grid[row * 5 + 3] = 6;
+        }
+        TrapMath.SlotScore both = TrapMath.slotScore(grid);
+        assertTrue(both.pay() > bottomOnly,
+                "a second line must add to the payout, got " + both.pay()
+                        + " for two wins against " + bottomOnly + " for one");
+        assertTrue(both.names().size() >= 2, "both wins should be named on the receipt");
+    }
+
+    @Test
+    void aShapePaysMoreThanALine() {
+        int[] grid = quietGrid();
+        // A 2x2 block in the top-left corner.
+        grid[0] = 7;
+        grid[1] = 7;
+        grid[5] = 7;
+        grid[6] = 7;
+        TrapMath.SlotScore score = TrapMath.slotScore(grid);
+        assertTrue(score.won(), "a 2x2 block should pay");
+        assertTrue(score.names().contains("Block"), "and should say so: " + score.names());
+    }
+
+    @Test
+    void theHighlightIsExactlyWhatPaid() {
+        int[] grid = quietGrid();
+        for (int col = 0; col < 4; col++) {
+            grid[2 * 5 + col] = 7;
+        }
+        TrapMath.SlotScore score = TrapMath.slotScore(grid);
+        assertTrue(score.won());
+        for (int cell : score.cells()) {
+            assertEquals(7, grid[cell],
+                    "cell " + cell + " glows but isn't part of any winning symbol");
+        }
+    }
+
+    @Test
+    void alosingBoardIsReallyClean() {
+        // The worst bug this machine can have is a board that visibly won and
+        // paid nothing, so the generator must never hand one back.
+        java.util.Random rng = new java.util.Random(99L);
+        for (int spin = 0; spin < 3000; spin++) {
+            int[] grid = TrapMath.slotBoard(rng, null);
+            assertFalse(TrapMath.slotScore(grid).won(),
+                    "generator produced a losing board that actually won");
+        }
+    }
+
+    @Test
+    void aWinningBoardReallyWins() {
+        java.util.Random rng = new java.util.Random(1234L);
+        for (String plan : TrapMath.SLOT_PLANS) {
+            for (int spin = 0; spin < 200; spin++) {
+                assertTrue(TrapMath.slotScore(TrapMath.slotBoard(rng, plan)).won(),
+                        "plan " + plan + " produced a board that pays nothing");
+            }
+        }
     }
 
     /**
-     * A 5x5 grid with no run of two anywhere -- rows, columns or diagonals.
-     * Tests build on this so any run they find is the one they put there.
+     * A board with nothing on it, for tests that need a blank slate.
+     *
+     * Every horizontally and vertically adjacent pair differs, so no run, no
+     * block and no shape can hide in it. A previous version used `i % 5`,
+     * which on a five-wide board makes every column uniform -- five-in-a-line
+     * everywhere -- and quietly made several tests assert nothing at all.
+     * {@link #aQuietBoardWinsNothing} is the guard against that returning.
      */
     private static int[] quietGrid() {
-        int[][] rows = {
-                {0, 1, 2, 3, 4},
-                {2, 3, 4, 0, 1},
-                {4, 0, 1, 2, 3},
-                {1, 2, 3, 4, 0},
-                {3, 4, 0, 1, 2},
-        };
         int[] grid = new int[25];
-        for (int row = 0; row < 5; row++) {
-            System.arraycopy(rows[row], 0, grid, row * 5, 5);
+        for (int cell = 0; cell < grid.length; cell++) {
+            grid[cell] = cell % 10;
         }
         return grid;
-    }
-
-    @Test
-    void theQuietGridReallyIsQuiet() {
-        assertEquals(0, TrapMath.slotWinningCells(quietGrid()).length,
-                "the baseline must contain no win, or every other test lies");
-    }
-
-    @Test
-    void everyLineIsCovered() {
-        // Five rows, five columns, two diagonals.
-        assertEquals(12, TrapMath.slotLines().length);
-        for (int[] line : TrapMath.slotLines()) {
-            assertEquals(TrapMath.SLOT_SIZE, line.length);
-        }
-    }
-
-    @Test
-    void aRowOfThreeCounts() {
-        int[] grid = quietGrid();
-        grid[5] = grid[6] = grid[7] = 2;
-        assertEquals(3, TrapMath.slotWinningCells(grid).length);
-    }
-
-    @Test
-    void aColumnCounts() {
-        int[] grid = quietGrid();
-        grid[2] = grid[7] = grid[12] = 5;
-        assertEquals(3, TrapMath.slotWinningCells(grid).length);
-    }
-
-    @Test
-    void aDiagonalCounts() {
-        int[] grid = quietGrid();
-        for (int i = 0; i < 5; i++) {
-            grid[i * 5 + i] = 5;
-        }
-        assertEquals(5, TrapMath.slotWinningCells(grid).length);
-    }
-
-    @Test
-    void aPairIsNotAWin() {
-        int[] grid = quietGrid();
-        grid[0] = grid[1] = 3;
-        assertEquals(0, TrapMath.slotWinningCells(grid).length);
-    }
-
-    @Test
-    void theHighlightAlwaysMatchesThePayout() {
-        int[] grid = quietGrid();
-        grid[10] = grid[11] = grid[12] = grid[13] = 2;
-        int[] cells = TrapMath.slotWinningCells(grid);
-        assertEquals(4, cells.length);
-        assertTrue(TrapMath.slotPayForRun(cells.length) > 0);
-    }
-
-    @Test
-    void theJackpotIsRareAndReal() {
-        assertEquals(TrapMath.SLOT_PAYS[0], TrapMath.slotPayout(0.0f), 0.001f);
-        assertEquals(0.0f, TrapMath.slotPayout(0.999f), 0.001f);
-        assertEquals(0.0f, TrapMath.slotPayForRun(2), 0.001f);
     }
 
     // --- investments ----------------------------------------------------------

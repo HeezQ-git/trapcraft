@@ -232,19 +232,25 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("4g. LUCKY STREAK\n\n"))
                 .append(body("A two-block cabinet. Needs headroom.\n\n"))
-                .append(body("Five by five. Three in a line pays, any "
-                        + "direction.\n\n"))
+                .append(body("Lines, blocks, crosses, stars, Zs, corners.\n\n"))
                 .append(hint("Winning squares glow. No glow, no win."))));
 
         pages.add(page(Text.empty()
+                .append(title("4g2. COMBOS\n\n"))
+                .append(body("Every win on the board is paid, and they add "
+                        + "up.\n\n"))
+                .append(body("Three diamonds across and three stars down is "
+                        + "two wins, not one.\n\n"))
+                .append(warn("A lone three only returns part of your stake."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4h. THE HOUSE\n\n"))
-                .append(body("About " + Math.round(TrapMath.slotWinChance() * 100)
+                .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
                         + " spins in 100 pay something.\n\n"))
-                .append(body("Green panes for a three, orange for a four, "
-                        + "rainbow only for all five.\n\n"))
+                .append(body("Rainbow panes and fireworks mean a real one.\n\n"))
                 .append(warn("The house keeps about "
-                        + Math.round((1.0f - TrapMath.slotReturnToPlayer()) * 100)
-                        + "% of everything staked. It always does."))));
+                        + Math.round((1.0f - TrapMath.SLOT_MEASURED_RTP) * 100)
+                        + "%. It always does."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {
