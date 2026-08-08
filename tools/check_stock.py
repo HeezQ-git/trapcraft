@@ -14,6 +14,10 @@ doesn't have what you expected -- and neither logs anything useful:
   * Two catalogue lines for the same item id. DECLARED is a map, so the
     second silently overwrites the first and one of the two prices is dead
     code nobody will ever see quoted.
+  * A shaped recipe whose pattern uses a symbol the key doesn't define. The
+    game logs one parse error at startup and the item is simply uncraftable
+    forever after. The coin toss shipped that way, using _ for a blank where
+    Minecraft wants a space.
   * A registered block or item with no name in the language file, which
     shows up in game as "item.trapcraft.whatever".
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
@@ -131,6 +135,23 @@ def duplicate_lines(source: str) -> list[str]:
     return problems
 
 
+def recipes() -> list[str]:
+    """Every shaped pattern's symbols must match its key, both ways."""
+    folder = ROOT / "src/main/resources/data/trapcraft/recipe"
+    problems = []
+    for path in sorted(folder.glob("*.json")):
+        body = json.loads(path.read_text())
+        if body.get("type") != "minecraft:crafting_shaped":
+            continue
+        used = {c for row in body["pattern"] for c in row if c != " "}
+        keys = set(body.get("key", {}))
+        for missing in sorted(used - keys):
+            problems.append(f"{path.name}: pattern uses '{missing}' with no key for it")
+        for spare in sorted(keys - used):
+            problems.append(f"{path.name}: key defines '{spare}' the pattern never uses")
+    return problems
+
+
 def names() -> list[str]:
     """Everything registered must have a name in en_us.json.
 
@@ -183,6 +204,7 @@ def main() -> int:
     problems.extend(roulette_wheel())
     problems.extend(names())
     problems.extend(duplicate_lines(source))
+    problems.extend(recipes())
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

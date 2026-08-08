@@ -1782,7 +1782,7 @@ def main() -> None:
     plinko_assets()
     climb_assets()
     # A gold ingot for the coin, green wool for the felt, planks for the box.
-    table_assets("toss", "toss_top", ["_G_", "WWW", "PPP"],
+    table_assets("toss", "toss_top", [" G ", "WWW", "PPP"],
                  {"G": "minecraft:gold_ingot", "W": "minecraft:green_wool",
                   "P": "#minecraft:planks"})
     # Paper for the cards, and a bit more of everything: it's a proper table.
