@@ -98,6 +98,19 @@ public final class TrapHouse {
         /** Counted between beats, then folded into the two stats and reset. */
         int roundsThisBeat;
         int turnedAwayThisBeat;
+        long handleThisBeat;
+        /** Everything the floor has ever paid to stay open: upkeep and the cut. */
+        public long costs;
+        /**
+         * What the owner has personally won or lost at their own machines.
+         *
+         * Kept out of the takings entirely. It is their money going round in a
+         * circle, and folding it into the handle made a floor's margin read
+         * at more than twice what the trade was actually paying.
+         */
+        public long ownPlay;
+        /** Beats running with the cut unpaid. Somebody comes for the third. */
+        int owing;
 
         House(UUID id, String founder, String name) {
             this.id = id;
@@ -105,12 +118,24 @@ public final class TrapHouse {
             this.name = name;
         }
 
-        /** What the house has kept, which can be negative on a bad night. */
+        /**
+         * What the house has actually kept, after what it costs to be open.
+         *
+         * Net, not gross. The gross figure flattered a ten-machine floor by a
+         * third -- it read "kept 4112e" on a night that had quietly spent
+         * 1101e keeping the lights on -- and a business you are judging by the
+         * wrong number is a business you cannot make decisions about.
+         */
         public long profit() {
+            return handle - paid - costs;
+        }
+
+        /** What it has kept before its running costs, which is not the same thing. */
+        public long grossProfit() {
             return handle - paid;
         }
 
-        /** The house edge it has actually run at, in percent. */
+        /** The margin it has actually run at, in percent. */
         public int edge() {
             return handle <= 0 ? 0 : Math.round(profit() * 100.0f / handle);
         }
@@ -236,6 +261,7 @@ public final class TrapHouse {
         house.handle += amount;
         house.plays++;
         house.roundsThisBeat++;
+        house.handleThisBeat += amount;
         save();
     }
 
@@ -286,12 +312,19 @@ public final class TrapHouse {
      * @param free how many of this house's machines are standing empty
      */
     public static void beat(House house, int varieties, int machines, int free) {
-        int upkeep = machines * TrapMath.MACHINE_UPKEEP;
-        if (house.balance >= upkeep) {
-            house.balance -= upkeep;
+        int bill = machines * TrapMath.MACHINE_UPKEEP
+                + TrapMath.protectionOn(house.handleThisBeat);
+        house.handleThisBeat = 0;
+        if (house.balance >= bill) {
+            house.balance -= bill;
+            house.costs += bill;
+            house.owing = 0;
         } else {
-            // Couldn't pay the bill. The room goes dark and word travels.
+            // Couldn't pay. The room goes dark, word travels, and the tab is
+            // remembered -- see TrapFloor, which sends somebody round for it.
+            house.costs += house.balance;
             house.balance = 0;
+            house.owing++;
             house.nudge(-6, 0);
         }
         house.rep = TrapMath.repAfter(house.rep, TrapMath.houseRepTarget(
@@ -438,9 +471,31 @@ public final class TrapHouse {
         }
         TrapMarket.collect(player, amount);
         house.balance += amount;
-        house.handle += amount;
         house.plays++;
+        // The owner playing their own machine is not trade. It moves emeralds
+        // from their pocket into their own vault and back out again, and
+        // counting it as takings is what made a floor look like it was earning
+        // seven percent when the villagers were handing over three. A business
+        // you are reading the wrong number off is one you cannot run.
+        if (owns(player, house)) {
+            house.ownPlay += amount;
+        } else {
+            house.handle += amount;
+            house.handleThisBeat += amount;
+        }
         save();
+    }
+
+    /** Is this player carrying the deed to this house? */
+    public static boolean owns(ServerPlayerEntity player, House house) {
+        var inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            ItemStack stack = inventory.getStack(slot);
+            if (stack.isOf(TrapContent.casinoCard) && house.equals(of(stack))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -461,7 +516,11 @@ public final class TrapHouse {
         }
         int given = (int) Math.min(amount, house.balance);
         house.balance -= given;
-        house.paid += given;
+        if (owns(player, house)) {
+            house.ownPlay -= given;
+        } else {
+            house.paid += given;
+        }
         TrapMarket.handOver(player, given);
         save();
         if (given < amount) {
@@ -689,6 +748,10 @@ public final class TrapHouse {
                         + " " + house.addiction + " "
                         + house.founder + " " + house.name);
             }
+            for (House house : HOUSES.values()) {
+                lines.add("costs " + house.id + " " + house.costs
+                        + " " + house.ownPlay);
+            }
             WIRES.forEach((where, id) -> lines.add("wire " + where + " " + id));
             Files.write(saveFile, lines);
         } catch (Exception failure) {
@@ -734,6 +797,17 @@ public final class TrapHouse {
                     // than as though nobody had ever heard of it.
                     house.rep = (int) Math.min(TrapMath.HOUSE_STAT_MAX, house.paid / 400);
                     HOUSES.put(house.id, house);
+                } else if (parts.length >= 3 && parts[0].equals("costs")) {
+                    // Its own record rather than another field on the house
+                    // line: that line ends with a name that may contain
+                    // spaces, so anything appended to it is unparseable.
+                    House house = HOUSES.get(UUID.fromString(parts[1]));
+                    if (house != null) {
+                        house.costs = Long.parseLong(parts[2]);
+                        if (parts.length > 3) {
+                            house.ownPlay = Long.parseLong(parts[3]);
+                        }
+                    }
                 } else if (parts.length == 6 && parts[0].equals("wire")) {
                     WIRES.put(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4],
                             UUID.fromString(parts[5]));
@@ -750,6 +824,16 @@ public final class TrapHouse {
             TrapCraft.LOGGER.error("couldn't read the casinos -- vaults may be lost: {}",
                     failure.toString());
         }
+    }
+
+    /** How many beats this floor has been behind on what it owes. */
+    public static int owing(House house) {
+        return house.owing;
+    }
+
+    public static void settled(House house) {
+        house.owing = 0;
+        save();
     }
 
     /** Called from the counting room when a balance changes outside a bet. */

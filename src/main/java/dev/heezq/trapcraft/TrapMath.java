@@ -1271,7 +1271,29 @@ public final class TrapMath {
     }
 
     /** What one wired machine costs to keep lit, per beat. */
-    public static final int MACHINE_UPKEEP = 2;
+    public static final int MACHINE_UPKEEP = 1;
+    /**
+     * The cut somebody takes of everything played on your floor.
+     *
+     * A cash business in this world does not get to keep its whole edge.
+     *
+     * One percent, and it was briefly four -- which every simulated floor lost
+     * money at, because the villagers only actually hand over about three and
+     * a bit percent and the lights already eat most of that. The seven percent
+     * this was first sized against turned out to be the owner losing to their
+     * own machines, which is not income at all. See House.trade.
+     *
+     * Taken on the HANDLE rather than the profit on purpose: it scales with
+     * how much goes through the room and not with how well the night went, so
+     * a bad night genuinely costs money. That is what a running cost is, and
+     * it is the difference between a business and an allowance.
+     */
+    public static final float PROTECTION_RATE = 0.01f;
+
+    /** What the cut comes to on this much play. */
+    public static int protectionOn(long handleThisBeat) {
+        return (int) Math.max(0, Math.round(Math.max(0, handleThisBeat) * PROTECTION_RATE));
+    }
     /** The float a floor is expected to hold behind each machine. */
     public static final int FLOAT_PER_MACHINE = 800;
     /** How fast a name travels towards what the floor deserves, per beat. */

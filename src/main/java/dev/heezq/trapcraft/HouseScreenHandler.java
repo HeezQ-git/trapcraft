@@ -201,6 +201,12 @@ public class HouseScreenHandler extends ScreenHandler {
                 .append(plain(" every 30s").formatted(Formatting.DARK_GRAY)));
         lore.add(line("  " + machines + " machines, lit whether or not", Formatting.DARK_GRAY));
         lore.add(line("  anybody is playing them.", Formatting.DARK_GRAY));
+        lore.add(plain("Protection  ").formatted(Formatting.GRAY)
+                .append(plain(Math.round(TrapMath.PROTECTION_RATE * 100) + "%")
+                        .formatted(Formatting.RED, Formatting.BOLD))
+                .append(plain(" of everything played").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("  Off the vault, win or lose. Miss it", Formatting.DARK_GRAY));
+        lore.add(line("  three times and they come round.", Formatting.RED));
         lore.add(line("  Your vault covers " + (upkeep <= 0 ? "forever"
                         : (house.balance / upkeep / 2) + " min") + " of quiet.",
                 Formatting.DARK_GRAY));
@@ -270,8 +276,17 @@ public class HouseScreenHandler extends ScreenHandler {
         long profit = house.profit();
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(house.plays + " bets taken", Formatting.GRAY),
-                line(house.handle + "e played through", Formatting.GRAY),
-                line(house.paid + "e paid out", Formatting.GRAY),
+                line(house.handle + "e of trade through the room", Formatting.GRAY),
+                line(house.paid + "e paid out to punters", Formatting.GRAY),
+                line(house.costs + "e in upkeep and the cut", Formatting.RED),
+                Text.empty(),
+                plain("Your own play  ").formatted(Formatting.DARK_GRAY)
+                        .append(plain((house.ownPlay >= 0 ? "+" : "")
+                                        + house.ownPlay + "e")
+                                .formatted(house.ownPlay >= 0
+                                        ? Formatting.GREEN : Formatting.RED)),
+                line("  Kept out of the takings. It's your", Formatting.DARK_GRAY),
+                line("  money going round in a circle.", Formatting.DARK_GRAY),
                 Text.empty(),
                 plain(profit >= 0 ? "Up " : "Down ").formatted(Formatting.WHITE)
                         .append(plain(Math.abs(profit) + "e")
@@ -281,12 +296,13 @@ public class HouseScreenHandler extends ScreenHandler {
                                 .formatted(Formatting.DARK_GRAY)),
                 Text.empty(),
                 line(house.handle < 2000
-                                ? "Early days. The edge is noise until"
-                                : "The machines run at 1-4% in your favour.",
+                                ? "Early days. The margin is noise until"
+                                : "Gross " + Math.round(house.grossProfit() * 100.0f
+                                / Math.max(1, house.handle)) + "%, and the rest",
                         Formatting.DARK_GRAY),
                 line(house.handle < 2000
                                 ? "a few thousand emeralds have gone through."
-                                : "Give it time and it shows.",
+                                : "goes on being open. Volume is the business.",
                         Formatting.DARK_GRAY))));
         return tag;
     }

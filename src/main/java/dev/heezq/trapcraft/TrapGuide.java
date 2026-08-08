@@ -453,10 +453,13 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4o4b3. UPKEEP\n\n"))
-                .append(body("Every wired machine costs "
+                .append(body("Every machine costs "
                         + TrapMath.MACHINE_UPKEEP + "e every 30s, lit or "
                         + "not.\n\n"))
-                .append(warn("Build more than your trade and you bleed."))));
+                .append(body("Somebody takes "
+                        + Math.round(TrapMath.PROTECTION_RATE * 100)
+                        + "% of everything played, win or lose.\n\n"))
+                .append(warn("Miss it three times and they visit."))));
 
         pages.add(page(Text.empty()
                 .append(title("4o4b4. THE ROOM\n\n"))

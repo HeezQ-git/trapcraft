@@ -244,6 +244,44 @@ public final class TrapFloor {
                 }
             }
             TrapHouse.beat(house, games.size(), machines, free);
+            if (TrapHouse.owing(house) >= 3) {
+                collectors(server, house);
+            }
+        }
+    }
+
+    /**
+     * Three beats behind on the cut, and somebody comes round for it.
+     *
+     * Aimed at whoever is standing on the floor, because the floor is where
+     * the money is and because a debt nobody can be found for is not a
+     * problem. If the owner is somewhere else entirely, the tab simply keeps
+     * running -- and their machines stay dark, which is punishment enough
+     * until they come back.
+     */
+    private static void collectors(MinecraftServer server, TrapHouse.House house) {
+        for (Map.Entry<String, UUID> wire : TrapHouse.wires().entrySet()) {
+            if (!wire.getValue().equals(house.id)) {
+                continue;
+            }
+            ServerWorld world = worldOf(server, wire.getKey());
+            BlockPos pos = TrapHouse.posOf(wire.getKey());
+            if (world == null || pos == null) {
+                continue;
+            }
+            for (ServerPlayerEntity player : world.getPlayers()) {
+                if (!player.getBlockPos().isWithinDistance(pos, 24)) {
+                    continue;
+                }
+                TrapHouse.settled(house);
+                player.sendMessage(Text.literal("Somebody's here about the money "
+                                + house.name + " owes.")
+                        .formatted(Formatting.RED, Formatting.BOLD), false);
+                TrapStickup.jump(player, TrapMath.stickupSquad(
+                        TrapContracts.repOf(TrapContracts.findPhone(player)),
+                        TrapHeat.carryingHeat(player), 3, 16));
+                return;
+            }
         }
     }
 

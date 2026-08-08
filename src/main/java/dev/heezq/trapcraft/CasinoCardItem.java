@@ -105,8 +105,12 @@ public class CasinoCardItem extends Item implements PolymerItem {
         lore.add(line(machines + (machines == 1 ? " machine" : " machines") + " on the floor",
                 Formatting.DARK_GRAY));
         if (house.handle > 0) {
-            lore.add(line("Kept " + house.profit() + "e of " + house.handle + "e played"
-                    + "  (" + house.edge() + "%)", Formatting.DARK_GRAY));
+            // Net of upkeep and the cut. The gross figure flattered a
+            // ten-machine floor by a third, and a business you are judging by
+            // the wrong number is one you cannot make decisions about.
+            lore.add(line("Kept " + house.profit() + "e of " + house.handle
+                    + "e played  (" + house.edge() + "% after costs)",
+                    house.profit() >= 0 ? Formatting.DARK_GRAY : Formatting.RED));
         }
         lore.add(Text.empty());
         if (machines == 0) {

@@ -889,6 +889,54 @@ class FormulaTest {
     }
 
     @Test
+    void aCasinoRunsOnAThinMargin() {
+        // The whole balance question, and the reason it was got wrong once:
+        // the cut was first sized against a seven percent edge read off a live
+        // floor, which turned out to be the owner losing to their own machines
+        // rather than trade. The villagers hand over about three, and at four
+        // percent every floor in the simulator lost money.
+        //
+        // Played out properly here: a day cycle of average trade on ten
+        // machines has to leave a real but modest profit, and doubling the
+        // machines without doubling the trade has to take almost all of it.
+        // Averaged over many cycles, not one. A single night really can lose
+        // money -- one seed here came out 835e down -- and that is the feature
+        // rather than a bug in it. What has to hold is the long run.
+        java.util.Random rng = new java.util.Random(4242);
+        int cycles = 400;
+        int rounds = (int) Math.round(4 * (60.0 / 3.5) * 20);   // 20 min, 4 punters
+        long handle = 0;
+        long paid = 0;
+        for (int cycle = 0; cycle < cycles; cycle++) {
+            for (int i = 0; i < rounds; i++) {
+                int stake = TrapMath.punterStake(rng, 4);
+                handle += stake;
+                paid += Math.round(stake * TrapMath.punterRound(0.97f, rng));
+            }
+        }
+        long gross = (handle - paid) / cycles;
+        assertTrue(gross > 0, "the villagers must lose in the long run: " + gross);
+
+        long cut = TrapMath.protectionOn(handle / cycles);
+        long lean = gross - cut - 10L * TrapMath.MACHINE_UPKEEP * 2 * 20;
+        long bloated = gross - cut - 20L * TrapMath.MACHINE_UPKEEP * 2 * 20;
+        assertTrue(lean > 150 && lean < 1200,
+                "a day cycle should be worth a few hundred, not thousands: " + lean);
+        assertTrue(bloated < lean / 3,
+                "twice the machines on the same trade should eat the profit: " + bloated);
+    }
+
+    @Test
+    void theCutScalesWithPlayNotWithLuck() {
+        // Taken on the handle, so a bad night genuinely costs money. That is
+        // what a running cost is, and the difference between a business and an
+        // allowance.
+        assertEquals(0, TrapMath.protectionOn(0));
+        assertEquals(TrapMath.protectionOn(1000) * 2, TrapMath.protectionOn(2000));
+        assertTrue(TrapMath.protectionOn(-500) == 0, "never a rebate");
+    }
+
+    @Test
     void neitherStatIsARatchet() {
         // Both used to be counters that filled up and stayed there, which made
         // a casino a thing you switch on rather than a thing you run. Left
