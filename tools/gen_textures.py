@@ -1097,6 +1097,79 @@ kkkkkkekkkkkkkkk
 """
 
 
+# --- the climb (strongbox) ------------------------------------------------
+
+CLIMB_PAL = {
+    "i": "#5b6068",     # iron plate
+    "I": "#7d838c",     # plate, lit
+    "d": "#3a3e44",     # plate, shadow
+    "r": "#2c2f34",     # rivet / seam
+    "m": "#c9a227",     # brass
+    "M": "#f0cf5a",     # brass, lit
+    "k": "#1a1c20",     # keyhole
+    "g": "#2fbf6b",     # green lamp
+}
+
+# The face: three brass locks in a row on a riveted iron door.
+CLIMB_FACE = """
+rrrrrrrrrrrrrrrr
+rIIIIIIIIIIIIIIr
+rIiiiiiiiiiiiiIr
+rIimMMmiimMMmiIr
+rIimMkMiimMkMiIr
+rIimMMmiimMMmiIr
+rIiiiiiiiiiiiiIr
+rIiiimMMmiiiiiIr
+rIiiimMkMiiiiiIr
+rIiiimMMmiiiiiIr
+rIiiiiiiiiiiiiIr
+rIiiiiiggiiiiiIr
+rIiiiiiiiiiiiiIr
+rIIIIIIIIIIIIIIr
+rdddddddddddddrr
+rrrrrrrrrrrrrrrr
+"""
+
+# The sides and back: plain riveted plate.
+CLIMB_PLATE = """
+rrrrrrrrrrrrrrrr
+rIIIIIIIIIIIIIIr
+rIiiiiiiiiiiiiIr
+rIidiiiiiiiidiIr
+rIiiiiiiiiiiiiIr
+rIiiiiidiiiiiiIr
+rIiiiiiiiiiiiiIr
+rIidiiiiiiiidiIr
+rIiiiiiiiiiiiiIr
+rIiiiiidiiiiiiIr
+rIiiiiiiiiiiiiIr
+rIidiiiiiiiidiIr
+rIiiiiiiiiiiiiIr
+rIIIIIIIIIIIIIIr
+rdddddddddddddrr
+rrrrrrrrrrrrrrrr
+"""
+
+# The lid: brass banding across iron.
+CLIMB_LID = """
+rrrrrrrrrrrrrrrr
+rIIIIIIIIIIIIIIr
+rImmmmmmmmmmmmIr
+rIMMMMMMMMMMMMIr
+rImmmmmmmmmmmmIr
+rIiiiiiiiiiiiiIr
+rIiiiiiiiiiiiiIr
+rImmmmmmmmmmmmIr
+rIMMMMMMMMMMMMIr
+rImmmmmmmmmmmmIr
+rIiiiiiiiiiiiiIr
+rIiiiiiiiiiiiiIr
+rIiiiiiiiiiiiiIr
+rIIIIIIIIIIIIIIr
+rdddddddddddddrr
+rrrrrrrrrrrrrrrr
+"""
+
 # --- the drop (plinko) ----------------------------------------------------
 
 PLINKO_PAL = {
@@ -1921,6 +1994,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(CLIMB_FACE, CLIMB_PAL), "block", "climb_face.png")
+    write(render(CLIMB_PLATE, CLIMB_PAL), "block", "climb_plate.png")
+    write(render(CLIMB_LID, CLIMB_PAL), "block", "climb_lid.png")
     write(render(PLINKO_BOARD, PLINKO_PAL), "block", "plinko_board.png")
     write(render(PLINKO_SLOTS, PLINKO_PAL), "block", "plinko_slots.png")
     write(render(PLINKO_FRAME, PLINKO_PAL), "block", "plinko_frame.png")

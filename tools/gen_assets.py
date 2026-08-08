@@ -461,6 +461,8 @@ def lang() -> None:
         "item.trapcraft.wallet": "Wallet",
         "block.trapcraft.roulette": "Roulette Table",
         "block.trapcraft.plinko": "The Drop",
+        "block.trapcraft.climb": "The Climb",
+        "item.trapcraft.climb": "The Climb",
         "item.trapcraft.plinko": "The Drop",
         "item.trapcraft.roulette": "Roulette Table",
         "item.trapcraft.burner_phone": "Burner Phone",
@@ -1080,6 +1082,74 @@ def nerve_tonic_assets() -> None:
     })
 
 
+def climb_model() -> dict:
+    """A full-cube strongbox: brass-banded lid, locks on the face.
+
+    Genuinely fills the cube, unlike the table and the peg board, so its
+    carrier can honestly say FULL_BLOCK and it costs nothing from the thin
+    transparent pool. check_models.py checks that claim rather than trusting
+    this comment.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "face": f"{NS}:block/climb_face",
+            "plate": f"{NS}:block/climb_plate",
+            "lid": f"{NS}:block/climb_lid",
+            "particle": f"{NS}:block/climb_plate",
+        },
+        "elements": [
+            {
+                "from": [0, 0, 0],
+                "to": [16, 16, 16],
+                "faces": {
+                    "north": {"texture": "#face", "uv": [0, 0, 16, 16]},
+                    "south": {"texture": "#plate", "uv": [0, 0, 16, 16]},
+                    "east": {"texture": "#plate", "uv": [0, 0, 16, 16]},
+                    "west": {"texture": "#plate", "uv": [0, 0, 16, 16]},
+                    "up": {"texture": "#lid", "uv": [0, 0, 16, 16]},
+                    "down": {"texture": "#plate", "uv": [0, 0, 16, 16]},
+                },
+            },
+        ],
+    }
+
+
+def climb_assets() -> None:
+    put(f"assets/{NS}/models/block/climb.json", climb_model())
+    put(f"assets/{NS}/models/item/climb.json", {"parent": f"{NS}:block/climb"})
+    put(f"assets/{NS}/items/climb.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/climb"},
+    })
+    put(f"assets/{NS}/blockstates/climb.json", {
+        "variants": {"": {"model": f"{NS}:block/climb"}},
+    })
+
+    # Iron for the box, gold for the locks, and a tripwire hook because the
+    # whole game is about which door is wired.
+    put(f"data/{NS}/recipe/climb.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["III", "GTG", "III"],
+        "key": {
+            "I": "minecraft:iron_ingot",
+            "G": "minecraft:gold_ingot",
+            "T": "minecraft:tripwire_hook",
+        },
+        "result": {"id": f"{NS}:climb", "count": 1},
+    })
+
+    put(f"data/{NS}/loot_table/blocks/climb.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:climb"}],
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+        }],
+    })
+
+
 def plinko_model(upper: bool) -> dict:
     """A tall peg board in a frame, standing against the wall.
 
@@ -1556,6 +1626,7 @@ def main() -> None:
     wallet_assets()
     roulette_assets()
     plinko_assets()
+    climb_assets()
     phone_assets()
     stall_assets()
     slot_assets()

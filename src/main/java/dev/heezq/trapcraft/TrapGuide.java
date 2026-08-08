@@ -308,7 +308,30 @@ public final class TrapGuide {
                 .append(warn("You can see the odds. That's the point."))));
 
         pages.add(page(Text.empty()
-                .append(title("4j. THE HOUSE\n\n"))
+                .append(title("4j. THE CLIMB\n\n"))
+                .append(item("Iron  Iron  Iron\nGold  Hook  Gold\nIron  Iron  Iron\n\n"))
+                .append(body("A strongbox with three locks.\n\n"))
+                .append(hint("Six rungs. One bad door on each."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4j2. WHEN TO STOP\n\n"))
+                .append(body("Open a door. Survive and you may climb "
+                        + "again, or take the money.\n\n"))
+                .append(body("Every rung has the same edge.\n\n"))
+                .append(warn("So there is no clever height. Only nerve."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4j3. TWO LADDERS\n\n"))
+                .append(body("Steady: four doors, tops out at "
+                        + Math.round(TrapMath.climbMultiplier(0, TrapMath.CLIMB_RUNGS))
+                        + "x.\n\n"))
+                .append(body("Reckless: three doors, tops out at "
+                        + Math.round(TrapMath.climbMultiplier(1, TrapMath.CLIMB_RUNGS))
+                        + "x.\n\n"))
+                .append(hint("Same bet either way. Wilder, not better."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4k. THE HOUSE\n\n"))
                 .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
                         + " spins in 100 pay, and never less than "
                         + "your stake.\n\n"))

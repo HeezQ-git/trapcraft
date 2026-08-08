@@ -427,6 +427,68 @@ class FormulaTest {
         return grid;
     }
 
+    // --- the climb --------------------------------------------------------------
+
+    @Test
+    void everyRungIsTheSameBet() {
+        // The whole design. If one height ever paid better than another the
+        // game would have a correct answer and stop being a gamble.
+        for (int ladder = 0; ladder < TrapMath.CLIMB_DOORS.length; ladder++) {
+            for (int rung = 1; rung <= TrapMath.CLIMB_RUNGS; rung++) {
+                assertEquals(TrapMath.CLIMB_RETURN,
+                        TrapMath.climbReturnToPlayer(ladder, rung), 0.0005f,
+                        "ladder " + ladder + " rung " + rung + " is priced differently");
+            }
+        }
+    }
+
+    @Test
+    void theHouseWinsTheClimbToo() {
+        assertTrue(TrapMath.CLIMB_RETURN < 1.0f);
+        assertTrue(TrapMath.CLIMB_RETURN > 0.9f);
+    }
+
+    @Test
+    void climbingHigherPaysMoreAndIsLessLikely() {
+        for (int ladder = 0; ladder < TrapMath.CLIMB_DOORS.length; ladder++) {
+            for (int rung = 2; rung <= TrapMath.CLIMB_RUNGS; rung++) {
+                assertTrue(TrapMath.climbMultiplier(ladder, rung)
+                                > TrapMath.climbMultiplier(ladder, rung - 1),
+                        "rung " + rung + " must pay more than the one below");
+                assertTrue(TrapMath.climbSurvival(ladder, rung)
+                                < TrapMath.climbSurvival(ladder, rung - 1),
+                        "rung " + rung + " must be harder to reach");
+            }
+        }
+    }
+
+    @Test
+    void theRecklessLadderIsWilderNotWorse() {
+        // Fewer doors means a worse chance and a bigger prize, and the two
+        // have to cancel exactly -- otherwise one ladder is simply the right
+        // one to play and the choice is fake.
+        int steady = 0;
+        int reckless = 1;
+        assertTrue(TrapMath.climbSafeChance(reckless) < TrapMath.climbSafeChance(steady));
+        assertTrue(TrapMath.climbMultiplier(reckless, TrapMath.CLIMB_RUNGS)
+                        > TrapMath.climbMultiplier(steady, TrapMath.CLIMB_RUNGS),
+                "the riskier ladder must top out higher");
+        assertEquals(TrapMath.climbReturnToPlayer(steady, TrapMath.CLIMB_RUNGS),
+                TrapMath.climbReturnToPlayer(reckless, TrapMath.CLIMB_RUNGS), 0.0005f,
+                "but both must be the same bet");
+    }
+
+    @Test
+    void theFirstRungAlreadyBeatsTheStake() {
+        // Surviving one door has to be worth more than walking in, or the
+        // cash-out button is a trap on the very first press.
+        for (int ladder = 0; ladder < TrapMath.CLIMB_DOORS.length; ladder++) {
+            assertTrue(TrapMath.climbMultiplier(ladder, 1) > 1.0f,
+                    "ladder " + ladder + " pays " + TrapMath.climbMultiplier(ladder, 1)
+                            + "x for the first door -- that is a loss for winning");
+        }
+    }
+
     // --- plinko -----------------------------------------------------------------
 
     @Test

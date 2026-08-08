@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "GTG",
+    "III"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:gold_ingot",
+    "T": "minecraft:tripwire_hook"
+  },
+  "result": {
+    "id": "trapcraft:climb",
+    "count": 1
+  }
+}

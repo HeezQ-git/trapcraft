@@ -706,6 +706,60 @@ public final class TrapMath {
         return paid / spins;
     }
 
+    // --- the climb --------------------------------------------------------------
+
+    /**
+     * Six rungs, one bad door on each, and you may stop whenever you like.
+     *
+     * The fourth machine, and the one axis the other three don't have: a
+     * decision DURING the game. The slot machine decides for you, roulette
+     * asks what you're backing before anything moves, and the peg board is
+     * pure spectacle -- here the only question is when to get off, and it is
+     * asked six times.
+     *
+     * The multipliers are chosen so every rung carries exactly the same house
+     * edge. That means there is no correct place to stop: cashing at the first
+     * rung and going for all six are the same bet in expectation, and the
+     * choice is nerve rather than arithmetic. A test asserts it, because the
+     * moment one rung is worth more than another the game becomes a puzzle
+     * with an answer and stops being a gamble.
+     */
+    public static final int CLIMB_RUNGS = 6;
+    /** What the house keeps, whichever rung you stop on. */
+    public static final float CLIMB_RETURN = 0.965f;
+
+    /** How the two ladders differ: doors per rung, one of which is bad. */
+    public static final int[] CLIMB_DOORS = {4, 3};
+    public static final String[] CLIMB_NAMES = {"Steady", "Reckless"};
+
+    /** Odds of surviving one rung on this ladder. */
+    public static float climbSafeChance(int ladder) {
+        int doors = CLIMB_DOORS[ladder];
+        return (doors - 1) / (float) doors;
+    }
+
+    /**
+     * What standing on this rung is worth, as a multiple of the stake.
+     *
+     * Solved from the odds rather than picked: the multiplier is exactly what
+     * makes the return the same at every height.
+     *
+     * @param rung how many doors have been survived, 1..CLIMB_RUNGS
+     */
+    public static float climbMultiplier(int ladder, int rung) {
+        return CLIMB_RETURN / (float) Math.pow(climbSafeChance(ladder), rung);
+    }
+
+    /** Chance of getting this high at all. */
+    public static float climbSurvival(int ladder, int rung) {
+        return (float) Math.pow(climbSafeChance(ladder), rung);
+    }
+
+    /** Long-run return for a player who always stops on this rung. */
+    public static float climbReturnToPlayer(int ladder, int rung) {
+        return climbSurvival(ladder, rung) * climbMultiplier(ladder, rung);
+    }
+
     // --- plinko -----------------------------------------------------------------
 
     /**

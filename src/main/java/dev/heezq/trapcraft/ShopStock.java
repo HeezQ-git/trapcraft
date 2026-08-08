@@ -260,6 +260,26 @@ public final class ShopStock {
 
     private static void building() {
         Category c = BUILDING;
+        add(c, "minecraft:copper_grate", 32, 16);
+        add(c, "minecraft:chiseled_copper", 32, 18);
+        add(c, "minecraft:copper_bulb", 8, 26);
+        add(c, "minecraft:exposed_copper", 32, 14);
+        add(c, "minecraft:weathered_copper", 32, 14);
+        add(c, "minecraft:oxidized_copper", 32, 14);
+        add(c, "minecraft:waxed_copper_block", 8, 28);
+        add(c, "minecraft:cut_copper", 32, 16);
+        add(c, "minecraft:magma_block", 16, 20);
+        add(c, "minecraft:soul_sand", 32, 10);
+        add(c, "minecraft:soul_soil", 32, 10);
+        add(c, "minecraft:polished_blackstone_brick_slab", 32, 8);
+        add(c, "minecraft:white_terracotta", 32, 11);
+        add(c, "minecraft:orange_terracotta", 32, 11);
+        add(c, "minecraft:light_blue_terracotta", 32, 11);
+        add(c, "minecraft:green_terracotta", 32, 11);
+        add(c, "minecraft:brown_terracotta", 32, 11);
+        add(c, "minecraft:blue_ice", 8, 40);
+        add(c, "minecraft:ice", 16, 12);
+        add(c, "minecraft:honeycomb_block", 8, 22);
         add(c, "minecraft:mud", 64, 4);
         add(c, "minecraft:packed_mud", 64, 5);
         add(c, "minecraft:resin_bricks", 32, 10);
@@ -569,6 +589,30 @@ public final class ShopStock {
 
     private static void materials() {
         Category c = MATERIALS;
+        add(c, "minecraft:coal_block", 8, 22);
+        add(c, "minecraft:raw_iron_block", 2, 40);
+        add(c, "minecraft:raw_copper_block", 2, 24);
+        add(c, "minecraft:raw_gold_block", 2, 60);
+        add(c, "minecraft:iron_block", 2, 40);
+        add(c, "minecraft:gold_block", 2, 70);
+        add(c, "minecraft:lapis_block", 4, 50);
+        add(c, "minecraft:redstone_block", 4, 30);
+        add(c, "minecraft:clay", 16, 10);
+        add(c, "minecraft:brick", 32, 10);
+        add(c, "minecraft:nether_wart_block", 8, 26);
+        add(c, "minecraft:warped_wart_block", 8, 26);
+        add(c, "minecraft:ender_eye", 4, 70);
+        add(c, "minecraft:chorus_fruit", 16, 20);
+        add(c, "minecraft:popped_chorus_fruit", 16, 24);
+        add(c, "minecraft:glow_lichen", 8, 14);
+        add(c, "minecraft:sculk", 16, 16);
+        add(c, "minecraft:wither_rose", 4, 60);
+        add(c, "minecraft:stick", 64, 4);
+        add(c, "minecraft:bowl", 32, 6);
+        add(c, "minecraft:slime_block", 4, 40);
+        add(c, "minecraft:honey_block", 4, 34);
+        add(c, "minecraft:dried_kelp_block", 8, 20);
+        add(c, "minecraft:cobweb", 8, 26);
         add(c, "minecraft:turtle_scute", 2, 50);
         add(c, "minecraft:rabbit_foot", 2, 45);
         add(c, "minecraft:resin_clump", 16, 16);
@@ -621,6 +665,27 @@ public final class ShopStock {
 
     private static void utility() {
         Category c = UTILITY;
+        add(c, "minecraft:crafter", 1, 40);
+        add(c, "minecraft:respawn_anchor", 1, 180);
+        add(c, "minecraft:hopper_minecart", 1, 45);
+        add(c, "minecraft:chest_minecart", 1, 32);
+        add(c, "minecraft:tnt_minecart", 1, 50);
+        add(c, "minecraft:furnace_minecart", 1, 30);
+        add(c, "minecraft:oak_boat", 2, 12);
+        add(c, "minecraft:oak_chest_boat", 2, 18);
+        add(c, "minecraft:crossbow", 1, 26);
+        add(c, "minecraft:spectral_arrow", 8, 24);
+        add(c, "minecraft:carrot_on_a_stick", 1, 20);
+        add(c, "minecraft:warped_fungus_on_a_stick", 1, 28);
+        add(c, "minecraft:map", 4, 12);
+        add(c, "minecraft:filled_map", 1, 10);
+        add(c, "minecraft:writable_book", 4, 14);
+        add(c, "minecraft:goat_horn", 1, 70);
+        add(c, "minecraft:trial_key", 1, 140);
+        add(c, "minecraft:ominous_trial_key", 1, 260);
+        add(c, "minecraft:ominous_bottle", 2, 90);
+        add(c, "minecraft:mace", 1, 900);
+        add(c, "minecraft:heavy_core", 1, 700);
         add(c, "minecraft:lightning_rod", 2, 24);
         add(c, "minecraft:daylight_detector", 2, 20);
         add(c, "minecraft:lectern", 2, 16);
