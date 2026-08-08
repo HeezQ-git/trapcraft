@@ -348,15 +348,9 @@ public class SlotScreenHandler extends ScreenHandler {
         int stake = STAKES[stakeChoice];
         lastWon = Math.round(stake * pending);
 
-        int before = TrapMarket.wealthOf(player);
         if (lastWon > 0) {
             TrapMarket.pay(player, lastWon);
         }
-        // TEMPORARY: the machine reportedly turned 9 emeralds into 15 stacks of
-        // blocks, which 31% house edge cannot do. Log every movement until the
-        // arithmetic is accounted for.
-        TrapCraft.LOGGER.info("slot: stake={} mult={} won={} wealth {} -> {}",
-                stake, pending, lastWon, before, TrapMarket.wealthOf(player));
 
         var world = player.getWorld();
         boolean big = pending >= TrapMath.SLOT_PAYS[1];
