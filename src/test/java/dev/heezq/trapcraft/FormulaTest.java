@@ -837,7 +837,7 @@ class FormulaTest {
         long total = 0;
         int rounds = 200_000;
         for (int i = 0; i < rounds; i++) {
-            int stake = TrapMath.punterStake(rng);
+            int stake = TrapMath.punterStake(rng, 0);
             assertTrue(stake >= TrapMath.PUNTER_MIN_STAKE
                             && stake <= TrapMath.PUNTER_MAX_STAKE,
                     "stake " + stake + " is outside the advertised range");
@@ -849,6 +849,56 @@ class FormulaTest {
                 "small punters should far outnumber whales");
         double mean = total / (double) rounds;
         assertTrue(mean > 25 && mean < 60, "mean stake is " + mean);
+    }
+
+    @Test
+    void aBusyRoomIsACheapRoom() {
+        // Seven in and nobody plays above sixteen -- that is what keeps a busy
+        // night from being simply a bigger night. You trade the size of the
+        // bets for the number of them.
+        java.util.Random rng = new java.util.Random(8080);
+        int previous = Integer.MAX_VALUE;
+        for (int crowd : new int[]{0, 2, 4, 6, 7, 12}) {
+            int biggest = 0;
+            for (int draw = 0; draw < 20_000; draw++) {
+                biggest = Math.max(biggest, TrapMath.punterStake(rng, crowd));
+            }
+            assertTrue(biggest <= previous,
+                    "a fuller room should never bet bigger: " + crowd + " reached " + biggest);
+            previous = biggest;
+        }
+        assertEquals(TrapMath.PUNTER_MAX_STAKE,
+                TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(0));
+        assertEquals(16, TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(7),
+                "seven in the room should cap at 16e, as advertised");
+    }
+
+    @Test
+    void aFloorNobodyHasHeardOfDrawsLeast() {
+        float unknown = TrapMath.floorPull(0, 0);
+        float known = TrapMath.floorPull(100, 0);
+        float hooked = TrapMath.floorPull(0, 100);
+        float best = TrapMath.floorPull(100, 100);
+        assertTrue(unknown < known && unknown < hooked && known < best,
+                unknown + " " + known + " " + hooked + " " + best);
+        assertTrue(unknown > 0.0f, "even an unknown room gets somebody");
+        // Reputation is the bigger lever, because it is the one you buy with
+        // payouts -- and that is the loop that stops a casino being a hoard.
+        assertTrue(known > hooked, "paying people out should matter most");
+        assertTrue(best <= 2.5f, "the draw must not run away: " + best);
+    }
+
+    @Test
+    void hookedRegularsStayLonger() {
+        java.util.Random rng = new java.util.Random(99);
+        int cold = 0;
+        int hooked = 0;
+        for (int visit = 0; visit < 20_000; visit++) {
+            cold += TrapMath.punterRounds(0, rng);
+            hooked += TrapMath.punterRounds(TrapMath.HOUSE_STAT_MAX, rng);
+        }
+        assertTrue(hooked > cold * 1.8, "cold " + cold + " vs hooked " + hooked);
+        assertTrue(TrapMath.punterRounds(0, rng) > 0, "a visit is at least one round");
     }
 
     @Test

@@ -86,6 +86,15 @@ public final class TrapHouse {
         /** Everything ever paid out. */
         public long paid;
         public int plays;
+        /**
+         * How well known the place is, 0..100.
+         *
+         * Bought with payouts and lost by turning people away. See
+         * {@link TrapMath#floorPull}.
+         */
+        public int rep;
+        /** How hooked the regulars are, 0..100. Built by play, decays quietly. */
+        public int addiction;
 
         House(UUID id, String founder, String name) {
             this.id = id;
@@ -101,6 +110,17 @@ public final class TrapHouse {
         /** The house edge it has actually run at, in percent. */
         public int edge() {
             return handle <= 0 ? 0 : Math.round(profit() * 100.0f / handle);
+        }
+
+        /** How hard this floor pulls people in, as a multiplier. */
+        public float pull() {
+            return TrapMath.floorPull(rep, addiction);
+        }
+
+        void nudge(int repDelta, int addictionDelta) {
+            rep = Math.max(0, Math.min(TrapMath.HOUSE_STAT_MAX, rep + repDelta));
+            addiction = Math.max(0, Math.min(TrapMath.HOUSE_STAT_MAX,
+                    addiction + addictionDelta));
         }
     }
 
@@ -212,16 +232,42 @@ public final class TrapHouse {
         house.balance += amount;
         house.handle += amount;
         house.plays++;
+        // Every round played is another round the regulars wanted.
+        house.nudge(0, 1);
         save();
     }
 
-    /** What a punter walked out with. Never more than the vault holds. */
+    /**
+     * What a punter walked out with. Never more than the vault holds.
+     *
+     * A winner is the only advertising this place has, so paying one is what
+     * buys the reputation that brings the next four in. Which is the loop that
+     * stops a casino being a machine for hoarding: hold on to everything and
+     * the room empties.
+     */
     public static int punterWon(House house, int amount) {
         int given = (int) Math.min(Math.max(0, amount), house.balance);
         house.balance -= given;
         house.paid += given;
+        if (given > 0) {
+            house.nudge(1, 0);
+        }
         save();
         return given;
+    }
+
+    /** Somebody walked up and the table wouldn't take their money. */
+    public static void turnedAway(House house) {
+        house.nudge(-2, 0);
+        save();
+    }
+
+    /** One beat of a quiet room forgetting about itself. */
+    public static void cool() {
+        for (House house : HOUSES.values()) {
+            house.nudge(house.rep > 0 ? -1 : 0, house.addiction > 0 ? -1 : 0);
+        }
+        save();
     }
 
     /** Where this casino's machines are, for the plaque. */
@@ -606,8 +652,9 @@ public final class TrapHouse {
         try {
             List<String> lines = new ArrayList<>();
             for (House house : HOUSES.values()) {
-                lines.add("house " + house.id + " " + house.balance + " " + house.handle
-                        + " " + house.paid + " " + house.plays + " "
+                lines.add("house2 " + house.id + " " + house.balance + " " + house.handle
+                        + " " + house.paid + " " + house.plays + " " + house.rep
+                        + " " + house.addiction + " "
                         + house.founder + " " + house.name);
             }
             WIRES.forEach((where, id) -> lines.add("wire " + where + " " + id));
@@ -627,7 +674,22 @@ public final class TrapHouse {
             }
             for (String line : Files.readAllLines(saveFile)) {
                 String[] parts = line.trim().split("\\s+");
-                if (parts.length >= 8 && parts[0].equals("house")) {
+                // A new tag rather than a longer line, because the founder
+                // field is a player name and a player name may legally be all
+                // digits -- so "is parts[6] a number?" is not a safe way to
+                // ask which format this is.
+                if (parts.length >= 10 && parts[0].equals("house2")) {
+                    House house = new House(UUID.fromString(parts[1]), parts[8],
+                            String.join(" ", java.util.Arrays.copyOfRange(
+                                    parts, 9, parts.length)));
+                    house.balance = Long.parseLong(parts[2]);
+                    house.handle = Long.parseLong(parts[3]);
+                    house.paid = Long.parseLong(parts[4]);
+                    house.plays = Integer.parseInt(parts[5]);
+                    house.rep = Integer.parseInt(parts[6]);
+                    house.addiction = Integer.parseInt(parts[7]);
+                    HOUSES.put(house.id, house);
+                } else if (parts.length >= 8 && parts[0].equals("house")) {
                     House house = new House(UUID.fromString(parts[1]), parts[6],
                             String.join(" ", java.util.Arrays.copyOfRange(
                                     parts, 7, parts.length)));
@@ -635,6 +697,10 @@ public final class TrapHouse {
                     house.handle = Long.parseLong(parts[3]);
                     house.paid = Long.parseLong(parts[4]);
                     house.plays = Integer.parseInt(parts[5]);
+                    // A floor from before any of this was measured opens on
+                    // the strength of what it has already paid out, rather
+                    // than as though nobody had ever heard of it.
+                    house.rep = (int) Math.min(TrapMath.HOUSE_STAT_MAX, house.paid / 400);
                     HOUSES.put(house.id, house);
                 } else if (parts.length == 6 && parts[0].equals("wire")) {
                     WIRES.put(parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4],
@@ -643,6 +709,11 @@ public final class TrapHouse {
             }
             TrapCraft.LOGGER.info("casinos: {} houses, {} machines wired, {}e in vaults",
                     HOUSES.size(), WIRES.size(), floatHeld());
+            for (House house : HOUSES.values()) {
+                TrapCraft.LOGGER.info("  {} -- {}e, rep {}, addiction {}, pull {}",
+                        house.name, house.balance, house.rep, house.addiction,
+                        String.format("%.2f", house.pull()));
+            }
         } catch (Exception failure) {
             TrapCraft.LOGGER.error("couldn't read the casinos -- vaults may be lost: {}",
                     failure.toString());

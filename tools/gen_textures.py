@@ -1322,7 +1322,53 @@ CLIMB_PAL = {
     "M": "#f0cf5a",     # brass, lit
     "k": "#1a1c20",     # keyhole
     "g": "#2fbf6b",     # green lamp
+    "G": "#8df0b4",     # lamp, lit core
+    "a": "#e0a02a",     # amber lamp
+    "A": "#ffd77a",     # amber, lit core
+    "t": "#8a6a1c",     # tread, shadow
+    "T": "#d8b249",     # tread, lit
 }
+
+# The tread of one rung on the climb: brass plate with a grip pattern, so
+# four of them stepping up the face read as a staircase and not as shelves.
+CLIMB_STEP = """
+tttttttttttttttt
+tTTTTTTTTTTTTTTt
+tTmTmTmTmTmTmTTt
+tTTTTTTTTTTTTTTt
+tTmTmTmTmTmTmTTt
+tTTTTTTTTTTTTTTt
+tttttttttttttttt
+................
+................
+................
+................
+................
+................
+................
+................
+................
+"""
+
+# The lamp on the end of a rung. Lit when you have got that far.
+CLIMB_LAMP = """
+kkkkkkkkkkkkkkkk
+kaaaaaaaaaaaaaak
+kaAAAAAAAAAAAAak
+kaAGGGGGGGGGGAak
+kaAGgggggggGGAak
+kaAGgggggggGGAak
+kaAGGGGGGGGGGAak
+kaAAAAAAAAAAAAak
+kaaaaaaaaaaaaaak
+kkkkkkkkkkkkkkkk
+................
+................
+................
+................
+................
+................
+"""
 
 # The face: three brass locks in a row on a riveted iron door.
 CLIMB_FACE = """
@@ -2334,6 +2380,8 @@ def main() -> None:
     write(render(CHIP_STACK, TABLE_PAL), "block", "chip_stack.png")
     write(render(CARD_RACK, TABLE_PAL), "block", "card_rack.png")
     write(render(CLIMB_FACE, CLIMB_PAL), "block", "climb_face.png")
+    write(render(CLIMB_STEP, CLIMB_PAL), "block", "climb_step.png")
+    write(render(CLIMB_LAMP, CLIMB_PAL), "block", "climb_lamp.png")
     write(render(CLIMB_PLATE, CLIMB_PAL), "block", "climb_plate.png")
     write(render(CLIMB_LID, CLIMB_PAL), "block", "climb_lid.png")
     write(render(PLINKO_BOARD, PLINKO_PAL), "block", "plinko_board.png")

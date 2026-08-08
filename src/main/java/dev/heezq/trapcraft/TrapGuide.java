@@ -443,7 +443,19 @@ public final class TrapGuide {
                         + "with their own money.\n\n"))
                 .append(body("They lose at the rate the cabinet says. That's "
                         + "your wage.\n\n"))
-                .append(hint("Empty vault, nobody comes."))));
+                .append(hint("Busy after dark. Quiet at noon."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4b2. YOUR NAME\n\n"))
+                .append(body("Paying winners is what gets the place talked "
+                        + "about. Turning people away is too.\n\n"))
+                .append(warn("A room that never pays empties out."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4b3. THE ROOM\n\n"))
+                .append(body("A quiet floor gets big bets. A packed one gets "
+                        + "8e a go -- but a lot of them.\n\n"))
+                .append(hint("/floor shows both."))));
 
         pages.add(page(Text.empty()
                 .append(title("4o4c. ONE AT A TIME\n\n"))

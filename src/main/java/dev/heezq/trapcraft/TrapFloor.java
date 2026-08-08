@@ -153,7 +153,7 @@ public final class TrapFloor {
 
     private static final String PUNTER_TAG = "trapcraft_punter";
     /** Ticks between one attempt to send somebody in. */
-    private static final int ARRIVAL_TICKS = 300;
+    private static final int ARRIVAL_TICKS = 60;
     /**
      * How often an attempt produces a punter, before the clock.
      *
@@ -162,10 +162,18 @@ public final class TrapFloor {
      * midnight.
      */
     private static final float ARRIVAL_CHANCE = 0.55f;
-    /** Most punters on the floor at once at dusk. Scaled by the same clock. */
-    private static final int MAX_PUNTERS = 5;
+    /**
+     * Most punters on the floor at once at dusk, before the clock and the
+     * floor's own draw.
+     *
+     * In practice the real cap is usually how many machines you have wired: a
+     * punter needs a free one, so a floor of four cabinets tops out at four
+     * whatever the hour. Build more and the room holds more, which is the
+     * legible version of "how do I get busier".
+     */
+    private static final int MAX_PUNTERS = 8;
     /** Ticks between one punter's rounds. Slow enough to watch. */
-    private static final int ROUND_TICKS = 45;
+    private static final int ROUND_TICKS = 70;
     /** How far out they arrive, so they walk the last few blocks in. */
     private static final int APPROACH = 6;
     /** Rounds spent trying to reach the machine before giving up and being there. */
@@ -204,6 +212,21 @@ public final class TrapFloor {
     }
 
     private static final List<Punter> PUNTERS = new ArrayList<>();
+
+    /**
+     * The draw of the best-regarded floor with a machine free.
+     *
+     * One number for the server rather than one per house, because arrivals
+     * are one attempt for everybody -- and taking the best means a good room
+     * next door does not have its trade throttled by a bad one.
+     */
+    private static float bestPull() {
+        float best = 0.55f;
+        for (TrapHouse.House house : TrapHouse.all()) {
+            best = Math.max(best, house.pull());
+        }
+        return best;
+    }
 
     /** Is this one ours, this session? */
     private static boolean known(UUID id) {
@@ -267,6 +290,12 @@ public final class TrapFloor {
             if (server.getTicks() % ARRIVAL_TICKS == 0) {
                 maybeArrive(server);
             }
+            // A minute of quiet is a minute the regulars spend not thinking
+            // about the place. Only when the room is genuinely empty, so a
+            // busy floor never goes backwards.
+            if (server.getTicks() % 1200 == 0 && PUNTERS.isEmpty()) {
+                TrapHouse.cool();
+            }
         });
     }
 
@@ -297,10 +326,10 @@ public final class TrapFloor {
     private static void maybeArrive(MinecraftServer server, boolean forced) {
         float busy = TrapMath.casinoHourFactor(
                 server.getOverworld().getTimeOfDay() % 24000L);
-        int room = Math.max(1, Math.round(MAX_PUNTERS * busy));
+        int room = Math.max(1, Math.round(MAX_PUNTERS * busy * bestPull()));
         if (PUNTERS.size() >= room
                 || (!forced && server.getOverworld().getRandom().nextFloat()
-                > ARRIVAL_CHANCE * busy)) {
+                > ARRIVAL_CHANCE * busy * bestPull())) {
             return;
         }
         List<String> open = new ArrayList<>();
@@ -365,7 +394,10 @@ public final class TrapFloor {
                 world.getRegistryManager().getOrThrow(RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(VillagerProfession.NITWIT)));
 
-        int stake = TrapMath.punterStake(new java.util.Random(random.nextLong()));
+        // Capped by how full the room already is: a busy floor is a cheap
+        // floor. See TrapMath.punterStakeCeiling.
+        int stake = TrapMath.punterStake(new java.util.Random(random.nextLong()),
+                PUNTERS.size());
         // Never a stake the vault could not settle: a punter who breaks the
         // bank is a punter who took the owner's money away while they were
         // stood somewhere else entirely.
@@ -374,6 +406,8 @@ public final class TrapFloor {
             stake /= 2;
         }
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
+            // Turned away at the smallest bet there is. Word gets round.
+            TrapHouse.turnedAway(house);
             punter.discard();
             return;
         }
@@ -387,7 +421,8 @@ public final class TrapFloor {
         // sent in was discarded by our own litter cleanup at the instant it
         // appeared. Nobody saw a single villager for the whole of 1.0.134.
         Punter session = new Punter(punter.getUuid(), at, houseId, stake,
-                2 + random.nextInt(5), stand);
+                TrapMath.punterRounds(house.addiction,
+                        new java.util.Random(random.nextLong())), stand);
         PUNTERS.add(session);
         if (!world.spawnEntity(punter)) {
             PUNTERS.remove(session);
@@ -617,10 +652,10 @@ public final class TrapFloor {
         }
         float busy = TrapMath.casinoHourFactor(
                 server.getOverworld().getTimeOfDay() % 24000L);
-        int room = Math.max(1, Math.round(MAX_PUNTERS * busy));
-        float chance = Math.min(1.0f, ARRIVAL_CHANCE * busy);
+        int room = Math.max(1, Math.round(MAX_PUNTERS * busy * bestPull()));
+        float chance = Math.min(1.0f, ARRIVAL_CHANCE * busy * bestPull());
         int every = Math.round(ARRIVAL_TICKS / 20.0f / chance);
-        Text out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
+        net.minecraft.text.MutableText out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(wired + " machines wired, " + loaded
                         + " loaded, " + free + " free").formatted(Formatting.GRAY))
                 .append(Text.literal("\n  " + PUNTERS.size() + " of " + room
@@ -635,7 +670,14 @@ public final class TrapFloor {
                 .append(Text.literal("\n  One turns up about every " + every
                                 + "s, if a wired machine is loaded and its vault isn't empty")
                         .formatted(Formatting.DARK_GRAY));
-        source.sendFeedback(() -> out, false);
+        for (TrapHouse.House house : TrapHouse.all()) {
+            out.append(Text.literal("\n  " + house.name + "  name "
+                            + house.rep + ", regulars " + house.addiction + "  ->  "
+                            + String.format("%.2f", house.pull()) + "x")
+                    .formatted(Formatting.DARK_GRAY));
+        }
+        Text shown = out;
+        source.sendFeedback(() -> shown, false);
         return 1;
     }
 

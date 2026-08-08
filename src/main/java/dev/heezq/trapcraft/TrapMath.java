@@ -1206,16 +1206,79 @@ public final class TrapMath {
     public static final int PUNTER_MAX_STAKE = 256;
 
     /**
+     * The biggest band a punter will play when the room already holds this
+     * many.
+     *
+     * A quiet floor is where the money is: two people in, and one of them may
+     * be putting 256e on a spin. A packed floor is a packed floor because it
+     * is cheap -- seven in and nobody is playing above sixteen. Which is both
+     * true of real rooms and the thing that keeps a busy night from being
+     * simply a bigger night: you trade the size of the bets for the number of
+     * them.
+     */
+    public static int punterStakeCeiling(int crowd) {
+        if (crowd <= 1) {
+            return 5;   // up to 256e
+        }
+        if (crowd <= 3) {
+            return 4;   // up to 128e
+        }
+        if (crowd <= 5) {
+            return 3;   // up to 64e
+        }
+        if (crowd <= 6) {
+            return 2;   // up to 32e
+        }
+        return 1;       // up to 16e
+    }
+
+    /**
      * What this punter bets a round.
      *
      * Doubling bands from 8 to 256, drawn low-biased by taking the smaller of
      * two rolls -- so most of the room is playing for small change and a whale
      * turns up about once in thirty-six, which is what makes one worth
-     * noticing. The mean lands near 40e.
+     * noticing -- then capped by how busy it already is.
      */
-    public static int punterStake(Random rng) {
-        int band = Math.min(rng.nextInt(6), rng.nextInt(6));
+    public static int punterStake(Random rng, int crowd) {
+        int band = Math.min(Math.min(rng.nextInt(6), rng.nextInt(6)),
+                punterStakeCeiling(crowd));
         return PUNTER_MIN_STAKE << band;
+    }
+
+    // --- what brings them in ------------------------------------------------
+
+    /** Both stats run 0..100. */
+    public static final int HOUSE_STAT_MAX = 100;
+
+    /**
+     * How much the floor's own name and its regulars' habits pull people in.
+     *
+     * Two stats, and they are earned in opposite ways on purpose.
+     *
+     * REPUTATION is bought with payouts. A casino that never pays anybody
+     * gets talked about as a casino that never pays anybody, and word of a
+     * winner is the only advertising a room like that has. Which means the
+     * loop cannot be gamed by simply hoarding: a thin, tight house empties
+     * out, and a bad run of luck -- expensive as it is -- is what fills it
+     * again.
+     *
+     * ADDICTION is built by the regulars playing, and it makes them play
+     * longer and come back sooner. It decays if the room goes quiet, so it is
+     * a thing you keep going rather than a thing you finish.
+     */
+    public static float floorPull(int rep, int addiction) {
+        float known = Math.max(0, Math.min(HOUSE_STAT_MAX, rep)) / (float) HOUSE_STAT_MAX;
+        float hooked = Math.max(0, Math.min(HOUSE_STAT_MAX, addiction)) / (float) HOUSE_STAT_MAX;
+        return 0.55f + 0.85f * known + 0.60f * hooked;
+    }
+
+    /** Rounds a punter stays for, given how hooked the regulars are. */
+    public static int punterRounds(int addiction, Random rng) {
+        float hooked = Math.max(0, Math.min(HOUSE_STAT_MAX, addiction))
+                / (float) HOUSE_STAT_MAX;
+        int base = 4 + rng.nextInt(6);
+        return base + Math.round(hooked * 10.0f);
     }
 
     /**

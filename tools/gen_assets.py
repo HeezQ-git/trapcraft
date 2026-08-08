@@ -1193,15 +1193,27 @@ def table_assets(name: str, top: str, pattern, key, furniture=None) -> None:
 
 
 def climb_model() -> dict:
-    """A strongbox: brass-banded lid, locks on the face, feet under it.
+    """A cabinet with the climb itself running up the front of it.
+
+    The strongbox it used to be was a handsome box that told you nothing: the
+    game is six rungs and a bad door on each, and a chest says "loot", not
+    "how far dare you go". Four brass treads now step up and across the face
+    with a lamp on the end of each, which is the game drawn on the outside of
+    the machine.
 
     The BODY still fills the cube exactly, so the carrier can honestly say
-    FULL_BLOCK and costs nothing from the thin transparent pool -- every
-    detail below is bolted to the OUTSIDE of that cube rather than carved out
-    of it. Which is the whole trick: proud geometry is free, hollow geometry
-    costs a blockstate. check_models.py measures the claim rather than
-    trusting this comment.
+    FULL_BLOCK -- every tread, lamp and post below is bolted to the OUTSIDE of
+    it. Proud geometry is free; hollow geometry costs a blockstate.
     """
+    # Four rungs stepping up and to the right, each with its lamp on the end.
+    treads = []
+    for rung in range(4):
+        low = 2.6 + rung * 3.0
+        left = 1.4 + rung * 2.4
+        treads.append(box([left, low, -1.3], [left + 5.2, low + 1.6, 0.4],
+                          "step", up="step", down="step"))
+        treads.append(box([left + 5.2, low + 0.1, -1.1], [left + 6.6, low + 1.5, 0.2],
+                          "lamp", up="lamp", down="lamp"))
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
@@ -1209,6 +1221,8 @@ def climb_model() -> dict:
             "face": f"{NS}:block/climb_face",
             "plate": f"{NS}:block/climb_plate",
             "lid": f"{NS}:block/climb_lid",
+            "step": f"{NS}:block/climb_step",
+            "lamp": f"{NS}:block/climb_lamp",
             "rim": f"{NS}:block/table_rim",
             "particle": f"{NS}:block/climb_plate",
         },
@@ -1225,17 +1239,16 @@ def climb_model() -> dict:
                     "down": {"texture": "#plate", "uv": [0, 0, 16, 16]},
                 },
             },
-            # An overhanging lid, so it reads as a chest rather than a crate.
-            box([-0.5, 15.5, -0.5], [16.5, 17, 16.5], "rim", up="lid", down="rim"),
-            # Corner posts down the front edges.
-            box([-0.4, 0, -0.4], [1.6, 15.5, 1.6], "rim"),
-            box([14.4, 0, -0.4], [16.4, 15.5, 1.6], "rim"),
-            box([-0.4, 0, 14.4], [1.6, 15.5, 16.4], "rim"),
-            box([14.4, 0, 14.4], [16.4, 15.5, 16.4], "rim"),
-            # A banded strap round the middle and a lock plate on the front.
-            box([-0.3, 6, -0.3], [16.3, 8, 16.3], "rim"),
-            box([5.5, 8.5, -1.2], [10.5, 13.5, 0.2], "rim", up="rim", down="rim"),
-        ],
+            box([-0.6, 0, -0.6], [16.6, 2, 16.6], "rim", down="rim"),      # plinth
+            box([-0.6, 14.6, -0.6], [16.6, 16.6, 16.6], "rim", up="lid"),  # crown
+            box([-0.4, 2, -0.4], [1.2, 14.6, 1.2], "rim"),                 # corner posts
+            box([14.8, 2, -0.4], [16.4, 14.6, 1.2], "rim"),
+            box([-0.4, 2, 14.8], [1.2, 14.6, 16.4], "rim"),
+            box([14.8, 2, 14.8], [16.4, 14.6, 16.4], "rim"),
+            # The top lamp, bigger than the rest: the sixth rung is the one
+            # everybody is looking at from the moment they sit down.
+            box([6, 15.9, 5], [10, 18.4, 9], "lamp", up="lamp", down="lamp"),
+        ] + treads,
     }
 
 
@@ -1786,6 +1799,18 @@ def slot_model(upper: bool) -> dict:
                 box([0.8, 1.5, 14.9], [15.2, 11.5, 15.4], "glass"),   # back glass
                 box([0, 13, 0], [16, 16, 16], "trim", up="trim"),     # marquee
                 box([0.6, 0.8, 0.4], [15.4, 1.6, 15.6], "trim"),      # lower brass lip
+                # A bezel round the glass, so the reels sit in a window
+                # instead of being painted on the front of a box.
+                box([0.4, 11.3, -0.3], [15.6, 12.6, 0.9], "trim", up="trim"),
+                box([0.4, 0.6, -0.3], [15.6, 1.9, 0.9], "trim", down="trim"),
+                box([0.2, 0.6, -0.3], [1.8, 12.6, 0.9], "trim"),
+                box([14.2, 0.6, -0.3], [15.8, 12.6, 0.9], "trim"),
+                # Lamp columns up the corners and a lit sign on the marquee.
+                box([-0.5, 1.2, -0.5], [0.9, 12.4, 0.9], "glass"),
+                box([15.1, 1.2, -0.5], [16.5, 12.4, 0.9], "glass"),
+                box([2.5, 13.4, -0.9], [13.5, 15.6, 0.4], "glass",
+                    up="trim", down="trim"),
+                box([-0.6, 15.6, -1.1], [16.6, 16.8, 16.6], "trim", up="trim"),
             ],
         }
     return {
@@ -1808,6 +1833,17 @@ def slot_model(upper: bool) -> dict:
             # sticking out at hand height and stops reading as a fridge.
             box([3, 2.5, -1.6], [13, 5, 0.6], "trim", up="deck", down="trim"),
             box([3, 5, -1.6], [13, 5.6, -1.0], "trim", up="trim"),
+            # The button row along the front of the deck -- the bit you press
+            # when you cannot be bothered to reach for the arm.
+            box([3.2, 14, 1.4], [5.6, 15.2, 3.8], "trim", up="deck"),
+            box([6.8, 14, 1.4], [9.2, 15.2, 3.8], "trim", up="deck"),
+            box([10.4, 14, 1.4], [12.8, 15.2, 3.8], "trim", up="deck"),
+            # Fluted side columns, so the cabinet has a profile from the side
+            # as well as the front.
+            box([-0.6, 1.2, 2], [1, 13.5, 5], "trim"),
+            box([15, 1.2, 2], [16.6, 13.5, 5], "trim"),
+            box([-0.6, 1.2, 11], [1, 13.5, 14], "trim"),
+            box([15, 1.2, 11], [16.6, 13.5, 14], "trim"),
         ],
     }
 

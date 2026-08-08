@@ -155,9 +155,30 @@ public class HouseScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Opened by " + house.founder, Formatting.DARK_GRAY),
                 Text.empty(),
+                bar("Name", house.rep, Formatting.GOLD),
+                line("  Bought with payouts. A room that never", Formatting.DARK_GRAY),
+                line("  pays gets talked about as one.", Formatting.DARK_GRAY),
+                bar("Regulars", house.addiction, Formatting.LIGHT_PURPLE),
+                line("  Built by play, forgotten in the quiet.", Formatting.DARK_GRAY),
+                Text.empty(),
+                plain("Draws ").formatted(Formatting.GRAY)
+                        .append(plain(String.format("%.2fx", house.pull()))
+                                .formatted(Formatting.WHITE, Formatting.BOLD))
+                        .append(plain(" the trade of an unknown floor.")
+                                .formatted(Formatting.GRAY)),
+                Text.empty(),
                 line("Rename the card in an anvil and the", Formatting.GRAY),
                 line("house takes the new name.", Formatting.GRAY))));
         return tag;
+    }
+
+    /** A stat as ten pips, because a bare number out of a hundred reads as noise. */
+    private MutableText bar(String label, int value, Formatting colour) {
+        int filled = Math.max(0, Math.min(10, Math.round(value / 10.0f)));
+        return plain(label + "  ").formatted(Formatting.GRAY)
+                .append(plain("|".repeat(filled)).formatted(colour, Formatting.BOLD))
+                .append(plain("|".repeat(10 - filled)).formatted(Formatting.DARK_GRAY))
+                .append(plain("  " + value).formatted(Formatting.DARK_GRAY));
     }
 
     private ItemStack vault(TrapHouse.House house) {
