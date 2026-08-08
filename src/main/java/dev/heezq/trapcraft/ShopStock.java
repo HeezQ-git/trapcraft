@@ -52,7 +52,23 @@ public final class ShopStock {
 
     private static final List<Entry> STOCK = new ArrayList<>();
 
+    /**
+     * Items the market must never trade, at any price.
+     *
+     * These ARE the money. An emerald block was listed at 8e and is nine
+     * emeralds in a coat: buy, uncraft, repeat, and the economy is over. Any
+     * item convertible to currency by a vanilla recipe has the same hole, and
+     * the price moves daily, so "the number happens to be safe today" is not
+     * a defence.
+     */
+    private static final List<Item> CURRENCY = List.of(Items.EMERALD, Items.EMERALD_BLOCK);
+
     private static void add(Category category, Item item, int count, int base) {
+        // Fails at startup rather than silently shipping a money printer.
+        if (CURRENCY.contains(item)) {
+            throw new IllegalArgumentException(
+                    "the market cannot trade its own currency: " + item);
+        }
         STOCK.add(new Entry(category, item, count, base));
     }
 
@@ -114,7 +130,6 @@ public final class ShopStock {
         add(MATERIALS, Items.LAPIS_LAZULI, 32, 14);
         add(MATERIALS, Items.QUARTZ, 32, 18);
         add(MATERIALS, Items.DIAMOND, 1, 42);
-        add(MATERIALS, Items.EMERALD_BLOCK, 1, 9);
         add(MATERIALS, Items.AMETHYST_SHARD, 8, 20);
         add(MATERIALS, Items.NETHERITE_SCRAP, 1, 260);
         add(MATERIALS, Items.ANCIENT_DEBRIS, 1, 300);
