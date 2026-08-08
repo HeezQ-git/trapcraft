@@ -72,10 +72,14 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     /** Set when the screen closes, so the tick loop lets go. */
     private boolean closed;
     private final List<Integer> history = new ArrayList<>();
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
 
-    public PlinkoScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public PlinkoScreenHandler(int syncId, PlayerInventory playerInventory,
+                               TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -236,6 +240,8 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
                 plain("Purse: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
+        tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                TrapHouse.tableNote(house, TrapHouse.TOP_DROP)));
         return tag;
     }
 
@@ -263,13 +269,20 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
 
     private void drop() {
         int stake = STAKES[stakeChoice];
+        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_DROP)) {
+            deny();
+            player.sendMessage(plain("The house won't take that -- the outside slots pay "
+                    + TrapHouse.TOP_DROP + "x and the vault is too thin for it.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
             player.sendMessage(plain("You can't cover a " + stake + "e drop.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        TrapMarket.take(player, stake);
+        TrapHouse.stake(player, house, stake);
 
         // Eight honest coin flips. No table, no target, nothing decided first:
         // the flips ARE the outcome, which is why this machine's return needs
@@ -335,7 +348,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         int stake = STAKES[stakeChoice];
         won = Math.round(stake * TrapMath.PLINKO_PAYS[landed]);
         if (won > 0) {
-            TrapMarket.pay(player, won);
+            won = TrapHouse.payout(player, house, won);
         }
 
         var world = player.getWorld();

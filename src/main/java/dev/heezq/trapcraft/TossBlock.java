@@ -57,9 +57,10 @@ public class TossBlock extends Block implements PolymerBlock, PolymerTexturedBlo
         }
         world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(),
                 SoundCategory.BLOCKS, 0.7F, 1.3F);
+        TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new TossScreenHandler(syncId, inventory),
-                Text.literal("Coin Toss").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)));
+                (syncId, inventory, ignored) -> new TossScreenHandler(syncId, inventory, house),
+                TrapHouse.sign(Text.literal("Coin Toss").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

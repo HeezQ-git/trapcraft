@@ -372,6 +372,42 @@ public final class TrapGuide {
                 .append(warn("The house still keeps about "
                         + Math.round((1.0f - TrapMath.SLOT_MEASURED_RTP) * 100)
                         + "%. It always does."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o. YOUR CASINO\n\n"))
+                .append(body("Craft a "))
+                .append(item("Casino Licence"))
+                .append(body(" and right-click the air. That opens a house.\n\n"))
+                .append(body("Name the card in an anvil first and the house "
+                        + "takes that name."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o2. WIRING UP\n\n"))
+                .append(body("Right-click any machine holding the card and it "
+                        + "pays into your vault.\n\n"))
+                .append(body("Every loss lands there. Every win comes out of "
+                        + "it.\n\n"))
+                .append(body("Right-click again to cut it loose."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o3. THE FLOAT\n\n"))
+                .append(body("A machine won't take a bet it can't pay off.\n\n"))
+                .append(body("Keep money in the vault or your floor is shut. "
+                        + "Take it all out and it's shut too.\n\n"))
+                .append(warn("Thin vault, small tables."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o4. THE EDGE\n\n"))
+                .append(body("The machines run 1-4% your way. Over a night "
+                        + "that's a wage. Over one spin it's nothing.\n\n"))
+                .append(warn("The Streak can land several lines at once and "
+                        + "clean you out. It's rare. It happens."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4o5. THE CARD\n\n"))
+                .append(body("Whoever holds it owns the house. All of it.\n\n"))
+                .append(body("It doesn't burn.\n\n"))
+                .append(warn("It does drop when you die."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {

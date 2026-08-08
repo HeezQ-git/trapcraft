@@ -1,0 +1,214 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "face": "trapcraft:item/card_face",
+    "edge": "trapcraft:item/card_edge",
+    "chip": "trapcraft:item/card_chip",
+    "particle": "trapcraft:item/card_face"
+  },
+  "display": {
+    "gui": {
+      "rotation": [
+        32,
+        210,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
+    },
+    "ground": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        3,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.6,
+        0.6,
+        0.6
+      ]
+    },
+    "thirdperson_righthand": {
+      "rotation": [
+        75,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        75,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        0,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.48,
+        0.48,
+        0.48
+      ]
+    },
+    "head": {
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        14,
+        0
+      ],
+      "scale": [
+        1.2,
+        1.2,
+        1.2
+      ]
+    }
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        6.5,
+        4
+      ],
+      "to": [
+        14,
+        8,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#edge"
+        },
+        "south": {
+          "texture": "#edge"
+        },
+        "east": {
+          "texture": "#edge"
+        },
+        "west": {
+          "texture": "#edge"
+        },
+        "up": {
+          "texture": "#face"
+        },
+        "down": {
+          "texture": "#face"
+        }
+      }
+    },
+    {
+      "from": [
+        9.5,
+        8,
+        5.5
+      ],
+      "to": [
+        13,
+        8.9,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#chip"
+        },
+        "south": {
+          "texture": "#chip"
+        },
+        "east": {
+          "texture": "#chip"
+        },
+        "west": {
+          "texture": "#chip"
+        },
+        "up": {
+          "texture": "#chip"
+        },
+        "down": {
+          "texture": "#chip"
+        }
+      }
+    }
+  ]
+}

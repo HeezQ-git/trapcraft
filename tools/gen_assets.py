@@ -459,6 +459,9 @@ def lang() -> None:
         "item.trapcraft.nerve_tonic": "Nerve Tonic",
         "item.trapcraft.ledger": "The Ledger",
         "item.trapcraft.wallet": "Wallet",
+        # Renamed per-casino by the component; this only shows on a
+        # freshly crafted, unsigned one.
+        "item.trapcraft.casino_card": "Casino Licence",
         "block.trapcraft.roulette": "Roulette Table",
         "block.trapcraft.plinko": "The Drop",
         "block.trapcraft.climb": "The Climb",
@@ -1257,6 +1260,12 @@ def advancements() -> None:
     award("whole_floor", "House Money", "Win something on all four machines.",
           "minecraft:emerald", "floor", frame="challenge")
 
+    award("licence", "Licensed", "Get your hands on a casino licence.",
+          f"{NS}:casino_card", "floor", trigger=has(f"{NS}:casino_card"))
+    award("broke_the_bank", "Broke The Bank",
+          "Win more off one machine than its casino had in the vault.",
+          "minecraft:gold_block", "licence", frame="challenge")
+
     award("rim", "On The Rim", "Call the edge on the coin toss and hit it.",
           "minecraft:nether_star", "floor", frame="challenge")
     award("natural", "Natural", "Get dealt twenty-one on two cards.",
@@ -1500,6 +1509,57 @@ def wallet_assets() -> None:
             "E": "minecraft:emerald",
         },
         "result": {"id": f"{NS}:wallet", "count": 1},
+    })
+
+
+def casino_card_model() -> dict:
+    """A thick plastic card lying flat with a raised chip on the corner.
+
+    A card seen face-on in a hotbar is a rectangle, and a rectangle at 16
+    pixels is indistinguishable from paper, a map or anybody else's quest
+    item. The thickness and the proud chip are what give it a silhouette, and
+    the GUI angle is picked so both read at once.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "face": f"{NS}:item/card_face",
+            "edge": f"{NS}:item/card_edge",
+            "chip": f"{NS}:item/card_chip",
+            "particle": f"{NS}:item/card_face",
+        },
+        "display": held(1.2, gui_rotation=(32, 210, 0)),
+        "elements": [
+            box([2, 6.5, 4], [14, 8, 12], "edge", up="face", down="face"),   # the card
+            box([9.5, 8, 5.5], [13, 8.9, 9], "chip", up="chip", down="chip"),  # the chip
+        ],
+    }
+
+
+def casino_card_assets() -> None:
+    put(f"assets/{NS}/models/block/casino_card.json", casino_card_model())
+    put(f"assets/{NS}/models/item/casino_card.json",
+        {"parent": f"{NS}:block/casino_card"})
+    put(f"assets/{NS}/items/casino_card.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/casino_card"},
+    })
+
+    # Gold for the trim, paper for the licence, a diamond for the chip and a
+    # block of emeralds for the float you are expected to have before this is
+    # any use at all. Deliberately steep: a casino is a business, and the
+    # recipe is the only place the cost of starting one can live.
+    put(f"data/{NS}/recipe/casino_card.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["GPG", "PEP", "GDG"],
+        "key": {
+            "G": "minecraft:gold_ingot",
+            "P": "minecraft:paper",
+            "E": "minecraft:emerald_block",
+            "D": "minecraft:diamond",
+        },
+        "result": {"id": f"{NS}:casino_card", "count": 1},
     })
 
 
@@ -1783,6 +1843,7 @@ def main() -> None:
     nerve_tonic_assets()
     ledger_assets()
     wallet_assets()
+    casino_card_assets()
     roulette_assets()
     plinko_assets()
     climb_assets()

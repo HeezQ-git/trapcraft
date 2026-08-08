@@ -144,9 +144,10 @@ public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedB
         }
         world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(),
                 SoundCategory.BLOCKS, 0.7F, 1.6F);
+        TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new PlinkoScreenHandler(syncId, inventory),
-                Text.literal("The Drop").formatted(Formatting.AQUA, Formatting.BOLD)));
+                (syncId, inventory, ignored) -> new PlinkoScreenHandler(syncId, inventory, house),
+                TrapHouse.sign(Text.literal("The Drop").formatted(Formatting.AQUA, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

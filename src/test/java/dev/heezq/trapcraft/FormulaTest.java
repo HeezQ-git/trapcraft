@@ -669,6 +669,39 @@ class FormulaTest {
         }
     }
 
+    // --- the casino floor -------------------------------------------------------
+
+    @Test
+    void aVaultNeverPromisesMoreThanItHolds() {
+        // The one invariant the whole feature rests on: whatever bet a table
+        // accepts, the vault can settle it at that game's top multiple. If
+        // this ever fails a machine mints emeralds out of nothing.
+        int[] tops = {5, 12, 26, 30, 36, 64};
+        long[] vaults = {0, 1, 63, 500, 10_000, 4_000_000_000L};
+        for (int top : tops) {
+            for (long vault : vaults) {
+                int most = TrapMath.houseLimit(vault, top);
+                assertTrue(most >= 0, "a limit is never negative: " + most);
+                assertTrue(TrapMath.houseCovers(vault, most, top),
+                        "vault " + vault + " offered " + most + "e at " + top + "x");
+                if (most < Integer.MAX_VALUE) {
+                    assertFalse(TrapMath.houseCovers(vault, most + 1, top),
+                            "vault " + vault + " should have refused "
+                                    + (most + 1) + "e at " + top + "x");
+                }
+            }
+        }
+    }
+
+    @Test
+    void anEmptyVaultTakesNoBets() {
+        assertEquals(0, TrapMath.houseLimit(0, TrapMath.ROULETTE_STRAIGHT));
+        assertFalse(TrapMath.houseCovers(0, 1, TrapMath.ROULETTE_STRAIGHT));
+        // And a vault big enough to overflow an int limit still answers with a
+        // usable number rather than a negative one.
+        assertTrue(TrapMath.houseLimit(Long.MAX_VALUE, 2) > 0);
+    }
+
     // --- the dealer network -----------------------------------------------------
 
     @Test

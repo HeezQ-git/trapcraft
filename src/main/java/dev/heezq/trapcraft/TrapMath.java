@@ -997,6 +997,28 @@ public final class TrapMath {
         return bets;
     }
 
+    // --- the casino floor -------------------------------------------------------
+    //
+    // A player-owned machine may not accept a bet its vault cannot settle, or
+    // a win would have to be conjured and the whole money supply stops adding
+    // up. These two are the entire rule, kept here rather than in TrapHouse so
+    // the overflow cases can be tested without a server.
+
+    /** Can a vault holding this much settle this bet at this multiple? */
+    public static boolean houseCovers(long balance, int stake, int topMultiple) {
+        return balance >= (long) stake * topMultiple;
+    }
+
+    /**
+     * The biggest bet a vault holding this much will take.
+     *
+     * Clamped to int because a stake is an int everywhere else, and a vault
+     * big enough to overflow one is a vault whose limit is "anything".
+     */
+    public static int houseLimit(long balance, int topMultiple) {
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0, balance) / topMultiple);
+    }
+
     // --- the dealer network -----------------------------------------------------
 
     /** Levels a dealer can reach. */

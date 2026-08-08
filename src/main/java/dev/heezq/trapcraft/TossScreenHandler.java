@@ -52,6 +52,8 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity player;
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
     private int stakeChoice = 0;
 
     private int spinning;
@@ -62,9 +64,11 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
     private int flash;
     private boolean closed;
 
-    public TossScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public TossScreenHandler(int syncId, PlayerInventory playerInventory,
+                             TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X3, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -177,6 +181,8 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                 plain("Purse: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(
+                TrapHouse.tableNote(house, TrapHouse.TOP_TOSS)));
         return tag;
     }
 
@@ -210,13 +216,20 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
 
     private void toss(int side) {
         int stake = STAKES[stakeChoice];
+        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_TOSS)) {
+            deny();
+            player.sendMessage(plain("The house won't take that -- the rim pays 64 to one "
+                            + "and there isn't the money behind the table.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
             player.sendMessage(plain("You can't cover a " + stake + "e toss.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        TrapMarket.take(player, stake);
+        TrapHouse.stake(player, house, stake);
         called = side;
         result = TrapMath.tossResult(player.getWorld().getRandom().nextFloat());
         spinning = FLIGHT;
@@ -263,7 +276,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
         int stake = STAKES[stakeChoice];
         won = Math.round(stake * TrapMath.tossReturn(called, result));
         if (won > 0) {
-            TrapMarket.pay(player, won);
+            won = TrapHouse.payout(player, house, won);
             TrapCasino.won(player, "toss");
         }
 

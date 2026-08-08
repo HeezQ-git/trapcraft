@@ -72,10 +72,14 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     private int flash;
     /** Set when the screen closes, so the tick loop lets go. */
     private boolean closed;
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
 
-    public ClimbScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public ClimbScreenHandler(int syncId, PlayerInventory playerInventory,
+                              TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -189,7 +193,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain("The Climb").formatted(Formatting.GOLD, Formatting.BOLD));
-        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+        List<Text> lore = new java.util.ArrayList<>(List.of(
                 line("Open a door. One on each rung ends it.", Formatting.GRAY),
                 line("Survive and you may climb, or take the", Formatting.GRAY),
                 line("money and walk away.", Formatting.GRAY),
@@ -200,7 +204,9 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                 Text.empty(),
                 line("The house keeps about "
                         + Math.round((1 - TrapMath.CLIMB_RETURN) * 100) + "%.",
-                        Formatting.DARK_GRAY))));
+                        Formatting.DARK_GRAY)));
+        lore.addAll(TrapHouse.tableNote(house, TrapHouse.TOP_CLIMB));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
@@ -311,13 +317,20 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     private void open(int door) {
         if (!climbing) {
             int stake = STAKES[stakeChoice];
+            if (!TrapHouse.covers(house, stake, TrapHouse.TOP_CLIMB)) {
+                deny();
+                player.sendMessage(plain("The house won't take that -- the sixth rung pays "
+                        + "eleven to one and the vault can't stand it.")
+                        .formatted(Formatting.GRAY), false);
+                return;
+            }
             if (TrapMarket.wealthOf(player) < stake) {
                 deny();
                 player.sendMessage(plain("You can't cover a " + stake + "e climb.")
                         .formatted(Formatting.GRAY), false);
                 return;
             }
-            TrapMarket.take(player, stake);
+            TrapHouse.stake(player, house, stake);
             // Every trap drawn up front, so the ladder is fixed before the
             // first door rather than decided as you go. A machine that picks
             // the bad door AFTER you point at one is a machine that can never
@@ -356,8 +369,8 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
             deny();
             return;
         }
-        int won = Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung));
-        TrapMarket.pay(player, won);
+        int won = TrapHouse.payout(player, house,
+                Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung)));
         TrapCasino.won(player, "climb");
         if (rung >= TrapMath.CLIMB_RUNGS) {
             TrapAwards.grant(player, "nerve");
@@ -445,7 +458,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
             }
             boolean lost = celebrating > 0 && busted;
             if (!lost && rung > 0) {
-                TrapMarket.pay(player,
+                TrapHouse.payout(player, house,
                         Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung)));
             }
         }

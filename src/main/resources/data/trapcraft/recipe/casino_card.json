@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GPG",
+    "PEP",
+    "GDG"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "P": "minecraft:paper",
+    "E": "minecraft:emerald_block",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "trapcraft:casino_card",
+    "count": 1
+  }
+}

@@ -57,9 +57,10 @@ public class BlackjackBlock extends Block implements PolymerBlock, PolymerTextur
         }
         world.playSound(null, pos, SoundEvents.ITEM_BOOK_PAGE_TURN,
                 SoundCategory.BLOCKS, 0.7F, 1.3F);
+        TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new BlackjackScreenHandler(syncId, inventory),
-                Text.literal("Blackjack").formatted(Formatting.GREEN, Formatting.BOLD)));
+                (syncId, inventory, ignored) -> new BlackjackScreenHandler(syncId, inventory, house),
+                TrapHouse.sign(Text.literal("Blackjack").formatted(Formatting.GREEN, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

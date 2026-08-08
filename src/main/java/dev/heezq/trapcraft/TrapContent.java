@@ -72,6 +72,7 @@ public final class TrapContent {
     public static Item nerveTonic;
     public static Item ledger;
     public static Item wallet;
+    public static Item casinoCard;
     public static Item burnerPhone;
     public static Block marketStall;
     public static Item marketStallItem;
@@ -355,6 +356,11 @@ public final class TrapContent {
         // would merge into whichever balance won.
         wallet = registerItem("wallet", (settings, model) ->
                 new WalletItem(settings.maxCount(1), model));
+        // maxCount 1 because the casino id rides on the stack; fireproof
+        // because it is a bearer instrument and losing a business to a lava
+        // pool is a bug report, whereas losing one to a mugger is a story.
+        casinoCard = registerItem("casino_card", (settings, model) ->
+                new CasinoCardItem(settings.maxCount(1).fireproof(), model));
         // maxCount 1: rep rides on the stack, and stacking phones would merge
         // two different standings into whichever one won.
         burnerPhone = registerItem("burner_phone", (settings, model) ->
@@ -490,6 +496,7 @@ public final class TrapContent {
                     entries.add(climbItem);
                     entries.add(tossItem);
                     entries.add(blackjackItem);
+                    entries.add(casinoCard());
                     entries.add(hammer);
                 })
                 .build();
@@ -524,6 +531,13 @@ public final class TrapContent {
     public static ItemStack wallet() {
         ItemStack stack = new ItemStack(wallet);
         WalletItem.setBalance(stack, 0);
+        return stack;
+    }
+
+    /** A blank licence, stamped so the creative tab shows it as one. */
+    public static ItemStack casinoCard() {
+        ItemStack stack = new ItemStack(casinoCard);
+        CasinoCardItem.restamp(stack, null);
         return stack;
     }
 

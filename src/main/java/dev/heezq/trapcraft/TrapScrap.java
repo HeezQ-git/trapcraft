@@ -40,6 +40,11 @@ public final class TrapScrap {
         if (stack.isOf(TrapContent.burnerPhone)) {
             return "your contacts are on that";
         }
+        // Whoever holds the card owns the casino, so a stall that bought one
+        // for scrap would have bought the business -- and then thrown it away.
+        if (stack.isOf(TrapContent.casinoCard)) {
+            return "that's a whole casino";
+        }
         // A shulker box or bundle with something inside would sell its contents
         // invisibly at the price of the empty container. Refuse rather than
         // quietly eat whatever is in it.

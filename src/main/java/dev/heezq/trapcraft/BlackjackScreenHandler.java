@@ -81,10 +81,14 @@ public class BlackjackScreenHandler extends ScreenHandler {
     private boolean showAll;
     private int staked;
     private String outcome = "";
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
 
-    public BlackjackScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public BlackjackScreenHandler(int syncId, PlayerInventory playerInventory,
+                                  TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -231,6 +235,8 @@ public class BlackjackScreenHandler extends ScreenHandler {
                 plain("Purse: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
+        tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                TrapHouse.tableNote(house, TrapHouse.TOP_BLACKJACK)));
         return tag;
     }
 
@@ -273,13 +279,22 @@ public class BlackjackScreenHandler extends ScreenHandler {
      */
     private void deal() {
         int stake = STAKES[stakeChoice];
+        // Checked at five times the stake, not two: a hand can be doubled, and
+        // a table that lets you double and then can't pay is worse than one
+        // that never dealt the hand.
+        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_BLACKJACK)) {
+            deny();
+            player.sendMessage(plain("The house won't deal that -- not enough behind "
+                    + "the table to cover a doubled hand.").formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
             player.sendMessage(plain("You can't cover a " + stake + "e hand.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        TrapMarket.take(player, stake);
+        TrapHouse.stake(player, house, stake);
         staked = stake;
 
         deck.clear();
@@ -339,7 +354,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
             deny();
             return;
         }
-        TrapMarket.take(player, staked);
+        TrapHouse.stake(player, house, staked);
         staked *= 2;
         drawTo(true);
         sound(SoundEvents.BLOCK_NOTE_BLOCK_BELL, 1.0F);
@@ -388,7 +403,11 @@ public class BlackjackScreenHandler extends ScreenHandler {
         }
 
         if (paid > 0) {
-            TrapMarket.pay(player, paid);
+            if (paid == staked) {
+                TrapHouse.refund(player, house, paid);
+            } else {
+                paid = TrapHouse.payout(player, house, paid);
+            }
         }
         if (paid > staked) {
             TrapCasino.won(player, "blackjack");
@@ -458,7 +477,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
     public void onClosed(PlayerEntity closer) {
         super.onClosed(closer);
         if (playing) {
-            TrapMarket.pay(player, staked);
+            TrapHouse.refund(player, house, staked);
             playing = false;
         }
     }

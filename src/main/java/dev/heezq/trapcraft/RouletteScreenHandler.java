@@ -83,6 +83,8 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity player;
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
 
     /** Bet name to emeralds staked. Insertion-ordered so the receipt reads sanely. */
     private final Map<String, Integer> bets = new LinkedHashMap<>();
@@ -99,9 +101,11 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     /** Recent results, newest last, for the board along the top. */
     private final List<Integer> history = new ArrayList<>();
 
-    public RouletteScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public RouletteScreenHandler(int syncId, PlayerInventory playerInventory,
+                                 TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -325,8 +329,10 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                 plain("Purse: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
-        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Wallets count.", Formatting.DARK_GRAY))));
+        List<Text> lore = new java.util.ArrayList<>(List.of(
+                line("Wallets count.", Formatting.DARK_GRAY)));
+        lore.addAll(TrapHouse.tableNote(house, TrapHouse.TOP_ROULETTE));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
@@ -391,7 +397,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                 deny();
                 return;
             }
-            TrapMarket.pay(player, back);
+            TrapHouse.refund(player, house, back);
             click(0.8F);
             repaint();
             return;
@@ -426,13 +432,24 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
      */
     private void place(String bet) {
         int chip = CHIPS[chipChoice];
+        // Against the WHOLE board, not just this chip: every emerald out
+        // there could be on one number, and a straight-up pays 36. Checking
+        // per chip would let a board be built one chip at a time into a
+        // position the vault can't settle.
+        if (!TrapHouse.covers(house, staked() + chip, TrapHouse.TOP_ROULETTE)) {
+            deny();
+            player.sendMessage(plain("The house won't take another chip -- there isn't "
+                    + "the money behind the table to settle that board at 36 to one.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < chip) {
             deny();
             player.sendMessage(plain("You can't cover a " + chip + "e chip.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        TrapMarket.take(player, chip);
+        TrapHouse.stake(player, house, chip);
         bets.merge(bet, chip, Integer::sum);
         click(1.0F + Math.min(0.6F, bets.size() * 0.05F));
         repaint();
@@ -443,7 +460,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             deny();
             return;
         }
-        TrapMarket.pay(player, staked());
+        TrapHouse.refund(player, house, staked());
         bets.clear();
         click(0.7F);
         repaint();
@@ -465,6 +482,12 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         for (int amount : lastBets.values()) {
             owed += amount;
         }
+        if (!TrapHouse.covers(house, staked() + owed, TrapHouse.TOP_ROULETTE)) {
+            deny();
+            player.sendMessage(plain("The house can't settle that board tonight.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < owed) {
             deny();
             player.sendMessage(plain("That bet was ").formatted(Formatting.GRAY)
@@ -472,7 +495,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                     .append(plain(". You're short.").formatted(Formatting.GRAY)), false);
             return;
         }
-        TrapMarket.take(player, owed);
+        TrapHouse.stake(player, house, owed);
         bets.putAll(lastBets);
         click(1.2F);
         repaint();
@@ -569,7 +592,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         lastBets.putAll(bets);
         history.add(result);
         if (won > 0) {
-            TrapMarket.pay(player, won);
+            won = TrapHouse.payout(player, house, won);
         }
 
         var world = player.getWorld();
@@ -652,8 +675,14 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     @Override
     public void onClosed(PlayerEntity closer) {
         super.onClosed(closer);
-        if (!bets.isEmpty() && spinning <= 0) {
-            TrapMarket.pay(player, staked());
+        // `celebrating` matters as much as `spinning`. settle() pays the board
+        // out and then leaves the chips on the felt for a second and a half
+        // while the lights finish, and for that second and a half `spinning`
+        // is already zero. Without the second test, closing the screen during
+        // the fanfare handed the stake back on top of the win it had just been
+        // paid -- once per spin, on purpose, by anybody who noticed.
+        if (!bets.isEmpty() && spinning <= 0 && celebrating <= 0) {
+            TrapHouse.refund(player, house, staked());
             bets.clear();
         }
     }

@@ -63,9 +63,10 @@ public class ClimbBlock extends Block implements PolymerBlock, PolymerTexturedBl
         }
         world.playSound(null, pos, SoundEvents.BLOCK_IRON_DOOR_OPEN,
                 SoundCategory.BLOCKS, 0.6F, 1.4F);
+        TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new ClimbScreenHandler(syncId, inventory),
-                Text.literal("The Climb").formatted(Formatting.GOLD, Formatting.BOLD)));
+                (syncId, inventory, ignored) -> new ClimbScreenHandler(syncId, inventory, house),
+                TrapHouse.sign(Text.literal("The Climb").formatted(Formatting.GOLD, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

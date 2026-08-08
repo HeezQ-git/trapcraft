@@ -66,9 +66,10 @@ public class RouletteBlock extends Block implements PolymerBlock, PolymerTexture
         }
         world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(),
                 SoundCategory.BLOCKS, 0.7F, 1.2F);
+        TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new RouletteScreenHandler(syncId, inventory),
-                Text.literal("Roulette").formatted(Formatting.GREEN, Formatting.BOLD)));
+                (syncId, inventory, ignored) -> new RouletteScreenHandler(syncId, inventory, house),
+                TrapHouse.sign(Text.literal("Roulette").formatted(Formatting.GREEN, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

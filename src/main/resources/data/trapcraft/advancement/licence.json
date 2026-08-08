@@ -1,0 +1,33 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:casino_card"
+    },
+    "title": "Licensed",
+    "description": "Get your hands on a casino licence.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:casino_card"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:floor"
+}

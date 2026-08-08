@@ -20,6 +20,12 @@ doesn't have what you expected -- and neither logs anything useful:
     Minecraft wants a space.
   * A registered block or item with no name in the language file, which
     shows up in game as "item.trapcraft.whatever".
+  * A gambling machine the casino system has never heard of. TrapHouse.at()
+    returns null for anything not in isMachine(), so a new table would take
+    bets, pay out of thin air, and never once mention that it isn't wired to
+    anybody -- it would simply behave like the old unowned ones forever.
+  * A casino screen handler still calling TrapMarket.take/pay directly, which
+    is money moving past the vault: the player pays, the house never sees it.
   * A line so cheap the shop refuses to buy it back. sellPrice() returns 0
     below 2e, and the daily index can push a 2e line under that on a bad day.
     That is the "it's not rentable" complaint: you farm a bundle, walk to the
@@ -183,6 +189,58 @@ def names() -> list[str]:
     return problems
 
 
+def casino_floor() -> list[str]:
+    """Every gambling machine must be ownable, and pay through the house.
+
+    Two silent failures, both of which look like "it works fine":
+
+      * A machine block missing from TrapHouse.isMachine() can never be wired
+        to a casino. Right-clicking it with the card does nothing at all, and
+        nothing is logged.
+      * A handler still calling TrapMarket.take/pay takes the player's stake
+        straight out of the world instead of into the vault. The bet happens,
+        the money vanishes, and the owner's books say the machine was never
+        played.
+
+    A machine is identified by what it does rather than by a hand-kept list:
+    it is a block whose onUse hands a House to a screen handler. That is the
+    same fact isMachine() is asserting, so the two cannot drift apart without
+    this noticing.
+    """
+    src = ROOT / "src/main/java/dev/heezq/trapcraft"
+    house = (src / "TrapHouse.java").read_text()
+    body = house.split("isMachine", 1)[1][:400]
+    known = set(re.findall(r"TrapContent\.([a-zA-Z]+)", body))
+    content = (src / "TrapContent.java").read_text()
+
+    problems = []
+    for path in sorted(src.glob("*Block.java")):
+        text = path.read_text()
+        if "ScreenHandler(syncId, inventory, house)" not in text:
+            continue
+        # The block class knows its own registry name from the loot table it
+        # drops, which is the one string that is always the registered path.
+        found = re.search(r'registerBlock\("([a-z0-9_]+)", ' + path.stem, content)
+        if not found:
+            problems.append(f"{path.name}: no registerBlock call found for it")
+            continue
+        field = re.search(r"(\w+) = registerBlock\(\"" + found.group(1) + r"\"", content)
+        if not field:
+            problems.append(f"{path.name}: can't find its TrapContent field")
+        elif field.group(1) not in known:
+            problems.append(f"{path.name}: not listed in TrapHouse.isMachine()")
+
+    for path in sorted(src.glob("*ScreenHandler.java")):
+        text = path.read_text()
+        if "TrapHouse.House house" not in text:
+            continue
+        for call in ("TrapMarket.take(", "TrapMarket.pay("):
+            if call in text:
+                problems.append(f"{path.name}: still calls {call} -- "
+                                f"that money never reaches the vault")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -205,6 +263,7 @@ def main() -> int:
     problems.extend(names())
     problems.extend(duplicate_lines(source))
     problems.extend(recipes())
+    problems.extend(casino_floor())
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

@@ -249,6 +249,13 @@ public final class TrapMarket {
         for (int stashed : VAULTS.values()) {
             counted += stashed;
         }
+        // A casino's float is parked player money, exactly like a chest full of
+        // emeralds, so it belongs in the pool. It also has to be here for the
+        // arithmetic to close: bets at an owned machine deliberately do NOT go
+        // through circulate() -- they move money between two players and
+        // create none -- so if the float went uncounted the supply would fall
+        // by the whole vault the moment somebody opened a casino.
+        counted += TrapHouse.floatHeld();
         supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
     }
 

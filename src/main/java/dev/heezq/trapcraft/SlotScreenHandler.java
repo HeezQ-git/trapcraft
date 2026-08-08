@@ -130,10 +130,14 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     private int fanfare;
     /** What the finished board won, in words, for the receipt. */
     private List<String> ways = List.of();
+    /** Whose money is on the other side of the table. Null means nobody's. */
+    private final TrapHouse.House house;
 
-    public SlotScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public SlotScreenHandler(int syncId, PlayerInventory playerInventory,
+                             TrapHouse.House house) {
         super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
+        this.house = house;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -320,6 +324,8 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
                 plain("Purse ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
+        tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                TrapHouse.tableNote(house, TrapHouse.TOP_SLOT)));
         return tag;
     }
 
@@ -341,6 +347,17 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         }
 
         int stake = STAKES[stakeChoice];
+        // Limited at a single five-in-a-row. A board that lands several lines
+        // at once can beat this and empty the vault -- see TrapHouse -- which
+        // is deliberate: limiting at the theoretical 150x would put a 32e spin
+        // out of reach of any casino anybody will actually build.
+        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
+            beep(0.5F);
+            player.sendMessage(plain("The house won't take a " + stake
+                    + "e spin -- there isn't the money behind it.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
         if (TrapMarket.wealthOf(player) < stake) {
             beep(0.5F);
             player.sendMessage(plain("You can't cover a " + stake + "e spin.")
@@ -348,7 +365,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             return;
         }
 
-        TrapMarket.take(player, stake);
+        TrapHouse.stake(player, house, stake);
         buildBoard();
         spinning = SPIN_TICKS;
         SlotMachineBlock.watch(this);
@@ -467,7 +484,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         lastWon = Math.round(stake * pending);
 
         if (lastWon > 0) {
-            TrapMarket.pay(player, lastWon);
+            lastWon = TrapHouse.payout(player, house, lastWon);
         }
 
         var world = player.getWorld();
