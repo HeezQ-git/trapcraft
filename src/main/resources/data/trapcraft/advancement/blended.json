@@ -1,0 +1,34 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:blend_bud"
+    },
+    "title": "House Blend",
+    "description": "Put two strains through the mixing station.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:blend_bud",
+              "trapcraft:blend_joint"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:rolled"
+}

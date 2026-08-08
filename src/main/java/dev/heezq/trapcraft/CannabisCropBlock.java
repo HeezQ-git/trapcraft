@@ -175,9 +175,24 @@ public class CannabisCropBlock extends CropBlock implements PolymerTexturedBlock
      * are. Only checks the four cardinal neighbours, so a deliberate
      * checkerboard of two strains breeds and a scattered field mostly doesn't.
      */
+    /**
+     * How many random ticks are thrown away for each one that grows the plant.
+     *
+     * Cannabis has four stages where wheat has eight, so a plain vanilla crop
+     * tick moves it twice as far -- which made a field go from seed to harvest
+     * in about the time wheat takes to sprout. Gating the tick puts it back on
+     * the slow side of wheat, which is where a crop worth this much money
+     * belongs.
+     */
+    private static final int GROWTH_PATIENCE = 4;
+
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        super.randomTick(state, world, pos, random);
+        // super.randomTick is vanilla crop growth and nothing else, so gating
+        // it slows the plant without touching light or moisture rules.
+        if (random.nextInt(GROWTH_PATIENCE) == 0) {
+            super.randomTick(state, world, pos, random);
+        }
 
         if (!isMature(state)) {
             return;

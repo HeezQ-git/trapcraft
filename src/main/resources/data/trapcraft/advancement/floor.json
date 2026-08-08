@@ -1,0 +1,36 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:slot_machine"
+    },
+    "title": "The Floor",
+    "description": "Get a machine of your own on the floor.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:slot_machine",
+              "trapcraft:roulette",
+              "trapcraft:plinko",
+              "trapcraft:climb"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:root"
+}

@@ -578,6 +578,10 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                     SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 0.6F, 0.6F);
             return;
         }
+        TrapCasino.won(player, "roulette");
+        if (won >= staked() * 10) {
+            TrapAwards.grant(player, "jackpot");
+        }
         boolean straight = won >= staked() * 10;
         world.spawnParticles(straight ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.HAPPY_VILLAGER,
                 player.getX(), player.getY() + 1.3, player.getZ(),

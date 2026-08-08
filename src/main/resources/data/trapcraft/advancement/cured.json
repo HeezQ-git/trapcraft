@@ -1,0 +1,38 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:dried_bud_kush"
+    },
+    "title": "Patience",
+    "description": "Dry a bud properly instead of smoking it wet.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:dried_bud_kush",
+              "trapcraft:dried_bud_haze",
+              "trapcraft:dried_bud_purp",
+              "trapcraft:dried_bud_diesel",
+              "trapcraft:dried_bud_sunset",
+              "trapcraft:dried_bud_midnight"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:root"
+}

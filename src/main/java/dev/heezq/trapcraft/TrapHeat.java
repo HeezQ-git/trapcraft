@@ -235,14 +235,19 @@ public final class TrapHeat {
     }
 
     private static void spawnPatrol(ServerWorld world, BlockPos pos, Random random, int tier) {
-        spawn(world, pos, random, EntityType.PILLAGER, PILLAGERS[tier]);
-        spawn(world, pos, random, EntityType.VINDICATOR, VINDICATORS[tier]);
-        spawn(world, pos, random, EntityType.RAVAGER, RAVAGERS[tier]);
+        java.util.List<net.minecraft.entity.mob.MobEntity> patrol = new java.util.ArrayList<>();
+        patrol.addAll(spawn(world, pos, random, EntityType.PILLAGER, PILLAGERS[tier]));
+        patrol.addAll(spawn(world, pos, random, EntityType.VINDICATOR, VINDICATORS[tier]));
+        patrol.addAll(spawn(world, pos, random, EntityType.RAVAGER, RAVAGERS[tier]));
+        // They didn't come for a fight, they came for the stash.
+        TrapRaid.begin(world, pos, patrol);
     }
 
-    private static void spawn(ServerWorld world, BlockPos pos, Random random,
-                              EntityType<? extends net.minecraft.entity.mob.MobEntity> type,
-                              int count) {
+    private static java.util.List<net.minecraft.entity.mob.MobEntity> spawn(
+            ServerWorld world, BlockPos pos, Random random,
+            EntityType<? extends net.minecraft.entity.mob.MobEntity> type,
+            int count) {
+        java.util.List<net.minecraft.entity.mob.MobEntity> spawned = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
             BlockPos spawn = findSpot(world, pos, random);
             if (spawn == null) {
@@ -255,7 +260,9 @@ public final class TrapHeat {
             mob.refreshPositionAndAngles(spawn, random.nextFloat() * 360.0F, 0.0F);
             mob.setPersistent();   // don't despawn halfway across the field
             world.spawnEntity(mob);
+            spawned.add(mob);
         }
+        return spawned;
     }
 
     /**

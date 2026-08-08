@@ -1,0 +1,38 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:seeds_kush"
+    },
+    "title": "Everybody Eats",
+    "description": "Get hold of some seeds and start something.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "trapcraft:textures/block/stall_counter.png"
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:seeds_kush",
+              "trapcraft:seeds_haze",
+              "trapcraft:seeds_purp",
+              "trapcraft:seeds_diesel",
+              "trapcraft:seeds_sunset",
+              "trapcraft:seeds_midnight"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ]
+}

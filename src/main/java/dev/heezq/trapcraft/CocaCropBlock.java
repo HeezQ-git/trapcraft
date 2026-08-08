@@ -57,6 +57,20 @@ public class CocaCropBlock extends CropBlock implements PolymerTexturedBlock {
         }
     }
 
+    /**
+     * Same four-stage problem as cannabis: half the stages of wheat means a
+     * plain crop tick moves it twice as far. Gated to match, so the two
+     * product lines take comparable time to bring in.
+     */
+    private static final int GROWTH_PATIENCE = 4;
+
+    @Override
+    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        if (random.nextInt(GROWTH_PATIENCE) == 0) {
+            super.randomTick(state, world, pos, random);
+        }
+    }
+
     @Override
     public MapCodec<? extends CropBlock> getCodec() {
         return CODEC;

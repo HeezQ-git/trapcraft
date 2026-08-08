@@ -69,6 +69,8 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     private int won;
     private int celebrating;
     private int flash;
+    /** Set when the screen closes, so the tick loop lets go. */
+    private boolean closed;
     private final List<Integer> history = new ArrayList<>();
 
     public PlinkoScreenHandler(int syncId, PlayerInventory playerInventory) {
@@ -291,6 +293,9 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     @Override
     public boolean tick() {
         flash++;
+        if (closed) {
+            return false;
+        }
 
         if (celebrating > 0) {
             celebrating--;
@@ -334,6 +339,15 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         }
 
         var world = player.getWorld();
+        if (landed == 0 || landed == TrapMath.PLINKO_SLOTS - 1) {
+            TrapAwards.grant(player, "edge");
+        }
+        if (won >= STAKES[stakeChoice]) {
+            TrapCasino.won(player, "drop");
+        }
+        if (won >= STAKES[stakeChoice] * 10) {
+            TrapAwards.grant(player, "jackpot");
+        }
         boolean big = TrapMath.PLINKO_PAYS[landed] >= 5.0f;
         if (big) {
             world.spawnParticles(ParticleTypes.TOTEM_OF_UNDYING,
@@ -394,6 +408,21 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     @Override
     public ItemStack quickMove(PlayerEntity mover, int index) {
         return ItemStack.EMPTY;
+    }
+
+
+    /**
+     * Stop the tick loop when the player walks away.
+     *
+     * Without this the handler stays in the casino's tick list repainting a
+     * screen nobody is looking at until its animation happens to finish. The
+     * money is never at risk -- payout happens the moment the reels stop, not
+     * when the lights do -- but it is work done for an audience of nobody.
+     */
+    @Override
+    public void onClosed(PlayerEntity closer) {
+        super.onClosed(closer);
+        closed = true;
     }
 
     @Override

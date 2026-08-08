@@ -358,6 +358,13 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         }
         int won = Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung));
         TrapMarket.pay(player, won);
+        TrapCasino.won(player, "climb");
+        if (rung >= TrapMath.CLIMB_RUNGS) {
+            TrapAwards.grant(player, "nerve");
+        }
+        if (won >= STAKES[stakeChoice] * 10) {
+            TrapAwards.grant(player, "jackpot");
+        }
         int net = won - STAKES[stakeChoice];
 
         player.getWorld().playSound(null, player.getBlockPos(),

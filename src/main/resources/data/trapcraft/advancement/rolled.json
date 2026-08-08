@@ -1,0 +1,38 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:joint_kush"
+    },
+    "title": "Rolled",
+    "description": "Turn a bud into something you can actually sell.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:joint_kush",
+              "trapcraft:joint_haze",
+              "trapcraft:joint_purp",
+              "trapcraft:joint_diesel",
+              "trapcraft:joint_sunset",
+              "trapcraft:joint_midnight"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:cured"
+}

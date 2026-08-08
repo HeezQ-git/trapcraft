@@ -1116,6 +1116,93 @@ def climb_model() -> dict:
     }
 
 
+def award(name, title, description, icon, parent, *, hidden=False,
+          frame="task", trigger=None) -> None:
+    """One advancement.
+
+    `trigger` None means the moment can't be seen by any vanilla criterion, so
+    it gets `impossible` and TrapAwards.grant() fires it from code. Anything
+    that is really "you own one of these" uses inventory_changed instead and
+    needs no Java at all.
+    """
+    criteria = {"granted": {"trigger": "minecraft:impossible"}} if trigger is None else trigger
+    body = {
+        "display": {
+            "icon": {"id": icon},
+            "title": title,
+            "description": description,
+            "frame": frame,
+            "show_toast": True,
+            "announce_to_chat": True,
+            "hidden": hidden,
+        },
+        "criteria": criteria,
+        "requirements": [list(criteria.keys())],
+    }
+    if parent is None:
+        body["display"]["background"] = f"{NS}:textures/block/stall_counter.png"
+    else:
+        body["parent"] = f"{NS}:{parent}"
+    put(f"data/{NS}/advancement/{name}.json", body)
+
+
+def has(*items) -> dict:
+    """An inventory_changed criterion for owning any of these."""
+    return {"got": {"trigger": "minecraft:inventory_changed",
+                    "conditions": {"items": [{"items": list(items)}]}}}
+
+
+def advancements() -> None:
+    award("root", "Everybody Eats", "Get hold of some seeds and start something.",
+          f"{NS}:seeds_kush", None, trigger=has(f"{NS}:seeds_kush", f"{NS}:seeds_haze",
+                                                f"{NS}:seeds_purp", f"{NS}:seeds_diesel",
+                                                f"{NS}:seeds_sunset", f"{NS}:seeds_midnight"))
+
+    award("cured", "Patience", "Dry a bud properly instead of smoking it wet.",
+          f"{NS}:dried_bud_kush", "root",
+          trigger=has(*[f"{NS}:dried_bud_{s}" for s in
+                        ("kush", "haze", "purp", "diesel", "sunset", "midnight")]))
+    award("rolled", "Rolled", "Turn a bud into something you can actually sell.",
+          f"{NS}:joint_kush", "cured",
+          trigger=has(*[f"{NS}:joint_{s}" for s in
+                        ("kush", "haze", "purp", "diesel", "sunset", "midnight")]))
+    award("blended", "House Blend", "Put two strains through the mixing station.",
+          f"{NS}:blend_bud", "rolled", trigger=has(f"{NS}:blend_bud", f"{NS}:blend_joint"))
+    award("named_blend", "By Name", "Make a blend somebody has already named.",
+          f"{NS}:blend_joint", "blended", frame="goal")
+
+    award("refined", "Refined", "Take the coca line all the way to powder.",
+          f"{NS}:coca_powder", "root", trigger=has(f"{NS}:coca_powder"))
+
+    award("open", "Open For Business", "Set up a market stall.",
+          f"{NS}:market_stall", "root", trigger=has(f"{NS}:market_stall"))
+    award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
+          f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
+    award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
+          "minecraft:hopper", "open", frame="goal")
+    award("mover", "Moved The Market", "Push one item's price by a fifth on your own.",
+          "minecraft:emerald_block", "liquidation", frame="challenge")
+
+    award("floor", "The Floor", "Get a machine of your own on the floor.",
+          f"{NS}:slot_machine", "root",
+          trigger=has(f"{NS}:slot_machine", f"{NS}:roulette", f"{NS}:plinko", f"{NS}:climb"))
+    award("jackpot", "Jackpot", "Take ten times your stake off a machine.",
+          "minecraft:nether_star", "floor", frame="goal")
+    award("nerve", "Nerve", "Walk away from the sixth rung of The Climb.",
+          "minecraft:gold_ingot", "floor", frame="goal")
+    award("edge", "Edge Case", "Land the ball in an outside slot on The Drop.",
+          "minecraft:snowball", "floor", frame="goal")
+    award("whole_floor", "House Money", "Win something on all four machines.",
+          "minecraft:emerald", "floor", frame="challenge")
+
+    award("crew", "Payroll", "Take somebody on. Wages start immediately.",
+          "minecraft:villager_spawn_egg", "root", frame="goal")
+    award("raided", "They Found It", "Have a raid walk out with your product.",
+          "minecraft:crossbow", "root", frame="goal")
+    award("clean", "Nothing To See", "Sit through a raid without losing a gram.",
+          "minecraft:barrier", "raided", frame="challenge")
+
+
 def climb_assets() -> None:
     put(f"assets/{NS}/models/block/climb.json", climb_model())
     put(f"assets/{NS}/models/item/climb.json", {"parent": f"{NS}:block/climb"})
@@ -1627,6 +1714,7 @@ def main() -> None:
     roulette_assets()
     plinko_assets()
     climb_assets()
+    advancements()
     phone_assets()
     stall_assets()
     slot_assets()

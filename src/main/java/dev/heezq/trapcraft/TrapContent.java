@@ -511,6 +511,27 @@ public final class TrapContent {
         return stack;
     }
 
+    /**
+     * Is this the sort of thing you'd rather the authorities didn't find?
+     *
+     * Product only -- buds, joints, mixes, powder and the coca line. Seeds and
+     * equipment are legal to own as far as this mod is concerned, which is
+     * also what stops a raid emptying your entire farming chest.
+     */
+    public static boolean isContraband(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        Item item = stack.getItem();
+        if (item == blendBudItem || item == blendJointItem
+                || item == cocaLeaves || item == cocaPaste || item == cocaPowder) {
+            return true;
+        }
+        return RAW_BUDS.containsValue(item)
+                || DRIED_BUDS.containsValue(item)
+                || JOINTS.containsValue(item);
+    }
+
     private static Item registerItem(String path, ItemFactory factory) {
         RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, TrapCraft.id(path));
         Identifier model = TrapCraft.id(path);

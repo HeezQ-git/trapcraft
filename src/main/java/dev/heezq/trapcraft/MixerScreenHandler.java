@@ -201,6 +201,9 @@ public class MixerScreenHandler extends ScreenHandler {
         for (int i = 0; i < inputs.size(); i++) {
             inputs.getStack(i).decrement(1);
         }
+        if (blend.named() != null && player instanceof net.minecraft.server.network.ServerPlayerEntity who) {
+            TrapAwards.grant(who, "named_blend");
+        }
         player.getInventory().offerOrDrop(TrapContent.blendBud(blend));
         celebrate();
         paint();

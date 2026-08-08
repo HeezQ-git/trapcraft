@@ -553,6 +553,51 @@ class FormulaTest {
         }
     }
 
+    @Test
+    void volumeSellingDoesNotCrashThePrice() {
+        // The complaint this curve exists to answer: three stacks of something
+        // used to walk a cheap line into the cap, where it rounded to nothing
+        // and the shop stopped buying it at all.
+        float after12 = TrapMath.flowFactor(TrapMath.pressureAfter(0, 12, false));
+        assertTrue(after12 > 0.88f,
+                "a dozen lots should barely move it, got " + after12);
+
+        float after200 = TrapMath.flowFactor(TrapMath.pressureAfter(0, 200, false));
+        assertTrue(after200 > 0.60f,
+                "even a mountain of stock should leave it worth selling, got " + after200);
+    }
+
+    @Test
+    void eachLotMovesThePriceLessThanTheLast() {
+        // Diminishing impact is the whole mechanism. Linear steps are what
+        // made the cliff.
+        float first = 1.0f - TrapMath.flowFactor(TrapMath.pressureAfter(0, 1, false));
+        float hundredth = TrapMath.flowFactor(TrapMath.pressureAfter(0, 99, false))
+                - TrapMath.flowFactor(TrapMath.pressureAfter(0, 100, false));
+        assertTrue(hundredth < first,
+                "the hundredth lot moved the price " + hundredth
+                        + ", the first moved it " + first);
+    }
+
+    @Test
+    void pressureNeverBreaksItsCap() {
+        for (int lots : new int[]{1, 10, 500, 100000}) {
+            for (boolean buying : new boolean[]{true, false}) {
+                float moved = TrapMath.pressureAfter(0, lots, buying);
+                assertTrue(Math.abs(moved) <= TrapMath.PRESSURE_CAP + 0.0001f,
+                        lots + " lots pushed pressure to " + moved);
+            }
+        }
+    }
+
+    @Test
+    void sellingIsWorthTheWalk() {
+        // Wide enough that the shop is a convenience, not so wide that farming
+        // a crop and carrying it in feels like a punishment.
+        assertTrue(TrapMath.SELL_RATE > 0.4f, "selling should be worth doing");
+        assertTrue(TrapMath.SELL_RATE < 0.7f, "but buying must stay the expensive side");
+    }
+
     // --- the pawn counter -------------------------------------------------------
 
     @Test

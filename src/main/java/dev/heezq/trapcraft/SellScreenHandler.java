@@ -234,6 +234,9 @@ public class SellScreenHandler extends ScreenHandler {
         }
         if (paid > 0) {
             TrapMarket.pay(seller, paid);
+            if (paid >= 500) {
+                TrapAwards.grant(seller, "liquidation");
+            }
             till();
             MutableText line = plain("Sold ").formatted(Formatting.GRAY)
                     .append(plain(sold + " item" + (sold == 1 ? "" : "s"))

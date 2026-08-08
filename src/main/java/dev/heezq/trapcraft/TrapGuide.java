@@ -102,6 +102,7 @@ public final class TrapGuide {
         strains(pages);
         breeding(pages);
         heat(pages);
+        crew(pages);
         supply(pages);
         return book("Grower's Handbook", pages);
     }
@@ -654,6 +655,28 @@ public final class TrapGuide {
         worth.append(body("\n"))
                 .append(warn("Wired costs nothing until it ends. Then it all lands at once."));
         pages.add(page(worth));
+    }
+
+    private static void crew(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("8b. THE CREW\n\n"))
+                .append(body("/crew hire  -  " + TrapCrew.HIRE_COST + "e\n\n"))
+                .append(body("They work " + TrapCrew.REACH + " blocks around where "
+                        + "you stood, picking and stashing.\n\n"))
+                .append(hint("Three hands is the most you can carry."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8c. WAGES\n\n"))
+                .append(body(TrapCrew.WAGE + "e each, every five minutes, "
+                        + "harvest or no harvest.\n\n"))
+                .append(warn("Miss a payday and they walk. No warning, no debt."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8d. THE SEARCH\n\n"))
+                .append(body("A raid doesn't just swing axes. They walk to "
+                        + "your chests and take product.\n\n"))
+                .append(body("Only product. Seeds and gear are safe.\n\n"))
+                .append(hint("Bury it, split it, or stand in the way."))));
     }
 
     private static void supply(List<RawFilteredPair<Text>> pages) {

@@ -124,6 +124,8 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     /** Ticks of noise left after the reels have settled. */
     private int celebrating;
     private int flash;
+    /** Set when the screen closes, so the tick loop lets go. */
+    private boolean closed;
     /** Ticks of jackpot fireworks left to draw. */
     private int fanfare;
     /** What the finished board won, in words, for the receipt. */
@@ -186,6 +188,8 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             // Corners is four cells and worth thirty times a lone three, and
             // lighting it the same colour would be a lie the player can see.
             if (pending >= JACKPOT_PAY) {
+            TrapAwards.grant(player, "jackpot");
+            TrapCasino.won(player, "slot");
                 Item[] rainbow = {Items.RED_STAINED_GLASS_PANE, Items.ORANGE_STAINED_GLASS_PANE,
                         Items.YELLOW_STAINED_GLASS_PANE, Items.LIME_STAINED_GLASS_PANE,
                         Items.LIGHT_BLUE_STAINED_GLASS_PANE, Items.PURPLE_STAINED_GLASS_PANE};
@@ -388,6 +392,9 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     @Override
     public boolean tick() {
         flash++;
+        if (closed) {
+            return false;
+        }
 
         if (celebrating > 0) {
             celebrating--;
@@ -481,6 +488,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
                     SoundCategory.PLAYERS, 1.0F, 0.8F);
             return;
         }
+        TrapCasino.won(player, "slot");
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 player.getX(), player.getY() + 1.2, player.getZ(), 18, 0.5, 0.6, 0.5, 0.06);
         world.playSound(null, player.getBlockPos(), SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
@@ -580,6 +588,21 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     @Override
     public ItemStack quickMove(PlayerEntity who, int index) {
         return ItemStack.EMPTY;
+    }
+
+
+    /**
+     * Stop the tick loop when the player walks away.
+     *
+     * Without this the handler stays in the casino's tick list repainting a
+     * screen nobody is looking at until its animation happens to finish. The
+     * money is never at risk -- payout happens the moment the reels stop, not
+     * when the lights do -- but it is work done for an audience of nobody.
+     */
+    @Override
+    public void onClosed(PlayerEntity closer) {
+        super.onClosed(closer);
+        closed = true;
     }
 
     @Override

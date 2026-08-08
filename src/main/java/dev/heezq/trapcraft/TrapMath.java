@@ -128,18 +128,24 @@ public final class TrapMath {
     public static final float DRIFT = 0.18f;
     /** Beats one wobble lasts before the next one is aimed for. */
     public static final int DRIFT_WINDOW = 8;
-    /** How far one lot traded moves that item's own price. */
-    public static final float IMPACT = 0.022f;
+    /** How much of the REMAINING headroom one lot eats. See pressureAfter. */
+    public static final float IMPACT = 0.02f;
     /** How far order flow may push one item, either way. */
-    public static final float PRESSURE_CAP = 0.60f;
+    public static final float PRESSURE_CAP = 0.35f;
     /** What survives one beat: a half-life of about eleven. */
     public static final float PRESSURE_DECAY = 0.94f;
     /** Below this, order flow is called spent and forgotten. */
     public static final float PRESSURE_FLOOR = 0.004f;
     /** How much of a transaction lands on the money supply immediately. */
     public static final float FLOW_WEIGHT = 0.25f;
-    /** What a sale returns, as a share of the buy price. */
-    public static final float SELL_RATE = 0.35f;
+    /**
+     * What a sale returns, as a share of the buy price.
+     *
+     * Wide enough that the shop is a convenience rather than an income, but
+     * not so wide that farming a crop and selling it feels like a punishment.
+     * At 35% a bundle of wheat was barely worth the walk.
+     */
+    public static final float SELL_RATE = 0.45f;
 
     /**
      * How expensive everything is right now, from the money in circulation.
@@ -201,14 +207,24 @@ public final class TrapMath {
      * Buying pushes a price up and selling pushes it down, immediately and
      * only for that line. This is the part of the market a player can actually
      * feel: clear the shelf of diamonds and the next diamond costs more, dump
-     * forty lots of wheat and wheat is worth less by the time you walk back.
+     * wheat and wheat is worth less by the time you walk back.
      *
-     * Capped, because the alternative is a player with deep pockets moving a
-     * price to zero or to the moon and breaking the shop for everyone else.
+     * Each lot eats a share of the REMAINING headroom rather than a fixed
+     * step, so the price approaches its floor and never reaches it. That is
+     * the difference between a market and a cliff: linear steps meant three
+     * stacks of something walked a cheap line straight into the cap, where it
+     * rounded to nothing and the shop stopped buying it at all. Now the
+     * hundredth lot moves the price far less than the first, which is both
+     * what real order books do and what stops a good harvest being worthless
+     * by the time you have carried it in.
      */
     public static float pressureAfter(float pressure, int lots, boolean buying) {
-        float moved = pressure + (buying ? 1 : -1) * lots * IMPACT;
-        return Math.max(-PRESSURE_CAP, Math.min(PRESSURE_CAP, moved));
+        if (lots <= 0) {
+            return pressure;
+        }
+        float floor = buying ? PRESSURE_CAP : -PRESSURE_CAP;
+        float left = (float) Math.pow(1.0f - IMPACT, lots);
+        return floor + (pressure - floor) * left;
     }
 
     /**
