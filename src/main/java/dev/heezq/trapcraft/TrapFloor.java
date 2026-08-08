@@ -282,8 +282,12 @@ public final class TrapFloor {
      * does not multiply them.
      */
     private static void maybeArrive(MinecraftServer server) {
+        maybeArrive(server, false);
+    }
+
+    private static void maybeArrive(MinecraftServer server, boolean forced) {
         if (PUNTERS.size() >= MAX_PUNTERS
-                || server.getOverworld().getRandom().nextFloat() > ARRIVAL_CHANCE) {
+                || (!forced && server.getOverworld().getRandom().nextFloat() > ARRIVAL_CHANCE)) {
             return;
         }
         List<String> open = new ArrayList<>();
@@ -354,17 +358,28 @@ public final class TrapFloor {
         punter.setCustomName(Text.literal("Punter  ·  " + stake + "e a go")
                 .formatted(Formatting.WHITE));
         punter.setCustomNameVisible(true);
-        world.spawnEntity(punter);
+
+        // BEFORE spawnEntity, not after. spawnEntity fires ENTITY_LOAD
+        // synchronously, the orphan sweep there asks whether this punter is
+        // one of ours, and for two lines it was not -- so every punter ever
+        // sent in was discarded by our own litter cleanup at the instant it
+        // appeared. Nobody saw a single villager for the whole of 1.0.134.
+        Punter session = new Punter(punter.getUuid(), at, houseId, stake,
+                2 + random.nextInt(5));
+        PUNTERS.add(session);
+        if (!world.spawnEntity(punter)) {
+            PUNTERS.remove(session);
+            return;
+        }
 
         // Walk in. If the pathing gives up -- a wall, a roof, a machine on a
         // ledge -- tickPunters puts them at the machine anyway, because a
         // punter stuck on the wrong side of a fence is a machine that never
         // frees up.
         punter.getNavigation().startMovingTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.5);
-
         claim(world, pos, punter.getUuid(), false);
-        PUNTERS.add(new Punter(punter.getUuid(), at, houseId, stake,
-                2 + random.nextInt(5)));
+        TrapCraft.LOGGER.info("punter in at {} {} {}, {}e a go",
+                pos.getX(), pos.getY(), pos.getZ(), stake);
     }
 
     private static final int[] STAKES = {8, 32, 128};
@@ -399,7 +414,12 @@ public final class TrapFloor {
                 }
                 body.refreshPositionAndAngles(nextTo(world, pos), 0.0F, 0.0F);
             }
+            // A villager Brain re-picks its own destination every tick and
+            // will happily wander off mid-session, so once they are at the
+            // machine they are rooted. Same treatment the contract buyer and
+            // a called dealer get, and for the same reason.
             body.getNavigation().stop();
+            body.setAiDisabled(true);
             body.getLookControl().lookAt(Vec3d.ofCenter(pos));
 
             play(world, pos, punter, house);
@@ -515,6 +535,69 @@ public final class TrapFloor {
             }
         }
         return pos.up();
+    }
+
+    /**
+     * /floor -- who is on what, and why nobody came.
+     *
+     * Written the day a punter bug shipped that nobody could see: the feature
+     * was running perfectly and killing its own villagers on the spawn line,
+     * and from inside the game that is identical to a feature that was never
+     * written. `/floor now` forces an arrival and says out loud which test
+     * turned it away.
+     */
+    public static void registerCommands() {
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, access, env) -> dispatcher.register(
+                        net.minecraft.server.command.CommandManager.literal("floor")
+                                .executes(context -> report(context.getSource()))
+                                .then(net.minecraft.server.command.CommandManager.literal("now")
+                                        .requires(source -> source.hasPermissionLevel(2))
+                                        .executes(context -> force(context.getSource())))));
+    }
+
+    private static int report(net.minecraft.server.command.ServerCommandSource source) {
+        MinecraftServer server = source.getServer();
+        int wired = TrapHouse.wires().size();
+        int loaded = 0;
+        int free = 0;
+        for (String at : TrapHouse.wires().keySet()) {
+            ServerWorld world = worldOf(server, at);
+            BlockPos pos = TrapHouse.posOf(at);
+            if (world == null || pos == null
+                    || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+                continue;
+            }
+            loaded++;
+            if (occupant(world, pos) == null) {
+                free++;
+            }
+        }
+        int seconds = ARRIVAL_TICKS / 20;
+        Text out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(wired + " machines wired, " + loaded
+                        + " loaded, " + free + " free").formatted(Formatting.GRAY))
+                .append(Text.literal("\n  " + PUNTERS.size() + " of " + MAX_PUNTERS
+                                + " punters in, " + SEATS.size() + " seats taken")
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  One turns up about every "
+                                + Math.round(seconds / ARRIVAL_CHANCE) + "s, if a wired "
+                                + "machine is loaded and its vault isn't empty")
+                        .formatted(Formatting.DARK_GRAY));
+        source.sendFeedback(() -> out, false);
+        return 1;
+    }
+
+    private static int force(net.minecraft.server.command.ServerCommandSource source) {
+        int before = PUNTERS.size();
+        maybeArrive(source.getServer(), true);
+        boolean came = PUNTERS.size() > before;
+        source.sendFeedback(() -> Text.literal(came
+                        ? "Somebody's on their way."
+                        : "Nobody came -- no wired machine is loaded, free and behind a "
+                        + "vault with money in it.")
+                .formatted(came ? Formatting.GREEN : Formatting.RED), false);
+        return came ? 1 : 0;
     }
 
     private TrapFloor() {

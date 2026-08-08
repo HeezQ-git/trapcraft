@@ -138,6 +138,17 @@ public class NetworkScreenHandler extends ScreenHandler {
         lore.add(line(dealer.stock.isEmpty()
                         ? "Idle -- nothing to sell." : "Out working.",
                 dealer.stock.isEmpty() ? Formatting.RED : Formatting.DARK_GRAY));
+        // They do level up on their own, off what they sell -- but with no
+        // number on the screen the only way to find out was to wait long
+        // enough, and the honest answer to "is this thing progressing?" has to
+        // be visible or it may as well not be true.
+        lore.add(dealer.level >= TrapMath.DEALER_MAX_LEVEL
+                ? line("Top of the ladder.", Formatting.GOLD)
+                : line(dealer.toNextLevel() + " more sales", Formatting.DARK_GRAY)
+                .append(plain(" to L" + (dealer.level + 1)).formatted(Formatting.WHITE)));
+        lore.add(line("Shifts about " + Math.round(
+                        TrapMath.dealerRate(dealer.level, mine.size(), 0) * 30)
+                + " an hour at this level.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(here
                 ? line("Already stood in front of you.", Formatting.DARK_GRAY)

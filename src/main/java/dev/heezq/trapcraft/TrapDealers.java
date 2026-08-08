@@ -43,7 +43,15 @@ import java.util.UUID;
  */
 public final class TrapDealers {
     /** Ticks between selling rounds. Five minutes. */
-    private static final int ROUND_TICKS = 20 * 60 * 5;
+    /**
+     * Two minutes, not five.
+     *
+     * The clock is half the reason a dealer felt like nothing was happening:
+     * at five minutes a level one sold one item every ten minutes, so most of
+     * a session went by with the earnings line unchanged. Trade you cannot
+     * see moving is trade nobody believes in.
+     */
+    private static final int ROUND_TICKS = 20 * 60 * 2;
     /** How long a called dealer waits around before going back to work. */
     private static final int VISIT_TICKS = 20 * 90;
     /** The most anybody can have on the books. */

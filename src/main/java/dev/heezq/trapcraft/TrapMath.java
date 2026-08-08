@@ -1190,18 +1190,24 @@ public final class TrapMath {
      */
     public static float punterRound(float rtp, Random rng) {
         float roll = rng.nextFloat();
-        // Base shape, mean 0.955: 0.25*2 + 0.045*6 + 0.005*37 = 0.955.
+        // Base shape, mean 0.956: 0.25*2 + 0.045*6.8 + 0.005*30 = 0.956.
+        //
+        // The top is 30 and not higher on purpose: that is the table limit a
+        // machine is checked against, so a punter can never win more than the
+        // vault was required to cover. Losing your bank to a villager while
+        // you stand and watch is a great deal less fun than losing it to
+        // somebody who was playing.
         float multiple;
         if (roll < 0.700f) {
             multiple = 0.0f;
         } else if (roll < 0.950f) {
             multiple = 2.0f;
         } else if (roll < 0.995f) {
-            multiple = 6.0f;
+            multiple = 6.8f;
         } else {
-            multiple = 37.0f;
+            multiple = 30.0f;
         }
-        return multiple * (rtp / 0.955f);
+        return multiple * (rtp / 0.956f);
     }
 
     /** Long-run return of the punter model, so the tests can hold it honest. */
@@ -1463,8 +1469,17 @@ public final class TrapMath {
 
     /** Levels a dealer can reach. */
     public static final int DEALER_MAX_LEVEL = 8;
-    /** Items sold to earn one level, at each level. */
-    public static final int[] DEALER_XP = {0, 40, 120, 280, 600, 1100, 1900, 3200};
+    /**
+     * Items sold to earn one level, at each level.
+     *
+     * Rescaled 2026-08-08. The old curve topped out at 3200 items, which at
+     * the rate a dealer actually worked was several hundred hours -- not a
+     * ladder, an asymptote, and the honest answer to "do they even level up?"
+     * was "technically". A dealer now climbs it in about seventeen hours of
+     * working, halving to nine for a boss with a name (see dealerLearnRate),
+     * which is a long-term goal you can see moving.
+     */
+    public static final int[] DEALER_XP = {0, 25, 70, 150, 300, 550, 950, 1500};
 
     /** Slots a dealer of this level can carry. */
     public static int dealerSlots(int level) {
@@ -1549,7 +1564,11 @@ public final class TrapMath {
      * @param heatTier 0..3, how much attention the operation is drawing
      */
     public static float dealerRate(int level, int crowd, int heatTier) {
-        float skill = 0.25f + 0.25f * level;
+        // Was 0.25 + 0.25*level, which gave a level one half an item per
+        // five-minute round: six an hour, for a dealer who cost 180e. You
+        // could watch one for twenty minutes and see two sales, and two sales
+        // in twenty minutes does not read as slow, it reads as broken.
+        float skill = 0.6f + 0.45f * level;
         float saturation = 1.0f / (1.0f + 0.45f * Math.max(0, crowd - 1));
         // Heat doesn't stop trade, it makes people careful about being seen
         // buying. A raid is the punishment; this is the drag.
@@ -1573,14 +1592,16 @@ public final class TrapMath {
     /**
      * Odds a dealer gets taken off for part of what they're carrying, per round.
      *
-     * Per ROUND, and rounds are five minutes apart -- so a level one runs
-     * about a seven percent risk over an hour on the street and a level five
-     * about one. Often enough that a cheap dealer carrying your best product
-     * is a bad idea, rare enough that it reads as bad luck rather than as a
-     * tax.
+     * Per ROUND, and rounds are two minutes apart -- so a level one runs about
+     * a nine percent risk over an hour on the street and a level five under
+     * two. Often enough that a cheap dealer carrying your best product is a
+     * bad idea, rare enough that it reads as bad luck rather than as a tax.
+     *
+     * Halved when the round interval was, so shortening the clock made them
+     * work faster rather than get robbed more.
      */
     public static float dealerRobChance(int level) {
-        return 0.006f / Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+        return 0.003f / Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
     }
 
     // --- the coin toss ----------------------------------------------------------
