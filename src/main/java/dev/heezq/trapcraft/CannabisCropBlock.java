@@ -118,6 +118,49 @@ public class CannabisCropBlock extends CropBlock implements PolymerTexturedBlock
      * itself, exactly like wheat does. Nobody expects that of a plant they
      * watched grow, so cannabis simply tolerates dirt.
      */
+    /**
+     * Let a hoe reach the soil under a standing plant.
+     *
+     * These plant on plain dirt as well as farmland, which is deliberate --
+     * but vanilla's hoe refuses to till a block with anything on top of it, so
+     * a field planted straight onto dirt could never be improved without
+     * ripping it up first. Right-clicking the PLANT with a hoe now tills the
+     * ground beneath it and leaves the plant standing.
+     *
+     * Registered as a use callback rather than an onUse override because the
+     * block's own onUse is the harvest, and a hoe in hand should not be a
+     * harvest.
+     */
+    public static void registerTilling() {
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register(
+                (player, world, hand, hit) -> {
+                    if (world.isClient() || hand != net.minecraft.util.Hand.MAIN_HAND) {
+                        return ActionResult.PASS;
+                    }
+                    ItemStack tool = player.getStackInHand(hand);
+                    if (!(tool.getItem() instanceof net.minecraft.item.HoeItem)) {
+                        return ActionResult.PASS;
+                    }
+                    BlockPos cropPos = hit.getBlockPos();
+                    var crop = world.getBlockState(cropPos);
+                    if (!(crop.getBlock() instanceof CannabisCropBlock)
+                            && !(crop.getBlock() instanceof CocaCropBlock)) {
+                        return ActionResult.PASS;
+                    }
+                    BlockPos soilPos = cropPos.down();
+                    var soil = world.getBlockState(soilPos);
+                    if (!soil.isIn(BlockTags.DIRT) || isFarmland(soil)) {
+                        return ActionResult.PASS;
+                    }
+                    world.setBlockState(soilPos, Blocks.FARMLAND.getDefaultState(),
+                            Block.NOTIFY_ALL);
+                    world.playSound(null, soilPos, SoundEvents.ITEM_HOE_TILL,
+                            SoundCategory.BLOCKS, 1.0F, 1.0F);
+                    tool.damage(1, player, net.minecraft.entity.EquipmentSlot.MAINHAND);
+                    return ActionResult.SUCCESS;
+                });
+    }
+
     @Override
     protected boolean canPlantOnTop(BlockState floor, BlockView world, BlockPos pos) {
         return isFarmland(floor) || floor.isIn(BlockTags.DIRT);

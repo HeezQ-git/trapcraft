@@ -46,7 +46,7 @@ public final class TrapHeat {
      * 225 lookups on 1-in-64 mature random ticks works out to a scan every
      * ~40 seconds on a busy farm, which is nothing.
      */
-    public static final int RADIUS = 7;
+    public static final int RADIUS = 11;
     /**
      * How far up and down the scan reaches.
      *
@@ -77,9 +77,9 @@ public final class TrapHeat {
      * up for a genuine plantation, and it trampling your crops on the way in is
      * the point rather than a side effect.
      */
-    private static final int[] PILLAGERS = {2, 3, 4, 4};
-    private static final int[] VINDICATORS = {0, 1, 2, 3};
-    private static final int[] RAVAGERS = {0, 0, 0, 1};
+    private static final int[] PILLAGERS = {2, 4, 5, 6};
+    private static final int[] VINDICATORS = {1, 2, 3, 4};
+    private static final int[] RAVAGERS = {0, 0, 1, 2};
 
     /**
      * Cooldown per tier. A bigger operation is watched more closely, so the
@@ -150,8 +150,9 @@ public final class TrapHeat {
                         .formatted(tier < 0 ? Formatting.GRAY : Formatting.RED))
                 .append(Text.literal("\n  Thresholds " + joinInts(THRESHOLDS))
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  Mature plant in the open 2, hidden 1, "
-                        + "loaded drying rack 1.").formatted(Formatting.DARK_GRAY));
+                .append(Text.literal("\n  Ripe in the open 3, hidden 2, growing "
+                        + "in the open 1, full rack 1.")
+                        .formatted(Formatting.DARK_GRAY));
         if (cooling > 0) {
             out.append(Text.literal("\n  Cooling down for another "
                     + cooling / 20 / 60 + "m " + cooling / 20 % 60 + "s.")
@@ -306,9 +307,18 @@ public final class TrapHeat {
                 for (int dy = -HEIGHT; dy <= HEIGHT; dy++) {
                     cursor.set(centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz);
                     var state = world.getBlockState(cursor);
-                    if (state.getBlock() instanceof CannabisCropBlock crop
-                            && crop.isMature(state)) {
-                        heat += world.isSkyVisible(cursor) ? 2 : 1;
+                    if (state.getBlock() instanceof CannabisCropBlock crop) {
+                        // Seedlings count too. A tilled field full of young
+                        // plants is just as obvious from the air as a ripe
+                        // one, and counting only mature ones meant a big
+                        // plantation read as almost nothing for most of its
+                        // life -- doubly so since growth was slowed.
+                        boolean seen = world.isSkyVisible(cursor);
+                        if (crop.isMature(state)) {
+                            heat += seen ? 3 : 2;
+                        } else {
+                            heat += seen ? 1 : 0;
+                        }
                     } else if (state.getBlock() instanceof DryingRackBlock
                             && state.get(DryingRackBlock.OCCUPIED)) {
                         heat += 1;
@@ -387,6 +397,12 @@ public final class TrapHeat {
                 continue;
             }
             mob.refreshPositionAndAngles(spawn, random.nextFloat() * 360.0F, 0.0F);
+            // initialize() is what arms them. Without it a pillager spawns
+            // holding nothing at all -- no crossbow, no armour, no captain --
+            // and a raid of unarmed pillagers is a mob of people jogging at
+            // you. This is the whole reason raids were not frightening.
+            mob.initialize(world, world.getLocalDifficulty(spawn),
+                    SpawnReason.EVENT, null);
             mob.setPersistent();   // don't despawn halfway across the field
             world.spawnEntity(mob);
             spawned.add(mob);

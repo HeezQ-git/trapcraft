@@ -700,8 +700,8 @@ public final class TrapGuide {
                 .append(title("8a2. /HEAT\n\n"))
                 .append(body("How hot the spot you're on is, and what "
                         + "it would bring.\n\n"))
-                .append(body("Open plant 2, hidden 1, full rack 1.\n\n"))
-                .append(hint("Reads 14 across, 10 tall."))));
+                .append(body("Ripe 3, hidden 2, growing 1, rack 1.\n\n"))
+                .append(hint("Reads 22 across, 10 tall."))));
     }
 
     private static void crew(List<RawFilteredPair<Text>> pages) {

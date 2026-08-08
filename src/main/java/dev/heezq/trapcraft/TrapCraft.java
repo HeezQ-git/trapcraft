@@ -29,6 +29,7 @@ public class TrapCraft implements ModInitializer {
         TrapCrew.register();
         TrapDealers.register();
         TrapHeat.registerCommands();
+        CannabisCropBlock.registerTilling();
         TrapCough.register();
         TrapContent.register();
         TrapTrades.register();
