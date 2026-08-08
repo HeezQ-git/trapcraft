@@ -47,9 +47,18 @@ public final class TrapHeat {
      * ~40 seconds on a busy farm, which is nothing.
      */
     public static final int RADIUS = 7;
+    /**
+     * How far up and down the scan reaches.
+     *
+     * It used to be a single flat slice at the plant's own Y, which meant a
+     * grow on two floors read as two unrelated small grows and neither ever
+     * got hot. A basement under a field is one operation and the authorities
+     * would treat it as one.
+     */
+    public static final int HEIGHT = 5;
 
     /** Only scan on 1 in N mature random ticks. */
-    public static final int SCAN_CHANCE = 64;
+    public static final int SCAN_CHANCE = 24;
 
     /**
      * Heat needed for each tier. Sky-exposed mature plants count 2, hidden 1.
@@ -91,6 +100,85 @@ public final class TrapHeat {
      * safe direction to fail: worst case someone gets one extra visit.
      */
     private static final Map<RegistryKey<World>, Long> lastRaid = new HashMap<>();
+
+    /**
+     * /heat tells you where you stand. /raid sends one now.
+     *
+     * The diagnostic exists because "nothing is happening" and "it is broken"
+     * are the same thing from inside the game, and the only way to tell them
+     * apart was reading the source. It reports the SAME measureHeat the raid
+     * uses, so it cannot disagree with reality.
+     */
+    public static void registerCommands() {
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, access, env) -> {
+                    dispatcher.register(net.minecraft.server.command.CommandManager
+                            .literal("heat")
+                            .executes(context -> report(context.getSource())));
+                    dispatcher.register(net.minecraft.server.command.CommandManager
+                            .literal("raid")
+                            .requires(source -> source.hasPermissionLevel(2))
+                            .executes(context -> send(context.getSource(), 0))
+                            .then(net.minecraft.server.command.CommandManager
+                                    .argument("tier", com.mojang.brigadier.arguments
+                                            .IntegerArgumentType.integer(0, 3))
+                                    .executes(context -> send(context.getSource(),
+                                            com.mojang.brigadier.arguments.IntegerArgumentType
+                                                    .getInteger(context, "tier")))));
+                });
+    }
+
+    private static int report(net.minecraft.server.command.ServerCommandSource source) {
+        ServerPlayerEntity player = source.getPlayer();
+        if (player == null) {
+            return 0;
+        }
+        ServerWorld world = player.getWorld();
+        BlockPos where = player.getBlockPos();
+        int heat = measureHeat(world, where);
+        int tier = tierFor(heat);
+        long cooling = cooldownLeft(world, tier);
+
+        var out = Text.literal("Heat  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(heat + " here").formatted(
+                        tier < 0 ? Formatting.GREEN : Formatting.RED))
+                .append(Text.literal("   (" + RADIUS * 2 + " blocks across, "
+                                + HEIGHT * 2 + " tall)").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  " + (tier < 0
+                                ? "Nothing worth a visit. Next tier at " + THRESHOLDS[0] + "."
+                                : "Tier " + (tier + 1) + " -- " + squadOf(tier)))
+                        .formatted(tier < 0 ? Formatting.GRAY : Formatting.RED))
+                .append(Text.literal("\n  Thresholds " + joinInts(THRESHOLDS))
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  Mature plant in the open 2, hidden 1, "
+                        + "loaded drying rack 1.").formatted(Formatting.DARK_GRAY));
+        if (cooling > 0) {
+            out.append(Text.literal("\n  Cooling down for another "
+                    + cooling / 20 / 60 + "m " + cooling / 20 % 60 + "s.")
+                    .formatted(Formatting.AQUA));
+        }
+        player.sendMessage(out, false);
+        return 1;
+    }
+
+    private static int send(net.minecraft.server.command.ServerCommandSource source, int tier) {
+        ServerPlayerEntity player = source.getPlayer();
+        if (player == null) {
+            return 0;
+        }
+        force(player.getWorld(), player.getBlockPos(), tier);
+        source.sendFeedback(() -> Text.literal("Sent a tier " + (tier + 1)
+                + " patrol: " + squadOf(tier)).formatted(Formatting.RED), false);
+        return 1;
+    }
+
+    private static String joinInts(int[] values) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < values.length; i++) {
+            out.append(i > 0 ? " / " : "").append(values[i]);
+        }
+        return out.toString();
+    }
 
     /** Called from a mature plant's random tick. Must stay cheap. */
     public static void onMatureTick(ServerWorld world, BlockPos pos, Random random) {
@@ -197,19 +285,60 @@ public final class TrapHeat {
     }
 
     /** Counts mature cannabis on the plant's own layer. Open sky counts double. */
-    private static int measureHeat(ServerWorld world, BlockPos centre) {
+    /**
+     * How obvious this operation is from outside.
+     *
+     * Counts three things, because one was never enough. MATURE PLANTS are the
+     * headline, and sky-visible ones count double -- a field anybody can see
+     * from the air is the giveaway. DRYING RACKS count too: a wall of them is
+     * as damning as the plants and, until now, was completely invisible to
+     * this. And it reaches five blocks up and down, so a basement under a
+     * field reads as one operation instead of two innocent ones.
+     *
+     * Public so /heat can show a player the same number this uses. A
+     * diagnostic that computes its own answer is a diagnostic that lies.
+     */
+    public static int measureHeat(ServerWorld world, BlockPos centre) {
         int heat = 0;
         BlockPos.Mutable cursor = new BlockPos.Mutable();
         for (int dx = -RADIUS; dx <= RADIUS; dx++) {
             for (int dz = -RADIUS; dz <= RADIUS; dz++) {
-                cursor.set(centre.getX() + dx, centre.getY(), centre.getZ() + dz);
-                var state = world.getBlockState(cursor);
-                if (state.getBlock() instanceof CannabisCropBlock crop && crop.isMature(state)) {
-                    heat += world.isSkyVisible(cursor) ? 2 : 1;
+                for (int dy = -HEIGHT; dy <= HEIGHT; dy++) {
+                    cursor.set(centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz);
+                    var state = world.getBlockState(cursor);
+                    if (state.getBlock() instanceof CannabisCropBlock crop
+                            && crop.isMature(state)) {
+                        heat += world.isSkyVisible(cursor) ? 2 : 1;
+                    } else if (state.getBlock() instanceof DryingRackBlock
+                            && state.get(DryingRackBlock.OCCUPIED)) {
+                        heat += 1;
+                    }
                 }
             }
         }
         return heat;
+    }
+
+    /** What tier this heat reaches, or -1. Public for the diagnostic. */
+    public static int tierOf(int heat) {
+        return tierFor(heat);
+    }
+
+    /** Ticks until this dimension could be raided again, or 0. */
+    public static long cooldownLeft(ServerWorld world, int tier) {
+        Long last = lastRaid.get(world.getRegistryKey());
+        if (last == null || tier < 0) {
+            return 0;
+        }
+        return Math.max(0, COOLDOWN_TICKS[tier] - (world.getTime() - last));
+    }
+
+    /** Send one now, ignoring heat and cooldown. For /raid. */
+    public static void force(ServerWorld world, BlockPos pos, int tier) {
+        int clamped = Math.max(0, Math.min(THRESHOLDS.length - 1, tier));
+        lastRaid.put(world.getRegistryKey(), world.getTime());
+        warn(world, pos, clamped);
+        spawnPatrol(world, pos, world.getRandom(), clamped);
     }
 
     /** Tells you roughly what's coming, so the tier is legible before it arrives. */

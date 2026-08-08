@@ -102,6 +102,7 @@ public final class TrapGuide {
         strains(pages);
         breeding(pages);
         heat(pages);
+        checking(pages);
         crew(pages);
         network(pages);
         supply(pages);
@@ -692,6 +693,16 @@ public final class TrapGuide {
         worth.append(body("\n"))
                 .append(warn("Wired costs nothing until it ends. Then it all lands at once."));
         pages.add(page(worth));
+    }
+
+    private static void checking(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("8a2. /HEAT\n\n"))
+                .append(body("Tells you how hot the spot you're stood on "
+                        + "is, and what it would bring.\n\n"))
+                .append(body("Mature plant in the open 2, hidden 1, loaded "
+                        + "drying rack 1.\n\n"))
+                .append(hint("Reads 14 across and 10 tall."))));
     }
 
     private static void crew(List<RawFilteredPair<Text>> pages) {
