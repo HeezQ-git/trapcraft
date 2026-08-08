@@ -1183,6 +1183,42 @@ public final class TrapMath {
     // else would have the books disagree with the paytable.
 
     /**
+     * How busy the floor is at this hour, as a multiplier.
+     *
+     * Far steeper than the dealers' clock. A villager with a job is at it in
+     * the daytime and the room is nearly empty; the evening crowd is who
+     * gambles, and a casino should look like a different building at midnight
+     * than it does at noon.
+     *
+     * @param timeOfDay the world's 0..23999
+     */
+    public static float casinoHourFactor(long timeOfDay) {
+        // 0 is sunrise, 6000 noon, 18000 midnight.
+        double phase = (timeOfDay % 24000L) / 24000.0 * Math.PI * 2.0;
+        float swing = -(float) Math.sin(phase);
+        // Floored rather than allowed to reach zero: a casino that is provably
+        // shut for eight minutes every day is a casino people stop checking.
+        return Math.max(0.12f, 1.0f + 0.95f * swing);
+    }
+
+    /** Least and most a punter will put on one round. */
+    public static final int PUNTER_MIN_STAKE = 8;
+    public static final int PUNTER_MAX_STAKE = 256;
+
+    /**
+     * What this punter bets a round.
+     *
+     * Doubling bands from 8 to 256, drawn low-biased by taking the smaller of
+     * two rolls -- so most of the room is playing for small change and a whale
+     * turns up about once in thirty-six, which is what makes one worth
+     * noticing. The mean lands near 40e.
+     */
+    public static int punterStake(Random rng) {
+        int band = Math.min(rng.nextInt(6), rng.nextInt(6));
+        return PUNTER_MIN_STAKE << band;
+    }
+
+    /**
      * What one punter round returns, as a multiple of what they staked.
      *
      * Mostly nothing, often a small win, rarely a big one -- the shape every

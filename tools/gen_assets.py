@@ -1091,40 +1091,83 @@ def nerve_tonic_assets() -> None:
     })
 
 
-def table_model(top: str) -> dict:
-    """A full-cube gaming table: panelled sides, a felt lid.
+def table_model(top: str, furniture=None) -> dict:
+    """A gaming table: four legs, an apron, a felt top in a brass rim, and
+    whatever that particular game keeps standing on it.
 
-    Genuinely fills the cube, so the carrier can honestly claim FULL_BLOCK and
-    costs nothing from the thin transparent pool the roulette table and the peg
-    board are already drawing on.
+    It used to be a single textured cube -- a solid block of wood from the
+    floor to the felt, which is not a table, it is a crate somebody drew a
+    card game on. Legs cost a state from the thin TRANSPARENT_BLOCK pool
+    apiece, and three states is what four sides of daylight under a table is
+    worth.
+
+    `furniture` is a list of extra elements, so the coin, the card shoe and
+    the scratchcard rack are the thing you tell the three games apart by from
+    across the room rather than a texture you have to walk up to and read.
     """
+    elements = [
+        # Four legs, inset from the corners so there is daylight between them.
+        box([1.5, 0, 1.5], [4, 11, 4], "leg"),
+        box([12, 0, 1.5], [14.5, 11, 4], "leg"),
+        box([1.5, 0, 12], [4, 11, 14.5], "leg"),
+        box([12, 0, 12], [14.5, 11, 14.5], "leg"),
+        # The apron the top sits on, tying the legs together.
+        box([1, 11, 1], [15, 13.5, 15], "side", up="side", down="side"),
+        # The playing surface, proud of the apron, with the felt on the lid.
+        box([0, 13.5, 0], [16, 15.5, 16], "rim", up="top", down="side"),
+    ]
+    elements.extend(furniture or [])
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
         "textures": {
             "top": f"{NS}:block/{top}",
             "side": f"{NS}:block/table_side",
+            "leg": f"{NS}:block/table_leg",
+            "rim": f"{NS}:block/table_rim",
+            "coin": f"{NS}:block/toss_coin",
+            "shoe": f"{NS}:block/card_shoe",
+            "chips": f"{NS}:block/chip_stack",
+            "rack": f"{NS}:block/card_rack",
             "particle": f"{NS}:block/table_side",
         },
-        "elements": [
-            {
-                "from": [0, 0, 0],
-                "to": [16, 16, 16],
-                "faces": {
-                    "north": {"texture": "#side", "uv": [0, 0, 16, 16]},
-                    "south": {"texture": "#side", "uv": [0, 0, 16, 16]},
-                    "east": {"texture": "#side", "uv": [0, 0, 16, 16]},
-                    "west": {"texture": "#side", "uv": [0, 0, 16, 16]},
-                    "up": {"texture": "#top", "uv": [0, 0, 16, 16]},
-                    "down": {"texture": "#side", "uv": [0, 0, 16, 16]},
-                },
-            },
-        ],
+        "elements": elements,
     }
 
 
-def table_assets(name: str, top: str, pattern, key) -> None:
-    put(f"assets/{NS}/models/block/{name}.json", table_model(top))
+def toss_furniture() -> list:
+    """A coin standing on its rim, mid-spin, and the stake it was tossed for.
+
+    Upright rather than lying flat: a coin lying on a table is a yellow dot,
+    and a coin on its edge is unmistakably a coin about to fall one way or the
+    other, which is the entire game.
+    """
+    return [
+        {**box([6.5, 15.5, 7.6], [9.5, 18.5, 8.4], "coin", up="coin", down="coin"),
+         "rotation": {"origin": [8, 17, 8], "axis": "y", "angle": 22.5}},
+        box([11, 15.5, 10.5], [13.5, 17, 13], "chips"),
+    ]
+
+
+def blackjack_furniture() -> list:
+    """The shoe the cards come out of, and two stacks of chips."""
+    return [
+        box([9.5, 15.5, 2.5], [14, 18, 7], "shoe", up="shoe", down="shoe"),
+        box([2.5, 15.5, 10], [5, 17.5, 12.5], "chips"),
+        box([5.5, 15.5, 11.5], [8, 16.8, 14], "chips"),
+    ]
+
+
+def scratch_furniture() -> list:
+    """A rack of unsold cards standing up at the back of the counter."""
+    return [
+        box([2.5, 15.5, 2], [13.5, 21, 3.5], "rack", up="rack", down="rack"),
+        box([10.5, 15.5, 10], [13, 17, 12.5], "chips"),
+    ]
+
+
+def table_assets(name: str, top: str, pattern, key, furniture=None) -> None:
+    put(f"assets/{NS}/models/block/{name}.json", table_model(top, furniture))
     put(f"assets/{NS}/models/item/{name}.json", {"parent": f"{NS}:block/{name}"})
     put(f"assets/{NS}/items/{name}.json", {
         "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
@@ -1150,12 +1193,14 @@ def table_assets(name: str, top: str, pattern, key) -> None:
 
 
 def climb_model() -> dict:
-    """A full-cube strongbox: brass-banded lid, locks on the face.
+    """A strongbox: brass-banded lid, locks on the face, feet under it.
 
-    Genuinely fills the cube, unlike the table and the peg board, so its
-    carrier can honestly say FULL_BLOCK and it costs nothing from the thin
-    transparent pool. check_models.py checks that claim rather than trusting
-    this comment.
+    The BODY still fills the cube exactly, so the carrier can honestly say
+    FULL_BLOCK and costs nothing from the thin transparent pool -- every
+    detail below is bolted to the OUTSIDE of that cube rather than carved out
+    of it. Which is the whole trick: proud geometry is free, hollow geometry
+    costs a blockstate. check_models.py measures the claim rather than
+    trusting this comment.
     """
     return {
         "parent": "minecraft:block/block",
@@ -1164,6 +1209,7 @@ def climb_model() -> dict:
             "face": f"{NS}:block/climb_face",
             "plate": f"{NS}:block/climb_plate",
             "lid": f"{NS}:block/climb_lid",
+            "rim": f"{NS}:block/table_rim",
             "particle": f"{NS}:block/climb_plate",
         },
         "elements": [
@@ -1179,6 +1225,16 @@ def climb_model() -> dict:
                     "down": {"texture": "#plate", "uv": [0, 0, 16, 16]},
                 },
             },
+            # An overhanging lid, so it reads as a chest rather than a crate.
+            box([-0.5, 15.5, -0.5], [16.5, 17, 16.5], "rim", up="lid", down="rim"),
+            # Corner posts down the front edges.
+            box([-0.4, 0, -0.4], [1.6, 15.5, 1.6], "rim"),
+            box([14.4, 0, -0.4], [16.4, 15.5, 1.6], "rim"),
+            box([-0.4, 0, 14.4], [1.6, 15.5, 16.4], "rim"),
+            box([14.4, 0, 14.4], [16.4, 15.5, 16.4], "rim"),
+            # A banded strap round the middle and a lock plate on the front.
+            box([-0.3, 6, -0.3], [16.3, 8, 16.3], "rim"),
+            box([5.5, 8.5, -1.2], [10.5, 13.5, 0.2], "rim", up="rim", down="rim"),
         ],
     }
 
@@ -1348,6 +1404,8 @@ def plinko_model(upper: bool) -> dict:
             box([1, 15, 9], [15, 16, 13], "frame", up="frame")               # head rail
             if upper else
             box([1, 0, 9], [15, 1, 13], "frame", down="frame"),              # tray at the foot
+            box([0.5, 0, 7.4], [15.5, 3, 9], "frame", up="frame", down="frame"),  # catch lip
+            box([0.5, 3, 7.4], [15.5, 3.6, 8.2], "frame", up="frame"),       # lip edge
         ],
     }
 
@@ -1427,6 +1485,12 @@ def roulette_model() -> dict:
             # The wheel head, sunk into the felt and standing proud of it.
             box([4, 11.5, 4], [12, 13, 12], "wheel", up="wheel", down="wheel"),
             box([6.5, 13, 6.5], [9.5, 13.8, 9.5], "rim", up="rim"),
+            # The dealer's chip rack along one edge -- the detail that says
+            # somebody works this table rather than it being scenery.
+            box([2.5, 11.5, 1.6], [13.5, 13.2, 3.2], "rim", up="rim", down="rim"),
+            box([3.5, 13.2, 1.9], [5.5, 14.2, 2.9], "wheel", up="wheel"),
+            box([7, 13.2, 1.9], [9, 14.2, 2.9], "wheel", up="wheel"),
+            box([10.5, 13.2, 1.9], [12.5, 14.2, 2.9], "wheel", up="wheel"),
         ],
     }
 
@@ -1740,6 +1804,10 @@ def slot_model(upper: bool) -> dict:
             box([15.4, 6, 6.5], [17, 11, 9.5], "trim"),           # lever arm
             box([15.6, 10.5, 6], [17.6, 12.5, 10], "deck"),       # lever knob
             box([0, 0, 0], [16, 1.2, 16], "trim", down="trim"),   # plinth
+            # The coin tray. Proud of the front, so the cabinet has something
+            # sticking out at hand height and stops reading as a fridge.
+            box([3, 2.5, -1.6], [13, 5, 0.6], "trim", up="deck", down="trim"),
+            box([3, 5, -1.6], [13, 5.6, -1.0], "trim", up="trim"),
         ],
     }
 
@@ -1855,15 +1923,16 @@ def main() -> None:
     # A gold ingot for the coin, green wool for the felt, planks for the box.
     table_assets("toss", "toss_top", [" G ", "WWW", "PPP"],
                  {"G": "minecraft:gold_ingot", "W": "minecraft:green_wool",
-                  "P": "#minecraft:planks"})
+                  "P": "#minecraft:planks"}, toss_furniture())
     # Paper for the cards, and a bit more of everything: it's a proper table.
     table_assets("blackjack", "blackjack_top", ["APA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "P": "#minecraft:planks",
-                  "W": "minecraft:green_wool"})
+                  "W": "minecraft:green_wool"}, blackjack_furniture())
     # Paper and gold leaf on red: a newsagent's counter, not a card table.
     table_assets("scratch", "scratch_top", ["AGA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "G": "minecraft:gold_ingot",
-                  "P": "#minecraft:planks", "W": "minecraft:red_wool"})
+                  "P": "#minecraft:planks", "W": "minecraft:red_wool"},
+                 scratch_furniture())
     advancements()
     phone_assets()
     stall_assets()

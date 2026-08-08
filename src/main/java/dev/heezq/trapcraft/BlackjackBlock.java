@@ -24,9 +24,10 @@ import xyz.nucleoid.packettweaker.PacketContext;
 /**
  * The furniture for {@link BlackjackScreenHandler}.
  *
- * A full cube, so FULL_BLOCK is an honest carrier and costs nothing from the
- * thin TRANSPARENT_BLOCK pool the tables and the peg board are already eating.
- * check_models.py verifies the claim rather than trusting this comment.
+ * A table on four legs, which costs one state from the thin
+ * TRANSPARENT_BLOCK pool and has to: a legged model on a solid carrier makes
+ * the client cull whatever is under and beside it. check_models.py measures
+ * the coverage and fails the deploy rather than trusting this comment.
  */
 public class BlackjackBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
     private final BlockState carrier;
@@ -34,7 +35,13 @@ public class BlackjackBlock extends Block implements PolymerBlock, PolymerTextur
     public BlackjackBlock(Settings settings) {
         super(settings);
         this.carrier = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
+                // TRANSPARENT_BLOCK, not FULL_BLOCK. It is a table on four
+                // legs now, and a carrier that claims to be a solid cube makes
+                // the client cull the faces of whatever is under and beside
+                // it -- so a table on a floor above a cave shows you the cave.
+                // check_models.py measures the coverage and fails the deploy
+                // rather than trusting this comment.
+                BlockModelType.TRANSPARENT_BLOCK,
                 PolymerBlockModel.of(Identifier.of("trapcraft:block/blackjack")),
                 () -> Blocks.GREEN_TERRACOTTA.getDefaultState(), "blackjack");
     }

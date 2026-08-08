@@ -1100,6 +1100,7 @@ kkkkkkekkkkkkkkk
 # --- the coin toss and the card table -------------------------------------
 
 TABLE_PAL = {
+
     "w": "#4a2f1a",     # rail
     "W": "#69452a",     # rail, lit
     "d": "#2e1c0f",     # rail, shadow
@@ -1111,6 +1112,20 @@ TABLE_PAL = {
     "p": "#e8e8ea",     # card face
     "r": "#b02020",     # red pip
     "b": "#1a1a1a",     # black pip
+    # The furniture that stands on the tables. Keys chosen to miss everything
+    # above: this palette is shared by six maps and a collision silently
+    # recolours whichever one was written second.
+    "x": "#171013",     # outline
+    "o": "#8a6a1c",     # coin, shadow
+    "O": "#f0cf5a",     # coin, face
+    "n": "#3a2b1c",     # shoe, dark wood
+    "N": "#5a4429",     # shoe, lit
+    "c": "#e8e2d4",     # card stock
+    "C": "#f7f3e8",     # card, lit
+    "e": "#a3232f",     # red chip
+    "E": "#c8323f",     # red chip, lit
+    "s": "#a8a8a8",     # scratch foil
+    "S": "#cfcfcf",     # foil, lit
 }
 
 # The toss box lid: a big coin embossed in the felt.
@@ -1171,6 +1186,129 @@ wWWWWdWWWWWWWWWw
 wWdWWWWWWWWWWWWw
 MWWWWWWWWWWWWWWM
 mMwwwwwwwwwwwwMm
+"""
+
+# The furniture that stands on the tables. Small, dark-outlined shapes that
+# read at 16px from across a room -- the whole point of a table having things
+# ON it is that you can tell the games apart without opening one.
+
+TABLE_LEG = """
+xxxxxxxxxxxxxxxx
+xMMMMMMMMMMMMMMx
+xMWWWWWWWWWWWWMx
+xMWdWWWWWWWWdWMx
+xMWWWWWWWWWWWWMx
+xMWWWWdWWWWWWWMx
+xMWWWWWWWWdWWWMx
+xMWdWWWWWWWWWWMx
+xMWWWWWWWdWWWWMx
+xMWWWdWWWWWWWWMx
+xMWWWWWWWWWWWWMx
+xMWWdWWWWdWWWWMx
+xMWWWWWWWWWWWWMx
+xMMMMMMMMMMMMMMx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+"""
+
+# Brass edging round the top of every table, so the felt sits in a rim.
+TABLE_RIM = """
+xxxxxxxxxxxxxxxx
+xmmmmmmmmmmmmmmx
+xmMMMMMMMMMMMMmx
+xmMmmmmmmmmmMMmx
+xxxxxxxxxxxxxxxx
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+................
+"""
+
+# The coin standing on its rim in the middle of the toss table.
+TOSS_COIN = """
+....xxxxxxxx....
+...xoooooooox...
+..xoOOOOOOOOox..
+.xoOOxxxxxxOOox.
+.xoOxOOOOOOxOox.
+.xoOxOxxxxOxOox.
+.xoOxOxOOxOxOox.
+.xoOxOxOOxOxOox.
+.xoOxOxxxxOxOox.
+.xoOxOOOOOOxOox.
+.xoOOxxxxxxOOox.
+..xoOOOOOOOOox..
+...xoooooooox...
+....xxxxxxxx....
+................
+................
+"""
+
+# The card shoe on the blackjack table.
+CARD_SHOE = """
+xxxxxxxxxxxxxxxx
+xnnnnnnnnnnnnnnx
+xnNNNNNNNNNNNNnx
+xnNccccccccccNnx
+xnNcCCCCCCCCcNnx
+xnNcCeeeeeeCcNnx
+xnNcCCCCCCCCcNnx
+xnNccccccccccNnx
+xnNNNNNNNNNNNNnx
+xnnnnnnnnnnnnnnx
+xxxxxxxxxxxxxxxx
+................
+................
+................
+................
+................
+"""
+
+# A stack of chips, for the corner of a table.
+CHIP_STACK = """
+..xxxxxxxxxxxx..
+.xeeeeeeeeeeeex.
+.xEEEEEEEEEEEEx.
+.xxxxxxxxxxxxxx.
+.xCCCCCCCCCCCCx.
+.xccccccccccccx.
+.xxxxxxxxxxxxxx.
+.xeeeeeeeeeeeex.
+.xEEEEEEEEEEEEx.
+.xxxxxxxxxxxxxx.
+.xCCCCCCCCCCCCx.
+.xccccccccccccx.
+.xxxxxxxxxxxxxx.
+................
+................
+................
+"""
+
+# The rack of unsold scratchcards standing on the newsagent's counter.
+CARD_RACK = """
+xxxxxxxxxxxxxxxx
+xmMmMmMmMmMmMmMx
+xMcccMcccMcccMMx
+xMcCcMcCcMcCcMMx
+xMcccMcccMcccMMx
+xMsssMsssMsssMMx
+xMsSsMsSsMsSsMMx
+xMsssMsssMsssMMx
+xMcccMcccMcccMMx
+xmMmMmMmMmMmMmMx
+xxxxxxxxxxxxxxxx
+................
+................
+................
+................
+................
 """
 
 # --- the climb (strongbox) ------------------------------------------------
@@ -2189,6 +2327,12 @@ def main() -> None:
     write(render(TOSS_TOP, TABLE_PAL), "block", "toss_top.png")
     write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
     write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")
+    write(render(TABLE_LEG, TABLE_PAL), "block", "table_leg.png")
+    write(render(TABLE_RIM, TABLE_PAL), "block", "table_rim.png")
+    write(render(TOSS_COIN, TABLE_PAL), "block", "toss_coin.png")
+    write(render(CARD_SHOE, TABLE_PAL), "block", "card_shoe.png")
+    write(render(CHIP_STACK, TABLE_PAL), "block", "chip_stack.png")
+    write(render(CARD_RACK, TABLE_PAL), "block", "card_rack.png")
     write(render(CLIMB_FACE, CLIMB_PAL), "block", "climb_face.png")
     write(render(CLIMB_PLATE, CLIMB_PAL), "block", "climb_plate.png")
     write(render(CLIMB_LID, CLIMB_PAL), "block", "climb_lid.png")

@@ -153,11 +153,17 @@ public final class TrapFloor {
 
     private static final String PUNTER_TAG = "trapcraft_punter";
     /** Ticks between one attempt to send somebody in. */
-    private static final int ARRIVAL_TICKS = 400;
-    /** How often an attempt actually produces a punter. */
+    private static final int ARRIVAL_TICKS = 300;
+    /**
+     * How often an attempt produces a punter, before the clock.
+     *
+     * Multiplied by {@link TrapMath#casinoHourFactor}, so this is the dusk and
+     * dawn figure: about one in three at noon and effectively certain at
+     * midnight.
+     */
     private static final float ARRIVAL_CHANCE = 0.55f;
-    /** Most punters on the floor at once, across the whole server. */
-    private static final int MAX_PUNTERS = 6;
+    /** Most punters on the floor at once at dusk. Scaled by the same clock. */
+    private static final int MAX_PUNTERS = 5;
     /** Ticks between one punter's rounds. Slow enough to watch. */
     private static final int ROUND_TICKS = 45;
     /** How far out they arrive, so they walk the last few blocks in. */
@@ -171,6 +177,8 @@ public final class TrapFloor {
         final String at;
         final UUID house;
         final int stake;
+        /** Where they stand to play it. Beside the machine, never on it. */
+        final BlockPos stand;
         int roundsLeft;
         int wait;
         int won;
@@ -184,13 +192,14 @@ public final class TrapFloor {
          */
         int walking = WALK_ROUNDS;
 
-        Punter(UUID id, String at, UUID house, int stake, int rounds) {
+        Punter(UUID id, String at, UUID house, int stake, int rounds, BlockPos stand) {
             this.id = id;
             this.at = at;
             this.house = house;
             this.stake = stake;
             this.roundsLeft = rounds;
             this.wait = ROUND_TICKS;
+            this.stand = stand;
         }
     }
 
@@ -286,8 +295,12 @@ public final class TrapFloor {
     }
 
     private static void maybeArrive(MinecraftServer server, boolean forced) {
-        if (PUNTERS.size() >= MAX_PUNTERS
-                || (!forced && server.getOverworld().getRandom().nextFloat() > ARRIVAL_CHANCE)) {
+        float busy = TrapMath.casinoHourFactor(
+                server.getOverworld().getTimeOfDay() % 24000L);
+        int room = Math.max(1, Math.round(MAX_PUNTERS * busy));
+        if (PUNTERS.size() >= room
+                || (!forced && server.getOverworld().getRandom().nextFloat()
+                > ARRIVAL_CHANCE * busy)) {
             return;
         }
         List<String> open = new ArrayList<>();
@@ -325,6 +338,14 @@ public final class TrapFloor {
 
         // A few blocks out, so they walk the last of it and the room sees
         // somebody arrive rather than somebody appear.
+        // Where they will end up standing, worked out BEFORE anybody is
+        // spawned: a machine with nowhere to stand beside it gets no
+        // customers at all, which is better than a customer standing on top
+        // of it like a hat.
+        BlockPos stand = standAt(world, pos);
+        if (stand == null) {
+            return;
+        }
         BlockPos from = doorway(world, pos, random);
         if (from == null) {
             return;   // no room to walk in from; nobody comes tonight
@@ -344,12 +365,13 @@ public final class TrapFloor {
                 world.getRegistryManager().getOrThrow(RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(VillagerProfession.NITWIT)));
 
-        int stake = STAKES[random.nextInt(STAKES.length)];
+        int stake = TrapMath.punterStake(new java.util.Random(random.nextLong()));
         // Never a stake the vault could not settle: a punter who breaks the
         // bank is a punter who took the owner's money away while they were
         // stood somewhere else entirely.
-        while (stake > 8 && !TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
-            stake /= 4;
+        while (stake > TrapMath.PUNTER_MIN_STAKE
+                && !TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
+            stake /= 2;
         }
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
             punter.discard();
@@ -365,7 +387,7 @@ public final class TrapFloor {
         // sent in was discarded by our own litter cleanup at the instant it
         // appeared. Nobody saw a single villager for the whole of 1.0.134.
         Punter session = new Punter(punter.getUuid(), at, houseId, stake,
-                2 + random.nextInt(5));
+                2 + random.nextInt(5), stand);
         PUNTERS.add(session);
         if (!world.spawnEntity(punter)) {
             PUNTERS.remove(session);
@@ -376,13 +398,12 @@ public final class TrapFloor {
         // ledge -- tickPunters puts them at the machine anyway, because a
         // punter stuck on the wrong side of a fence is a machine that never
         // frees up.
-        punter.getNavigation().startMovingTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.5);
+        punter.getNavigation().startMovingTo(
+                stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 0.5);
         claim(world, pos, punter.getUuid(), false);
         TrapCraft.LOGGER.info("punter in at {} {} {}, {}e a go",
                 pos.getX(), pos.getY(), pos.getZ(), stake);
     }
-
-    private static final int[] STAKES = {8, 32, 128};
 
     // --- and plays ------------------------------------------------------------
 
@@ -403,16 +424,19 @@ public final class TrapFloor {
             }
             punter.wait = ROUND_TICKS;
 
-            // Close enough to be playing it, or put there. A few seconds of
-            // walking is atmosphere; a minute of failed pathing is a machine
-            // locked by somebody stuck behind a fence.
-            if (!body.getBlockPos().isWithinDistance(pos, 2.5)) {
+            // At their spot, or put there. A few seconds of walking is
+            // atmosphere; a minute of failed pathing is a machine locked by
+            // somebody stuck behind a fence.
+            //
+            // Measured against the STANDING spot rather than the machine, so
+            // "close enough" cannot be satisfied by standing on the lid.
+            if (!body.getBlockPos().equals(punter.stand)) {
                 if (punter.walking-- > 0) {
-                    body.getNavigation().startMovingTo(
-                            pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.5);
+                    body.getNavigation().startMovingTo(punter.stand.getX() + 0.5,
+                            punter.stand.getY(), punter.stand.getZ() + 0.5, 0.5);
                     continue;
                 }
-                body.refreshPositionAndAngles(nextTo(world, pos), 0.0F, 0.0F);
+                body.refreshPositionAndAngles(punter.stand, 0.0F, 0.0F);
             }
             // A villager Brain re-picks its own destination every tick and
             // will happily wander off mid-session, so once they are at the
@@ -525,16 +549,34 @@ public final class TrapFloor {
         return null;
     }
 
-    /** A standable block beside the machine, or the machine's own square. */
-    private static BlockPos nextTo(ServerWorld world, BlockPos pos) {
-        for (net.minecraft.util.math.Direction side
-                : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
-            BlockPos beside = pos.offset(side);
-            if (world.getBlockState(beside).isAir() && world.getBlockState(beside.up()).isAir()) {
-                return beside;
+    /**
+     * Somewhere to stand and play, beside the machine.
+     *
+     * The old version fell back to the machine's own square when nothing
+     * horizontal was free, so a punter at a boxed-in cabinet climbed on top of
+     * it and played from up there. There is no fallback now: a machine with
+     * nowhere to stand at it simply gets no customers, which is a thing you
+     * can look at and fix.
+     *
+     * Two rings, because a slot machine two blocks tall against a wall may
+     * have only diagonal room, and a diagonal is still standing at it.
+     */
+    private static BlockPos standAt(ServerWorld world, BlockPos pos) {
+        int[][] offsets = {
+                {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                {1, 1}, {1, -1}, {-1, 1}, {-1, -1},
+        };
+        for (int[] offset : offsets) {
+            for (int drop = 0; drop <= 1; drop++) {
+                BlockPos spot = pos.add(offset[0], -drop, offset[1]);
+                if (world.getBlockState(spot).isAir()
+                        && world.getBlockState(spot.up()).isAir()
+                        && world.getBlockState(spot.down()).isSolidBlock(world, spot.down())) {
+                    return spot;
+                }
             }
         }
-        return pos.up();
+        return null;
     }
 
     /**
@@ -573,16 +615,25 @@ public final class TrapFloor {
                 free++;
             }
         }
-        int seconds = ARRIVAL_TICKS / 20;
+        float busy = TrapMath.casinoHourFactor(
+                server.getOverworld().getTimeOfDay() % 24000L);
+        int room = Math.max(1, Math.round(MAX_PUNTERS * busy));
+        float chance = Math.min(1.0f, ARRIVAL_CHANCE * busy);
+        int every = Math.round(ARRIVAL_TICKS / 20.0f / chance);
         Text out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(wired + " machines wired, " + loaded
                         + " loaded, " + free + " free").formatted(Formatting.GRAY))
-                .append(Text.literal("\n  " + PUNTERS.size() + " of " + MAX_PUNTERS
+                .append(Text.literal("\n  " + PUNTERS.size() + " of " + room
                                 + " punters in, " + SEATS.size() + " seats taken")
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  One turns up about every "
-                                + Math.round(seconds / ARRIVAL_CHANCE) + "s, if a wired "
-                                + "machine is loaded and its vault isn't empty")
+                .append(Text.literal("\n  " + (busy >= 1.4f ? "Busy -- the night crowd."
+                                : busy >= 0.8f ? "Filling up."
+                                : "Quiet. They're all at work.")
+                        + "  (" + String.format("%.2f", busy) + "x)")
+                        .formatted(busy >= 1.4f ? Formatting.GREEN
+                                : busy >= 0.8f ? Formatting.WHITE : Formatting.DARK_GRAY))
+                .append(Text.literal("\n  One turns up about every " + every
+                                + "s, if a wired machine is loaded and its vault isn't empty")
                         .formatted(Formatting.DARK_GRAY));
         source.sendFeedback(() -> out, false);
         return 1;

@@ -815,6 +815,43 @@ class FormulaTest {
     }
 
     @Test
+    void theFloorFillsUpAtNight() {
+        float noon = TrapMath.casinoHourFactor(6000);
+        float dusk = TrapMath.casinoHourFactor(12000);
+        float midnight = TrapMath.casinoHourFactor(18000);
+        assertTrue(midnight > dusk && dusk > noon,
+                "noon " + noon + ", dusk " + dusk + ", midnight " + midnight);
+        assertTrue(midnight > noon * 5, "night should be a different room entirely");
+        // Never actually zero: a casino provably shut for part of every day is
+        // one people stop walking past.
+        assertTrue(noon > 0.0f, "the door is never locked");
+        // Sunrise and sunset are the crossover and must match, or one of them
+        // is secretly better for no reason anybody could learn.
+        assertEquals(TrapMath.casinoHourFactor(0), TrapMath.casinoHourFactor(12000), 0.001f);
+    }
+
+    @Test
+    void punterStakesSpanTheRangeAndLeanSmall() {
+        java.util.Random rng = new java.util.Random(31337);
+        java.util.Map<Integer, Integer> seen = new java.util.HashMap<>();
+        long total = 0;
+        int rounds = 200_000;
+        for (int i = 0; i < rounds; i++) {
+            int stake = TrapMath.punterStake(rng);
+            assertTrue(stake >= TrapMath.PUNTER_MIN_STAKE
+                            && stake <= TrapMath.PUNTER_MAX_STAKE,
+                    "stake " + stake + " is outside the advertised range");
+            seen.merge(stake, 1, Integer::sum);
+            total += stake;
+        }
+        assertEquals(6, seen.size(), "every band should turn up");
+        assertTrue(seen.get(TrapMath.PUNTER_MIN_STAKE) > seen.get(TrapMath.PUNTER_MAX_STAKE) * 5,
+                "small punters should far outnumber whales");
+        double mean = total / (double) rounds;
+        assertTrue(mean > 25 && mean < 60, "mean stake is " + mean);
+    }
+
+    @Test
     void punterRoundsAreMostlyNothing() {
         // A villager who wins every other round is a villager the owner
         // watches drain their vault, which is the opposite of the feature.

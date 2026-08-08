@@ -5,6 +5,7 @@
     "face": "trapcraft:block/climb_face",
     "plate": "trapcraft:block/climb_plate",
     "lid": "trapcraft:block/climb_lid",
+    "rim": "trapcraft:block/table_rim",
     "particle": "trapcraft:block/climb_plate"
   },
   "elements": [
@@ -73,6 +74,230 @@
             16,
             16
           ]
+        }
+      }
+    },
+    {
+      "from": [
+        -0.5,
+        15.5,
+        -0.5
+      ],
+      "to": [
+        16.5,
+        17,
+        16.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#lid"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.4,
+        0,
+        -0.4
+      ],
+      "to": [
+        1.6,
+        15.5,
+        1.6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        14.4,
+        0,
+        -0.4
+      ],
+      "to": [
+        16.4,
+        15.5,
+        1.6
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.4,
+        0,
+        14.4
+      ],
+      "to": [
+        1.6,
+        15.5,
+        16.4
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        14.4,
+        0,
+        14.4
+      ],
+      "to": [
+        16.4,
+        15.5,
+        16.4
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.3,
+        6,
+        -0.3
+      ],
+      "to": [
+        16.3,
+        8,
+        16.3
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        5.5,
+        8.5,
+        -1.2
+      ],
+      "to": [
+        10.5,
+        13.5,
+        0.2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
         }
       }
     }
