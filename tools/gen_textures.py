@@ -932,73 +932,94 @@ cCccccncccCccccn
 # --- slot machine ---------------------------------------------------------
 
 SLOT_PAL = {
-    "r": "#8e2020",   # cabinet red
-    "R": "#b83030",   # cabinet, lit
-    "d": "#5e1414",   # cabinet, shadow
-    "y": "#e0b53a",   # brass trim
-    "Y": "#f7d96a",   # brass, lit
-    "k": "#1a1418",   # screen surround
-    "w": "#e8e4d8",   # reel face
-    "W": "#ffffff",   # reel highlight
-    "g": "#3ba55c",   # win light, green
-    "e": "#d8d8e4",   # chrome lever
+    "r": "#8e2020",   # cabinet lacquer
+    "R": "#b83030",   # lacquer, lit
+    "d": "#5e1414",   # lacquer, shadow
+    "y": "#c9992e",   # brass
+    "Y": "#f2d271",   # brass, lit
+    "o": "#8a6a1c",   # brass, shadow
+    "k": "#120e12",   # glass surround
+    "b": "#1b2a3a",   # screen glass
+    "B": "#2f4a63",   # glass, lit
+    "w": "#e8e4d8",   # marquee lamp
+    "g": "#54d37a",   # win lamp
+    "e": "#c8ccd8",   # chrome
 }
 
-SLOT_FRONT = """
-yyyyyyyyyyyyyyyy
-yRRRRRRRRRRRRRRy
-yRdddddddddddRRy
-yRdkkkkkkkkkdRRy
-yRdkwwWkwwWkdRRy
-yRdkwWwkwWwkdRRy
-yRdkwwWkwwWkdRRy
-yRdkkkkkkkkkdRRy
-yRdddddddddddRRy
-yRRRRRRRRRRRRRRy
-yRRgRRRRRRRRgRRy
-yRRRRRRRRRRRRRRy
-yRddddddddddddRy
-yRdyyyyyyyyyydRy
-yRRRRRRRRRRRRRRy
-yyyyyyyyyyyyyyyy
+SLOT_BODY = """
+dRRRRRRRRRRRRRRd
+RrrrrrrrrrrrrrrR
+RrrdrrrrrrrdrrrR
+RrrrrrrrrrrrrrrR
+RrrrrrrrrrrrrrrR
+RrdrrrrrrrrrrdrR
+RrrrrrrrrrrrrrrR
+RrrrrrrrrrrrrrrR
+RrrrrdrrrrrrrrrR
+RrrrrrrrrrrrrrrR
+RrdrrrrrrrrdrrrR
+RrrrrrrrrrrrrrrR
+RrrrrrrrrrrrrrrR
+RrrrdrrrrrrrrrrR
+RrrrrrrrrrrrrrrR
+dRRRRRRRRRRRRRRd
 """
 
-SLOT_SIDE = """
-yyyyyyyyyyyyyyyy
-yRRRRRRRRRRRRRRy
-yRdRRRRRRRRRRdRy
-yRRRRRRRRRRRRRRy
-yRRRRRRRRRRRReey
-yRRRRRRRRRRRRedy
-yRdRRRRRRRRRRdRy
-yRRRRRRRRRRRRRRy
-yRRRRRRRRRRRRRRy
-yRdRRRRRRRRRRdRy
-yRRRRRRRRRRRRRRy
-yRRRRRRRRRRRRRRy
-yRddddddddddddRy
-yRRRRRRRRRRRRRRy
-yRRRRRRRRRRRRRRy
-yyyyyyyyyyyyyyyy
+SLOT_SCREEN = """
+kkkkkkkkkkkkkkkk
+kbbbbbbbbbbbbbbk
+kbBBbbBBbbBBbbbk
+kbBbbbBbbbBbbbbk
+kbBBbbBBbbBBbbbk
+kbbbbbbbbbbbbbbk
+kbBBbbBBbbBBbbbk
+kbBbbbBbbbBbbbbk
+kbBBbbBBbbBBbbbk
+kbbbbbbbbbbbbbbk
+kbBBbbBBbbBBbbbk
+kbBbbbBbbbBbbbbk
+kbBBbbBBbbBBbbbk
+kbbbbbbbbbbbbbbk
+kbbbbbbbbbbbbbbk
+kkkkkkkkkkkkkkkk
 """
 
-SLOT_TOP = """
-yyyyyyyyyyyyyyyy
+SLOT_TRIM = """
+oyyyyyyyyyyyyyyo
 yYYYYYYYYYYYYYYy
-yYRRRRRRRRRRRRYy
-yYRddddddddddRYy
-yYRdRRRRRRRRdRYy
-yYRdRgggggRRdRYy
-yYRdRgYYYgRRdRYy
-yYRdRgYkYgRRdRYy
-yYRdRgYYYgRRdRYy
-yYRdRgggggRRdRYy
-yYRdRRRRRRRRdRYy
-yYRddddddddddRYy
-yYRRRRRRRRRRRRYy
+yYwwYYgYYgYYwwYy
 yYYYYYYYYYYYYYYy
-yyyyyyyyyyyyyyyy
-yyyyyyyyyyyyyyyy
+oyyyyyyyyyyyyyyo
+yYYYYYYYYYYYYYYy
+yYwwYYgYYgYYwwYy
+yYYYYYYYYYYYYYYy
+oyyyyyyyyyyyyyyo
+yYYYYYYYYYYYYYYy
+yYwwYYgYYgYYwwYy
+yYYYYYYYYYYYYYYy
+oyyyyyyyyyyyyyyo
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+oyyyyyyyyyyyyyyo
+"""
+
+SLOT_DECK = """
+eeeeeeeeeeeeeeee
+eyyyyyyyyyyyyyye
+eyrrrrrrrrrrrrye
+eyrkkkkkkkkkkrye
+eyrkbbbkbbbkbrye
+eyrkbBbkbBbkbrye
+eyrkbbbkbbbkbrye
+eyrkkkkkkkkkkrye
+eyrrrrrrrrrrrrye
+eyyyyyyyyyyyyyye
+eyggyyyyyyyyggye
+eyyyyyyyyyyyyyye
+eyrrrrrrrrrrrrye
+eyyyyyyyyyyyyyye
+eeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeee
 """
 
 
@@ -1677,9 +1698,10 @@ def main() -> None:
     write(render(STALL_COUNTER, STALL_PAL), "block", "stall_counter.png")
     write(render(STALL_AWNING, STALL_PAL), "block", "stall_awning.png")
     write(render(STALL_GOODS, STALL_PAL), "block", "stall_goods.png")
-    write(render(SLOT_FRONT, SLOT_PAL), "block", "slot_front.png")
-    write(render(SLOT_SIDE, SLOT_PAL), "block", "slot_side.png")
-    write(render(SLOT_TOP, SLOT_PAL), "block", "slot_top.png")
+    write(render(SLOT_BODY, SLOT_PAL), "block", "slot_body.png")
+    write(render(SLOT_SCREEN, SLOT_PAL), "block", "slot_screen.png")
+    write(render(SLOT_TRIM, SLOT_PAL), "block", "slot_trim.png")
+    write(render(SLOT_DECK, SLOT_PAL), "block", "slot_deck.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

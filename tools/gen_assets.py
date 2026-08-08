@@ -1202,42 +1202,61 @@ def stall_model() -> dict:
     }
 
 
-def slot_model() -> dict:
-    """A cabinet: chrome lever down one side, lit panel on top.
+def slot_model(upper: bool) -> dict:
+    """Half a cabinet: sloped console below, lit display head above.
 
-    Closed shell, same FULL_BLOCK constraint as everything else. The lever is
-    a proud box rather than a cut-out so the silhouette reads from the side.
+    Two blocks so it stands like furniture rather than sitting on the floor
+    like a crate. The lower half is the console you reach -- a sloped deck with
+    the lever out of the right side -- and the upper half is the glass, framed
+    in brass with a marquee across the top.
+
+    Closed shells both, same FULL_BLOCK rule as everything else here: any gap
+    shows a world lit as though the block were solid.
     """
+    if upper:
+        return {
+            "parent": "minecraft:block/block",
+            "ambientocclusion": False,
+            "textures": {
+                "glass": f"{NS}:block/slot_screen",
+                "body": f"{NS}:block/slot_body",
+                "trim": f"{NS}:block/slot_trim",
+                "particle": f"{NS}:block/slot_body",
+            },
+            "elements": [
+                box([1, 0, 1], [15, 13, 15], "body"),                 # cabinet head
+                box([0.8, 1.5, 0.6], [15.2, 11.5, 1.1], "glass"),     # front glass
+                box([0.8, 1.5, 14.9], [15.2, 11.5, 15.4], "glass"),   # back glass
+                box([0, 13, 0], [16, 16, 16], "trim", up="trim"),     # marquee
+                box([0.6, 0.8, 0.4], [15.4, 1.6, 15.6], "trim"),      # lower brass lip
+            ],
+        }
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
         "textures": {
-            "front": f"{NS}:block/slot_front",
-            "side": f"{NS}:block/slot_side",
-            "top": f"{NS}:block/slot_top",
-            "particle": f"{NS}:block/slot_front",
+            "body": f"{NS}:block/slot_body",
+            "deck": f"{NS}:block/slot_deck",
+            "trim": f"{NS}:block/slot_trim",
+            "particle": f"{NS}:block/slot_body",
         },
         "elements": [
-            {
-                "from": [0, 0, 0], "to": [16, 16, 16],
-                "faces": {
-                    "north": {"texture": "#front"},
-                    "south": {"texture": "#front"},
-                    "east": {"texture": "#side"},
-                    "west": {"texture": "#side"},
-                    "up": {"texture": "#top"},
-                    "down": {"texture": "#side"},
-                },
-            },
-            box([16, 6, 6.5], [17.5, 12, 9.5], "side"),      # the lever arm
-            box([16.2, 11, 6], [18, 13, 10], "top"),         # its knob
+            box([1, 0, 1], [15, 12, 15], "body"),                 # cabinet
+            box([0.5, 12, 0.5], [15.5, 14, 15.5], "deck", up="deck"),   # sloped deck
+            box([0, 14, 2], [16, 16, 14], "trim", up="trim"),     # console lip
+            box([15.4, 6, 6.5], [17, 11, 9.5], "trim"),           # lever arm
+            box([15.6, 10.5, 6], [17.6, 12.5, 10], "deck"),       # lever knob
+            box([0, 0, 0], [16, 1.2, 16], "trim", down="trim"),   # plinth
         ],
     }
 
 
 def slot_assets() -> None:
-    put(f"assets/{NS}/models/block/slot_machine.json", slot_model())
-    put(f"assets/{NS}/models/item/slot_machine.json", {"parent": f"{NS}:block/slot_machine"})
+    put(f"assets/{NS}/models/block/slot_machine_lower.json", slot_model(False))
+    put(f"assets/{NS}/models/block/slot_machine_upper.json", slot_model(True))
+    # The item shows the console half -- the recognisable end with the lever.
+    put(f"assets/{NS}/models/item/slot_machine.json",
+        {"parent": f"{NS}:block/slot_machine_lower"})
     put(f"assets/{NS}/items/slot_machine.json", {
         "model": {"type": "minecraft:model", "model": f"{NS}:item/slot_machine"},
     })

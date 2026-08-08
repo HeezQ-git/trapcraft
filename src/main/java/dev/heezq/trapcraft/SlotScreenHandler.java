@@ -25,70 +25,141 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The one-armed bandit.
+ * The one-armed bandit, as a real reel window.
  *
- * A hopper screen: five slots in a row, which is exactly three reels with a
- * stake button on one side and the lever on the other. No filler.
+ * A 9x6 chest laid out like a cabinet: three reels three symbols tall, with the
+ * middle row marked as the payline. The reels scroll a strip of symbols
+ * downward and stop left to right, which is the only reason the third reel is
+ * ever exciting.
  *
- * The reels are theatre. The outcome is drawn from {@link TrapMath#slotPayout}
- * before the reels are chosen, and the symbols are then picked to agree with
- * it -- which is how real machines work, and the only way the return rate is a
- * number anyone can actually check. It pays back 85% over time, and roughly
- * three spins in four pay nothing.
+ * The reels are theatre. The outcome comes out of {@link TrapMath#slotPayout}
+ * BEFORE any symbol is chosen, and the strips are then built to land on
+ * symbols that agree with it -- which is how real machines work, and the only
+ * way the return rate is a number anyone can check. It pays back 85% over
+ * time, and roughly three spins in four pay nothing.
  */
 public class SlotScreenHandler extends ScreenHandler {
-    private static final int SIZE = 5;
-    private static final int STAKE_SLOT = 0;
-    private static final int REEL_ONE = 1;
-    private static final int LEVER_SLOT = 4;
+    private static final int ROWS = 6;
+    private static final int SIZE = ROWS * 9;
+
+    /** Reel columns sit at grid columns 3, 4 and 5, rows 1 to 3. */
+    private static final int WINDOW_TOP = 12;
+    private static final int PAYLINE = 21;
+    private static final int MARKER_LEFT = 20;
+    private static final int MARKER_RIGHT = 24;
+
+    private static final int STAKE_SLOT = 47;
+    private static final int LEVER_SLOT = 49;
+    private static final int PURSE_SLOT = 51;
 
     /** Reel faces, worst to best. The last is the jackpot. */
     private static final Item[] FACES = {
             Items.COAL, Items.COPPER_INGOT, Items.IRON_INGOT,
             Items.GOLD_INGOT, Items.DIAMOND, Items.NETHER_STAR,
     };
+    private static final String[] FACE_NAMES = {
+            "Coal", "Copper", "Iron", "Gold", "Diamond", "Star",
+    };
 
     private static final int[] STAKES = {8, 32, 128};
+
+    /** Ticks a reel spins before it locks, first to last. */
+    private static final int[] STOPS = {26, 34, 44};
+    private static final int SPIN_TICKS = 48;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity player;
     private int stakeChoice = 0;
-    /** Ticks left of the reels spinning; zero when idle. */
+
     private int spinning;
     private float pending;
+    /** Where each reel has come to rest, once it has. */
+    private final int[] landed = new int[3];
+    /** Scroll offset per reel while it's still moving. */
+    private final int[] offset = new int[3];
 
     public SlotScreenHandler(int syncId, PlayerInventory playerInventory) {
-        super(ScreenHandlerType.HOPPER, syncId);
+        super(ScreenHandlerType.GENERIC_9X6, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
 
         for (int index = 0; index < SIZE; index++) {
-            this.addSlot(new ReadOnlySlot(display, index, 44 + index * 18, 20));
+            this.addSlot(new ReadOnlySlot(display, index,
+                    8 + (index % 9) * 18, 18 + (index / 9) * 18));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9,
-                        8 + col * 18, 51 + row * 18));
+                        8 + col * 18, 103 + row * 18 + (ROWS - 4) * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 109));
+            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 161 + (ROWS - 4) * 18));
         }
-        idle();
+
+        for (int reel = 0; reel < 3; reel++) {
+            landed[reel] = reel + 1;
+        }
+        repaint();
     }
 
-    private void idle() {
-        for (int reel = 0; reel < 3; reel++) {
-            display.setStack(REEL_ONE + reel, face(FACES[reel % FACES.length], null));
+    // --- painting -------------------------------------------------------------
+
+    private void repaint() {
+        ItemStack black = pane(Items.BLACK_STAINED_GLASS_PANE);
+        ItemStack red = pane(Items.RED_STAINED_GLASS_PANE);
+        for (int index = 0; index < SIZE; index++) {
+            display.setStack(index, (index / 9) % 2 == 0 ? red.copy() : black.copy());
         }
+
+        // The window: three columns, three rows, middle row is the payline.
+        for (int reel = 0; reel < 3; reel++) {
+            for (int row = 0; row < 3; row++) {
+                int slot = WINDOW_TOP + reel + row * 9;
+                int symbol = symbolAt(reel, row);
+                display.setStack(slot, face(symbol, row == 1));
+            }
+        }
+        display.setStack(MARKER_LEFT, marker());
+        display.setStack(MARKER_RIGHT, marker());
+
         display.setStack(STAKE_SLOT, stakeTag());
         display.setStack(LEVER_SLOT, leverTag());
+        display.setStack(PURSE_SLOT, purseTag());
         sendContentUpdates();
+    }
+
+    /** Which face shows in a given cell, spinning or settled. */
+    private int symbolAt(int reel, int row) {
+        int centre = spinning > 0 && spinning > SPIN_TICKS - STOPS[reel]
+                ? offset[reel]
+                : landed[reel];
+        return Math.floorMod(centre + row - 1, FACES.length);
+    }
+
+    private ItemStack face(int symbol, boolean onLine) {
+        ItemStack tag = new ItemStack(FACES[symbol]);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(FACE_NAMES[symbol]).formatted(onLine ? Formatting.YELLOW : Formatting.DARK_GRAY));
+        return tag;
+    }
+
+    private ItemStack marker() {
+        ItemStack tag = new ItemStack(Items.ARROW);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Payline").formatted(Formatting.YELLOW, Formatting.BOLD));
+        return tag;
+    }
+
+    private ItemStack pane(Item item) {
+        ItemStack tag = new ItemStack(item);
+        tag.set(DataComponentTypes.CUSTOM_NAME, Text.empty());
+        return tag;
     }
 
     private ItemStack stakeTag() {
         ItemStack tag = new ItemStack(Items.EMERALD, Math.max(1, STAKES[stakeChoice] / 8));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake: ").formatted(Formatting.GRAY)
+                plain("Stake ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
@@ -99,22 +170,31 @@ public class SlotScreenHandler extends ScreenHandler {
     private ItemStack leverTag() {
         ItemStack tag = new ItemStack(spinning > 0 ? Items.REDSTONE_TORCH : Items.LEVER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(spinning > 0 ? "Spinning..." : "PULL")
+                plain(spinning > 0 ? "Spinning" : "PULL")
                         .formatted(spinning > 0 ? Formatting.GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
-        List<Text> lore = new ArrayList<>();
-        lore.add(line("Three of a kind pays big.", Formatting.GRAY));
-        lore.add(line("Two pays a little.", Formatting.GRAY));
-        lore.add(Text.empty());
-        lore.add(line("The house wins more than it loses.", Formatting.DARK_GRAY));
-        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Three stars", Formatting.WHITE)
+                        .append(plain("   x20").formatted(Formatting.GOLD)),
+                line("Three diamonds", Formatting.WHITE)
+                        .append(plain("   x8").formatted(Formatting.GOLD)),
+                line("Three of a kind", Formatting.WHITE)
+                        .append(plain("   x3").formatted(Formatting.GOLD)),
+                line("Any pair", Formatting.WHITE)
+                        .append(plain("   x1.5").formatted(Formatting.GOLD)),
+                Text.empty(),
+                line("The house keeps about "
+                        + Math.round((1 - TrapMath.slotReturnToPlayer()) * 100)
+                        + "%.", Formatting.DARK_GRAY))));
         return tag;
     }
 
-    private ItemStack face(Item item, String label) {
-        ItemStack tag = new ItemStack(item);
+    private ItemStack purseTag() {
+        ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(label == null ? " " : label).formatted(Formatting.WHITE));
+                plain("Purse ").formatted(Formatting.GRAY)
+                        .append(plain(TrapMarket.wealthOf(player) + "e")
+                                .formatted(Formatting.GREEN, Formatting.BOLD)));
         return tag;
     }
 
@@ -128,7 +208,7 @@ public class SlotScreenHandler extends ScreenHandler {
         if (slotIndex == STAKE_SLOT) {
             stakeChoice = (stakeChoice + 1) % STAKES.length;
             beep(1.4F);
-            idle();
+            repaint();
             return;
         }
         if (slotIndex != LEVER_SLOT) {
@@ -144,13 +224,51 @@ public class SlotScreenHandler extends ScreenHandler {
         }
 
         TrapMarket.take(player, stake);
-        // Outcome first, reels afterwards.
+        // Outcome first, symbols afterwards.
         pending = TrapMath.slotPayout(player.getWorld().getRandom().nextFloat());
-        spinning = 22;
+        chooseSymbols();
+        spinning = SPIN_TICKS;
         SlotMachineBlock.watch(this);
+
         player.getWorld().playSound(null, player.getBlockPos(),
-                SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.PLAYERS, 0.9F, 0.7F);
-        idle();
+                SoundEvents.BLOCK_LEVER_CLICK, SoundCategory.PLAYERS, 0.9F, 0.6F);
+        repaint();
+    }
+
+    /**
+     * Pick the three faces the reels will stop on, given a decided payout.
+     *
+     * Three of a kind for the big tiers, a genuine pair for the small one, and
+     * three different faces for a loss -- so what you see on the payline always
+     * explains what you were paid.
+     */
+    private void chooseSymbols() {
+        var random = player.getWorld().getRandom();
+        if (pending >= 20.0f) {
+            landed[0] = landed[1] = landed[2] = 5;
+        } else if (pending >= 8.0f) {
+            landed[0] = landed[1] = landed[2] = 4;
+        } else if (pending >= 3.0f) {
+            int hit = random.nextInt(4);
+            landed[0] = landed[1] = landed[2] = hit;
+        } else if (pending > 0.0f) {
+            int pair = random.nextInt(FACES.length);
+            int odd = (pair + 1 + random.nextInt(FACES.length - 1)) % FACES.length;
+            landed[0] = landed[1] = pair;
+            landed[2] = odd;
+            // Put the odd one out in a random column so a pair isn't always
+            // the first two reels.
+            int shuffle = random.nextInt(3);
+            int spare = landed[shuffle];
+            landed[shuffle] = landed[2];
+            landed[2] = spare;
+        } else {
+            landed[0] = random.nextInt(FACES.length);
+            landed[1] = (landed[0] + 1 + random.nextInt(FACES.length - 1)) % FACES.length;
+            do {
+                landed[2] = random.nextInt(FACES.length);
+            } while (landed[2] == landed[0] || landed[2] == landed[1]);
+        }
     }
 
     /** Called each server tick while the reels are moving. */
@@ -159,54 +277,29 @@ public class SlotScreenHandler extends ScreenHandler {
             return false;
         }
         spinning--;
-        var random = player.getWorld().getRandom();
 
-        // Reels stop left to right, which is the whole reason the last one is
-        // exciting.
-        int settled = spinning < 6 ? 3 : spinning < 11 ? 2 : spinning < 16 ? 1 : 0;
-        Item[] shown = symbolsFor(pending, random.nextInt(FACES.length));
         for (int reel = 0; reel < 3; reel++) {
-            Item item = reel < settled ? shown[reel] : FACES[random.nextInt(FACES.length)];
-            display.setStack(REEL_ONE + reel, face(item, null));
+            boolean stillMoving = spinning > SPIN_TICKS - STOPS[reel];
+            if (stillMoving) {
+                offset[reel] = Math.floorMod(offset[reel] + 1, FACES.length);
+            } else if (offset[reel] != landed[reel]) {
+                offset[reel] = landed[reel];
+                // A click as each reel locks: the sound of it landing is most
+                // of what makes the last one tense.
+                beep(0.8F + reel * 0.25F);
+            }
         }
-        display.setStack(LEVER_SLOT, leverTag());
-        sendContentUpdates();
+        repaint();
 
-        if (spinning % 4 == 0) {
-            beep(0.9F + (22 - spinning) * 0.02F);
+        if (spinning % 3 == 0) {
+            player.getWorld().playSound(null, player.getBlockPos(),
+                    SoundEvents.UI_BUTTON_CLICK.value(), SoundCategory.PLAYERS, 0.15F, 1.9F);
         }
         if (spinning == 0) {
             settle();
             return false;
         }
         return true;
-    }
-
-    /**
-     * Reels that agree with an already-decided outcome.
-     *
-     * Three of a kind for the big payouts, a matching pair for the small one,
-     * and a deliberate mismatch for a loss -- so what you see always explains
-     * what you were paid.
-     */
-    private Item[] symbolsFor(float payout, int seed) {
-        if (payout >= 20.0f) {
-            return new Item[]{FACES[5], FACES[5], FACES[5]};
-        }
-        if (payout >= 8.0f) {
-            return new Item[]{FACES[4], FACES[4], FACES[4]};
-        }
-        if (payout >= 3.0f) {
-            Item hit = FACES[2 + seed % 2];
-            return new Item[]{hit, hit, hit};
-        }
-        if (payout > 0.0f) {
-            Item pair = FACES[seed % FACES.length];
-            Item odd = FACES[(seed + 3) % FACES.length];
-            return new Item[]{pair, pair, odd};
-        }
-        return new Item[]{FACES[seed % FACES.length],
-                FACES[(seed + 2) % FACES.length], FACES[(seed + 4) % FACES.length]};
     }
 
     private void settle() {
@@ -228,19 +321,20 @@ public class SlotScreenHandler extends ScreenHandler {
                     SoundCategory.PLAYERS, 1.0F, big ? 1.0F : 1.5F);
             world.spawnParticles(big ? ParticleTypes.TOTEM_OF_UNDYING : ParticleTypes.HAPPY_VILLAGER,
                     player.getX(), player.getY() + 1.2, player.getZ(),
-                    big ? 40 : 12, 0.4, 0.5, 0.4, big ? 0.3 : 0.05);
+                    big ? 50 : 14, 0.4, 0.6, 0.4, big ? 0.35 : 0.05);
             player.sendMessage(plain(big ? "JACKPOT.  " : "Winner.  ")
                             .formatted(big ? Formatting.GOLD : Formatting.GREEN, Formatting.BOLD)
-                            .append(plain(won + "e").formatted(Formatting.GREEN))
-                            .append(plain("   on a " + stake + "e spin").formatted(Formatting.DARK_GRAY)),
+                            .append(plain("+" + won + "e").formatted(Formatting.GREEN))
+                            .append(plain("   on a " + stake + "e spin")
+                                    .formatted(Formatting.DARK_GRAY)),
                     false);
         }
-        idle();
+        repaint();
     }
 
     private void beep(float pitch) {
         player.getWorld().playSound(null, player.getBlockPos(),
-                SoundEvents.UI_BUTTON_CLICK.value(), SoundCategory.PLAYERS, 0.4F, pitch);
+                SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(), SoundCategory.PLAYERS, 0.6F, pitch);
     }
 
     private static MutableText plain(String text) {
