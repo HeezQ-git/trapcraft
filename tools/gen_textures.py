@@ -1097,6 +1097,83 @@ kkkkkkekkkkkkkkk
 """
 
 
+# --- the drop (plinko) ----------------------------------------------------
+
+PLINKO_PAL = {
+    "w": "#3a2a4a",     # cabinet frame, dark violet wood
+    "W": "#55406e",     # frame, lit
+    "d": "#241a2e",     # frame, shadow
+    "m": "#c9a227",     # brass
+    "M": "#f0cf5a",     # brass, lit
+    "b": "#101828",     # backboard
+    "B": "#1b2740",     # backboard, lit
+    "p": "#cfd6e0",     # peg
+    "P": "#ffffff",     # peg, lit
+    "g": "#2fbf6b",     # winning slot
+    "r": "#c03a3a",     # losing slot
+    "y": "#e8c33a",     # edge slot
+}
+
+# The peg field: a dark board with a lattice of bright pegs.
+PLINKO_BOARD = """
+bbbbbbbbbbbbbbbb
+bBbpbbbpbbbpbbBb
+bbbbbbbbbbbbbbbb
+bpbbbpbbbpbbbpbb
+bbbbbbbbbbbbbbbb
+bBbpbbbpbbbpbbBb
+bbbbbbbbbbbbbbbb
+bpbbbpbbbpbbbpbb
+bbbbbbbbbbbbbbbb
+bBbpbbbpbbbpbbBb
+bbbbbbbbbbbbbbbb
+bpbbbpbbbpbbbpbb
+bbbbbbbbbbbbbbbb
+bBbpbbbpbbbpbbBb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+"""
+
+# The bottom half: the same field, then the payout slots in a row.
+PLINKO_SLOTS = """
+bbbbbbbbbbbbbbbb
+bpbbbpbbbpbbbpbb
+bbbbbbbbbbbbbbbb
+bBbpbbbpbbbpbbBb
+bbbbbbbbbbbbbbbb
+bpbbbpbbbpbbbpbb
+bbbbbbbbbbbbbbbb
+wwwwwwwwwwwwwwww
+yyggrrrrrrrrggyy
+yyggrrrrrrrrggyy
+wwwwwwwwwwwwwwww
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+"""
+
+# The frame around the board, with brass corners.
+PLINKO_FRAME = """
+mMwwwwwwwwwwwwMm
+MWWWWWWWWWWWWWWM
+wWdWWWWWWWWWdWWw
+wWWWWWdWWWWWWWWw
+wWWWWWWWWWdWWWWw
+wWdWWWWWWWWWWWWw
+wWWWWWWWWdWWWWWw
+wWWWdWWWWWWWWdWw
+wWWWWWWWWWWWWWWw
+wWWdWWWWdWWWWWWw
+wWWWWWWWWWWWdWWw
+wWWWWdWWWWWWWWWw
+wWdWWWWWWWWWWWWw
+wWWWWWWWdWWWWWWw
+MWWWWWWWWWWWWWWM
+mMwwwwwwwwwwwwMm
+"""
+
 # --- the roulette table ---------------------------------------------------
 
 ROULETTE_PAL = {
@@ -1844,6 +1921,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(PLINKO_BOARD, PLINKO_PAL), "block", "plinko_board.png")
+    write(render(PLINKO_SLOTS, PLINKO_PAL), "block", "plinko_slots.png")
+    write(render(PLINKO_FRAME, PLINKO_PAL), "block", "plinko_frame.png")
     write(render(ROULETTE_FELT, ROULETTE_PAL), "block", "roulette_felt.png")
     write(render(ROULETTE_RIM, ROULETTE_PAL), "block", "roulette_rim.png")
     write(render(ROULETTE_WHEEL, ROULETTE_PAL), "block", "roulette_wheel.png")

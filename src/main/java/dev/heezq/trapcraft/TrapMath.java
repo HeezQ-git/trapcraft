@@ -706,6 +706,66 @@ public final class TrapMath {
         return paid / spins;
     }
 
+    // --- plinko -----------------------------------------------------------------
+
+    /**
+     * The peg board: a ball dropped down the middle, eight bounces, nine slots.
+     *
+     * The third machine and a third kind of gamble. The slot machine decides
+     * your outcome and draws a board to match; roulette lets you pick what you
+     * are backing; here you have no choice at all and simply watch. What makes
+     * it worth watching is that the odds are VISIBLE -- everyone knows the ball
+     * usually lands in the middle, so everyone knows the edges are where the
+     * money is, and everyone watches the last two bounces.
+     *
+     * Eight fair coin flips gives the binomial 1:8:28:56:70:56:28:8:1 over 256,
+     * so the payouts here are not a table somebody tuned by feel. They are
+     * solved: the middle lands 70 times in 256 and pays a fifth, the edges land
+     * once each and pay twenty-six times.
+     */
+    public static final int PLINKO_BOUNCES = 8;
+    public static final int PLINKO_SLOTS = PLINKO_BOUNCES + 1;
+    public static final float[] PLINKO_PAYS = {
+            26.0f, 5.0f, 1.0f, 0.4f, 0.2f, 0.4f, 1.0f, 5.0f, 26.0f,
+    };
+
+    /** How many of the 256 equally likely paths end in each slot. */
+    public static int plinkoPaths(int slot) {
+        int paths = 1;
+        for (int step = 0; step < slot; step++) {
+            paths = paths * (PLINKO_BOUNCES - step) / (step + 1);
+        }
+        return paths;
+    }
+
+    /**
+     * Long-run return per emerald. Exact, not sampled.
+     *
+     * There are only 256 paths, so summing them is both faster and more honest
+     * than a Monte Carlo -- and it means a mistyped multiplier shows up as a
+     * failing test rather than as a slow leak nobody notices for a week.
+     */
+    public static float plinkoReturnToPlayer() {
+        float total = 0.0f;
+        int paths = 0;
+        for (int slot = 0; slot < PLINKO_SLOTS; slot++) {
+            total += plinkoPaths(slot) * PLINKO_PAYS[slot];
+            paths += plinkoPaths(slot);
+        }
+        return total / paths;
+    }
+
+    /** Where a ball ends up, given which way it went at each peg. */
+    public static int plinkoSlot(boolean[] bounces) {
+        int right = 0;
+        for (boolean wentRight : bounces) {
+            if (wentRight) {
+                right++;
+            }
+        }
+        return right;
+    }
+
     // --- the pawn counter -------------------------------------------------------
 
     /** What the counter pays, as a share of what a listed item would fetch. */

@@ -243,11 +243,11 @@ public class SellScreenHandler extends ScreenHandler {
             int named = 0;
             for (Map.Entry<String, int[]> row : receipt.entrySet()) {
                 if (named++ >= 6) {
-                    line.append(plain("\\n  ...and " + (receipt.size() - 6) + " more")
+                    line.append(plain("\n  ...and " + (receipt.size() - 6) + " more")
                             .formatted(Formatting.DARK_GRAY));
                     break;
                 }
-                line.append(plain("\\n  " + row.getValue()[0] + "x " + row.getKey() + "   ")
+                line.append(plain("\n  " + row.getValue()[0] + "x " + row.getKey() + "   ")
                                 .formatted(Formatting.DARK_GRAY))
                         .append(plain(row.getValue()[1] + "e").formatted(Formatting.GREEN));
             }
@@ -258,7 +258,7 @@ public class SellScreenHandler extends ScreenHandler {
             deny();
             MutableText line = plain("Handed back:").formatted(Formatting.GRAY);
             for (String refused : handedBack) {
-                line.append(plain("\\n  " + refused).formatted(Formatting.RED));
+                line.append(plain("\n  " + refused).formatted(Formatting.RED));
             }
             seller.sendMessage(line, false);
         }

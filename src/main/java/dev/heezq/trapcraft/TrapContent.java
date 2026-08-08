@@ -79,6 +79,8 @@ public final class TrapContent {
     public static Item slotMachineItem;
     public static Block roulette;
     public static Item rouletteItem;
+    public static Block plinko;
+    public static Item plinkoItem;
     public static RegistryEntry<StatusEffect> wiredEffect;
     public static Block bong;
     public static Item bongItem;
@@ -367,6 +369,12 @@ public final class TrapContent {
         rouletteItem = registerItem("roulette",
                 (settings, model) -> new RackItem(roulette, settings, model));
 
+        plinko = registerBlock("plinko", PlinkoBlock::new,
+                AbstractBlock.Settings.create().strength(2.5F)
+                        .sounds(BlockSoundGroup.WOOD).nonOpaque());
+        plinkoItem = registerItem("plinko",
+                (settings, model) -> new RackItem(plinko, settings, model));
+
         cocaSeeds = registerItem("coca_seeds",
                 (settings, model) -> new SeedsItem(cocaCrop, settings, model));
         cocaLeaves = registerItem("coca_leaves", TrapItem::new);
@@ -457,6 +465,7 @@ public final class TrapContent {
                     entries.add(marketStallItem);
                     entries.add(slotMachineItem);
                     entries.add(rouletteItem);
+                    entries.add(plinkoItem);
                     entries.add(hammer);
                 })
                 .build();

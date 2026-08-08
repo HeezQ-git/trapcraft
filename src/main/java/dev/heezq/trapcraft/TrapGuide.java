@@ -294,7 +294,21 @@ public final class TrapGuide {
                 .append(hint("Shift-click SPIN repeats your last bet."))));
 
         pages.add(page(Text.empty()
-                .append(title("4i. THE HOUSE\n\n"))
+                .append(title("4i. THE DROP\n\n"))
+                .append(item("Plank Iron  Plank\nGlass Dmnd  Glass\nPlank Iron  Plank\n\n"))
+                .append(body("Two blocks tall. Needs headroom.\n\n"))
+                .append(hint("A ball, some pegs, nine slots."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4i2. THE ODDS\n\n"))
+                .append(body("Eight bounces, all coin flips. Nothing "
+                        + "is decided first.\n\n"))
+                .append(body("The middle catches 70 in 256 and pays "
+                        + "least. Each edge catches one.\n\n"))
+                .append(warn("You can see the odds. That's the point."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4j. THE HOUSE\n\n"))
                 .append(body("About " + Math.round(TrapMath.SLOT_MEASURED_WIN_RATE * 100)
                         + " spins in 100 pay, and never less than "
                         + "your stake.\n\n"))

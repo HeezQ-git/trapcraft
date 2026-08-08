@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PIP",
+    "GDG",
+    "PIP"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass",
+    "D": "minecraft:diamond"
+  },
+  "result": {
+    "id": "trapcraft:plinko",
+    "count": 1
+  }
+}

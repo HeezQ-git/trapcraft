@@ -427,6 +427,70 @@ class FormulaTest {
         return grid;
     }
 
+    // --- plinko -----------------------------------------------------------------
+
+    @Test
+    void theBoardIsAFairCoinEightTimes() {
+        // The binomial 1:8:28:56:70:56:28:8:1. If this drifts, every multiplier
+        // priced against it is wrong and the return quietly moves with it.
+        int[] expected = {1, 8, 28, 56, 70, 56, 28, 8, 1};
+        int total = 0;
+        for (int slot = 0; slot < TrapMath.PLINKO_SLOTS; slot++) {
+            assertEquals(expected[slot], TrapMath.plinkoPaths(slot),
+                    "wrong number of paths into slot " + slot);
+            total += TrapMath.plinkoPaths(slot);
+        }
+        assertEquals(256, total, "eight coin flips must have 256 outcomes");
+    }
+
+    @Test
+    void theDropKeepsItsEdge() {
+        float rtp = TrapMath.plinkoReturnToPlayer();
+        assertTrue(rtp < 1.0f, "the house must win long-run, got " + rtp);
+        assertTrue(rtp > 0.90f, "but the bleed should stay gentle, got " + rtp);
+    }
+
+    @Test
+    void theEdgesPayAndTheMiddleDoesNot() {
+        // The whole shape of the game, and the reason anyone watches the last
+        // bounce: the likely slot is the worst one.
+        float middle = TrapMath.PLINKO_PAYS[TrapMath.PLINKO_SLOTS / 2];
+        for (int slot = 0; slot < TrapMath.PLINKO_SLOTS / 2; slot++) {
+            assertTrue(TrapMath.PLINKO_PAYS[slot] > middle,
+                    "slot " + slot + " should beat the middle");
+            assertEquals(TrapMath.PLINKO_PAYS[slot],
+                    TrapMath.PLINKO_PAYS[TrapMath.PLINKO_SLOTS - 1 - slot], 0.0001f,
+                    "the board must be symmetric");
+        }
+    }
+
+    @Test
+    void rarerSlotsPayBetter() {
+        // Nobody should ever be able to find a slot that is both likelier and
+        // more generous than another.
+        for (int a = 0; a < TrapMath.PLINKO_SLOTS; a++) {
+            for (int b = 0; b < TrapMath.PLINKO_SLOTS; b++) {
+                if (TrapMath.plinkoPaths(a) < TrapMath.plinkoPaths(b)) {
+                    assertTrue(TrapMath.PLINKO_PAYS[a] >= TrapMath.PLINKO_PAYS[b],
+                            "slot " + a + " is rarer than " + b + " but pays less");
+                }
+            }
+        }
+    }
+
+    @Test
+    void everyPathLandsSomewhereReal() {
+        for (int mask = 0; mask < 256; mask++) {
+            boolean[] path = new boolean[TrapMath.PLINKO_BOUNCES];
+            for (int step = 0; step < path.length; step++) {
+                path[step] = (mask >> step & 1) == 1;
+            }
+            int slot = TrapMath.plinkoSlot(path);
+            assertTrue(slot >= 0 && slot < TrapMath.PLINKO_SLOTS,
+                    "path " + mask + " landed off the board at " + slot);
+        }
+    }
+
     // --- the pawn counter -------------------------------------------------------
 
     @Test

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "trapcraft:block/plinko_lower"
+    },
+    "half=upper": {
+      "model": "trapcraft:block/plinko_upper"
+    }
+  }
+}

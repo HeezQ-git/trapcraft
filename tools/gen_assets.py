@@ -460,6 +460,8 @@ def lang() -> None:
         "item.trapcraft.ledger": "The Ledger",
         "item.trapcraft.wallet": "Wallet",
         "block.trapcraft.roulette": "Roulette Table",
+        "block.trapcraft.plinko": "The Drop",
+        "item.trapcraft.plinko": "The Drop",
         "item.trapcraft.roulette": "Roulette Table",
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
@@ -1078,6 +1080,79 @@ def nerve_tonic_assets() -> None:
     })
 
 
+def plinko_model(upper: bool) -> dict:
+    """A tall peg board in a frame, standing against the wall.
+
+    Deliberately shallow front to back -- it is a board, not a cabinet, and
+    the ball falls down the FACE of it. Made of a back panel, a raised frame
+    around the edge, and side rails, so the pegs sit in a recess you can see
+    into rather than being painted on a slab.
+    """
+    face = "board" if upper else "slots"
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "board": f"{NS}:block/plinko_board",
+            "slots": f"{NS}:block/plinko_slots",
+            "frame": f"{NS}:block/plinko_frame",
+            "particle": f"{NS}:block/plinko_frame",
+        },
+        "elements": [
+            box([1, 0, 10], [15, 16, 12], face, up="frame", down="frame"),   # the field
+            box([0, 0, 9], [1, 16, 13], "frame", up="frame", down="frame"),  # left rail
+            box([15, 0, 9], [16, 16, 13], "frame", up="frame", down="frame"),  # right rail
+            box([1, 15, 9], [15, 16, 13], "frame", up="frame")               # head rail
+            if upper else
+            box([1, 0, 9], [15, 1, 13], "frame", down="frame"),              # tray at the foot
+        ],
+    }
+
+
+def plinko_assets() -> None:
+    for half, upper in (("upper", True), ("lower", False)):
+        put(f"assets/{NS}/models/block/plinko_{half}.json", plinko_model(upper))
+    put(f"assets/{NS}/models/item/plinko.json", {"parent": f"{NS}:block/plinko_lower"})
+    put(f"assets/{NS}/items/plinko.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/plinko"},
+    })
+    put(f"assets/{NS}/blockstates/plinko.json", {
+        "variants": {
+            "half=lower": {"model": f"{NS}:block/plinko_lower"},
+            "half=upper": {"model": f"{NS}:block/plinko_upper"},
+        },
+    })
+
+    # Iron for the pegs, glass to watch through, planks for the frame and a
+    # diamond for the tray. Priced like the other two tables.
+    put(f"data/{NS}/recipe/plinko.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["PIP", "GDG", "PIP"],
+        "key": {
+            "P": "#minecraft:planks",
+            "I": "minecraft:iron_ingot",
+            "G": "minecraft:glass",
+            "D": "minecraft:diamond",
+        },
+        "result": {"id": f"{NS}:plinko", "count": 1},
+    })
+
+    # Only the lower half drops, or breaking one gives you two boards.
+    put(f"data/{NS}/loot_table/blocks/plinko.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:plinko"}],
+            "conditions": [
+                {"condition": "minecraft:survives_explosion"},
+                {"condition": "minecraft:block_state_property",
+                 "block": f"{NS}:plinko", "properties": {"half": "lower"}},
+            ],
+        }],
+    })
+
+
 def roulette_model() -> dict:
     """A waist-high table: legs, a felt top, a mahogany rim, and the wheel.
 
@@ -1480,6 +1555,7 @@ def main() -> None:
     ledger_assets()
     wallet_assets()
     roulette_assets()
+    plinko_assets()
     phone_assets()
     stall_assets()
     slot_assets()

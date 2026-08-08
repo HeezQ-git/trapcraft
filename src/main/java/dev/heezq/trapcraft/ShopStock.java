@@ -260,6 +260,43 @@ public final class ShopStock {
 
     private static void building() {
         Category c = BUILDING;
+        add(c, "minecraft:mud", 64, 4);
+        add(c, "minecraft:packed_mud", 64, 5);
+        add(c, "minecraft:resin_bricks", 32, 10);
+        add(c, "minecraft:smooth_sandstone", 32, 8);
+        add(c, "minecraft:cut_sandstone", 32, 8);
+        add(c, "minecraft:smooth_red_sandstone", 32, 8);
+        add(c, "minecraft:chiseled_sandstone", 32, 9);
+        add(c, "minecraft:chiseled_red_sandstone", 32, 9);
+        add(c, "minecraft:smooth_basalt", 32, 8);
+        add(c, "minecraft:polished_basalt", 32, 8);
+        add(c, "minecraft:polished_blackstone", 32, 10);
+        add(c, "minecraft:polished_blackstone_bricks", 32, 12);
+        add(c, "minecraft:gilded_blackstone", 8, 45);
+        add(c, "minecraft:cracked_stone_bricks", 32, 9);
+        add(c, "minecraft:cracked_deepslate_bricks", 32, 11);
+        add(c, "minecraft:chiseled_deepslate", 32, 11);
+        add(c, "minecraft:deepslate_tiles", 32, 12);
+        add(c, "minecraft:cracked_deepslate_tiles", 32, 12);
+        add(c, "minecraft:chiseled_tuff", 32, 10);
+        add(c, "minecraft:tuff_bricks", 32, 9);
+        add(c, "minecraft:polished_tuff", 32, 9);
+        add(c, "minecraft:end_stone_bricks", 32, 18);
+        add(c, "minecraft:purpur_pillar", 16, 22);
+        add(c, "minecraft:red_nether_bricks", 32, 16);
+        add(c, "minecraft:chiseled_nether_bricks", 16, 15);
+        add(c, "minecraft:chiseled_quartz_block", 32, 24);
+        add(c, "minecraft:quartz_bricks", 32, 24);
+        add(c, "minecraft:prismarine_bricks", 32, 24);
+        add(c, "minecraft:dark_prismarine", 32, 26);
+        add(c, "minecraft:glowstone", 16, 28);
+        add(c, "minecraft:shroomlight", 8, 30);
+        add(c, "minecraft:ochre_froglight", 4, 45);
+        add(c, "minecraft:verdant_froglight", 4, 45);
+        add(c, "minecraft:bone_block", 16, 18);
+        add(c, "minecraft:dripstone_block", 32, 8);
+        add(c, "minecraft:pale_moss_block", 16, 14);
+        add(c, "minecraft:pearlescent_froglight", 4, 45);
         add(c, "minecraft:cobblestone", 64, 4);
         add(c, "minecraft:stone", 64, 6);
         add(c, "minecraft:smooth_stone", 64, 8);
@@ -337,6 +374,36 @@ public final class ShopStock {
 
     private static void decoration() {
         Category c = DECOR;
+        add(c, "minecraft:white_wool", 16, 10);
+        add(c, "minecraft:light_gray_wool", 16, 10);
+        add(c, "minecraft:gray_wool", 16, 10);
+        add(c, "minecraft:brown_wool", 16, 10);
+        add(c, "minecraft:pink_wool", 16, 10);
+        add(c, "minecraft:magenta_wool", 16, 10);
+        add(c, "minecraft:purple_wool", 16, 10);
+        add(c, "minecraft:blue_wool", 16, 10);
+        add(c, "minecraft:light_blue_wool", 16, 10);
+        add(c, "minecraft:cyan_wool", 16, 10);
+        add(c, "minecraft:lime_wool", 16, 10);
+        add(c, "minecraft:yellow_wool", 16, 10);
+        add(c, "minecraft:orange_wool", 16, 10);
+        add(c, "minecraft:white_concrete", 32, 12);
+        add(c, "minecraft:black_concrete", 32, 12);
+        add(c, "minecraft:red_concrete", 32, 12);
+        add(c, "minecraft:blue_concrete", 32, 12);
+        add(c, "minecraft:yellow_concrete", 32, 12);
+        add(c, "minecraft:green_concrete", 32, 12);
+        add(c, "minecraft:white_glazed_terracotta", 8, 18);
+        add(c, "minecraft:blue_glazed_terracotta", 8, 18);
+        add(c, "minecraft:red_glazed_terracotta", 8, 18);
+        add(c, "minecraft:white_stained_glass", 32, 12);
+        add(c, "minecraft:black_stained_glass", 32, 12);
+        add(c, "minecraft:gray_stained_glass", 32, 12);
+        add(c, "minecraft:brown_stained_glass", 32, 12);
+        add(c, "minecraft:glow_item_frame", 4, 20);
+        add(c, "minecraft:chain", 16, 14);
+        add(c, "minecraft:decorated_pot", 4, 14);
+        add(c, "minecraft:chiseled_bookshelf", 4, 22);
         for (String dye : new String[]{"white", "orange", "magenta", "light_blue", "yellow",
                 "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown",
                 "green", "red", "black"}) {
@@ -505,6 +572,11 @@ public final class ShopStock {
 
     private static void materials() {
         Category c = MATERIALS;
+        add(c, "minecraft:turtle_scute", 2, 50);
+        add(c, "minecraft:rabbit_foot", 2, 45);
+        add(c, "minecraft:resin_clump", 16, 16);
+        add(c, "minecraft:breeze_rod", 2, 120);
+        add(c, "minecraft:wind_charge", 8, 30);
         add(c, "minecraft:coal", 32, 9);
         add(c, "minecraft:charcoal", 32, 8);
         add(c, "minecraft:raw_iron", 16, 16);
@@ -552,6 +624,18 @@ public final class ShopStock {
 
     private static void utility() {
         Category c = UTILITY;
+        add(c, "minecraft:lightning_rod", 2, 24);
+        add(c, "minecraft:daylight_detector", 2, 20);
+        add(c, "minecraft:lectern", 2, 16);
+        add(c, "minecraft:fletching_table", 1, 12);
+        add(c, "minecraft:stonecutter", 1, 12);
+        add(c, "minecraft:campfire", 4, 12);
+        add(c, "minecraft:soul_campfire", 4, 18);
+        add(c, "minecraft:beehive", 2, 20);
+        add(c, "minecraft:bundle", 1, 26);
+        add(c, "minecraft:activator_rail", 8, 26);
+        add(c, "minecraft:firework_rocket", 16, 16);
+        add(c, "minecraft:bell", 1, 45);
         add(c, "minecraft:torch", 32, 4);
         add(c, "minecraft:lantern", 8, 14);
         add(c, "minecraft:soul_lantern", 8, 18);
@@ -683,6 +767,28 @@ public final class ShopStock {
 
     private static void theGoodStuff() {
         Category c = RARE;
+        add(c, "minecraft:netherite_axe", 1, 1250);
+        add(c, "minecraft:netherite_pickaxe", 1, 1250);
+        add(c, "minecraft:netherite_sword", 1, 1200);
+        add(c, "minecraft:netherite_helmet", 1, 1300);
+        add(c, "minecraft:netherite_chestplate", 1, 1500);
+        add(c, "minecraft:netherite_leggings", 1, 1450);
+        add(c, "minecraft:netherite_boots", 1, 1300);
+        add(c, "minecraft:netherite_block", 1, 10000);
+        add(c, "minecraft:enchanted_book", 1, 120);
+        add(c, "minecraft:dragon_egg", 1, 4000);
+        add(c, "minecraft:sponge", 4, 120);
+        add(c, "minecraft:wet_sponge", 4, 110);
+        add(c, "minecraft:bee_nest", 1, 140);
+        add(c, "minecraft:budding_amethyst", 1, 320);
+        add(c, "minecraft:skeleton_skull", 1, 180);
+        add(c, "minecraft:zombie_head", 1, 180);
+        add(c, "minecraft:creeper_head", 1, 220);
+        add(c, "minecraft:piglin_head", 1, 260);
+        add(c, "minecraft:music_disc_otherside", 1, 420);
+        add(c, "minecraft:music_disc_5", 1, 380);
+        add(c, "minecraft:music_disc_relic", 1, 400);
+        add(c, "minecraft:music_disc_creator", 1, 400);
         add(c, "minecraft:diamond_block", 1, 380);
         add(c, "minecraft:netherite_ingot", 1, 1150);
         add(c, "minecraft:netherite_upgrade_smithing_template", 1, 900);
