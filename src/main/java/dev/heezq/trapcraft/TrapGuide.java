@@ -751,10 +751,9 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("8h. LEVELS\n\n"))
-                .append(body("Eight levels. Higher = more slots, faster, "
+                .append(body("Eight of them. Higher = more slots, faster, "
                         + "robbed less, bigger cut.\n\n"))
-                .append(body("Still worth it -- the throughput more than "
-                        + "covers the cut.\n\n"))
+                .append(body("The throughput covers the cut.\n\n"))
                 .append(hint("Level 8 carries 18 slots."))));
 
         pages.add(page(Text.empty()
