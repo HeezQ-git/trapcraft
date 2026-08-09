@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BHB",
+    "PPP",
+    "PPP"
+  ],
+  "key": {
+    "B": "minecraft:glass_bottle",
+    "H": "minecraft:barrel",
+    "P": "#minecraft:planks"
+  },
+  "result": {
+    "id": "trapcraft:casino_bar",
+    "count": 1
+  }
+}

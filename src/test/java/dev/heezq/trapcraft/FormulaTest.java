@@ -979,6 +979,29 @@ class FormulaTest {
     }
 
     @Test
+    void aDryBarEmptiesTheRoom() {
+        // The point of the whole thing: a floor nobody restocks has to earn
+        // close to nothing, because the complaint was that it earned a
+        // fortune while its owner did nothing at all.
+        java.util.Random rng = new java.util.Random(606);
+        long served = 0;
+        long dry = 0;
+        for (int visit = 0; visit < 20_000; visit++) {
+            served += TrapMath.punterRoundsServed(50, 2, rng);
+            dry += TrapMath.punterRoundsServed(50, 0, rng);
+        }
+        assertTrue(dry * 5 < served,
+                "a dry bar should cost most of the trade: " + dry + " vs " + served);
+        assertTrue(dry > 0, "but somebody still has one go before leaving");
+        // Product has to beat food, or there is no reason to point a farm at it.
+        long food = 0;
+        for (int visit = 0; visit < 20_000; visit++) {
+            food += TrapMath.punterRoundsServed(50, 1, rng);
+        }
+        assertTrue(served > food * 1.3, "your own product should be worth stocking");
+    }
+
+    @Test
     void neitherStatIsARatchet() {
         // Both used to be counters that filled up and stayed there, which made
         // a casino a thing you switch on rather than a thing you run. Left
@@ -986,7 +1009,7 @@ class FormulaTest {
         int rep = TrapMath.HOUSE_STAT_MAX;
         int addiction = TrapMath.HOUSE_STAT_MAX;
         for (int beat = 0; beat < 200; beat++) {
-            rep = TrapMath.repAfter(rep, TrapMath.houseRepTarget(0, 0, 0, 0, 0, 0, false));
+            rep = TrapMath.repAfter(rep, TrapMath.houseRepTarget(0, 0, 0, 0, 0, 0, false, false));
             addiction = TrapMath.addictionAfter(addiction, 0);
         }
         assertEquals(0, rep, "an abandoned floor keeps its name forever");
@@ -1008,24 +1031,26 @@ class FormulaTest {
 
     @Test
     void aQueueAtTheDoorIsTheWorstThing() {
-        int kept = TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, false);
-        int full = TrapMath.houseRepTarget(7, 10, 8000, 0, 0, 0, false);
-        int queued = TrapMath.houseRepTarget(7, 10, 8000, 0, 3, 0, false);
+        int kept = TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, false, false);
+        int full = TrapMath.houseRepTarget(7, 10, 8000, 0, 0, 0, false, false);
+        int queued = TrapMath.houseRepTarget(7, 10, 8000, 0, 3, 0, false, false);
         assertTrue(full < kept, "no room to play should cost something");
         assertTrue(queued < full - 25,
                 "turning people away should hurt far more: " + full + " -> " + queued);
         // And every lever is a decision somebody has to keep making.
-        assertTrue(TrapMath.houseRepTarget(1, 10, 8000, 5, 0, 0, false) < kept, "variety matters");
-        assertTrue(TrapMath.houseRepTarget(7, 10, 100, 5, 0, 0, false) < kept, "the float matters");
-        assertEquals(0, TrapMath.houseRepTarget(0, 0, 99999, 9, 0, 0, false),
+        assertTrue(TrapMath.houseRepTarget(1, 10, 8000, 5, 0, 0, false, false) < kept, "variety matters");
+        assertTrue(TrapMath.houseRepTarget(7, 10, 100, 5, 0, 0, false, false) < kept, "the float matters");
+        assertEquals(0, TrapMath.houseRepTarget(0, 0, 99999, 9, 0, 0, false, false),
                 "a casino with no machines is not a casino");
         // The two new levers, both of which the owner has to keep pulling.
-        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, TrapMath.WEAR_BROKEN, false)
+        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, TrapMath.WEAR_BROKEN, false, false)
                         < kept - 20,
                 "a floor held together with tape should cost you");
-        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, true) > kept
+        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, true, false) > kept
                         || kept >= TrapMath.HOUSE_STAT_MAX,
                 "running loose should be worth something");
+        assertTrue(TrapMath.houseRepTarget(7, 10, 8000, 5, 0, 0, false, true) < kept - 20,
+                "a dry bar should be the most visible neglect there is");
     }
 
     @Test

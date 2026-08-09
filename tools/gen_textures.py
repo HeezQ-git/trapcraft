@@ -1311,6 +1311,46 @@ xxxxxxxxxxxxxxxx
 ................
 """
 
+# The bar top: bottles and glasses lined up along a dark wood counter.
+BAR_TOP = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xWdWWWWWWWWdWWWx
+xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+xCcCcCcCcCcCcCcx
+xcCcCcCcCcCcCcCx
+xxxxxxxxxxxxxxxx
+xWWWWdWWWWWWWWWx
+xWWWWWWWWWdWWWWx
+xxxxxxxxxxxxxxxx
+xOoOoOoOoOoOoOox
+xoOoOoOoOoOoOoOx
+xxxxxxxxxxxxxxxx
+xWdWWWWWWWWWWdWx
+xxxxxxxxxxxxxxxx
+"""
+
+# The bottle shelf that stands up behind it.
+BAR_SHELF = """
+xxxxxxxxxxxxxxxx
+xmMmMmMmMmMmMmMx
+xxxxxxxxxxxxxxxx
+xOxCxOxCxOxCxOxx
+xOxCxOxCxOxCxOxx
+xOxCxOxCxOxCxOxx
+xxxxxxxxxxxxxxxx
+xmMmMmMmMmMmMmMx
+xxxxxxxxxxxxxxxx
+xCxOxCxOxCxOxCxx
+xCxOxCxOxCxOxCxx
+xCxOxCxOxCxOxCxx
+xxxxxxxxxxxxxxxx
+xmMmMmMmMmMmMmMx
+xxxxxxxxxxxxxxxx
+................
+"""
+
 # --- the climb (strongbox) ------------------------------------------------
 
 CLIMB_PAL = {
@@ -2374,6 +2414,8 @@ def main() -> None:
     write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
     write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")
     write(render(TABLE_LEG, TABLE_PAL), "block", "table_leg.png")
+    write(render(BAR_TOP, TABLE_PAL), "block", "bar_top.png")
+    write(render(BAR_SHELF, TABLE_PAL), "block", "bar_shelf.png")
     write(render(TABLE_RIM, TABLE_PAL), "block", "table_rim.png")
     write(render(TOSS_COIN, TABLE_PAL), "block", "toss_coin.png")
     write(render(CARD_SHOE, TABLE_PAL), "block", "card_shoe.png")

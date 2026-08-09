@@ -7,7 +7,10 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.enums.DoubleBlockHalf;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -118,6 +121,24 @@ public final class TrapHouse {
         /** Beats until another spell can be called, or another round stood. */
         public int looseCooldown;
         public int compCooldown;
+        /**
+         * What's behind the counter.
+         *
+         * Held on the house rather than in a block entity for the same reason
+         * a dealer's stock is: one counter per casino is the shape of the
+         * thing, and a text ledger anybody can read beats a binary blob.
+         */
+        public final List<ItemStack> bar = new ArrayList<>();
+
+        /** Is there anything left to hand anybody? */
+        public boolean dryBar() {
+            for (ItemStack stack : bar) {
+                if (!stack.isEmpty()) {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         House(UUID id, String founder, String name) {
             this.id = id;
@@ -423,7 +444,7 @@ public final class TrapHouse {
         }
         house.rep = TrapMath.repAfter(house.rep, TrapMath.houseRepTarget(
                 varieties, machines, house.balance, free, house.turnedAwayThisBeat,
-                averageWear(house), house.loose()));
+                averageWear(house), house.loose(), house.dryBar()));
         // A loose spell is worth double to the regulars, which is most of why
         // anybody would ever call one.
         house.addiction = TrapMath.addictionAfter(house.addiction,
@@ -481,6 +502,17 @@ public final class TrapHouse {
     }
 
     // --- wiring ---------------------------------------------------------------
+
+    /**
+     * Is this something a card can be wired to?
+     *
+     * The bar is not a machine -- nobody bets at it and it holds no seat --
+     * but it belongs to a house and is wired the same way, so the card, the
+     * break hook and the wire ledger all treat it alike.
+     */
+    public static boolean isFitting(Block block) {
+        return isMachine(block) || block == TrapContent.casinoBar;
+    }
 
     /** Is this a thing that takes bets? */
     public static boolean isMachine(Block block) {
@@ -735,7 +767,7 @@ public final class TrapHouse {
                 return ActionResult.PASS;
             }
             BlockPos pos = hit.getBlockPos();
-            if (!isMachine(world.getBlockState(pos).getBlock())) {
+            if (!isFitting(world.getBlockState(pos).getBlock())) {
                 return ActionResult.PASS;
             }
             wire(owner, held, world, floorOf(world, pos));
@@ -745,7 +777,7 @@ public final class TrapHouse {
         // A machine that has been mined is not a machine. Without this the wire
         // outlives it and the next thing built on that spot inherits a casino.
         PlayerBlockBreakEvents.AFTER.register((world, breaker, pos, state, entity) -> {
-            if (!isMachine(state.getBlock())) {
+            if (!isFitting(state.getBlock())) {
                 return;
             }
             // floorOf(world, pos) would read AIR here -- the block is already
@@ -860,6 +892,13 @@ public final class TrapHouse {
             for (House house : HOUSES.values()) {
                 lines.add("costs " + house.id + " " + house.costs
                         + " " + house.ownPlay);
+                StringBuilder bar = new StringBuilder("bar ").append(house.id);
+                for (ItemStack stack : house.bar) {
+                    bar.append(' ').append(Registries.ITEM.getId(stack.getItem()))
+                            .append('|').append(stack.getCount())
+                            .append('|').append(TrapComponents.get(stack).index());
+                }
+                lines.add(bar.toString());
                 lines.add("staff " + house.id + " " + (house.pitBoss ? 1 : 0)
                         + " " + house.looseBeats + " " + house.looseCooldown
                         + " " + house.compCooldown);
@@ -920,6 +959,25 @@ public final class TrapHouse {
                         house.costs = Long.parseLong(parts[2]);
                         if (parts.length > 3) {
                             house.ownPlay = Long.parseLong(parts[3]);
+                        }
+                    }
+                } else if (parts.length >= 2 && parts[0].equals("bar")) {
+                    House house = HOUSES.get(UUID.fromString(parts[1]));
+                    if (house != null) {
+                        house.bar.clear();
+                        for (int i = 2; i < parts.length; i++) {
+                            String[] bits = parts[i].split("\\|");
+                            if (bits.length != 3) {
+                                continue;
+                            }
+                            Item item = Registries.ITEM.getOptionalValue(
+                                    Identifier.of(bits[0])).orElse(null);
+                            if (item == null) {
+                                continue;
+                            }
+                            house.bar.add(TrapComponents.apply(
+                                    new ItemStack(item, Integer.parseInt(bits[1])),
+                                    Quality.byIndex(Integer.parseInt(bits[2]))));
                         }
                     }
                 } else if (parts.length == 6 && parts[0].equals("staff")) {
@@ -1022,6 +1080,52 @@ public final class TrapHouse {
         house.looseCooldown = TrapMath.LOOSE_COOLDOWN_BEATS;
         save();
         return null;
+    }
+
+    /**
+     * Serve the next one through the door.
+     *
+     * Product first, then food -- so the good stuff goes to somebody rather
+     * than sitting behind the counter while bread gets handed out. Returns
+     * what tier they were served: 2 product, 1 food, 0 nothing.
+     *
+     * The serving is FREE. It is a comp, and what it buys is the punter
+     * staying: see {@link TrapMath#punterRoundsServed}. Charging for it would
+     * make the bar a second income and miss the point, which is that a casino
+     * has to eat what you grow.
+     */
+    public static int serve(House house) {
+        int best = -1;
+        int tier = 0;
+        for (int slot = 0; slot < house.bar.size(); slot++) {
+            ItemStack stack = house.bar.get(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            int worth = TrapContent.isContraband(stack) ? 2 : 1;
+            if (worth > tier) {
+                tier = worth;
+                best = slot;
+            }
+        }
+        if (best < 0) {
+            return 0;
+        }
+        house.bar.get(best).decrement(1);
+        house.bar.removeIf(ItemStack::isEmpty);
+        house.nudge(0, tier == 2
+                ? TrapMath.BAR_ADDICTION_PRODUCT : TrapMath.BAR_ADDICTION_FOOD);
+        save();
+        return tier;
+    }
+
+    /** How much is left behind the counter, in items. */
+    public static int barStock(House house) {
+        int total = 0;
+        for (ItemStack stack : house.bar) {
+            total += stack.getCount();
+        }
+        return total;
     }
 
     /** How many beats this floor has been behind on what it owes. */

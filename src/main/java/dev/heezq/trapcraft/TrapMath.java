@@ -1321,6 +1321,51 @@ public final class TrapMath {
     /** What a cheat plays at. Over one, which is the problem. */
     public static final float CHEAT_RETURN = 1.18f;
 
+    // --- the bar ------------------------------------------------------------
+    //
+    // The one thing that stops a casino being a faucet.
+    //
+    // Punters bring money in from outside, so however the percentages are
+    // tuned the vault fills on its own -- which made a floor something you
+    // switch on and walk away from. A casino has to CONSUME something the
+    // owner produces, the way a dealer consumes what you grew and a contract
+    // consumes what you cured, or it is not a business, it is a tap.
+    //
+    // So the floor runs on your stash. Punters are served on the way in;
+    // served punters stay, and a dry bar empties the room.
+
+    /** Stacks the bar behind the counter holds. */
+    public static final int BAR_SLOTS = 18;
+
+    /** How long a served punter stays, against how long a dry one does. */
+    public static final float SERVED_PRODUCT = 1.6f;
+    public static final float SERVED_FOOD = 1.15f;
+    public static final float SERVED_NOTHING = 0.18f;
+
+    /** What one serving is worth to the regulars. */
+    public static final int BAR_ADDICTION_PRODUCT = 3;
+    public static final int BAR_ADDICTION_FOOD = 1;
+    /** What a dry bar takes off the name it was holding. */
+    public static final int DRY_BAR_REP = 28;
+
+    /**
+     * Rounds this punter is good for, given what they were handed at the door.
+     *
+     * A dry bar is not a small penalty. Somebody who walks into a room with
+     * nothing behind the counter has one go and leaves, which takes about
+     * eighty percent of the trade with it -- and the reputation hit takes more
+     * off the arrivals on top. An unattended floor should earn very close to
+     * nothing, because the whole complaint was that it earned a fortune.
+     */
+    public static int punterRoundsServed(int addiction, int servedTier, Random rng) {
+        float multiplier = switch (servedTier) {
+            case 2 -> SERVED_PRODUCT;
+            case 1 -> SERVED_FOOD;
+            default -> SERVED_NOTHING;
+        };
+        return Math.max(1, Math.round(punterRounds(addiction, rng) * multiplier));
+    }
+
     /** What a round of drinks costs per machine, and what it buys. */
     public static final int COMP_COST_PER_MACHINE = 30;
     public static final int COMP_ADDICTION = 9;
@@ -1373,7 +1418,7 @@ public final class TrapMath {
      */
     public static int houseRepTarget(int varieties, int machines, long balance,
                                      int free, int turnedAway, int avgWear,
-                                     boolean loose) {
+                                     boolean loose, boolean dryBar) {
         if (machines <= 0) {
             return 0;
         }
@@ -1388,6 +1433,11 @@ public final class TrapMath {
         score -= Math.min(30, Math.max(0, avgWear) * 30 / WEAR_BROKEN);
         if (loose) {
             score += LOOSE_REP_BONUS;
+        }
+        // Nothing behind the counter is the single most visible way a floor
+        // says nobody is looking after it.
+        if (dryBar) {
+            score -= DRY_BAR_REP;
         }
         return Math.max(0, Math.min(HOUSE_STAT_MAX, score));
     }

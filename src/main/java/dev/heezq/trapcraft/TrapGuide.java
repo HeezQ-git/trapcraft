@@ -183,6 +183,21 @@ public final class TrapGuide {
                 .append(warn("Miss the cut three times and they visit."))));
 
         pages.add(page(Text.empty()
+                .append(title("4b. THE BAR\n\n"))
+                .append(body("Wire a "))
+                .append(item("Bar"))
+                .append(body(" to the house and stock it. "
+                        + "Everybody through the door gets one.\n\n"))
+                .append(warn("Dry bar: one go each and out."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b2. WHAT TO STOCK\n\n"))
+                .append(body("Anything edible. Anything you grew.\n\n"))
+                .append(body("Your own product keeps them at the machines "
+                        + "far longer than bread does.\n\n"))
+                .append(hint("This is what the farm is for."))));
+
+        pages.add(page(Text.empty()
                 .append(title("5. THE PUNTERS\n\n"))
                 .append(body("Villagers wander in and play with their own "
                         + "money.\n\n"))

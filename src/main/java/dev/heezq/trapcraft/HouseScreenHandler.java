@@ -387,6 +387,19 @@ public class HouseScreenHandler extends ScreenHandler {
             lore.add(line("  ...and " + (broken - 6) + " more", Formatting.RED));
         }
         lore.add(Text.empty());
+        int stock = TrapHouse.barStock(house);
+        lore.add(plain("Behind the bar  ").formatted(Formatting.GRAY)
+                .append(plain(stock + (stock == 1 ? " serving" : " servings"))
+                        .formatted(stock > 0 ? Formatting.GREEN : Formatting.RED,
+                                Formatting.BOLD)));
+        lore.add(line(stock > 0
+                        ? "  Everybody through the door gets one."
+                        : "  Nothing to hand out. They have one go",
+                stock > 0 ? Formatting.DARK_GRAY : Formatting.RED));
+        if (stock <= 0) {
+            lore.add(line("  and leave, and your name goes with them.", Formatting.RED));
+        }
+        lore.add(Text.empty());
         lore.add(line("Hit a machine with a Miner's Hammer to", Formatting.YELLOW));
         lore.add(line("put it right. The house pays for parts.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));

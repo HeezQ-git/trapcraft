@@ -469,6 +469,8 @@ def lang() -> None:
         "item.trapcraft.toss": "Coin Toss",
         "block.trapcraft.blackjack": "Blackjack",
         "block.trapcraft.scratch": "Scratchers",
+        "block.trapcraft.casino_bar": "The Bar",
+        "item.trapcraft.casino_bar": "The Bar",
         "item.trapcraft.scratch": "Scratchers",
         "item.trapcraft.blackjack": "Blackjack",
         "item.trapcraft.climb": "The Climb",
@@ -1129,10 +1131,25 @@ def table_model(top: str, furniture=None) -> dict:
             "shoe": f"{NS}:block/card_shoe",
             "chips": f"{NS}:block/chip_stack",
             "rack": f"{NS}:block/card_rack",
+            "shelf": f"{NS}:block/bar_shelf",
             "particle": f"{NS}:block/table_side",
         },
         "elements": elements,
     }
+
+
+def bar_furniture() -> list:
+    """A back shelf of bottles standing up behind the counter.
+
+    The one piece of casino furniture that has to read as somewhere you PUT
+    things rather than somewhere you play, because it is the only block on the
+    floor the owner has a job at.
+    """
+    return [
+        box([1, 15.5, 12.5], [15, 23, 14.5], "shelf", up="shelf", down="shelf"),
+        box([0.5, 22.5, 12], [15.5, 23.8, 15], "rim", up="rim"),
+        box([2.5, 15.5, 3], [5, 17.2, 5.5], "chips"),
+    ]
 
 
 def toss_furniture() -> list:
@@ -1965,6 +1982,11 @@ def main() -> None:
                  {"A": "minecraft:paper", "P": "#minecraft:planks",
                   "W": "minecraft:green_wool"}, blackjack_furniture())
     # Paper and gold leaf on red: a newsagent's counter, not a card table.
+    # Bottles, a barrel and planks. Cheap on purpose -- the bar is a chore you
+    # are being asked to take on, not a reward for having got somewhere.
+    table_assets("casino_bar", "bar_top", ["BHB", "PPP", "PPP"],
+                 {"B": "minecraft:glass_bottle", "H": "minecraft:barrel",
+                  "P": "#minecraft:planks"}, bar_furniture())
     table_assets("scratch", "scratch_top", ["AGA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "G": "minecraft:gold_ingot",
                   "P": "#minecraft:planks", "W": "minecraft:red_wool"},

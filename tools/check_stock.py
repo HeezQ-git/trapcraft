@@ -209,7 +209,12 @@ def casino_floor() -> list[str]:
     """
     src = ROOT / "src/main/java/dev/heezq/trapcraft"
     house = (src / "TrapHouse.java").read_text()
-    body = house.split("isMachine", 1)[1][:400]
+    # The METHOD body, not the first mention of the name. isFitting() talks
+    # about isMachine in its own javadoc, and reading a fixed window from the
+    # first match silently started measuring the wrong text the day that was
+    # added -- which is how a checker quietly stops checking.
+    at = house.index("boolean isMachine(Block block) {")
+    body = house[at:house.index("\n    }", at)]
     known = set(re.findall(r"TrapContent\.([a-zA-Z]+)", body))
     content = (src / "TrapContent.java").read_text()
 
@@ -217,6 +222,16 @@ def casino_floor() -> list[str]:
     for path in sorted(src.glob("*Block.java")):
         text = path.read_text()
         if "ScreenHandler(syncId, inventory, house)" not in text:
+            continue
+        # A machine is a thing you BET at. The bar takes a house the same way
+        # and opens the same shape of screen, but nobody stakes anything on it
+        # -- so the discriminator is whether its handler takes money, not
+        # whether it knows which casino it belongs to.
+        handler = src / (path.stem.replace("Block", "") + "ScreenHandler.java")
+        if not handler.exists():
+            handler = src / (path.stem.replace("Block", "").replace("Machine", "")
+                             + "ScreenHandler.java")
+        if handler.exists() and "TrapHouse.stake(" not in handler.read_text():
             continue
         # The block class knows its own registry name from the loot table it
         # drops, which is the one string that is always the registered path.

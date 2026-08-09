@@ -234,12 +234,19 @@ public final class TrapFloor {
                 if (!wire.getValue().equals(house.id)) {
                     continue;
                 }
-                machines++;
                 ServerWorld world = worldOf(server, wire.getKey());
                 BlockPos pos = TrapHouse.posOf(wire.getKey());
                 if (world == null || pos == null) {
                     continue;
                 }
+                // The bar is wired like a machine but is not one: it takes no
+                // bets, holds no seat, and must not be counted as either
+                // variety or capacity or a floor of ten bars would look
+                // magnificent on paper.
+                if (!TrapHouse.isMachine(world.getBlockState(pos).getBlock())) {
+                    continue;
+                }
+                machines++;
                 games.add(world.getBlockState(pos).getBlock());
                 if (occupant(world, pos) == null) {
                     free++;
@@ -582,8 +589,13 @@ public final class TrapFloor {
             punter.discard();
             return;
         }
+        // Served at the door, out of your own stash. This is the whole
+        // difference between a floor and a faucet: a dry bar means one go and
+        // out, and that is most of the trade gone.
+        int served = TrapHouse.serve(house);
         punter.setCustomName(Text.literal("Punter  ·  " + stake + "e a go")
-                .formatted(Formatting.WHITE));
+                .formatted(served == 2 ? Formatting.LIGHT_PURPLE
+                        : served == 1 ? Formatting.WHITE : Formatting.DARK_GRAY));
         punter.setCustomNameVisible(true);
 
         // BEFORE spawnEntity, not after. spawnEntity fires ENTITY_LOAD
@@ -592,7 +604,7 @@ public final class TrapFloor {
         // sent in was discarded by our own litter cleanup at the instant it
         // appeared. Nobody saw a single villager for the whole of 1.0.134.
         Punter session = new Punter(punter.getUuid(), at, houseId, stake,
-                TrapMath.punterRounds(house.addiction,
+                TrapMath.punterRoundsServed(house.addiction, served,
                         new java.util.Random(random.nextLong())), stand);
         PUNTERS.add(session);
         if (!world.spawnEntity(punter)) {
@@ -876,7 +888,8 @@ public final class TrapFloor {
         for (TrapHouse.House house : TrapHouse.all()) {
             out.append(Text.literal("\n  " + house.name + "  name "
                             + house.rep + ", regulars " + house.addiction
-                            + ", worn " + TrapHouse.averageWear(house) + "  ->  "
+                            + ", worn " + TrapHouse.averageWear(house)
+                            + ", bar " + TrapHouse.barStock(house) + "  ->  "
                             + String.format("%.2f", house.pull()) + "x"
                             + (house.pitBoss ? "  [boss]" : "")
                             + (house.loose() ? "  [LOOSE " + house.looseBeats / 2 + "m]" : ""))

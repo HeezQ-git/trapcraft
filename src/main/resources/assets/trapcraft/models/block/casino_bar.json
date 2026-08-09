@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "top": "trapcraft:block/toss_top",
+    "top": "trapcraft:block/bar_top",
     "side": "trapcraft:block/table_side",
     "leg": "trapcraft:block/table_leg",
     "rim": "trapcraft:block/table_rim",
@@ -208,55 +208,78 @@
     },
     {
       "from": [
-        6.5,
+        1,
         15.5,
-        7.6
+        12.5
       ],
       "to": [
-        9.5,
-        18.5,
-        8.4
+        15,
+        23,
+        14.5
       ],
       "faces": {
         "north": {
-          "texture": "#coin"
+          "texture": "#shelf"
         },
         "south": {
-          "texture": "#coin"
+          "texture": "#shelf"
         },
         "east": {
-          "texture": "#coin"
+          "texture": "#shelf"
         },
         "west": {
-          "texture": "#coin"
+          "texture": "#shelf"
         },
         "up": {
-          "texture": "#coin"
+          "texture": "#shelf"
         },
         "down": {
-          "texture": "#coin"
+          "texture": "#shelf"
         }
-      },
-      "rotation": {
-        "origin": [
-          8,
-          17,
-          8
-        ],
-        "axis": "y",
-        "angle": 22.5
       }
     },
     {
       "from": [
-        11,
-        15.5,
-        10.5
+        0.5,
+        22.5,
+        12
       ],
       "to": [
-        13.5,
-        17,
-        13
+        15.5,
+        23.8,
+        15
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rim"
+        },
+        "south": {
+          "texture": "#rim"
+        },
+        "east": {
+          "texture": "#rim"
+        },
+        "west": {
+          "texture": "#rim"
+        },
+        "up": {
+          "texture": "#rim"
+        },
+        "down": {
+          "texture": "#rim"
+        }
+      }
+    },
+    {
+      "from": [
+        2.5,
+        15.5,
+        3
+      ],
+      "to": [
+        5,
+        17.2,
+        5.5
       ],
       "faces": {
         "north": {
