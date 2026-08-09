@@ -48,13 +48,18 @@ public class ShopScreenHandler extends ScreenHandler {
     private static final int NEXT_SLOT = FOOTER + 6;
 
     /**
-     * Three rows of three, centred, so the shelves read as a shopfront.
+     * Three rows of four, so the shelves read as a shopfront.
      *
-     * Sized to CATEGORIES: add a tenth category and it silently wouldn't
+     * Sized to CATEGORIES: add a thirteenth category and it silently wouldn't
      * appear, which is exactly how the enchantments shelf nearly shipped
-     * invisible.
+     * invisible. Widened from three columns when the garden shelf went in and
+     * there was nowhere to put it.
      */
-    private static final int[] SHELF_SPOTS = {11, 13, 15, 20, 22, 24, 29, 31, 33};
+    private static final int[] SHELF_SPOTS = {
+            10, 12, 14, 16,
+            19, 21, 23, 25,
+            28, 30, 32, 34,
+    };
     /** The counter and the exchange desk, off on their own below the shelves. */
     private static final int SELL_SPOT = 38;
     private static final int INVEST_SPOT = 42;

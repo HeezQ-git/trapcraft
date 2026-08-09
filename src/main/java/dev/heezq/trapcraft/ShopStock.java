@@ -1,10 +1,17 @@
 package dev.heezq.trapcraft;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.CropBlock;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.FoodComponent;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.item.BlockItem;
+import net.minecraft.block.FlowerBlock;
+import net.minecraft.block.FlowerbedBlock;
+import net.minecraft.block.LeavesBlock;
+import net.minecraft.block.MushroomPlantBlock;
+import net.minecraft.block.SaplingBlock;
+import net.minecraft.block.TallPlantBlock;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
@@ -83,6 +90,8 @@ public final class ShopStock {
             "minecraft:oak_log", Formatting.DARK_GREEN, "Logs, leaves, growing things");
     public static final Category DECOR = new Category("decor", "Decoration",
             "minecraft:cyan_terracotta", Formatting.LIGHT_PURPLE, "Colour and trim");
+    public static final Category GARDEN = new Category("garden", "The Garden",
+            "minecraft:peony", Formatting.LIGHT_PURPLE, "Flowers, pots, lanterns");
     public static final Category FARMING = new Category("farming", "Seeds & Crops",
             "minecraft:wheat_seeds", Formatting.GREEN, "Everything that grows");
     public static final Category FOOD = new Category("food", "Kitchen",
@@ -97,7 +106,8 @@ public final class ShopStock {
             "minecraft:nether_star", Formatting.DARK_PURPLE, "If you can afford it");
 
     public static final List<Category> CATEGORIES =
-            List.of(BUILDING, WOOD, DECOR, FARMING, FOOD, MATERIALS, UTILITY, ENCHANTS, RARE);
+            List.of(BUILDING, WOOD, DECOR, GARDEN, FARMING, FOOD,
+                    MATERIALS, UTILITY, ENCHANTS, RARE);
 
     /**
      * Items the market must never trade, at any price.
@@ -182,6 +192,7 @@ public final class ShopStock {
         }
         int listed = STOCK.size();
         stockTheKitchen();
+        stockTheGarden();
         TrapCraft.LOGGER.info(
                 "market: {} lines stocked ({} listed, {} found in the registry), {} skipped",
                 STOCK.size(), listed, STOCK.size() - listed, missing);
@@ -238,6 +249,116 @@ public final class ShopStock {
         TrapCraft.LOGGER.info("market: found {} foods and {} seeds in the registry", foods, seeds);
     }
 
+    /**
+     * Put every flower, sapling and leaf in the game on the garden shelf.
+     *
+     * Same reasoning as the kitchen. There are a hundred and thirty-six mods
+     * installed and between them they add hundreds of flowers nobody is going
+     * to list by hand -- and every id typed wrong would be silently dropped as
+     * "mod not present", which is the worst kind of missing.
+     *
+     * Asked of the registry two ways, because neither is enough on its own: a
+     * tag catches modded flowers that were polite enough to join
+     * #minecraft:flowers, and the block class catches the ones that weren't.
+     * Between them almost nothing gets left outside.
+     */
+    private static void stockTheGarden() {
+        int found = 0;
+        for (Item item : Registries.ITEM) {
+            String id = Registries.ITEM.getId(item).toString();
+            if (DECLARED.containsKey(id) || NEVER_STOCK.contains(id) || CURRENCY.contains(id)) {
+                continue;
+            }
+            int[] priced = gardenPrice(item);
+            if (priced == null) {
+                continue;
+            }
+            STOCK.add(new Entry(GARDEN, item, id, priced[0], priced[1],
+                    new ItemStack(item, priced[0]), item.getName().getString()));
+            found++;
+        }
+        TrapCraft.LOGGER.info("market: found {} garden lines in the registry", found);
+    }
+
+    /**
+     * {bundle size, price} for anything you would plant to look at, or null.
+     *
+     * Nothing is priced below 5. A line cheap enough that the counter refuses
+     * to buy it back once the index dips is a line that reads as broken --
+     * see the sell floor in check_stock.py, which fails the deploy over it.
+     */
+    private static int[] gardenPrice(Item item) {
+        ItemStack stack = item.getDefaultStack();
+        Block block = Block.getBlockFromItem(item);
+
+        if (stack.isIn(ItemTags.LEAVES) || block instanceof LeavesBlock) {
+            return new int[]{16, 6};
+        }
+        if (stack.isIn(ItemTags.SAPLINGS) || block instanceof SaplingBlock) {
+            return new int[]{4, 12};
+        }
+        if (stack.isIn(ItemTags.SMALL_FLOWERS) || block instanceof FlowerBlock
+                || block instanceof FlowerbedBlock) {
+            return new int[]{8, 7};
+        }
+        if (stack.isIn(ItemTags.FLOWERS) || block instanceof TallPlantBlock) {
+            return new int[]{4, 9};
+        }
+        if (block instanceof MushroomPlantBlock) {
+            return new int[]{8, 7};
+        }
+        return null;
+    }
+
+    /**
+     * The hard landscaping, which no tag will find for you.
+     *
+     * Everything a garden needs that isn't alive: the pots to put the flowers
+     * in, the light to see them by, and the paths and stone to lay it all out
+     * on.
+     */
+    private static void garden() {
+        // Anything already on another shelf is deliberately absent: DECLARED
+        // is a map, so a second line silently wins and the price somebody
+        // tuned is quietly replaced. check_stock.py fails the deploy over it,
+        // which is how these twenty-nine were found.
+        Category c = GARDEN;
+        // Light
+        add(c, "minecraft:soul_torch", 16, 7);
+        add(c, "minecraft:end_rod", 8, 20);
+        for (String dye : new String[]{"white", "orange", "magenta", "light_blue", "yellow",
+                "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown",
+                "green", "red", "black"}) {
+            add(c, "minecraft:" + dye + "_candle", 8, 9);
+        }
+        // Green cover
+        add(c, "minecraft:moss_carpet", 16, 8);
+        add(c, "minecraft:pale_moss_carpet", 16, 10);
+        add(c, "minecraft:hanging_roots", 8, 9);
+        add(c, "minecraft:big_dripleaf", 4, 14);
+        add(c, "minecraft:small_dripleaf", 8, 10);
+        add(c, "minecraft:azalea", 4, 16);
+        add(c, "minecraft:flowering_azalea", 4, 20);
+        add(c, "minecraft:grass_block", 16, 8);
+        add(c, "minecraft:dirt_path", 16, 6);
+        add(c, "minecraft:farmland", 16, 6);
+        // Water and stone
+        add(c, "minecraft:seagrass", 8, 8);
+        add(c, "minecraft:pointed_dripstone", 8, 10);
+        add(c, "minecraft:mossy_cobblestone", 16, 10);
+        add(c, "minecraft:cobblestone_wall", 16, 9);
+        add(c, "minecraft:mossy_cobblestone_wall", 16, 10);
+        add(c, "minecraft:stone_brick_wall", 16, 9);
+        add(c, "minecraft:brick_wall", 16, 10);
+        // Furniture
+        add(c, "minecraft:oak_fence", 16, 8);
+        add(c, "minecraft:spruce_fence", 16, 8);
+        add(c, "minecraft:birch_fence", 16, 8);
+        add(c, "minecraft:dark_oak_fence", 16, 9);
+        add(c, "minecraft:bamboo_fence", 16, 9);
+        add(c, "minecraft:oak_trapdoor", 8, 10);
+    }
+
     /** Anything a villager would plant, or that places a crop. */
     private static boolean plantable(Item item) {
         if (item.getDefaultStack().isIn(ItemTags.VILLAGER_PLANTABLE_SEEDS)) {
@@ -250,6 +371,7 @@ public final class ShopStock {
         building();
         timber();
         decoration();
+        garden();
         seeds();
         kitchen();
         materials();
