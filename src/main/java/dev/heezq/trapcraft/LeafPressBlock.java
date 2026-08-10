@@ -145,10 +145,71 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
             return false;
         }
         leaves.decrement(LEAVES_PER_BATCH);
+        start(state, world, pos);
+        return true;
+    }
+
+    /**
+     * A batch out of a whole chest, across as many stacks as it takes.
+     *
+     * A hand decides there is work here by counting the leaves in the WHOLE
+     * box, and used to load the press out of a single stack. Five at a time
+     * off a stack of sixty-four leaves four behind, so a box filled with full
+     * stacks ends up as a row of fours -- every one of them enough to keep
+     * saying "ready" and none of them enough to press. The hand then walked
+     * to the press once a pass, forever, and did nothing when it got there.
+     *
+     * Counted first and taken second, so a box that turns out to be short
+     * loses nothing: half a batch out of the chest and no batch in the press
+     * would be leaves destroyed by looking at them.
+     */
+    public static boolean load(BlockState state, World world, BlockPos pos,
+                               net.minecraft.inventory.Inventory box) {
+        if (state.get(LOADED) || !canLoad(box)) {
+            return false;
+        }
+        int owed = LEAVES_PER_BATCH;
+        for (int slot = 0; slot < box.size() && owed > 0; slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (!stack.isOf(TrapContent.cocaLeaves)) {
+                continue;
+            }
+            int taken = Math.min(owed, stack.getCount());
+            stack.decrement(taken);
+            owed -= taken;
+        }
+        box.markDirty();
+        start(state, world, pos);
+        return true;
+    }
+
+    /**
+     * Has this box got a batch in it, counting every stack?
+     *
+     * Public, and asked by the crew board rather than answered again over
+     * there. Two copies of "is there enough" is what broke this: the board
+     * counted the whole box, the loader took from one stack, and a barrel of
+     * four-leaf stacks satisfied one and not the other -- so the hand was
+     * told to go to work and then had no work to do, every pass, forever.
+     * One question, one answer, and they cannot drift apart again.
+     */
+    public static boolean canLoad(net.minecraft.inventory.Inventory box) {
+        if (box == null) {
+            return false;
+        }
+        int found = 0;
+        for (int slot = 0; slot < box.size() && found < LEAVES_PER_BATCH; slot++) {
+            if (box.getStack(slot).isOf(TrapContent.cocaLeaves)) {
+                found += box.getStack(slot).getCount();
+            }
+        }
+        return found >= LEAVES_PER_BATCH;
+    }
+
+    private static void start(BlockState state, World world, BlockPos pos) {
         world.setBlockState(pos, state.with(LOADED, true).with(PROGRESS, 0));
         world.scheduleBlockTick(pos, state.getBlock(), STEP_TICKS);
         world.playSound(null, pos, SoundEvents.BLOCK_BAMBOO_BREAK, SoundCategory.BLOCKS, 0.8F, 0.7F);
-        return true;
     }
 
     /** The paste, if it is pressed. Empty otherwise. */

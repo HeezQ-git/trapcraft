@@ -1706,19 +1706,6 @@ public final class TrapCrew {
         return false;
     }
 
-    private static int counts(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want) {
-        if (box == null) {
-            return 0;
-        }
-        int found = 0;
-        for (int slot = 0; slot < box.size(); slot++) {
-            if (box.getStack(slot).isOf(want)) {
-                found += box.getStack(slot).getCount();
-            }
-        }
-        return found;
-    }
-
     /** A cured bud in the chest that there is also paper for, or null. */
     private static ItemStack rollable(net.minecraft.inventory.Inventory box) {
         if (box == null || !holds(box, Items.PAPER)) {
@@ -1749,7 +1736,8 @@ public final class TrapCrew {
     private static Supplies suppliesOf(net.minecraft.inventory.Inventory box) {
         return new Supplies(holds(box, Items.BONE_MEAL), holdsSeed(box),
                 holdsRawBud(box),
-                counts(box, TrapContent.cocaLeaves) >= LeafPressBlock.LEAVES_PER_BATCH,
+                // Asked of the press, not worked out again here. See canLoad.
+                LeafPressBlock.canLoad(box),
                 holds(box, TrapContent.cocaPaste) && holds(box, Items.BLAZE_POWDER),
                 rollable(box) != null);
     }
@@ -1879,8 +1867,11 @@ public final class TrapCrew {
                 stow(world, box, at, List.of(paste));
                 cheer(world, at, SoundEvents.BLOCK_WET_GRASS_BREAK, 0.9F);
             } else if (box != null) {
-                feed(box, TrapContent.cocaLeaves,
-                        leaves -> LeafPressBlock.load(state, world, at, leaves));
+                // The whole box, not the first stack in it -- which is the
+                // same box the "is there work here" count reads. See the note
+                // on LeafPressBlock.load: those two disagreeing is what left
+                // a barrel of four-leaf stacks and a hand with nothing to do.
+                LeafPressBlock.load(state, world, at, box);
             }
             return;
         }
@@ -2058,7 +2049,10 @@ public final class TrapCrew {
     private static void stow(ServerWorld world, net.minecraft.inventory.Inventory box,
                              BlockPos at, List<ItemStack> drops) {
         for (ItemStack drop : drops) {
-            if (box == null || !store(box, drop)) {
+            // What store() couldn't fit, and nothing else -- it takes as much
+            // as there is room for and leaves the rest in `drop`. A full chest
+            // still means crops on the floor; a chest with room no longer does.
+            if ((box == null || !store(box, drop)) && !drop.isEmpty()) {
                 Block.dropStack(world, at, drop);
             }
         }
@@ -2088,23 +2082,49 @@ public final class TrapCrew {
         return null;
     }
 
-    /** Put a drop away. False if it wouldn't fit. */
+    /**
+     * Put a drop away, across as many slots as it takes.
+     *
+     * The other half of the leaf press bug, and the one every hand hits: this
+     * used to be all-or-nothing into a SINGLE slot. A barrel with twenty
+     * stacks of sixty and no empty slot has room for eighty more, and this
+     * would look at each slot in turn, find nowhere the whole drop fit, and
+     * throw the lot on the floor -- next to a chest that was visibly not full.
+     * Everything a hand produces comes through here: picked crops, cured buds,
+     * paste, powder, rolled joints. So it was every worker, quietly littering.
+     *
+     * Partial stacks are topped up before an empty slot is taken, because
+     * doing it the other way round fragments a barrel into ten half stacks of
+     * wheat and then reports it full.
+     *
+     * `drop` is decremented to whatever would not go in, so the caller drops
+     * that and only that.
+     */
     private static boolean store(net.minecraft.inventory.Inventory box, ItemStack drop) {
-        for (int slot = 0; slot < box.size(); slot++) {
+        for (int slot = 0; slot < box.size() && !drop.isEmpty(); slot++) {
             ItemStack there = box.getStack(slot);
-            if (there.isEmpty()) {
-                box.setStack(slot, drop.copy());
-                box.markDirty();
-                return true;
+            if (there.isEmpty() || !ItemStack.areItemsAndComponentsEqual(there, drop)) {
+                continue;
             }
-            if (ItemStack.areItemsAndComponentsEqual(there, drop)
-                    && there.getCount() + drop.getCount() <= there.getMaxCount()) {
-                there.increment(drop.getCount());
+            int room = Math.min(there.getMaxCount() - there.getCount(), drop.getCount());
+            if (room > 0) {
+                there.increment(room);
+                drop.decrement(room);
                 box.markDirty();
-                return true;
             }
         }
-        return false;
+        for (int slot = 0; slot < box.size() && !drop.isEmpty(); slot++) {
+            if (!box.getStack(slot).isEmpty()) {
+                continue;
+            }
+            int room = Math.min(drop.getMaxCount(), drop.getCount());
+            ItemStack put = drop.copy();
+            put.setCount(room);
+            box.setStack(slot, put);
+            drop.decrement(room);
+            box.markDirty();
+        }
+        return drop.isEmpty();
     }
 
     // --- payday ---------------------------------------------------------------
