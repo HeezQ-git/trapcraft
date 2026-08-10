@@ -155,9 +155,19 @@ public final class TrapCrew {
      * chunk debug output, and vanilla prints "[unregistered]" there rather
      * than falling over -- so registering it would only buy a nicer debug
      * line at the cost of a call that throws if registries are already frozen.
+     *
+     * Twenty seconds, and the number matters more than it looks.
+     * {@code ChunkTicketType} is a RECORD, so two of them are equal when their
+     * three fields match -- registered or not, named or not. The game asks
+     * that question in two places: whether a new ticket is really the same one
+     * (refresh it rather than stack it), and whether a ticket is the FORCED
+     * type (and so belongs in the /forceload list). Land on a vanilla type's
+     * exact numbers and this quietly becomes that type. Fifteen seconds would
+     * have been PORTAL's expiry to the tick, saved from meaning it only by
+     * PORTAL persisting and this not. Twenty is nobody's.
      */
     private static final ChunkTicketType TICKET = new ChunkTicketType(
-            20 * 15, false, ChunkTicketType.Use.LOADING_AND_SIMULATION);
+            20 * 20, false, ChunkTicketType.Use.LOADING_AND_SIMULATION);
     private static final int TICKET_TICKS = 20 * 5;
 
     /**
