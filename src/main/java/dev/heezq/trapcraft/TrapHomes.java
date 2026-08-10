@@ -624,7 +624,7 @@ public final class TrapHomes {
             }
             return;
         }
-        keepBody(world, home);
+        keepBodies(world, home);
         if (home.lastRent == day) {
             return;
         }
@@ -812,7 +812,7 @@ public final class TrapHomes {
         home.lastRent = day;
         home.letters.clear();
         home.write(home.tenant + " has moved in. Rent starts tomorrow.");
-        keepBody(world, home);
+        keepBodies(world, home);
         save();
         ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(home.owner);
         if (owner != null) {
@@ -872,10 +872,53 @@ public final class TrapHomes {
      * body, and it is allowed to be missing, eaten or left in an unloaded
      * chunk without anybody losing a day's rent over it.
      */
-    private static void keepBody(ServerWorld world, Home home) {
-        if (home.body != null && world.getEntity(home.body) != null) {
+    /**
+     * A body per person in the house, and no more.
+     *
+     * One villager per HOUSE was the old rule, back when a house held one
+     * tenant however many beds were in it. A family of four that pays four
+     * rents and sends four people through the shop door should look like four
+     * people, or the village is a row of addresses with one person in it.
+     *
+     * Counted off the world rather than remembered, and this is the important
+     * part: the register cannot grow a field -- see the note on {@link
+     * Home#heads} for what that cost last time -- so a list of body ids has
+     * nowhere to live. Every body carries a tag naming its house instead, so
+     * the answer to "how many of yours are standing here" is a question for
+     * the world and survives anything the file does.
+     *
+     * The head of the household keeps {@link Home#body}, because the stray
+     * sweep and the eviction both already know that field.
+     */
+    private static void keepBodies(ServerWorld world, Home home) {
+        if (home.tenant == null) {
             return;
         }
+        String tag = TENANT_TAG + "_" + home.id;
+        var box = new net.minecraft.util.math.Box(
+                home.box[0], home.box[1], home.box[2],
+                home.box[3] + 1, home.box[4] + 1, home.box[5] + 1).expand(BODY_RANGE);
+        List<net.minecraft.entity.passive.VillagerEntity> living =
+                world.getEntitiesByClass(net.minecraft.entity.passive.VillagerEntity.class, box,
+                        found -> found.isAlive() && found.getCommandTags().contains(tag));
+
+        // Fewer beds than there were, or a grade that slipped: the household
+        // shrinks. Discarded from the end so the head of it is the last to go.
+        for (int extra = living.size() - 1; extra >= home.heads; extra--) {
+            var going = living.get(extra);
+            if (!going.getUuid().equals(home.body)) {
+                going.discard();
+            }
+        }
+        for (int missing = living.size(); missing < home.heads; missing++) {
+            body(world, home, tag, missing);
+        }
+    }
+
+    /** How far from the house a resident still counts as living there. */
+    private static final int BODY_RANGE = 24;
+
+    private static void body(ServerWorld world, Home home, String tag, int index) {
         net.minecraft.entity.passive.VillagerEntity body =
                 net.minecraft.entity.EntityType.VILLAGER.create(
                         world, net.minecraft.entity.SpawnReason.EVENT);
@@ -884,9 +927,16 @@ public final class TrapHomes {
         }
         body.refreshPositionAndAngles(home.anchor.up(), world.getRandom().nextFloat() * 360f, 0f);
         body.setPersistent();
-        body.setCustomName(Text.literal(home.tenant).formatted(Formatting.AQUA));
+        // The first one is the tenant the letters and the rent are about. The
+        // rest are the family, and they need their own names or the house is
+        // four copies of Edwin.
+        String name = index == 0 ? home.tenant
+                : NAMES[Math.floorMod((int) home.id.getLeastSignificantBits() + index * 7,
+                        NAMES.length)];
+        body.setCustomName(Text.literal(name).formatted(Formatting.AQUA));
         body.setCustomNameVisible(true);
         body.addCommandTag(TENANT_TAG);
+        body.addCommandTag(tag);
         // NITWIT for the same reason the crew are: a professionless villager
         // takes a job from any workstation it wanders past and starts trading,
         // which would undercut the shop its landlord built downstairs.
@@ -895,7 +945,9 @@ public final class TrapHomes {
                         .getOrThrow(net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
         world.spawnEntity(body);
-        home.body = body.getUuid();
+        if (index == 0) {
+            home.body = body.getUuid();
+        }
     }
 
     private static void announce(MinecraftServer server, Home home, int was) {
@@ -1244,43 +1296,64 @@ public final class TrapHomes {
     public static Home spareOf(ServerPlayerEntity owner, ServerWorld world, BlockPos near,
                                int range) {
         String dimension = world.getRegistryKey().getValue().toString();
-        Home spare = null;
-        Home served = null;
-        double toSpare = (double) range * range;
-        double toServed = (double) range * range;
+        Home best = null;
+        double closest = (double) range * range;
         for (Home home : HOMES) {
             if (!home.owner.equals(owner.getUuid()) || !home.dimension.equals(dimension)) {
                 continue;
             }
             double away = home.anchor.getSquaredDistance(near);
+            if (away > closest) {
+                continue;
+            }
             // Distance FIRST. Reading the block would drag the chunk of a
             // house on the other side of the map into memory to answer a
             // question about one twenty blocks away.
-            if (away > Math.max(toSpare, toServed)) {
+            if (hasPost(world, home, near)) {
+                continue;   // that one still has its box
+            }
+            closest = away;
+            best = home;
+        }
+        return best;
+    }
+
+    /**
+     * A house of yours nearby that ALREADY has its post, for the message only.
+     *
+     * Never adopted. Letting a box be taken by a house that already had one
+     * looked like a kindness -- nail a second box to the wall and the post
+     * moves -- and it quietly ate the commonest thing anybody does next: put
+     * a box down to register a SECOND house. The room's survey fails for its
+     * own reasons, the neighbour swallows the box, and a village becomes one
+     * address with two mailboxes on it. What the player gets now is a sentence
+     * telling them which house is in the way and how to move its post on
+     * purpose.
+     */
+    public static Home postedNear(ServerPlayerEntity owner, ServerWorld world, BlockPos near,
+                                  int range) {
+        String dimension = world.getRegistryKey().getValue().toString();
+        Home best = null;
+        double closest = (double) range * range;
+        for (Home home : HOMES) {
+            if (!home.owner.equals(owner.getUuid()) || !home.dimension.equals(dimension)) {
                 continue;
             }
-            boolean hasBox = home.mailbox != null && !home.mailbox.equals(near)
-                    && world.getChunkManager().isChunkLoaded(
-                            home.mailbox.getX() >> 4, home.mailbox.getZ() >> 4)
-                    && world.getBlockState(home.mailbox).isOf(TrapContent.mailbox);
-            if (hasBox) {
-                if (away < toServed) {
-                    toServed = away;
-                    served = home;
-                }
-            } else if (away < toSpare) {
-                toSpare = away;
-                spare = home;
+            double away = home.anchor.getSquaredDistance(near);
+            if (away <= closest && hasPost(world, home, near)) {
+                closest = away;
+                best = home;
             }
         }
-        // A house with no post wins, and a house that already has one is the
-        // fallback rather than a refusal. Nailing a second box to the outside
-        // wall of your own house is the commonest thing anybody does with one
-        // -- the book even tells them to -- and it used to be answered with
-        // "this isn't sealed", which is a survey error about the street they
-        // were stood on and reads as "your house is broken". The post simply
-        // moves to the new box; reattach lets the old one go.
-        return spare != null ? spare : served;
+        return best;
+    }
+
+    /** Is this house's box still standing somewhere other than here? */
+    private static boolean hasPost(ServerWorld world, Home home, BlockPos near) {
+        return home.mailbox != null && !home.mailbox.equals(near)
+                && world.getChunkManager().isChunkLoaded(
+                        home.mailbox.getX() >> 4, home.mailbox.getZ() >> 4)
+                && world.getBlockState(home.mailbox).isOf(TrapContent.mailbox);
     }
 
     /** A house nobody is going to live in. Only its owner may say so. */
@@ -1334,6 +1407,9 @@ public final class TrapHomes {
                 new net.minecraft.util.math.Box(who.getBlockPos()).expand(8),
                 found -> found.getCustomName() != null
                         && !living.contains(found.getUuid())
+                        // The tag is what marks a tenant, and a household has
+                        // three of them the register has never heard of.
+                        && !found.getCommandTags().contains(TENANT_TAG)
                         && !TrapCrew.isHand(found.getUuid()))) {
             double away = villager.squaredDistanceTo(who);
             if (away <= closest) {
@@ -1349,10 +1425,21 @@ public final class TrapHomes {
         return name + " has been put out. Their house wasn't on the register.";
     }
 
-    /** Put the tenant out and take their body with them. */
+    /** Put the tenant out and take their whole household with them. */
     private static void evict(ServerWorld world, Home home) {
         if (home.body != null && world.getEntity(home.body) != null) {
             world.getEntity(home.body).discard();
+        }
+        // The rest of the family, who are not in the file and are found the
+        // way they are counted: by the tag that names their house.
+        String tag = TENANT_TAG + "_" + home.id;
+        var box = new net.minecraft.util.math.Box(
+                home.box[0], home.box[1], home.box[2],
+                home.box[3] + 1, home.box[4] + 1, home.box[5] + 1).expand(BODY_RANGE);
+        for (var body : world.getEntitiesByClass(
+                net.minecraft.entity.passive.VillagerEntity.class, box,
+                found -> found.getCommandTags().contains(tag))) {
+            body.discard();
         }
         home.body = null;
         home.tenant = null;

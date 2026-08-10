@@ -219,24 +219,30 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
 
         TrapHomes.Home spare = TrapHomes.spareOf(who, ground, pos, LOOKS_FOR);
         if (spare != null) {
-            // Read before reattach, which is what moves it.
-            BlockPos old = spare.mailbox();
-            boolean moved = old != null && !old.equals(pos)
-                    && ground.getBlockState(old).isOf(TrapContent.mailbox);
             TrapHomes.reattach(spare, pos);
             good(ground, pos);
             who.sendMessage(Text.literal("Post for ").formatted(Formatting.GREEN)
                     .append(Text.literal(spare.name())
                             .formatted(Formatting.GOLD, Formatting.BOLD))
-                    .append(Text.literal(" arrives here now.").formatted(Formatting.GRAY))
-                    // Say where it used to go. The old box is still on the
-                    // wall and still looks like the post, and a player who
-                    // isn't told will keep checking the empty one.
-                    .append(moved ? Text.literal("\n  The one at " + old.getX() + " "
-                            + old.getY() + " " + old.getZ() + " is just a box now.")
-                            .formatted(Formatting.DARK_GRAY) : Text.empty()), false);
+                    .append(Text.literal(" arrives here now.").formatted(Formatting.GRAY)), false);
             return spare;
         }
+
+        // Outdoors, and every house of yours round here already has its post.
+        // Two different intentions land here -- moving that house's box, or
+        // registering a new house from a spot that is not a room -- and
+        // guessing between them is what turned a village into one address.
+        TrapHomes.Home posted = TrapHomes.postedNear(who, ground, pos, LOOKS_FOR);
+        if (posted != null) {
+            BlockPos box = posted.mailbox();
+            refuse(who, ground, pos, "That's not a room, and " + posted.name()
+                    + " already has its post at " + box.getX() + " " + box.getY() + " "
+                    + box.getZ() + ". To MOVE that one, sneak-click it empty-handed and "
+                    + "put it here. To register another house, stand inside it and "
+                    + "click a box there.");
+            return null;
+        }
+
         refuse(who, ground, pos, no);
         return null;
     }
