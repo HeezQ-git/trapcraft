@@ -262,6 +262,22 @@ public final class TrapGuide {
                 .append(hint("Each one has a floor and a ceiling."))));
 
         pages.add(page(Text.empty()
+                .append(title("1e. THE SHOPS\n\n"))
+                .append(body("Put a market shelf over a chest and stock "
+                        + "it.\n\n"))
+                .append(body("Townspeople walk in and buy at "
+                        + Math.round(TrapShops.RETAIL * 100)
+                        + "% of the market price.\n\n"))
+                .append(hint("Right-click your shelf to empty the till."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1f. WHO SHOPS\n\n"))
+                .append(body("The people in your houses. More housing, "
+                        + "more custom.\n\n"))
+                .append(body("A better grade holds more of them.\n\n"))
+                .append(warn("No houses, no shoppers. No vault, no city."))));
+
+        pages.add(page(Text.empty()
                 .append(title("2. THE MAILBOX\n\n"))
                 .append(body("Stand one inside the room ONCE and right-click "
                         + "it.\n\n"))

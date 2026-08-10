@@ -28,6 +28,7 @@ public class TrapCraft implements ModInitializer {
         TrapStalls.register();
         TrapCity.register();
         TrapHomes.register();
+        TrapShops.register();
         TrapTables.register();
         TrapRaid.register();
         TrapCrew.register();

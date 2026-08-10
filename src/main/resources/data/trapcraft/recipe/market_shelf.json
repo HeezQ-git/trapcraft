@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PPP",
+    "PBP",
+    "PPP"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "B": "minecraft:barrel"
+  },
+  "result": {
+    "id": "trapcraft:market_shelf",
+    "count": 2
+  }
+}

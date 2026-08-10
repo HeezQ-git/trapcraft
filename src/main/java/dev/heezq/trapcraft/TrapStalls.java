@@ -115,6 +115,15 @@ public final class TrapStalls {
         return STALLS;
     }
 
+    /** Takings sat in tills, which are emeralds nobody is carrying. */
+    public static int tillsHeld() {
+        int total = 0;
+        for (Stall stall : STALLS) {
+            total += stall.till;
+        }
+        return total;
+    }
+
     /** Whoever placed it owns it. */
     public static void claim(ServerWorld world, BlockPos pos, ServerPlayerEntity owner) {
         if (at(world, pos) != null) {

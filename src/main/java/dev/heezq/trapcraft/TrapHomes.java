@@ -184,6 +184,23 @@ public final class TrapHomes {
         return HOMES;
     }
 
+    /**
+     * How many people the city holds, near enough.
+     *
+     * The sum of the grades, which is a stand-in for the tenants step three
+     * will actually put in these houses -- a grade five holds more people than
+     * a grade one, and a condemned room holds nobody. It is the number the
+     * shops read to decide how much custom walks through the door, so building
+     * housing already pays before anybody has moved in.
+     */
+    public static int population() {
+        int people = 0;
+        for (Home home : HOMES) {
+            people += home.tier;
+        }
+        return people;
+    }
+
     public static Home byId(UUID id) {
         for (Home home : HOMES) {
             if (home.id.equals(id)) {

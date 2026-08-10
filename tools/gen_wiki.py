@@ -343,6 +343,7 @@ def gather() -> None:
     DATA["broke"] = int(need(r"BROKE = (\d+)", city, "BROKE"))
     DATA["flush"] = int(need(r"FLUSH = (\d+)", city, "FLUSH"))
     DATA["budget_days"] = int(need(r"BUDGET_DAYS = (\d+)", city, "BUDGET_DAYS"))
+    DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", java("TrapShops"), "RETAIL"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -718,6 +719,22 @@ def build() -> str:
     <p class="note"><strong>Nothing sold to customers or dealers is taxed at all.</strong>
     That is not an oversight either — the black market pays better per hour precisely because
     it pays nothing to anybody, and that is a problem worth having.</p>
+    <h3 class="sub">Shops the town walks into</h3>
+    <p>A <strong>market shelf</strong> over a chest or barrel sells what is in it — not to
+    players, but to the city. Townspeople come out of the housing, walk to the building, take
+    a lot off the shelf and pay <strong>{round(d['retail'] * 100)}%</strong> of the market
+    price, which is about double what the counter gives for the same crate. The duty on the
+    sale goes straight to the purse.</p>
+    <p>There is no such thing as a shop building in the code. A shelf over a barrel already
+    looks like a counter and twelve of them in a room already look like a supermarket, so the
+    thing that would have needed defining defines itself. Stock is whatever is in the
+    container underneath, exactly like a stall.</p>
+    <p><strong>How much custom you get is the population</strong> — the sum of the housing
+    grades. So the loop closes: houses make people, people shop, shopping pays the farmer and
+    the city, and the purse pays for more of the town. Nobody has to be told to build houses;
+    the shop tells them. <code>/shops</code> lists the counters and the head count.</p>
+    <p class="note">Townspeople buy food far more often than anything else, which is both true
+    and the reason this is built for whoever is doing the farming.</p>
     <h3 class="sub">The budget</h3>
     <p>Rates move on their own every {d['budget_days']} days and the change is announced with
     its reason. Under {d['broke']}e in the purse and everything goes up; over {d['flush']}e and
@@ -880,6 +897,7 @@ def build() -> str:
         ["<code>/stalls</code>", "Who is selling, and where"],
         ["<code>/city</code>", "The purse, the current duties, and what each has raised"],
         ["<code>/homes</code>", "Every house on the register, and its grade"],
+        ["<code>/shops</code>", "Every market shelf, and how many townspeople there are"],
         ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],
         ["<code>/crew</code>", "The crew board — hire, train, pay"],
         ["<code>/heat</code>", "How hot this spot is, and what it would bring"],

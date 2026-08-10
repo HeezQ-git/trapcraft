@@ -238,6 +238,25 @@ public final class TrapCity {
         return owed;
     }
 
+    /**
+     * Duty on a sale nobody's pocket paid for.
+     *
+     * A townsperson buying a loaf off a shelf brings emeralds into the world
+     * that were never in it before, so there is no player to collect from --
+     * the caller mints the whole price and hands this the city's share. Kept
+     * separate from {@link #charge} on purpose: one moves money and the other
+     * receives money that has just been made, and conflating them is how a
+     * treasury quietly starts inventing itself.
+     */
+    public static void receive(int amount, Duty duty) {
+        if (!founded() || amount <= 0) {
+            return;
+        }
+        treasury += amount;
+        TAKEN.merge(duty, amount, Integer::sum);
+        save();
+    }
+
     /** Anybody may spend it, and everybody hears about it. */
     public static String withdraw(ServerPlayerEntity who, int amount) {
         if (!founded()) {

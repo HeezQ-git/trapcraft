@@ -483,6 +483,8 @@ def lang() -> None:
         "item.trapcraft.mailbox": "Mailbox",
         "block.trapcraft.city_vault": "City Vault",
         "item.trapcraft.city_vault": "City Vault",
+        "block.trapcraft.market_shelf": "Market Shelf",
+        "item.trapcraft.market_shelf": "Market Shelf",
         "block.trapcraft.slot_machine": "Lucky Streak",
         "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
@@ -1337,6 +1339,8 @@ def advancements() -> None:
           f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
     award("founded", "Founded", "Put the city vault down and start taxing everybody.",
           f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
+    award("shopkeeper", "Shopkeeper", "Stand a market shelf up for the town to buy from.",
+          f"{NS}:market_shelf", "open", trigger=has(f"{NS}:market_shelf"))
     award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
           f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
     award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
@@ -1948,6 +1952,49 @@ def mailbox_model() -> dict:
     }
 
 
+def shelf_assets() -> None:
+    """A solid cube of stocked shelving, spelled out for check_models."""
+    put(f"assets/{NS}/models/block/market_shelf.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "front": f"{NS}:block/market_shelf_front",
+            "side": f"{NS}:block/market_shelf_side",
+            "top": f"{NS}:block/market_shelf_top",
+            "particle": f"{NS}:block/market_shelf_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#front"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#side"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/market_shelf.json", {"parent": f"{NS}:block/market_shelf"})
+    put(f"assets/{NS}/items/market_shelf.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/market_shelf"},
+    })
+    put(f"data/{NS}/loot_table/blocks/market_shelf.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:market_shelf"}]}],
+    })
+    # Planks and a barrel: it is shelving, and cheap on purpose. A supermarket
+    # is meant to be a row of them, which nobody builds at four emeralds each.
+    put(f"data/{NS}/recipe/market_shelf.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["PPP", "PBP", "PPP"],
+        "key": {"P": "#minecraft:planks", "B": "minecraft:barrel"},
+        "result": {"id": f"{NS}:market_shelf", "count": 2},
+    })
+
+
 def vault_assets() -> None:
     """A solid cube, so it may honestly claim the FULL_BLOCK carrier.
 
@@ -2108,6 +2155,7 @@ def main() -> None:
     stall_assets()
     mailbox_assets()
     vault_assets()
+    shelf_assets()
     slot_assets()
     tags()
     worldgen()

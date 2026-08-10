@@ -285,6 +285,38 @@ public final class TrapMarket {
     // --- the daily roll -------------------------------------------------------
 
     /**
+     * Emeralds the world is holding that are not in anybody's inventory.
+     *
+     * Every one of these is parked player money, exactly like a chest full of
+     * emeralds, and every one of them HAS to be here for the resample to
+     * close: money moved into a float, a till or a purse goes through
+     * {@link #collect} rather than {@link #take}, so it was never reported as
+     * destroyed -- and if the resample then failed to find it, the supply
+     * would fall by the whole balance the moment somebody opened a casino, a
+     * shop or a city.
+     *
+     * One method rather than four call sites, because this list only ever
+     * grows and the failure it prevents is completely silent: the index drifts
+     * and everybody's prices move for a reason nobody can name.
+     */
+    private static float heldElsewhere() {
+        return TrapHouse.floatHeld() + TrapCity.treasury()
+                + TrapStalls.tillsHeld() + TrapShops.tillsHeld();
+    }
+
+    /**
+     * Money that arrived without a pocket to arrive in.
+     *
+     * A townsperson who walks into a shop and buys a loaf brings emeralds into
+     * the world the way a customer buying a joint does. The difference is that
+     * none of it lands on a player at the time -- it splits between the shop's
+     * till and the city's purse -- so it cannot ride in on {@link #pay}.
+     */
+    public static void minted(int amount) {
+        circulate(amount);
+    }
+
+    /**
      * Re-read the money supply from what people are carrying.
      *
      * Our own bookkeeping in {@link #circulate} is the fast, reactive half;
@@ -313,13 +345,7 @@ public final class TrapMarket {
         for (int stashed : VAULTS.values()) {
             counted += stashed;
         }
-        // A casino's float is parked player money, exactly like a chest full of
-        // emeralds, so it belongs in the pool. It also has to be here for the
-        // arithmetic to close: bets at an owned machine deliberately do NOT go
-        // through circulate() -- they move money between two players and
-        // create none -- so if the float went uncounted the supply would fall
-        // by the whole vault the moment somebody opened a casino.
-        counted += TrapHouse.floatHeld();
+        counted += heldElsewhere();
         supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
         // Inside resample so it inherits the nobody-online guard: an anchor
         // that kept drifting overnight would have the whole server wake up to

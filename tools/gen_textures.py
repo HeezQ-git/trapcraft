@@ -2485,6 +2485,85 @@ xxxxxxxxxxxxxxxx
 """
 
 
+
+# --- the market shelf -------------------------------------------------------
+#
+# A stocked shelf seen from the front: three tiers of crates and jars on a
+# timber frame. It has to read as a SHOP from across a square -- somewhere
+# things are laid out to be bought -- rather than as another storage box.
+
+SHELF_PAL = {
+    "w": "#7a5330",     # timber
+    "W": "#9a6d41",     # timber, lit
+    "d": "#4b3119",     # timber, shadow
+    "c": "#a8642f",     # crate
+    "C": "#c98game",    # placeholder, replaced below
+    "j": "#4f8f57",     # jar, green
+    "J": "#6fb877",     # jar, lit
+    "r": "#b0432f",     # jar, red
+    "p": "#d9cba8",     # paper / bread
+    "x": "#2a1c10",     # outline
+}
+SHELF_PAL["C"] = "#c9834a"
+
+SHELF_FRONT = """
+xxxxxxxxxxxxxxxx
+xWwwwwwwwwwwwwWx
+xwddddddddddddwx
+xwcCcjJjrrpppdwx
+xwcccjjjrrpppdwx
+xwddddddddddddwx
+xwWWWWWWWWWWWWwx
+xwddddddddddddwx
+xwpppcCcjJjrrdwx
+xwpppcccjjjrrdwx
+xwddddddddddddwx
+xwWWWWWWWWWWWWwx
+xwddddddddddddwx
+xwjJjrrpppcCcdwx
+xwjjjrrpppcccdwx
+xxxxxxxxxxxxxxxx
+"""
+
+SHELF_SIDE = """
+xxxxxxxxxxxxxxxx
+xWwwwwwwwwwwwwWx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xwWwwwwwwwwwwWwx
+xwddddddddddddwx
+xwWWWWWWWWWWWWwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xwWwwwwwwwwwwWwx
+xwddddddddddddwx
+xwWWWWWWWWWWWWwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xwWwwwwwwwwwwWwx
+xxxxxxxxxxxxxxxx
+"""
+
+SHELF_TOP = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xWwwwwwwwwwwwwWx
+xWwddddddddddwWx
+xWwdpppcCcjJjwWx
+xWwdpppcccjjjwWx
+xWwddddddddddwWx
+xWwwwwwwwwwwwwWx
+xWwwwwwwwwwwwwWx
+xWwddddddddddwWx
+xWwdrrjJjpppcwWx
+xWwdrrjjjpppcwWx
+xWwddddddddddwWx
+xWwwwwwwwwwwwwWx
+xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2591,6 +2670,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(SHELF_FRONT, SHELF_PAL), "block", "market_shelf_front.png")
+    write(render(SHELF_SIDE, SHELF_PAL), "block", "market_shelf_side.png")
+    write(render(SHELF_TOP, SHELF_PAL), "block", "market_shelf_top.png")
     write(render(VAULT_FACE, VAULT_PAL), "block", "city_vault_face.png")
     write(render(VAULT_SIDE, VAULT_PAL), "block", "city_vault_side.png")
     write(render(VAULT_TOP, VAULT_PAL), "block", "city_vault_top.png")
