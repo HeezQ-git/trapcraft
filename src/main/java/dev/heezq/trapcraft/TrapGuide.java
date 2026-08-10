@@ -297,12 +297,26 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("1e. THE SHOPS\n\n"))
-                .append(body("Put a market shelf over a chest and stock "
-                        + "it.\n\n"))
-                .append(body("Townspeople walk in and buy at "
-                        + Math.round(TrapShops.RETAIL * 100)
-                        + "% of the market price.\n\n"))
-                .append(hint("Right-click your shelf to empty the till."))));
+                .append(body("Put a SHOP TILL down. That's the shop.\n\n"))
+                .append(body("Shelves within " + TrapShops.REACH
+                        + " blocks join it on their own.\n\n"))
+                .append(hint("Stock any chest under the till or a shelf."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1e2. THE TILL\n\n"))
+                .append(body("One register for the whole building.\n\n"))
+                .append(body("Open it and the takings are yours. Set your "
+                        + "prices there too.\n\n"))
+                .append(hint("Cheap draws more people. Dear takes more "
+                        + "off each."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1e3. OVER THE COUNTER\n\n"))
+                .append(body("Shelves sell joints, buds and powder too.\n\n"))
+                .append(body(Math.round(TrapShops.LEGAL_RATE * 100)
+                        + "% of the street -- but CLEAN, declared, taxed, "
+                        + "and no heat.\n\n"))
+                .append(hint("Slow money is the safe kind."))));
 
         pages.add(page(Text.empty()
                 .append(title("1f. WHO SHOPS\n\n"))

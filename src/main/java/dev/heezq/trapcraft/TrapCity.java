@@ -590,8 +590,8 @@ public final class TrapCity {
                 }
             }
             int shelfSales = 0;
-            for (TrapShops.Shelf shelf : TrapShops.all()) {
-                shelfSales += shelf.sold();
+            for (TrapShops.Shop shop : TrapShops.shops()) {
+                shelfSales += shop.sold();
             }
             long casinoBalance = 0;
             long casinoHandle = 0;

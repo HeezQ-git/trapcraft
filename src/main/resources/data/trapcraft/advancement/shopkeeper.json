@@ -1,10 +1,10 @@
 {
   "display": {
     "icon": {
-      "id": "trapcraft:market_shelf"
+      "id": "trapcraft:shop_till"
     },
     "title": "Shopkeeper",
-    "description": "Stand a market shelf up for the town to buy from.",
+    "description": "Open a shop the town can buy from.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
@@ -17,7 +17,7 @@
         "items": [
           {
             "items": [
-              "trapcraft:market_shelf"
+              "trapcraft:shop_till"
             ]
           }
         ]

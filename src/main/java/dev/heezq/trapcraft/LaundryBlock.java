@@ -171,10 +171,12 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
     private void collect(ServerWorld world, BlockPos pos, BlockState state,
                          ServerPlayerEntity who) {
         int load = state.get(LOAD);
-        int cut = Math.max(1, Math.round(load * TrapLaw.WASH_CUT));
+        // Anything from nothing to a fifth. A flat rate is a fee somebody
+        // budgets for; a roll is a risk they take, and the whole point of
+        // laundering is that you do not know what you will get back.
+        int cut = Math.round(load * TrapLaw.WASH_CUT * world.getRandom().nextFloat());
         int clean = Math.max(0, load - cut);
         world.setBlockState(pos, state.with(LOAD, 0).with(DONE, false));
-
         if (clean > 0) {
             // Minted here and nowhere else. Dirty money was never in the world
             // -- the market has never counted it and no shop would take it --
@@ -190,7 +192,8 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
                 pos.getY() + 1.1, pos.getZ() + 0.5, 14, 0.35, 0.3, 0.35, 0.02);
         who.sendMessage(Text.literal("Out of the drum. ").formatted(Formatting.GREEN)
                 .append(Text.literal(clean + "e clean").formatted(Formatting.WHITE))
-                .append(Text.literal(", " + cut + " gone in the wash.")
+                .append(Text.literal(cut == 0 ? ", and nothing lost this time."
+                                : ", " + cut + " gone in the wash.")
                         .formatted(Formatting.DARK_GRAY)), false);
     }
 

@@ -205,12 +205,25 @@ def graded(name: str) -> list[dict]:
 
 
 def crew_jobs() -> list[dict]:
-    """Job("Picking", "minecraft:wheat", cost, wage, "what they do")."""
+    """Job("Picking", "minecraft:wheat", cost, wage, "what they do", "what it wants").
+
+    Counted as well as parsed. Adding a sixth field to the enum silently took
+    this to zero matches and the page shipped with an empty jobs table -- the
+    duties and the works already had a guard for exactly that and this did not.
+    """
     text = java("TrapCrew")
-    return [{"name": m.group(1), "cost": int(m.group(2)), "wage": int(m.group(3)),
-             "blurb": m.group(4)}
+    body = text[text.index("public enum Job {"):]
+    body = body[:body.index(";")]
+    jobs = [{"name": m.group(1), "cost": int(m.group(2)), "wage": int(m.group(3)),
+             "blurb": m.group(4), "needs": m.group(5)}
             for m in re.finditer(
-                r'\w+\("([^"]+)", "[^"]+", (\d+), (\d+),\s*\n\s*"([^"]+)"\)', text)]
+                r'\w+\("([^"]+)", "[^"]+", (\d+), (\d+),\s*"([^"]+)",\s*"([^"]+)"\)',
+                body, re.S)]
+    declared = len(re.findall(r"^\s{8}[A-Z_]+\(", body, re.M))
+    if declared != len(jobs):
+        raise SystemExit(f"  parsed {len(jobs)} crew jobs but {declared} are declared "
+                         f"-- the jobs table would be wrong")
+    return jobs
 
 
 def named_blends() -> list[dict]:
@@ -369,7 +382,11 @@ def gather() -> None:
     if declared_works != len(DATA["works"]):
         raise SystemExit(f"  parsed {len(DATA['works'])} works but "
                          f"{declared_works} are declared")
-    DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", java("TrapShops"), "RETAIL"))
+    shops = java("TrapShops")
+    DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", shops, "RETAIL"))
+    DATA["legal_rate"] = float(need(r"LEGAL_RATE = ([\d.]+)f", shops, "LEGAL_RATE"))
+    DATA["shop_reach"] = int(need(r"REACH = (\d+)", shops, "REACH"))
+    DATA["markups"] = ints("MARKUP", shops)
     DATA["rent"] = ints("RENT", homes)
     DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
@@ -535,7 +552,8 @@ def build() -> str:
                   f'+{d["pace_wage"][i]}e']
                  for i in range(len(d["pace_ticks"]))]
     job_rows = [[esc(j["name"]), f'{j["cost"]}e' if j["cost"] else "free",
-                 f'+{j["wage"]}e', f'<span class="dim">{esc(j["blurb"])}</span>']
+                 f'+{j["wage"]}e',
+                 f'<span class="dim">{esc(j["blurb"])} Wants {esc(j["needs"])}.</span>']
                 for j in d["jobs"]]
     heat_rows = []
     for i, t in enumerate(d["heat_thresholds"]):
@@ -764,10 +782,19 @@ def build() -> str:
     a lot off the shelf and pay <strong>{round(d['retail'] * 100)}%</strong> of the market
     price, which is about double what the counter gives for the same crate. The duty on the
     sale goes straight to the purse.</p>
-    <p>There is no such thing as a shop building in the code. A shelf over a barrel already
-    looks like a counter and twelve of them in a room already look like a supermarket, so the
-    thing that would have needed defining defines itself. Stock is whatever is in the
-    container underneath, exactly like a stall.</p>
+    <p>A <strong>shop till</strong> is the shop. Put one down and every market shelf within
+    {d['shop_reach']} blocks joins it — no wand, no attaching, a shelf simply belongs to the
+    nearest till. One name, one price policy, one cash register for the whole building, and
+    stock is any chest or barrel under the till <em>or</em> under any of its shelves, so a back
+    room and a stocked counter both work.</p>
+    <p>Prices are yours: from {min(d['markups'])}% to {max(d['markups'])}% of what the town
+    expects to pay. Cheap brings more of them through the door; dear takes more off each one.
+    Opening the till pays you the takings.</p>
+    <h3 class="sub">Over the counter</h3>
+    <p>Shelves sell <strong>joints, cured buds and powder</strong> as well as groceries — at
+    {round(d['legal_rate'] * 100)}% of the street price, but <strong>clean</strong>: paid in
+    real emeralds, declared, taxed, and nobody carries heat for it. Half again as much on the
+    street, dirty, and it has to go through a drum. The safest money is the slowest.</p>
     <p><strong>How much custom you get is the population</strong> — the sum of the housing
     grades. So the loop closes: houses make people, people shop, shopping pays the farmer and
     the city, and the purse pays for more of the town. Nobody has to be told to build houses;

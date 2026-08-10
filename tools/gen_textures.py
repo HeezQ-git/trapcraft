@@ -2667,6 +2667,82 @@ xxxxxxxxxxxxxxxx
 """
 
 
+# --- the shop till ----------------------------------------------------------
+#
+# A counter with a brass register standing on it. It has to read as the place
+# you PAY from across a room full of shelves, so brass and a green display
+# rather than more timber.
+
+TILL_PAL = {
+    "w": "#7a5330",     # counter
+    "W": "#9a6d41",     # counter, lit
+    "d": "#4b3119",     # counter, shadow
+    "m": "#b08a2a",     # brass
+    "M": "#e0bb56",     # brass, lit
+    "g": "#2fa85a",     # display
+    "G": "#5fd98a",     # display, lit
+    "k": "#1d2b22",     # display, dark
+    "x": "#2a1c10",     # outline
+}
+
+TILL_FRONT = """
+xxxxxxxxxxxxxxxx
+xWwwwwwwwwwwwwWx
+xwddddddddddddwx
+xwdmmmmmmmmmmdwx
+xwdmMMMMMMMMmdwx
+xwdmMkgggggkMdwx
+xwdmMkgGGGgkMdwx
+xwdmMkgggggkMdwx
+xwdmMMMMMMMMmdwx
+xwdmmmmmmmmmmdwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xWwwwwwwwwwwwwWx
+xxxxxxxxxxxxxxxx
+"""
+
+TILL_SIDE = """
+xxxxxxxxxxxxxxxx
+xWwwwwwwwwwwwwWx
+xwddddddddddddwx
+xwdWwwwwwwwwWdwx
+xwdWwwwwwwwwWdwx
+xwdmmmmmmmmmmdwx
+xwdmMMMMMMMMmdwx
+xwdmmmmmmmmmmdwx
+xwdWwwwwwwwwWdwx
+xwdWwwwwwwwwWdwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xwddddddddddddwx
+xwWwwwwwwwwwwWwx
+xWwwwwwwwwwwwwWx
+xxxxxxxxxxxxxxxx
+"""
+
+TILL_TOP = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xWwwwwwwwwwwwwWx
+xWwmmmmmmmmmmwWx
+xWwmMMMMMMMMmwWx
+xWwmMkkkkkkMmwWx
+xWwmMkgggggMmwWx
+xWwmMkgGGGgMmwWx
+xWwmMkkkkkkMmwWx
+xWwmMMMMMMMMmwWx
+xWwmmmmmmmmmmwWx
+xWwwwwwwwwwwwwWx
+xWwddddddddddwWx
+xWWWWWWWWWWWWWWx
+xWwwwwwwwwwwwwWx
+xxxxxxxxxxxxxxxx
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2773,6 +2849,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(TILL_FRONT, TILL_PAL), "block", "shop_till_front.png")
+    write(render(TILL_SIDE, TILL_PAL), "block", "shop_till_side.png")
+    write(render(TILL_TOP, TILL_PAL), "block", "shop_till_top.png")
     write(render(DIRTY_EMERALD, DIRTY_PAL), "item", "dirty_emerald.png")
     write(render(LAUNDRY_EMPTY, LAUNDRY_PAL), "block", "laundry_empty.png")
     write(render(LAUNDRY_RUNNING, LAUNDRY_PAL), "block", "laundry_running.png")

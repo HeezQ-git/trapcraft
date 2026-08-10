@@ -6,6 +6,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
@@ -23,74 +24,82 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Shops that people actually walk into.
+ * Supermarkets: a till, its shelves, and the town that shops at them.
  *
- * A market stall sells to PLAYERS, and on a server with three of them that is
- * a shop with three possible customers. A shelf sells to the city: villagers
- * come out of the housing, walk to the building, take something off the shelf
- * and pay for it. That is the first demand in this mod that does not come out
- * of somebody's pocket, and it is what turns a farm into a business.
+ * The first version was a shelf over a barrel and nothing else, which is a
+ * corner shop and does not become a supermarket by being repeated -- twelve
+ * shelves meant twelve barrels to keep stocked and twelve tills to empty, and
+ * the building had no existence of its own at all.
  *
- * <h2>How much custom you get</h2>
+ * Now a {@link ShopTillBlock} IS the shop. Shelves within {@link #REACH} of it
+ * belong to it, so a room full of them is one business with one name, one
+ * price policy and one cash register. Stock is every container under the till
+ * and under any of its shelves, so you may keep it all in a back room or in
+ * the counters themselves and both work.
  *
- * {@link TrapHomes#population}, which is the sum of the housing grades. So the
- * loop closes: houses make people, people shop, shopping pays the farmer and
- * the city, the city's purse pays for more of the town. Nobody has to be told
- * to build houses -- the shop tells them.
+ * <h2>Why nothing is attached by hand</h2>
  *
- * <h2>Why the stock is the container underneath</h2>
- *
- * Same reason the stall's is. No inventory to serialise, no components to
- * lose, and restocking is putting things in a barrel. A shelf over a barrel
- * also happens to be exactly what a shop counter looks like, so a supermarket
- * is a row of them and needs no concept of its own.
- *
- * <h2>What the shopkeeper earns</h2>
- *
- * {@link #RETAIL} of the market price, against the {@code SELL_RATE} the
- * counter pays -- roughly double. That is the entire argument for building a
- * shop instead of dumping harvests at the counter, and it is bounded by
- * population rather than by patience, so it can never become a tap.
+ * Because an attachment is a thing that can be wrong. A shelf belongs to the
+ * nearest till, full stop -- put one down and it joins the shop, break the
+ * till and they all go quiet. The alternative was a wand, a click mode and a
+ * saved list of positions that could disagree with the world.
  */
 public final class TrapShops {
 
     /** Marks our shoppers, so they are never confused with a real trader. */
     public static final String TAG = "trapcraft_shopper";
 
-    /** What a villager pays, against the market price. */
+    /** How far a shelf may stand from its till. */
+    public static final int REACH = 24;
+    /** What a villager pays for ordinary goods, against the market price. */
     public static final float RETAIL = 0.90f;
-    /** How often the city decides whether somebody fancies a trip out. */
+    /**
+     * What a villager pays for weed and coca ACROSS A COUNTER, against the
+     * street price.
+     *
+     * The whole trade-off in one number. Sold over a counter it is clean money,
+     * declared, taxed, and nobody carries heat for it. Sold on the street it is
+     * dirty, untaxed and worth half as much again. The safest money is the
+     * slowest; the fastest is still the one you have to wash.
+     */
+    public static final float LEGAL_RATE = 0.65f;
+
+    /** What the owner may set their prices to, against the standard rate. */
+    public static final int[] MARKUP = {75, 90, 100, 115, 135};
+    public static final String[] MARKUP_NAME = {
+            "Cut-price", "Keen", "Going rate", "Dear", "Daylight robbery"};
+
     private static final int CHECK_INTERVAL = 20 * 20;
-    /** Chance of a visit per head of population, per roll. */
     private static final float PULL = 0.06f;
-    /** Shoppers about at once, over the whole map. */
     private static final int MAX_SHOPPERS = 6;
-    /** Ticks a shopper gets to reach the counter before giving up walking. */
     private static final int PATIENCE = 20 * 20;
-    /** How close counts as at the counter. */
     private static final int COUNTER = 3;
-    /** Ticks a shopper hangs about after paying, so they leave rather than pop. */
     private static final int LEAVE_TICKS = 20 * 8;
 
-    /** One counter: where it is, whose it is, and what it has taken. */
-    public static final class Shelf {
+    /** One business: a till, a name, a price policy and a cash register. */
+    public static final class Shop {
         final String dimension;
         final BlockPos pos;
         final UUID owner;
         String ownerName;
+        String name;
+        int markup = 2;
         int till;
         int sold;
+        int turnover;
 
-        Shelf(String dimension, BlockPos pos, UUID owner, String ownerName) {
+        Shop(String dimension, BlockPos pos, UUID owner, String ownerName, String name) {
             this.dimension = dimension;
             this.pos = pos;
             this.owner = owner;
             this.ownerName = ownerName;
+            this.name = name;
         }
 
         public BlockPos pos() {
@@ -105,6 +114,10 @@ public final class TrapShops {
             return ownerName;
         }
 
+        public String name() {
+            return name;
+        }
+
         public int till() {
             return till;
         }
@@ -112,12 +125,48 @@ public final class TrapShops {
         public int sold() {
             return sold;
         }
+
+        public int turnover() {
+            return turnover;
+        }
+
+        public int markup() {
+            return MARKUP[Math.max(0, Math.min(markup, MARKUP.length - 1))];
+        }
+
+        public String markupName() {
+            return MARKUP_NAME[Math.max(0, Math.min(markup, MARKUP.length - 1))];
+        }
+
+        void nextMarkup() {
+            markup = (markup + 1) % MARKUP.length;
+        }
     }
 
-    /** A villager on a shopping trip. */
+    /** One counter people queue at. It belongs to whichever till is nearest. */
+    public static final class Shelf {
+        final String dimension;
+        final BlockPos pos;
+
+        Shelf(String dimension, BlockPos pos) {
+            this.dimension = dimension;
+            this.pos = pos;
+        }
+
+        public BlockPos pos() {
+            return pos;
+        }
+    }
+
+    /** Something a shelf will sell, however it got there. */
+    public record Line(ItemStack sample, int count, int price, String label,
+                       TrapCity.Duty duty) {
+    }
+
     private record Shopper(BlockPos shelf, String dimension, int bornAt) {
     }
 
+    private static final List<Shop> SHOPS = new ArrayList<>();
     private static final List<Shelf> SHELVES = new ArrayList<>();
     private static final Map<UUID, Shopper> SHOPPERS = new HashMap<>();
     private static final Map<UUID, Integer> LEAVING = new HashMap<>();
@@ -142,6 +191,24 @@ public final class TrapShops {
 
     // --- the register ---------------------------------------------------------
 
+    public static List<Shop> shops() {
+        return SHOPS;
+    }
+
+    public static List<Shelf> all() {
+        return SHELVES;
+    }
+
+    public static Shop shopAt(ServerWorld world, BlockPos pos) {
+        String dimension = world.getRegistryKey().getValue().toString();
+        for (Shop shop : SHOPS) {
+            if (shop.pos.equals(pos) && shop.dimension.equals(dimension)) {
+                return shop;
+            }
+        }
+        return null;
+    }
+
     public static Shelf at(ServerWorld world, BlockPos pos) {
         String dimension = world.getRegistryKey().getValue().toString();
         for (Shelf shelf : SHELVES) {
@@ -152,157 +219,270 @@ public final class TrapShops {
         return null;
     }
 
-    public static List<Shelf> all() {
-        return SHELVES;
+    /** The till this shelf answers to: nearest within reach, or nobody. */
+    public static Shop ownerOf(Shelf shelf) {
+        Shop best = null;
+        double closest = (double) REACH * REACH;
+        for (Shop shop : SHOPS) {
+            if (!shop.dimension.equals(shelf.dimension)) {
+                continue;
+            }
+            double away = shop.pos.getSquaredDistance(shelf.pos);
+            if (away <= closest) {
+                closest = away;
+                best = shop;
+            }
+        }
+        return best;
     }
 
-    /** Takings sat in shelves, which are emeralds nobody is carrying. */
+    public static List<Shelf> shelvesOf(Shop shop) {
+        List<Shelf> mine = new ArrayList<>();
+        for (Shelf shelf : SHELVES) {
+            if (ownerOf(shelf) == shop) {
+                mine.add(shelf);
+            }
+        }
+        return mine;
+    }
+
     public static int tillsHeld() {
         int total = 0;
-        for (Shelf shelf : SHELVES) {
-            total += shelf.till;
+        for (Shop shop : SHOPS) {
+            total += shop.till;
         }
         return total;
+    }
+
+    // --- putting one up -------------------------------------------------------
+
+    public static void open(ServerWorld world, BlockPos pos, ServerPlayerEntity owner) {
+        if (shopAt(world, pos) != null) {
+            return;
+        }
+        SHOPS.add(new Shop(world.getRegistryKey().getValue().toString(), pos.toImmutable(),
+                owner.getUuid(), owner.getGameProfile().getName(),
+                owner.getGameProfile().getName() + "'s shop"));
+        save();
+        owner.sendMessage(Text.literal("Shop open. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal("Put market shelves within " + REACH + " blocks and "
+                        + "they join it. Stock goes in any chest under the till or under "
+                        + "a shelf.").formatted(Formatting.GRAY)), false);
+        if (!TrapCity.founded()) {
+            owner.sendMessage(Text.literal("There's no city yet, so there's nobody to "
+                    + "shop here.").formatted(Formatting.DARK_GRAY), false);
+        }
+    }
+
+    public static void closeShop(ServerWorld world, BlockPos pos) {
+        Shop shop = shopAt(world, pos);
+        if (shop == null) {
+            return;
+        }
+        spill(world, pos, shop.till);
+        SHOPS.remove(shop);
+        save();
     }
 
     public static void claim(ServerWorld world, BlockPos pos, ServerPlayerEntity owner) {
         if (at(world, pos) != null) {
             return;
         }
-        SHELVES.add(new Shelf(world.getRegistryKey().getValue().toString(), pos.toImmutable(),
-                owner.getUuid(), owner.getGameProfile().getName()));
+        Shelf shelf = new Shelf(world.getRegistryKey().getValue().toString(), pos.toImmutable());
+        SHELVES.add(shelf);
         save();
-        owner.sendMessage(Text.literal("Your shelf. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal("Put a chest or barrel underneath and stock it. "
-                        + "Townspeople will come and buy at "
-                        + Math.round(RETAIL * 100) + "% of the market price.")
-                        .formatted(Formatting.GRAY)), false);
-        if (!TrapCity.founded()) {
-            owner.sendMessage(Text.literal("There's no city yet, so there's nobody to "
-                    + "shop here. Somebody has to put a vault down.")
-                    .formatted(Formatting.DARK_GRAY), false);
-        }
+        Shop shop = ownerOf(shelf);
+        owner.sendMessage(shop == null
+                ? Text.literal("A shelf with no shop. ").formatted(Formatting.YELLOW)
+                        .append(Text.literal("Put a shop till within " + REACH
+                                + " blocks and it'll join.").formatted(Formatting.GRAY))
+                : Text.literal("Joined ").formatted(Formatting.GREEN)
+                        .append(Text.literal(shop.name).formatted(Formatting.GOLD))
+                        .append(Text.literal(". Stock a chest under it, or under the till.")
+                                .formatted(Formatting.GRAY)), false);
     }
 
-    /** Taken down. The takings spill rather than evaporate. */
     public static void release(ServerWorld world, BlockPos pos) {
         Shelf shelf = at(world, pos);
-        if (shelf == null) {
+        if (shelf != null) {
+            SHELVES.remove(shelf);
+            save();
+        }
+    }
+
+    private static void spill(ServerWorld world, BlockPos pos, int money) {
+        if (money <= 0) {
             return;
         }
-        if (shelf.till > 0) {
-            int[] packed = TrapMath.packEmeralds(shelf.till);
-            for (int i = 0; i < packed[0]; i++) {
-                net.minecraft.block.Block.dropStack(world, pos,
-                        new ItemStack(net.minecraft.item.Items.EMERALD_BLOCK));
-            }
-            if (packed[1] > 0) {
-                net.minecraft.block.Block.dropStack(world, pos,
-                        new ItemStack(net.minecraft.item.Items.EMERALD, packed[1]));
-            }
+        int[] packed = TrapMath.packEmeralds(money);
+        for (int i = 0; i < packed[0]; i++) {
+            net.minecraft.block.Block.dropStack(world, pos,
+                    new ItemStack(net.minecraft.item.Items.EMERALD_BLOCK));
         }
-        SHELVES.remove(shelf);
+        if (packed[1] > 0) {
+            net.minecraft.block.Block.dropStack(world, pos,
+                    new ItemStack(net.minecraft.item.Items.EMERALD, packed[1]));
+        }
+    }
+
+    /** Cycle the price policy and write it down. */
+    public static void repricePrices(Shop shop) {
+        shop.nextMarkup();
         save();
     }
 
-    /** Empty the till into the owner's pockets. Returns what was in it. */
-    public static int collect(ServerPlayerEntity owner, Shelf shelf) {
-        int takings = shelf.till;
+    /** Empty the register. */
+    public static int collect(ServerPlayerEntity owner, Shop shop) {
+        int takings = shop.till;
         if (takings <= 0) {
             return 0;
         }
-        shelf.till = 0;
-        // handOver, not pay: the shopper's emeralds entered the world when
-        // they were spent. Paying again here would mint them twice.
+        shop.till = 0;
         TrapMarket.handOver(owner, takings);
         TrapLedger.record(owner, TrapLedger.Source.STALL, takings);
         save();
         return takings;
     }
 
-    // --- what is on the shelf -------------------------------------------------
+    // --- what is on the shelves -----------------------------------------------
 
-    public static Inventory stockOf(ServerWorld world, Shelf shelf) {
-        if (!world.getRegistryKey().getValue().toString().equals(shelf.dimension)) {
-            return null;
+    /**
+     * Every container this shop can sell out of.
+     *
+     * Under the till and under every shelf, because a supermarket keeps its
+     * stock in a back room and a market stall keeps it under the counter, and
+     * telling somebody which of those they are allowed to build would be the
+     * mod deciding what their shop looks like.
+     */
+    public static List<Inventory> stockOf(ServerWorld world, Shop shop) {
+        List<Inventory> boxes = new ArrayList<>();
+        if (!world.getRegistryKey().getValue().toString().equals(shop.dimension)) {
+            return boxes;
         }
-        return world.getBlockEntity(shelf.pos.down()) instanceof Inventory box ? box : null;
+        if (world.getBlockEntity(shop.pos.down()) instanceof Inventory under) {
+            boxes.add(under);
+        }
+        for (Shelf shelf : shelvesOf(shop)) {
+            if (world.getBlockEntity(shelf.pos.down()) instanceof Inventory box) {
+                boxes.add(box);
+            }
+        }
+        return boxes;
     }
 
     /**
-     * A line a shopper would actually take, or null if there is nothing.
+     * What a stack is worth over this counter, or null if nobody would buy it.
      *
-     * Weighted towards food, and heavily. Townspeople buy dinner far more
-     * often than they buy a stack of polished andesite, which is both true and
-     * the reason the farmer is the one this system is built for.
+     * Two kinds of line. Anything the market has a price for sells at
+     * {@link #RETAIL} of it. Weed, coca and what they turn into sell at
+     * {@link #LEGAL_RATE} of the STREET price -- clean, declared and taxed,
+     * which is worth less than the street and costs none of the trouble.
      */
-    private static ShopStock.Entry wanted(ServerWorld world, Shelf shelf, Random random) {
-        Inventory box = stockOf(world, shelf);
-        if (box == null) {
+    public static Line lineFor(MinecraftServer server, ItemStack stack, Shop shop) {
+        if (stack.isEmpty()) {
             return null;
         }
-        Map<ShopStock.Entry, Integer> lines = new java.util.LinkedHashMap<>();
-        for (int slot = 0; slot < box.size(); slot++) {
-            ItemStack stack = box.getStack(slot);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            ShopStock.Entry entry = ShopStock.matching(stack);
-            if (entry != null) {
-                lines.merge(entry, stack.getCount(), Integer::sum);
-            }
+        float rate = shop.markup() / 100f;
+        ShopStock.Entry entry = ShopStock.matching(stack);
+        if (entry != null) {
+            int market = TrapMarket.buyPrice(server, entry);
+            return new Line(entry.stack(), entry.count(),
+                    Math.max(1, Math.round(market * RETAIL * rate)), entry.label(),
+                    TrapCity.forGoods(entry.category()));
         }
-        lines.entrySet().removeIf(row -> row.getValue() < row.getKey().count());
-        if (lines.isEmpty()) {
-            return null;
+        int street = TrapDealing.streetPrice(stack);
+        if (street > 0 && contraband(stack.getItem())) {
+            ItemStack one = stack.copy();
+            one.setCount(1);
+            return new Line(one, 1, Math.max(1, Math.round(street * LEGAL_RATE * rate)),
+                    stack.getName().getString(), TrapCity.Duty.LUXURY);
         }
-
-        List<ShopStock.Entry> pool = new ArrayList<>();
-        for (ShopStock.Entry entry : lines.keySet()) {
-            int weight = TrapCity.forGoods(entry.category()) == TrapCity.Duty.ESSENTIALS ? 5 : 1;
-            for (int i = 0; i < weight; i++) {
-                pool.add(entry);
-            }
-        }
-        return pool.get(random.nextInt(pool.size()));
+        return null;
     }
 
-    private static boolean take(Inventory box, ShopStock.Entry entry, int wanted) {
-        int found = 0;
-        for (int slot = 0; slot < box.size() && found < wanted; slot++) {
-            if (entry.matches(box.getStack(slot))) {
-                found += box.getStack(slot).getCount();
+    /** Weed, coca, and everything they become. */
+    private static boolean contraband(Item item) {
+        if (TrapContent.strainOfDriedBud(item) != null
+                || item == TrapContent.cocaPowder
+                || item == TrapContent.blendJointItem) {
+            return true;
+        }
+        for (Strain strain : Strain.values()) {
+            if (TrapContent.joint(strain) == item) {
+                return true;
             }
         }
-        if (found < wanted) {
-            return false;
+        return false;
+    }
+
+    /** A line the shop could serve right now, weighted towards dinner. */
+    private static Line wanted(MinecraftServer server, ServerWorld world, Shop shop,
+                               Random random) {
+        Map<String, Line> lines = new LinkedHashMap<>();
+        Map<String, Integer> held = new LinkedHashMap<>();
+        for (Inventory box : stockOf(world, shop)) {
+            for (int slot = 0; slot < box.size(); slot++) {
+                ItemStack stack = box.getStack(slot);
+                Line line = lineFor(server, stack, shop);
+                if (line == null) {
+                    continue;
+                }
+                lines.putIfAbsent(line.label(), line);
+                held.merge(line.label(), stack.getCount(), Integer::sum);
+            }
         }
-        int owed = wanted;
-        for (int slot = 0; slot < box.size() && owed > 0; slot++) {
-            ItemStack stack = box.getStack(slot);
-            if (!entry.matches(stack)) {
+        List<Line> pool = new ArrayList<>();
+        for (var row : lines.entrySet()) {
+            Line line = row.getValue();
+            if (held.getOrDefault(row.getKey(), 0) < line.count()) {
                 continue;
             }
-            int taken = Math.min(owed, stack.getCount());
-            stack.decrement(taken);
-            owed -= taken;
+            // Dinner far more often than anything else, and contraband rarely
+            // -- a town buys bread every day and a joint on a Friday.
+            int weight = line.duty() == TrapCity.Duty.ESSENTIALS ? 5
+                    : line.duty() == TrapCity.Duty.LUXURY ? 2 : 1;
+            for (int i = 0; i < weight; i++) {
+                pool.add(line);
+            }
         }
-        box.markDirty();
+        return pool.isEmpty() ? null : pool.get(random.nextInt(pool.size()));
+    }
+
+    private static boolean take(ServerWorld world, Shop shop, Line line) {
+        int owed = line.count();
+        List<Inventory> boxes = stockOf(world, shop);
+        int found = 0;
+        for (Inventory box : boxes) {
+            for (int slot = 0; slot < box.size(); slot++) {
+                ItemStack stack = box.getStack(slot);
+                if (ItemStack.areItemsAndComponentsEqual(stack, line.sample())
+                        || stack.isOf(line.sample().getItem())) {
+                    found += stack.getCount();
+                }
+            }
+        }
+        if (found < owed) {
+            return false;
+        }
+        for (Inventory box : boxes) {
+            for (int slot = 0; slot < box.size() && owed > 0; slot++) {
+                ItemStack stack = box.getStack(slot);
+                if (!stack.isOf(line.sample().getItem())) {
+                    continue;
+                }
+                int taken = Math.min(owed, stack.getCount());
+                stack.decrement(taken);
+                owed -= taken;
+            }
+            box.markDirty();
+        }
         return true;
     }
 
     // --- the trip out ---------------------------------------------------------
 
-    /**
-     * Does anybody fancy going to the shops?
-     *
-     * Gated on the city existing at all, because the shoppers ARE the city --
-     * there is nobody to come out of the houses until somebody has founded
-     * one, and a village that materialised customers out of an empty map would
-     * be a spawner with extra steps.
-     */
     private static void maybeVisit(MinecraftServer server) {
-        if (!TrapCity.founded() || SHELVES.isEmpty() || SHOPPERS.size() >= MAX_SHOPPERS) {
+        if (!TrapCity.founded() || SHOPS.isEmpty() || SHOPPERS.size() >= MAX_SHOPPERS) {
             return;
         }
         int people = TrapHomes.population();
@@ -310,33 +490,38 @@ public final class TrapShops {
             return;
         }
         Random random = server.getOverworld().getRandom();
-        // Street Lamps: a lit town is a town people go out in.
         float pull = people * PULL
                 * (TrapCity.built(TrapCity.Work.LAMPS) ? TrapCity.LAMPS_TRADE : 1f);
         if (random.nextFloat() > Math.min(0.95f, pull)) {
             return;
         }
 
-        List<Shelf> open = new ArrayList<>();
-        for (Shelf shelf : SHELVES) {
-            ServerWorld world = worldOf(server, shelf);
-            if (world == null || !loaded(world, shelf.pos)) {
+        // A cheap shop draws more custom than a dear one, which is the whole
+        // point of being allowed to set a price at all.
+        List<Shop> open = new ArrayList<>();
+        for (Shop shop : SHOPS) {
+            ServerWorld world = worldOf(server, shop.dimension);
+            if (world == null || !loaded(world, shop.pos)) {
                 continue;
             }
-            if (wanted(world, shelf, random) != null) {
-                open.add(shelf);
+            if (shelvesOf(shop).isEmpty() || wanted(server, world, shop, random) == null) {
+                continue;
+            }
+            int weight = Math.max(1, 200 - shop.markup());
+            for (int i = 0; i < weight; i += 20) {
+                open.add(shop);
             }
         }
         if (open.isEmpty()) {
             return;
         }
-        Shelf shelf = open.get(random.nextInt(open.size()));
-        arrive(server, shelf, random);
+        Shop shop = open.get(random.nextInt(open.size()));
+        List<Shelf> counters = shelvesOf(shop);
+        arrive(server, shop, counters.get(random.nextInt(counters.size())), random);
     }
 
-    /** Somebody walks in off the street. */
-    private static void arrive(MinecraftServer server, Shelf shelf, Random random) {
-        ServerWorld world = worldOf(server, shelf);
+    private static void arrive(MinecraftServer server, Shop shop, Shelf shelf, Random random) {
+        ServerWorld world = worldOf(server, shop.dimension);
         if (world == null) {
             return;
         }
@@ -353,23 +538,12 @@ public final class TrapShops {
         shopper.setCustomName(Text.literal("Townsperson").formatted(Formatting.AQUA));
         shopper.setCustomNameVisible(true);
         shopper.addCommandTag(TAG);
-        // Vanilla's own despawn timer as a backstop: if the server restarts and
-        // the in-memory record goes with it, they wander off on their own
-        // rather than standing in somebody's shop forever.
         shopper.setDespawnDelay(20 * 60 * 3);
         world.spawnEntity(shopper);
         SHOPPERS.put(shopper.getUuid(),
-                new Shopper(shelf.pos, shelf.dimension, server.getTicks()));
+                new Shopper(shelf.pos, shop.dimension, server.getTicks()));
     }
 
-    /**
-     * Somewhere outside to walk in FROM.
-     *
-     * Tries the ring around the counter and takes the first standable spot
-     * with sky above it, so shoppers appear on the street rather than inside
-     * the stock room. If the shop is buried, they turn up at the counter and
-     * nobody is any the wiser.
-     */
     private static BlockPos doorstep(ServerWorld world, BlockPos shelf, Random random) {
         for (int tries = 0; tries < 24; tries++) {
             int dx = random.nextInt(17) - 8;
@@ -390,7 +564,6 @@ public final class TrapShops {
         return shelf.up();
     }
 
-    /** Walk them in, sell to them, walk them out. */
     private static void shepherd(MinecraftServer server, int now) {
         List<UUID> done = new ArrayList<>();
         for (var row : SHOPPERS.entrySet()) {
@@ -409,10 +582,6 @@ public final class TrapShops {
                 continue;
             }
             if (now - trip.bornAt() > PATIENCE) {
-                // Pathing is not allowed to be load-bearing. Twenty seconds of
-                // trying is a good-faith walk; after that they are simply at
-                // the counter, which is what a person watching would assume
-                // happened anyway.
                 shopper.refreshPositionAndAngles(counter.up(), shopper.getYaw(), 0.0F);
                 continue;
             }
@@ -436,55 +605,41 @@ public final class TrapShops {
         gone.forEach(LEAVING::remove);
     }
 
-    /**
-     * One lot, off the shelf, paid for.
-     *
-     * The money is minted here because the shopper is not a player and their
-     * emeralds were never in the world before. It is split at once: the shop's
-     * share into the till, the duty into the city's purse. Both of those are
-     * balances the market resample knows to count, which is the only reason
-     * minting the whole lot does not quietly inflate the index.
-     */
     private static void buy(MinecraftServer server, WanderingTraderEntity shopper,
                             Shopper trip) {
         ServerWorld world = (ServerWorld) shopper.getWorld();
         Shelf shelf = at(world, trip.shelf());
-        if (shelf == null) {
+        Shop shop = shelf == null ? null : ownerOf(shelf);
+        if (shop == null) {
             leave(server, shopper);
             return;
         }
-        Inventory box = stockOf(world, shelf);
-        ShopStock.Entry entry = box == null ? null
-                : wanted(world, shelf, world.getRandom());
-        if (entry == null || !take(box, entry, entry.count())) {
+        Line line = wanted(server, world, shop, world.getRandom());
+        if (line == null || !take(world, shop, line)) {
             leave(server, shopper);
             return;
         }
 
-        int market = TrapMarket.buyPrice(server, entry);
-        int price = Math.max(1, Math.round(market * RETAIL));
-        int duty = TrapCity.dutyOn(price, TrapCity.forGoods(entry.category()));
-
-        TrapMarket.minted(price + duty);
-        shelf.till += price;
-        shelf.sold++;
-        TrapCity.receive(duty, TrapCity.forGoods(entry.category()));
-        TrapMarket.traded(entry, 1, true);
-        save();
+        int duty = TrapCity.dutyOn(line.price(), line.duty());
+        TrapMarket.minted(line.price() + duty);
+        shop.till += line.price();
+        shop.sold++;
+        shop.turnover += line.price();
+        TrapCity.receive(duty, line.duty());
 
         world.playSound(null, shelf.pos, SoundEvents.ENTITY_VILLAGER_TRADE,
                 SoundCategory.NEUTRAL, 0.8F, 1.0F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, shelf.pos.getX() + 0.5,
                 shelf.pos.getY() + 1.2, shelf.pos.getZ() + 0.5, 8, 0.35, 0.3, 0.35, 0.02);
 
-        ServerPlayerEntity owner = server.getPlayerManager().getPlayer(shelf.owner);
+        ServerPlayerEntity owner = server.getPlayerManager().getPlayer(shop.owner);
         if (owner != null) {
             owner.sendMessage(Text.literal("Sold ").formatted(Formatting.GRAY)
-                    .append(Text.literal(entry.count() + "x " + entry.label())
+                    .append(Text.literal(line.count() + "x " + line.label())
                             .formatted(Formatting.WHITE))
-                    .append(Text.literal(" -- " + price + "e in the shelf")
+                    .append(Text.literal(" -- " + line.price() + "e in the till")
                             .formatted(Formatting.GREEN))
-                    .append(Text.literal(duty > 0 ? ", " + duty + "e duty to the city" : "")
+                    .append(Text.literal(duty > 0 ? ", " + duty + "e duty" : "")
                             .formatted(Formatting.DARK_GRAY)), true);
         }
         leave(server, shopper);
@@ -509,9 +664,9 @@ public final class TrapShops {
         return world.getChunkManager().isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
-    private static ServerWorld worldOf(MinecraftServer server, Shelf shelf) {
+    private static ServerWorld worldOf(MinecraftServer server, String dimension) {
         for (ServerWorld world : server.getWorlds()) {
-            if (world.getRegistryKey().getValue().toString().equals(shelf.dimension)) {
+            if (world.getRegistryKey().getValue().toString().equals(dimension)) {
                 return world;
             }
         }
@@ -535,7 +690,7 @@ public final class TrapShops {
     }
 
     private static void directory(ServerPlayerEntity who) {
-        if (SHELVES.isEmpty()) {
+        if (SHOPS.isEmpty()) {
             who.sendMessage(Text.literal("Nobody's opened a shop yet.")
                     .formatted(Formatting.GRAY), false);
             return;
@@ -546,13 +701,15 @@ public final class TrapShops {
                         .formatted(people > 0 ? Formatting.GREEN : Formatting.RED))
                 .append(Text.literal(people > 0 ? "" : "  -- build houses, or nobody comes")
                         .formatted(Formatting.DARK_GRAY)), false);
-        for (Shelf shelf : SHELVES) {
-            who.sendMessage(Text.literal("  " + shelf.ownerName + "'s shelf")
-                    .formatted(Formatting.WHITE)
-                    .append(Text.literal("  " + shelf.pos.getX() + " " + shelf.pos.getY()
-                            + " " + shelf.pos.getZ()).formatted(Formatting.DARK_GRAY))
-                    .append(Text.literal("  " + shelf.sold + " sold")
-                            .formatted(Formatting.GRAY)), false);
+        for (Shop shop : SHOPS) {
+            who.sendMessage(Text.literal("  " + shop.name).formatted(Formatting.WHITE)
+                    .append(Text.literal("  " + shelvesOf(shop).size() + " shelves")
+                            .formatted(Formatting.GRAY))
+                    .append(Text.literal("  " + shop.markupName().toLowerCase(
+                            java.util.Locale.ROOT)).formatted(Formatting.AQUA))
+                    .append(Text.literal("  " + shop.sold + " sold  "
+                            + shop.pos.getX() + " " + shop.pos.getY() + " " + shop.pos.getZ())
+                            .formatted(Formatting.DARK_GRAY)), false);
         }
     }
 
@@ -560,6 +717,7 @@ public final class TrapShops {
 
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-shops.txt");
+        SHOPS.clear();
         SHELVES.clear();
         SHOPPERS.clear();
         LEAVING.clear();
@@ -568,16 +726,25 @@ public final class TrapShops {
                 return;
             }
             for (String line : Files.readAllLines(saveFile)) {
-                String[] parts = line.trim().split("\\s+");
-                if (parts.length < 8) {
+                String[] parts = line.trim().split("\\s+", 10);
+                if (parts.length < 5) {
                     continue;
                 }
-                Shelf shelf = new Shelf(parts[0], new BlockPos(Integer.parseInt(parts[1]),
-                        Integer.parseInt(parts[2]), Integer.parseInt(parts[3])),
-                        UUID.fromString(parts[4]), parts[5]);
-                shelf.till = Integer.parseInt(parts[6]);
-                shelf.sold = Integer.parseInt(parts[7]);
-                SHELVES.add(shelf);
+                if (parts[0].equals("shelf")) {
+                    SHELVES.add(new Shelf(parts[1], new BlockPos(Integer.parseInt(parts[2]),
+                            Integer.parseInt(parts[3]), Integer.parseInt(parts[4]))));
+                } else if (parts[0].equals("shop") && parts.length >= 10) {
+                    Shop shop = new Shop(parts[1], new BlockPos(Integer.parseInt(parts[2]),
+                            Integer.parseInt(parts[3]), Integer.parseInt(parts[4])),
+                            UUID.fromString(parts[5]), parts[6], parts[9]);
+                    shop.markup = Math.max(0, Math.min(MARKUP.length - 1,
+                            Integer.parseInt(parts[7])));
+                    String[] money = parts[8].split(",");
+                    shop.till = Integer.parseInt(money[0]);
+                    shop.sold = money.length > 1 ? Integer.parseInt(money[1]) : 0;
+                    shop.turnover = money.length > 2 ? Integer.parseInt(money[2]) : 0;
+                    SHOPS.add(shop);
+                }
             }
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't read the shops: {}", failure.toString());
@@ -590,15 +757,20 @@ public final class TrapShops {
         }
         try {
             StringBuilder out = new StringBuilder();
+            for (Shop shop : SHOPS) {
+                out.append("shop ").append(shop.dimension).append(' ')
+                        .append(shop.pos.getX()).append(' ').append(shop.pos.getY())
+                        .append(' ').append(shop.pos.getZ()).append(' ')
+                        .append(shop.owner).append(' ').append(shop.ownerName).append(' ')
+                        .append(shop.markup).append(' ')
+                        .append(shop.till).append(',').append(shop.sold).append(',')
+                        .append(shop.turnover).append(' ')
+                        .append(shop.name.replace('\n', ' ')).append('\n');
+            }
             for (Shelf shelf : SHELVES) {
-                out.append(shelf.dimension).append(' ')
-                        .append(shelf.pos.getX()).append(' ')
-                        .append(shelf.pos.getY()).append(' ')
-                        .append(shelf.pos.getZ()).append(' ')
-                        .append(shelf.owner).append(' ')
-                        .append(shelf.ownerName).append(' ')
-                        .append(shelf.till).append(' ')
-                        .append(shelf.sold).append('\n');
+                out.append("shelf ").append(shelf.dimension).append(' ')
+                        .append(shelf.pos.getX()).append(' ').append(shelf.pos.getY())
+                        .append(' ').append(shelf.pos.getZ()).append('\n');
             }
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {

@@ -486,6 +486,8 @@ def lang() -> None:
         "block.trapcraft.market_shelf": "Market Shelf",
         "item.trapcraft.market_shelf": "Market Shelf",
         "item.trapcraft.dirty_emerald": "Dirty Emerald",
+        "block.trapcraft.shop_till": "Shop Till",
+        "item.trapcraft.shop_till": "Shop Till",
         "block.trapcraft.laundry": "Laundry Drum",
         "item.trapcraft.laundry": "Laundry Drum",
         "block.trapcraft.slot_machine": "Lucky Streak",
@@ -1342,8 +1344,8 @@ def advancements() -> None:
           f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
     award("founded", "Founded", "Put the city vault down and start taxing everybody.",
           f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
-    award("shopkeeper", "Shopkeeper", "Stand a market shelf up for the town to buy from.",
-          f"{NS}:market_shelf", "open", trigger=has(f"{NS}:market_shelf"))
+    award("shopkeeper", "Shopkeeper", "Open a shop the town can buy from.",
+          f"{NS}:shop_till", "open", trigger=has(f"{NS}:shop_till"))
     award("dirty", "Dirty Money", "Take payment nobody can bank.",
           f"{NS}:dirty_emerald", "root", trigger=has(f"{NS}:dirty_emerald"))
     award("clean", "Through The Books", "Wash a drum of it.",
@@ -1959,6 +1961,49 @@ def mailbox_model() -> dict:
     }
 
 
+def till_assets() -> None:
+    """The register. A solid cube, spelled out for check_models."""
+    put(f"assets/{NS}/models/block/shop_till.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "front": f"{NS}:block/shop_till_front",
+            "side": f"{NS}:block/shop_till_side",
+            "top": f"{NS}:block/shop_till_top",
+            "particle": f"{NS}:block/shop_till_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#front"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#side"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/shop_till.json", {"parent": f"{NS}:block/shop_till"})
+    put(f"assets/{NS}/items/shop_till.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/shop_till"},
+    })
+    put(f"data/{NS}/loot_table/blocks/shop_till.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:shop_till"}]}],
+    })
+    # Planks round gold and an emerald: a counter with a register on it.
+    put(f"data/{NS}/recipe/shop_till.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["PGP", "PEP", "PPP"],
+        "key": {"P": "#minecraft:planks", "G": "minecraft:gold_ingot",
+                "E": "minecraft:emerald"},
+        "result": {"id": f"{NS}:shop_till", "count": 1},
+    })
+
+
 def laundry_assets() -> None:
     """The drum, its three faces, and the money that goes in it."""
     put(f"assets/{NS}/models/item/dirty_emerald.json", {
@@ -2208,6 +2253,7 @@ def main() -> None:
     vault_assets()
     shelf_assets()
     laundry_assets()
+    till_assets()
     slot_assets()
     tags()
     worldgen()

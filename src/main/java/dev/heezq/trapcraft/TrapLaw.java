@@ -263,9 +263,12 @@ public final class TrapLaw {
      */
     public static int washLimit(ServerPlayerEntity who) {
         int limit = 0;
-        for (TrapShops.Shelf shelf : TrapShops.all()) {
-            if (shelf.owner().equals(who.getUuid())) {
-                limit += shelf.sold() * 24;
+        for (TrapShops.Shop shop : TrapShops.shops()) {
+            if (shop.owner().equals(who.getUuid())) {
+                // Real turnover, in emeralds, rather than a count of sales.
+                // A shop that shifted four hundred emeralds of bread can
+                // explain four hundred emeralds.
+                limit += shop.turnover();
             }
         }
         for (TrapHouse.House house : TrapHouse.all()) {

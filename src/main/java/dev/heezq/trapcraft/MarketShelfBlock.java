@@ -27,16 +27,14 @@ import xyz.nucleoid.packettweaker.PacketContext;
 /**
  * The counter townspeople queue at.
  *
- * A shelf sells what is in the container directly beneath it -- same rule as
- * the market stall, for the same reasons -- but it sells to the CITY rather
- * than to players. Villagers walk out of the housing, come to the building,
- * take a lot off it and pay {@link TrapShops#RETAIL} of the market price,
- * which is about double what the counter would give for the same crate.
+ * A shelf is where somebody stands to be served. It belongs to the nearest
+ * {@link ShopTillBlock} within {@link TrapShops#REACH}, and everything a shop
+ * HAS -- its name, its prices, its cash register -- lives on that till.
  *
- * A supermarket is a row of these. There is deliberately no concept of a shop
- * building anywhere in the code: a shelf over a barrel already looks like a
- * shop counter, and twelve of them in a room already looks like a supermarket,
- * so the thing that would have needed defining defines itself.
+ * That is the whole difference from the first version, which made every shelf
+ * its own little business with its own barrel and its own till. Twelve of
+ * those is not a supermarket, it is twelve corner shops in a row and twelve
+ * things to keep stocked. Twelve of these is one building.
  */
 public class MarketShelfBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
     private final BlockState carrier;
@@ -68,11 +66,11 @@ public class MarketShelfBlock extends Block implements PolymerBlock, PolymerText
     }
 
     /**
-     * Owner takes the money; anybody else reads the sign.
+     * A shelf is a counter, not a business.
      *
-     * No screen. Everything a shelf has to say is three numbers, and this mod
-     * already asks people to click through enough chests -- the interesting
-     * part of a shop is the queue outside it, not another grid.
+     * Everything a shop has -- its name, its prices, its money -- lives on the
+     * till it belongs to. Clicking a shelf tells you whose shop you are stood
+     * in and points at the register.
      */
     @Override
     protected ActionResult onUse(BlockState state, World world, BlockPos pos,
@@ -87,36 +85,27 @@ public class MarketShelfBlock extends Block implements PolymerBlock, PolymerText
         }
         world.playSound(null, pos, SoundEvents.BLOCK_BARREL_OPEN,
                 SoundCategory.BLOCKS, 0.6F, 1.2F);
-
-        if (!shelf.owner().equals(who.getUuid())) {
-            who.sendMessage(Text.literal(shelf.ownerName() + "'s shelf. ")
-                    .formatted(Formatting.WHITE)
-                    .append(Text.literal(shelf.sold() + " sold to the town so far.")
-                            .formatted(Formatting.GRAY)), false);
+        TrapShops.Shop shop = TrapShops.ownerOf(shelf);
+        if (shop == null) {
+            who.sendMessage(Text.literal("A shelf with no shop. ")
+                    .formatted(Formatting.YELLOW)
+                    .append(Text.literal("Put a shop till within " + TrapShops.REACH
+                            + " blocks of it.").formatted(Formatting.GRAY)), false);
             return ActionResult.SUCCESS;
         }
-
-        int takings = TrapShops.collect(who, shelf);
-        Inventory box = TrapShops.stockOf(ground, shelf);
-        int lines = 0;
-        if (box != null) {
-            for (int slot = 0; slot < box.size(); slot++) {
-                if (!box.getStack(slot).isEmpty()) {
-                    lines++;
-                }
-            }
-        }
-        who.sendMessage(Text.literal("Your shelf. ").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(takings > 0
-                        ? Text.literal("+" + takings + "e").formatted(Formatting.GREEN)
-                        : Text.literal("Till empty.").formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("   " + shelf.sold() + " sold, "
-                        + TrapHomes.population() + " townspeople about")
-                        .formatted(Formatting.GRAY))
-                .append(Text.literal(box == null
-                                ? "\n  Nothing underneath it. Put a chest or barrel there."
-                                : lines == 0 ? "\n  Empty. Stock it and they'll come."
-                                : "").formatted(Formatting.RED)), false);
+        Inventory under = ground.getBlockEntity(pos.down()) instanceof Inventory box
+                ? box : null;
+        who.sendMessage(Text.literal(shop.name()).formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("   " + shop.ownerName() + "'s, "
+                        + TrapShops.shelvesOf(shop).size() + " shelves, "
+                        + shop.sold() + " sold").formatted(Formatting.GRAY))
+                .append(Text.literal(under == null
+                                ? "\n  Nothing under this one. Stock goes under any shelf, "
+                                + "or under the till."
+                                : "").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  The till is at " + shop.pos().getX() + " "
+                        + shop.pos().getY() + " " + shop.pos().getZ() + ".")
+                        .formatted(Formatting.DARK_GRAY)), false);
         return ActionResult.SUCCESS;
     }
 

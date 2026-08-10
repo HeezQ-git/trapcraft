@@ -82,6 +82,8 @@ public final class TrapContent {
     public static Item cityVaultItem;
     public static Block marketShelf;
     public static Item marketShelfItem;
+    public static Block shopTill;
+    public static Item shopTillItem;
     public static Item dirtyEmerald;
     public static Block laundry;
     public static Item laundryItem;
@@ -401,6 +403,11 @@ public final class TrapContent {
         marketShelfItem = registerItem("market_shelf",
                 (settings, model) -> new RackItem(marketShelf, settings, model));
 
+        shopTill = registerBlock("shop_till", ShopTillBlock::new,
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+        shopTillItem = registerItem("shop_till",
+                (settings, model) -> new RackItem(shopTill, settings, model));
+
         // Deliberately not fireproof and deliberately stackable: it is money,
         // it is meant to be awkward to hold, and burning a pocketful of it in
         // a lava pool is a story about laundering rather than a bug report.
@@ -544,6 +551,7 @@ public final class TrapContent {
                     entries.add(marketStallItem);
                     entries.add(mailboxItem);
                     entries.add(cityVaultItem);
+                    entries.add(shopTillItem);
                     entries.add(marketShelfItem);
                     entries.add(laundryItem);
                     entries.add(dirtyEmerald);

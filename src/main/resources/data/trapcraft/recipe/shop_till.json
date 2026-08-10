@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PGP",
+    "PEP",
+    "PPP"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "G": "minecraft:gold_ingot",
+    "E": "minecraft:emerald"
+  },
+  "result": {
+    "id": "trapcraft:shop_till",
+    "count": 1
+  }
+}
