@@ -134,6 +134,28 @@ public final class ShopStock {
         DECLARED.put(id, new Object[]{category, count, base, null, 0});
     }
 
+    /**
+     * The stairs, slab and wall cut from one block, at the block's own price.
+     *
+     * Same bundle, same money: thirty-two stairs cost what thirty-two of the
+     * stone costs. That is not laziness, it is the rule that keeps a
+     * stonecutter from being a printer -- one block gives at most two slabs,
+     * and two slabs sold back at 45% can never beat one block bought at full
+     * price. Price a shape above its block and the loop opens immediately, on
+     * a machine every base has, and nothing in the game would ever say so.
+     *
+     * Walls are optional because the game is inconsistent about them: tuff has
+     * one, polished granite doesn't, and an id nobody provides would be
+     * counted at startup as a mod that isn't installed.
+     */
+    private static void shapes(Category c, String family, int count, int price, boolean walls) {
+        add(c, "minecraft:" + family + "_stairs", count, price);
+        add(c, "minecraft:" + family + "_slab", count, price);
+        if (walls) {
+            add(c, "minecraft:" + family + "_wall", count, price);
+        }
+    }
+
     /** An enchanted book line. Keyed separately so levels don't collide. */
     private static void book(String enchantment, int level, int base) {
         DECLARED.put("minecraft:enchanted_book#" + enchantment + "#" + level,
@@ -356,17 +378,24 @@ public final class ShopStock {
         add(c, "minecraft:seagrass", 8, 8);
         add(c, "minecraft:pointed_dripstone", 8, 10);
         add(c, "minecraft:mossy_cobblestone", 16, 10);
-        add(c, "minecraft:cobblestone_wall", 16, 9);
-        add(c, "minecraft:mossy_cobblestone_wall", 16, 10);
-        add(c, "minecraft:stone_brick_wall", 16, 9);
-        add(c, "minecraft:brick_wall", 16, 10);
-        // Furniture
-        add(c, "minecraft:oak_fence", 16, 8);
-        add(c, "minecraft:spruce_fence", 16, 8);
-        add(c, "minecraft:birch_fence", 16, 8);
-        add(c, "minecraft:dark_oak_fence", 16, 9);
-        add(c, "minecraft:bamboo_fence", 16, 9);
-        add(c, "minecraft:oak_trapdoor", 8, 10);
+        // The walls, fences and trapdoors that used to be listed here are on
+        // the building and timber shelves now, with the rest of their family.
+        // They were also the shape of a money printer: an oak trapdoor sold
+        // for two and a half times the planks it is made of.
+
+        // Reef. Every coral is four blocks -- the plant, the fan, the block
+        // and the bleached block you get by leaving it out of water -- and
+        // none of them can be crafted, so a diver is the only supplier.
+        for (String coral : new String[]{"tube", "brain", "bubble", "fire", "horn"}) {
+            add(c, "minecraft:" + coral + "_coral_block", 8, 24);
+            add(c, "minecraft:" + coral + "_coral", 8, 16);
+            add(c, "minecraft:" + coral + "_coral_fan", 8, 16);
+            add(c, "minecraft:dead_" + coral + "_coral_block", 8, 16);
+        }
+        // Autumn, which the seed shelf sells you the start of.
+        add(c, "minecraft:pumpkin", 8, 16);
+        add(c, "minecraft:carved_pumpkin", 8, 12);
+        add(c, "minecraft:jack_o_lantern", 8, 16);
     }
 
     /** Anything a villager would plant, or that places a crop. */
@@ -379,6 +408,8 @@ public final class ShopStock {
 
     static {
         building();
+        masonry();
+        copper();
         timber();
         decoration();
         garden();
@@ -391,21 +422,99 @@ public final class ShopStock {
         theGoodStuff();
     }
 
+    /**
+     * Every shape of every stone, at the price of the stone.
+     *
+     * Eighty-eight lines the market never carried, which is most of what
+     * anybody actually places: nobody builds a wall out of full blocks and
+     * nobody roofs anything without stairs. The bundle and price of each
+     * family are its own block's, copied from {@link #building} above -- see
+     * {@link #shapes} for why that number and not a nicer one.
+     */
+    private static void masonry() {
+        Category c = BUILDING;
+        shapes(c, "cobblestone", 64, 20, true);
+        shapes(c, "mossy_cobblestone", 16, 10, true);
+        shapes(c, "stone", 64, 24, false);
+        shapes(c, "stone_brick", 64, 8, true);
+        shapes(c, "mossy_stone_brick", 32, 10, true);
+        // Smooth stone is the one family with a slab and no stairs.
+        add(c, "minecraft:smooth_stone_slab", 64, 8);
+        shapes(c, "granite", 64, 5, true);
+        shapes(c, "polished_granite", 64, 6, false);
+        shapes(c, "diorite", 64, 5, true);
+        shapes(c, "polished_diorite", 64, 6, false);
+        shapes(c, "andesite", 64, 5, true);
+        shapes(c, "polished_andesite", 64, 6, false);
+        shapes(c, "cobbled_deepslate", 64, 18, true);
+        shapes(c, "polished_deepslate", 32, 9, true);
+        shapes(c, "deepslate_brick", 32, 10, true);
+        shapes(c, "deepslate_tile", 32, 12, true);
+        shapes(c, "brick", 32, 16, true);
+        shapes(c, "mud_brick", 32, 9, true);
+        shapes(c, "sandstone", 64, 7, true);
+        shapes(c, "smooth_sandstone", 32, 8, false);
+        shapes(c, "red_sandstone", 64, 7, true);
+        shapes(c, "smooth_red_sandstone", 32, 8, false);
+        shapes(c, "prismarine", 16, 20, true);
+        shapes(c, "prismarine_brick", 32, 24, false);
+        shapes(c, "dark_prismarine", 32, 26, false);
+        // Off the chiseled block, not the plain one: quartz shapes are cut
+        // from whichever quartz block you have, so the shop has to assume the
+        // cheapest of them or it is selling slabs for more than their stock.
+        shapes(c, "quartz", 32, 24, false);
+        shapes(c, "smooth_quartz", 16, 22, false);
+        shapes(c, "purpur", 16, 20, false);
+        shapes(c, "end_stone_brick", 32, 18, true);
+        shapes(c, "tuff", 64, 6, true);
+        shapes(c, "polished_tuff", 32, 9, true);
+        shapes(c, "tuff_brick", 32, 9, true);
+        shapes(c, "resin_brick", 32, 10, true);
+        // The two slabs with no stairs to go with them.
+        add(c, "minecraft:cut_sandstone_slab", 32, 8);
+        add(c, "minecraft:cut_red_sandstone_slab", 32, 8);
+    }
+
+    /**
+     * Copper, all seventy-two faces of it.
+     *
+     * The shelf carried nine copper lines picked apparently at random -- cut
+     * copper but not its stairs, exposed copper but not exposed cut copper,
+     * one waxed block out of eight. Copper is the one vanilla material whose
+     * whole point is the palette, so the palette is what's sold: four ages,
+     * waxed and not, nine shapes each.
+     *
+     * Every state is the same price. Oxidising is free and takes time, waxing
+     * costs a honeycomb, and a shop that charged more for the green one would
+     * just be selling patience -- which the weather gives away.
+     */
+    private static void copper() {
+        Category c = BUILDING;
+        for (String state : new String[]{"", "exposed_", "weathered_", "oxidized_",
+                "waxed_", "waxed_exposed_", "waxed_weathered_", "waxed_oxidized_"}) {
+            add(c, "minecraft:" + state + "cut_copper", 32, 16);
+            shapes(c, state + "cut_copper", 32, 16, false);
+            add(c, "minecraft:" + state + "chiseled_copper", 32, 18);
+            add(c, "minecraft:" + state + "copper_grate", 32, 16);
+            add(c, "minecraft:" + state + "copper_bulb", 8, 26);
+            add(c, "minecraft:" + state + "copper_door", 8, 14);
+            add(c, "minecraft:" + state + "copper_trapdoor", 8, 14);
+        }
+        // The plain block is the one form the game doesn't name to a pattern:
+        // copper_block, then exposed_copper with no "block" on the end.
+        for (String block : new String[]{"copper_block", "exposed_copper", "weathered_copper",
+                "oxidized_copper", "waxed_copper_block", "waxed_exposed_copper",
+                "waxed_weathered_copper", "waxed_oxidized_copper"}) {
+            add(c, "minecraft:" + block, 4, 34);
+        }
+    }
+
     private static void building() {
         Category c = BUILDING;
-        add(c, "minecraft:copper_grate", 32, 16);
-        add(c, "minecraft:chiseled_copper", 32, 18);
-        add(c, "minecraft:copper_bulb", 8, 26);
-        add(c, "minecraft:exposed_copper", 32, 14);
-        add(c, "minecraft:weathered_copper", 32, 14);
-        add(c, "minecraft:oxidized_copper", 32, 14);
-        add(c, "minecraft:waxed_copper_block", 4, 34);
-        add(c, "minecraft:cut_copper", 32, 16);
-        add(c, "minecraft:white_terracotta", 32, 11);
-        add(c, "minecraft:orange_terracotta", 32, 11);
-        add(c, "minecraft:light_blue_terracotta", 32, 11);
-        add(c, "minecraft:green_terracotta", 32, 11);
-        add(c, "minecraft:brown_terracotta", 32, 11);
+        add(c, "minecraft:polished_granite", 64, 6);
+        add(c, "minecraft:polished_diorite", 64, 6);
+        add(c, "minecraft:polished_andesite", 64, 6);
+        add(c, "minecraft:cut_red_sandstone", 32, 8);
         add(c, "minecraft:blue_ice", 8, 40);
         add(c, "minecraft:ice", 16, 12);
         add(c, "minecraft:honeycomb_block", 8, 22);
@@ -476,21 +585,82 @@ public final class ShopStock {
         add(c, "minecraft:ladder", 16, 6);
         add(c, "minecraft:iron_bars", 16, 12);
         add(c, "minecraft:amethyst_block", 8, 26);
-        add(c, "minecraft:copper_block", 4, 34);
         add(c, "minecraft:mud_bricks", 32, 9);
         add(c, "minecraft:packed_ice", 16, 16);
         add(c, "minecraft:snow_block", 32, 5);
+        add(c, "minecraft:snow", 64, 4);
+        add(c, "minecraft:snowball", 32, 4);
+        add(c, "minecraft:chiseled_tuff_bricks", 32, 9);
+        add(c, "minecraft:resin_block", 8, 48);
+        add(c, "minecraft:resin_brick", 32, 16);
+        add(c, "minecraft:chiseled_resin_bricks", 32, 12);
+        // The two doors nobody can make out of wood.
+        add(c, "minecraft:iron_door", 8, 40);
+        add(c, "minecraft:iron_trapdoor", 8, 50);
     }
 
+    /**
+     * The whole tree, nine times over.
+     *
+     * The shelf used to carry three lines per wood -- log, planks, sapling --
+     * which is enough to start a build and not enough to finish one. Every
+     * roof is stairs and slabs, every fence is fence and gate, and a stripped
+     * log is a different material to the log it came off; none of it was for
+     * sale, so a builder bought planks here and went back to chopping.
+     *
+     * Prices follow the planks, because everything below the log is planks by
+     * the time you build with it, and planks are cheap on this server. The
+     * arithmetic is in check_stock.py, which now reads this loop -- it did not
+     * before, and the wooden trapdoor spent that whole time selling for two
+     * and a half times the wood it is made of.
+     *
+     * Stripped wood is priced level with the log rather than above it. An axe
+     * strips for free, so any gap is a loop; and the counter's 45% means a
+     * level price can never be one.
+     */
     private static void timber() {
         Category c = WOOD;
         for (String wood : new String[]{"oak", "spruce", "birch", "jungle", "acacia",
-                "dark_oak", "mangrove", "cherry"}) {
+                "dark_oak", "pale_oak", "mangrove", "cherry"}) {
             add(c, "minecraft:" + wood + "_log", 32, 8);
+            add(c, "minecraft:stripped_" + wood + "_log", 32, 8);
+            add(c, "minecraft:" + wood + "_wood", 32, 8);
+            add(c, "minecraft:stripped_" + wood + "_wood", 32, 8);
             add(c, "minecraft:" + wood + "_planks", 64, 5);
-            add(c, "minecraft:" + wood + "_sapling", 8, 5);
+            shapes(c, wood, 64, 5, false);
+            add(c, "minecraft:" + wood + "_fence", 32, 4);
+            add(c, "minecraft:" + wood + "_fence_gate", 8, 3);
+            add(c, "minecraft:" + wood + "_door", 16, 4);
+            add(c, "minecraft:" + wood + "_trapdoor", 16, 4);
+            add(c, "minecraft:" + wood + "_button", 32, 3);
+            add(c, "minecraft:" + wood + "_pressure_plate", 16, 3);
+            add(c, "minecraft:" + wood + "_sign", 8, 3);
+            add(c, "minecraft:" + wood + "_hanging_sign", 8, 4);
         }
+        // Saplings are not listed here any more. Mangrove hasn't got one --
+        // it grows from a propagule -- so the loop was declaring an id that
+        // has never existed, and the garden shelf stocks every sapling in the
+        // game off the registry anyway, this mod's and the other hundred and
+        // thirty-six mods'.
+
+        // Bamboo: a plank family with no tree behind it.
+        add(c, "minecraft:bamboo_block", 32, 8);
+        add(c, "minecraft:stripped_bamboo_block", 32, 8);
+        add(c, "minecraft:bamboo_planks", 64, 5);
+        add(c, "minecraft:bamboo_mosaic", 64, 6);
+        shapes(c, "bamboo", 64, 5, false);
+        shapes(c, "bamboo_mosaic", 64, 6, false);
+        add(c, "minecraft:bamboo_fence", 32, 4);
+        add(c, "minecraft:bamboo_fence_gate", 8, 3);
+        add(c, "minecraft:bamboo_door", 16, 4);
+        add(c, "minecraft:bamboo_trapdoor", 16, 4);
+        add(c, "minecraft:bamboo_button", 32, 3);
+        add(c, "minecraft:bamboo_pressure_plate", 16, 3);
+        add(c, "minecraft:bamboo_sign", 8, 3);
+        add(c, "minecraft:bamboo_hanging_sign", 8, 4);
         add(c, "minecraft:bamboo", 32, 4);
+        add(c, "minecraft:mangrove_roots", 32, 8);
+        add(c, "minecraft:muddy_mangrove_roots", 32, 8);
         add(c, "minecraft:moss_block", 16, 10);
         add(c, "minecraft:vine", 16, 6);
         add(c, "minecraft:lily_pad", 16, 8);
@@ -505,51 +675,49 @@ public final class ShopStock {
         add(c, "minecraft:dead_bush", 8, 4);
     }
 
+    /**
+     * Colour, in all sixteen of every kind.
+     *
+     * Six concretes, four stained glasses and three glazed terracottas is a
+     * decorating shelf that decides for you what your build is going to look
+     * like. The colour families are all sixteen wide in the game and there is
+     * no reason for the shop to carry a third of one -- so the loop at the
+     * bottom carries the lot, and the hand-written lines that used to sit up
+     * here are gone.
+     *
+     * Thirteen of them were dead anyway: the loop runs after them and DECLARED
+     * is a map, so every wool price written out by hand had been silently
+     * overwritten by the loop's for as long as both existed. check_stock.py
+     * couldn't see it, because it only read string literals. It can now.
+     */
     private static void decoration() {
         Category c = DECOR;
-        add(c, "minecraft:white_wool", 16, 10);
-        add(c, "minecraft:light_gray_wool", 16, 10);
-        add(c, "minecraft:gray_wool", 16, 10);
-        add(c, "minecraft:brown_wool", 16, 10);
-        add(c, "minecraft:pink_wool", 16, 10);
-        add(c, "minecraft:magenta_wool", 16, 10);
-        add(c, "minecraft:purple_wool", 16, 10);
-        add(c, "minecraft:blue_wool", 16, 10);
-        add(c, "minecraft:light_blue_wool", 16, 10);
-        add(c, "minecraft:cyan_wool", 16, 10);
-        add(c, "minecraft:lime_wool", 16, 10);
-        add(c, "minecraft:yellow_wool", 16, 10);
-        add(c, "minecraft:orange_wool", 16, 10);
-        add(c, "minecraft:white_concrete", 32, 12);
-        add(c, "minecraft:black_concrete", 32, 12);
-        add(c, "minecraft:red_concrete", 32, 12);
-        add(c, "minecraft:blue_concrete", 32, 12);
-        add(c, "minecraft:yellow_concrete", 32, 12);
-        add(c, "minecraft:green_concrete", 32, 12);
-        add(c, "minecraft:white_glazed_terracotta", 8, 18);
-        add(c, "minecraft:blue_glazed_terracotta", 8, 18);
-        add(c, "minecraft:red_glazed_terracotta", 8, 18);
-        add(c, "minecraft:white_stained_glass", 32, 12);
-        add(c, "minecraft:black_stained_glass", 32, 12);
-        add(c, "minecraft:gray_stained_glass", 32, 12);
-        add(c, "minecraft:brown_stained_glass", 32, 12);
         add(c, "minecraft:glow_item_frame", 4, 20);
         add(c, "minecraft:chain", 16, 14);
         add(c, "minecraft:decorated_pot", 4, 14);
-        add(c, "minecraft:chiseled_bookshelf", 4, 22);
+        add(c, "minecraft:chiseled_bookshelf", 4, 6);
         for (String dye : new String[]{"white", "orange", "magenta", "light_blue", "yellow",
                 "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown",
                 "green", "red", "black"}) {
             add(c, "minecraft:" + dye + "_dye", 16, 6);
             add(c, "minecraft:" + dye + "_wool", 16, 8);
+            add(c, "minecraft:" + dye + "_carpet", 32, 8);
             add(c, "minecraft:" + dye + "_concrete_powder", 32, 10);
+            add(c, "minecraft:" + dye + "_concrete", 32, 12);
             add(c, "minecraft:" + dye + "_terracotta", 32, 11);
+            // Glazed is a smelt away from plain terracotta, so it is priced
+            // level with it. At the old 2.25e a block, a furnace was a mint.
+            add(c, "minecraft:" + dye + "_glazed_terracotta", 32, 12);
+            add(c, "minecraft:" + dye + "_stained_glass", 32, 12);
+            add(c, "minecraft:" + dye + "_stained_glass_pane", 32, 8);
+            add(c, "minecraft:" + dye + "_bed", 1, 3);
+            add(c, "minecraft:" + dye + "_banner", 2, 10);
         }
         add(c, "minecraft:terracotta", 32, 9);
         add(c, "minecraft:item_frame", 4, 10);
         add(c, "minecraft:painting", 4, 10);
         add(c, "minecraft:flower_pot", 4, 6);
-        add(c, "minecraft:armor_stand", 2, 12);
+        add(c, "minecraft:armor_stand", 4, 4);
         add(c, "minecraft:candle", 8, 8);
         add(c, "minecraft:glow_ink_sac", 4, 20);
         add(c, "minecraft:ink_sac", 8, 8);
@@ -606,7 +774,6 @@ public final class ShopStock {
         add(c, "minecraft:polished_basalt", 32, 8);
         add(c, "minecraft:polished_blackstone", 32, 10);
         add(c, "minecraft:polished_blackstone_bricks", 32, 12);
-        add(c, "minecraft:polished_blackstone_brick_slab", 32, 8);
         add(c, "minecraft:crimson_stem", 32, 12);
         add(c, "minecraft:warped_stem", 32, 12);
         add(c, "minecraft:nether_wart_block", 8, 26);
@@ -650,6 +817,28 @@ public final class ShopStock {
         add(c, "minecraft:nether_gold_ore", 16, 26);
         add(c, "minecraft:nether_quartz_ore", 16, 18);
         add(c, "minecraft:lodestone", 1, 10);
+
+        // The shapes, at their block's price. Everything a bastion is built
+        // of, which is what people come back through the portal wanting.
+        shapes(c, "nether_brick", 32, 14, true);
+        shapes(c, "red_nether_brick", 32, 16, true);
+        shapes(c, "blackstone", 32, 9, true);
+        shapes(c, "polished_blackstone", 32, 10, true);
+        shapes(c, "polished_blackstone_brick", 32, 12, true);
+        shapes(c, "crimson", 64, 12, false);
+        shapes(c, "warped", 64, 12, false);
+        add(c, "minecraft:crimson_fence_gate", 8, 6);
+        add(c, "minecraft:warped_fence_gate", 8, 6);
+        add(c, "minecraft:crimson_button", 32, 4);
+        add(c, "minecraft:warped_button", 32, 4);
+        add(c, "minecraft:crimson_pressure_plate", 16, 5);
+        add(c, "minecraft:warped_pressure_plate", 16, 5);
+        add(c, "minecraft:crimson_sign", 8, 5);
+        add(c, "minecraft:warped_sign", 8, 5);
+        add(c, "minecraft:crimson_hanging_sign", 8, 8);
+        add(c, "minecraft:warped_hanging_sign", 8, 8);
+        add(c, "minecraft:stripped_crimson_hyphae", 32, 14);
+        add(c, "minecraft:stripped_warped_hyphae", 32, 14);
     }
 
     private static void seeds() {
@@ -835,7 +1024,7 @@ public final class ShopStock {
         add(c, "minecraft:stick", 64, 4);
         add(c, "minecraft:bowl", 32, 6);
         add(c, "minecraft:slime_block", 4, 40);
-        add(c, "minecraft:honey_block", 4, 34);
+        add(c, "minecraft:honey_block", 1, 34);
         add(c, "minecraft:dried_kelp_block", 4, 72);
         add(c, "minecraft:cobweb", 8, 26);
         add(c, "minecraft:turtle_scute", 2, 50);
@@ -879,12 +1068,17 @@ public final class ShopStock {
         add(c, "minecraft:prismarine_shard", 16, 14);
         add(c, "minecraft:prismarine_crystals", 8, 18);
         add(c, "minecraft:nautilus_shell", 2, 55);
-        add(c, "minecraft:scute", 2, 45);
         add(c, "minecraft:echo_shard", 2, 90);
         add(c, "minecraft:glowstone_dust", 16, 12);
         add(c, "minecraft:blaze_powder", 8, 24);
         add(c, "minecraft:fermented_spider_eye", 4, 14);
         add(c, "minecraft:brown_mushroom_block", 8, 8);
+        add(c, "minecraft:red_mushroom_block", 8, 8);
+        add(c, "minecraft:mushroom_stem", 8, 8);
+        add(c, "minecraft:sculk_vein", 16, 14);
+        add(c, "minecraft:sculk_sensor", 2, 40);
+        add(c, "minecraft:calibrated_sculk_sensor", 2, 60);
+        add(c, "minecraft:armadillo_scute", 8, 20);
     }
 
     private static void utility() {
@@ -895,8 +1089,10 @@ public final class ShopStock {
         add(c, "minecraft:chest_minecart", 1, 32);
         add(c, "minecraft:tnt_minecart", 1, 50);
         add(c, "minecraft:furnace_minecart", 1, 30);
-        add(c, "minecraft:oak_boat", 2, 12);
-        add(c, "minecraft:oak_chest_boat", 2, 18);
+        // Five planks and a craft. Priced above that and the shop is buying
+        // back more than it sold, which is what a boat did for a long time.
+        add(c, "minecraft:oak_boat", 4, 12);
+        add(c, "minecraft:oak_chest_boat", 4, 18);
         add(c, "minecraft:crossbow", 1, 16);
         add(c, "minecraft:spectral_arrow", 8, 24);
         add(c, "minecraft:carrot_on_a_stick", 1, 20);
@@ -911,7 +1107,7 @@ public final class ShopStock {
         add(c, "minecraft:mace", 1, 900);
         add(c, "minecraft:heavy_core", 1, 700);
         add(c, "minecraft:lightning_rod", 2, 20);
-        add(c, "minecraft:daylight_detector", 2, 20);
+        add(c, "minecraft:daylight_detector", 4, 20);
         add(c, "minecraft:lectern", 2, 16);
         add(c, "minecraft:fletching_table", 1, 8);
         add(c, "minecraft:stonecutter", 1, 7);
@@ -928,7 +1124,7 @@ public final class ShopStock {
         add(c, "minecraft:furnace", 2, 8);
         add(c, "minecraft:blast_furnace", 1, 16);
         add(c, "minecraft:smoker", 1, 14);
-        add(c, "minecraft:crafting_table", 2, 6);
+        add(c, "minecraft:crafting_table", 4, 6);
         add(c, "minecraft:hopper", 2, 26);
         add(c, "minecraft:dropper", 4, 14);
         add(c, "minecraft:dispenser", 4, 18);
@@ -945,6 +1141,14 @@ public final class ShopStock {
         add(c, "minecraft:redstone_torch", 8, 8);
         add(c, "minecraft:lever", 8, 5);
         add(c, "minecraft:tripwire_hook", 8, 8);
+        add(c, "minecraft:stone_button", 32, 12);
+        add(c, "minecraft:stone_pressure_plate", 16, 12);
+        add(c, "minecraft:polished_blackstone_button", 32, 10);
+        add(c, "minecraft:polished_blackstone_pressure_plate", 16, 10);
+        add(c, "minecraft:heavy_weighted_pressure_plate", 8, 40);
+        add(c, "minecraft:light_weighted_pressure_plate", 8, 50);
+        add(c, "minecraft:trapped_chest", 4, 10);
+        add(c, "minecraft:glass_bottle", 16, 6);
         add(c, "minecraft:target", 4, 12);
         add(c, "minecraft:note_block", 4, 10);
         add(c, "minecraft:jukebox", 1, 24);
@@ -961,11 +1165,11 @@ public final class ShopStock {
         add(c, "minecraft:saddle", 1, 30);
         add(c, "minecraft:bookshelf", 4, 26);
         add(c, "minecraft:anvil", 1, 70);
-        add(c, "minecraft:grindstone", 1, 18);
+        add(c, "minecraft:grindstone", 2, 3);
         add(c, "minecraft:smithing_table", 1, 11);
         add(c, "minecraft:cartography_table", 4, 8);
         add(c, "minecraft:loom", 1, 9);
-        add(c, "minecraft:composter", 1, 10);
+        add(c, "minecraft:composter", 4, 4);
         add(c, "minecraft:cauldron", 1, 18);
         add(c, "minecraft:brewing_stand", 1, 24);
         add(c, "minecraft:ender_chest", 1, 90);
@@ -974,7 +1178,6 @@ public final class ShopStock {
         add(c, "minecraft:bow", 1, 13);
         add(c, "minecraft:arrow", 32, 12);
         add(c, "minecraft:fishing_rod", 1, 9);
-        add(c, "minecraft:boat", 1, 8);
     }
 
     /**

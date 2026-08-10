@@ -14,6 +14,10 @@ doesn't have what you expected -- and neither logs anything useful:
   * Two catalogue lines for the same item id. DECLARED is a map, so the
     second silently overwrites the first and one of the two prices is dead
     code nobody will ever see quoted.
+  * A catalogue line naming a vanilla item that doesn't exist. build() drops
+    it exactly the way it drops a mod nobody has installed, and says the same
+    nothing -- which is how `minecraft:scute` sat on the shelf list for two
+    versions after the game renamed it, and `minecraft:boat` for longer.
   * A shaped recipe whose pattern uses a symbol the key doesn't define. The
     game logs one parse error at startup and the item is simply uncraftable
     forever after. The coin toss shipped that way, using _ for a blank where
@@ -51,12 +55,83 @@ STOCK = ROOT / "src/main/java/dev/heezq/trapcraft/ShopStock.java"
 MC_JARS = (pathlib.Path.home() / ".gradle/caches/fabric-loom/minecraftMaven"
                                  "/net/minecraft/minecraft-merged/*/*.jar")
 
+# The catalogue is written half in literals and half in loops over wood types,
+# dyes and stone families, and every check below needs the SAME list: the ids
+# the mod will actually declare. These three read the Java, so they are coupled
+# to how it is written -- a loop shaped differently to the ones in ShopStock
+# reads as no loop at all, and its lines quietly stop being checked.
+LOOP = re.compile(r"for \(String (\w+) : new String\[\]\{(.*?)\}\) \{(.*?)\n        \}", re.S)
+ADD = re.compile(r"add\([A-Za-z]+, (.+?), (\d+), (\d+)\);")
+SHAPES = re.compile(r"shapes\([A-Za-z]+, (.+?), (\d+), (\d+), (true|false)\);")
+
 # TrapMath: the shop won't buy under 2e, and INDEX_MIN * (1 - DRIFT) is the
 # cheapest a line can ever get -- a glut day with the drift against it.
 SELL_FLOOR = 2
 WORST_INDEX = 0.65 * (1 - 0.18)
 # TrapMath.SELL_RATE.
 SELL_RATE = 0.45
+
+
+def expand(expression: str, var: str, values: list[str]) -> list[str]:
+    """Every id one Java expression can produce, inside the loop it sits in.
+
+    Literals and the loop variable, in any arrangement -- "minecraft:" + wood +
+    "_log", state + "copper_bulb", or a plain string. Anything else returns
+    nothing rather than a guess, so a line this can't read is a line reported
+    as missing by the checks that follow rather than one silently approved.
+    """
+    parts = [part.strip() for part in expression.split(" + ")]
+    if any(not part.startswith('"') and part != var for part in parts):
+        return []
+    if var not in parts:
+        return ["".join(part.strip('"') for part in parts)]
+    return ["".join(value if part == var else part.strip('"') for part in parts)
+            for value in values]
+
+
+def catalogue(source: str) -> list[tuple[str, int, int]]:
+    """(id, bundle size, price) for every line the market declares.
+
+    Loops expanded, because ShopStock declares whole families that way -- the
+    nine woods, the sixteen dyes, the copper matrix -- and a check that reads
+    only string literals is blind to most of the catalogue. That blindness was
+    load-bearing: the wooden trapdoor sold for two and a half times the planks
+    it is made of for as long as nothing here could see it.
+    """
+    found = []
+
+    def read(text: str, var: str = "", values: list[str] = ()) -> None:
+        for expression, count, base in ADD.findall(text):
+            for ident in expand(expression, var, values):
+                found.append((ident, int(count), int(base)))
+        for expression, count, base, walls in SHAPES.findall(text):
+            for family in expand(expression, var, values):
+                for form in ("stairs", "slab") + (("wall",) if walls == "true" else ()):
+                    found.append((f"minecraft:{family}_{form}", int(count), int(base)))
+
+    body = source
+    for loop in LOOP.finditer(source):
+        # [^"]* rather than +: the copper loop's first state is "", the
+        # unweathered one, and a + here reads the gap between the two empty
+        # quotes as a value and turns every copper id into nonsense.
+        read(loop.group(3), loop.group(1), re.findall(r'"([^"]*)"', loop.group(2)))
+        body = body.replace(loop.group(0), "")
+    read(body)
+    return found
+
+
+def vanilla_items() -> set[str]:
+    """Every item id the game has, one file each in the jar's item models."""
+    jars = [j for j in glob.glob(str(MC_JARS)) if "sources" not in j]
+    if not jars:
+        sys.exit("no mapped Minecraft jar in the Loom cache -- run ./gradlew build first")
+    with zipfile.ZipFile(jars[0]) as jar:
+        found = {"minecraft:" + m.group(1) for m in
+                 (re.fullmatch(r"assets/minecraft/items/(.+)\.json", name)
+                  for name in jar.namelist()) if m}
+    if not found:
+        sys.exit(f"no item models in {jars[0]} -- the path moved, fix this script")
+    return found
 
 
 def vanilla_enchantments() -> dict[str, int]:
@@ -131,7 +206,7 @@ def vanilla_recipes() -> list[tuple[str, int, list[str]]]:
     return out
 
 
-def craft_loops(source: str) -> list[str]:
+def craft_loops(goods: list[tuple[str, int, int]]) -> list[str]:
     """No recipe may be worth more sold than its ingredients cost to buy.
 
     The shop is the only place emeralds enter and leave on their own, so any
@@ -148,19 +223,14 @@ def craft_loops(source: str) -> list[str]:
     still catches the whole vanilla food tree, which is where the raw crops
     everybody farms turn into things worth selling.
 
-    KNOWN BLIND SPOT: catalogue lines whose id is BUILT rather than written --
-    `add(c, "minecraft:" + wood + "_planks", 64, 5)` and the dye and wool loops
-    like it -- never reach the price map, because the regex above can only read
-    string literals. Recipes taking those ingredients are therefore costed off
-    the cheapest LITERAL member of the tag instead of the true cheapest, which
-    understates nothing and overstates the cost. Adding one literal plank line
-    for the nether shelf is what first made six wooden workstations visible as
-    money printers; the rest of the timber catalogue is still invisible. Worth
-    closing by expanding the loops, and worth knowing about until somebody does.
+    Stonecutting is not checked and does not need to be, as long as no shape
+    costs more per piece than the block it is cut from -- one block gives at
+    most two slabs, and two slabs sold back at 45% can never beat one block
+    bought at full price. That is what {@link shapes} is for.
     """
     unit = {}
-    for ident, count, base in re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source):
-        unit[ident] = int(base) / int(count)
+    for ident, count, base in goods:
+        unit[ident] = base / count
 
     problems = []
     found = []
@@ -249,20 +319,39 @@ def roulette_wheel() -> list[str]:
     return problems
 
 
-def duplicate_lines(source: str) -> list[str]:
-    """One id, one price. The map keeps whichever was declared last."""
+def duplicate_lines(goods: list[tuple[str, int, int]]) -> list[str]:
+    """One id, one price. The map keeps whichever was declared last.
+
+    Counted after the loops are expanded, which is the only way to see the
+    collisions that actually happened: thirteen wool lines and five terracotta
+    lines sat in the file for months being silently overwritten by the dye
+    loop that runs after them, and every one of them looked like a price
+    somebody had chosen.
+    """
     seen = {}
     problems = []
-    for ident in re.findall(r'\n\s+add\([A-Za-z]+, "([^"]+)"', source):
-        # Concatenated ids (the per-strain lines) expand at runtime and are
-        # not real duplicates of each other.
-        if ident.endswith(":"):
-            continue
+    for ident, _, _ in goods:
         seen[ident] = seen.get(ident, 0) + 1
     for ident, count in sorted(seen.items()):
         if count > 1:
             problems.append(f"{ident} is listed {count} times -- only the last price counts")
     return problems
+
+
+def unknown_ids(goods: list[tuple[str, int, int]]) -> list[str]:
+    """A minecraft: id the game doesn't have is a line nobody will ever see.
+
+    build() drops it exactly the way it drops a mod that isn't installed, and
+    says the same nothing about it -- so `minecraft:scute` kept its price in
+    the file for two versions after the game renamed it to turtle_scute.
+
+    Only vanilla ids are checkable. A modded one that's missing is the
+    mechanism working, not a typo, and there is no registry here to ask.
+    """
+    items = vanilla_items()
+    return [f"{ident} at {base}e: no such item in vanilla"
+            for ident, _, base in sorted(set(goods))
+            if ident.startswith("minecraft:") and ident not in items]
 
 
 def recipes() -> list[str]:
@@ -397,17 +486,18 @@ def main() -> int:
     if missing:
         print(f"note: no max-level book for {', '.join(missing)}")
 
+    goods = catalogue(source)
     problems.extend(slot_reel())
     problems.extend(roulette_wheel())
     problems.extend(names())
-    problems.extend(duplicate_lines(source))
+    problems.extend(duplicate_lines(goods))
+    problems.extend(unknown_ids(goods))
     problems.extend(recipes())
     problems.extend(casino_floor())
-    problems.extend(craft_loops(source))
+    problems.extend(craft_loops(goods))
 
-    goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:
-        if round(int(base) * WORST_INDEX) < SELL_FLOOR:
+        if round(base * WORST_INDEX) < SELL_FLOOR:
             problems.append(f"{ident} at {base}e: unsellable once the index dips")
 
     print(f"{len(goods)} goods, {len(books)} books, "

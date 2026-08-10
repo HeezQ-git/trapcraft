@@ -27,6 +27,8 @@ import sys
 
 from PIL import Image
 
+import check_stock
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src/main/java/dev/heezq/trapcraft"
 ADVANCEMENTS = ROOT / "src/main/resources/data/trapcraft/advancement"
@@ -410,7 +412,11 @@ def gather() -> None:
 
     stock = java("ShopStock")
     DATA["categories"] = len(re.findall(r"new Category\(", stock))
-    DATA["declared_lines"] = len(re.findall(r'add\(c, "', stock))
+    # Counting `add(c, "` misses every line the catalogue builds in a loop,
+    # which is now most of them -- nine woods, sixteen dyes, eight coppers --
+    # so the page would have advertised a market a third the size of the real
+    # one. check_stock.py already expands those loops; borrow it.
+    DATA["declared_lines"] = len(check_stock.catalogue(stock))
 
 
 def minutes(rolls: int) -> float:
