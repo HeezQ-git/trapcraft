@@ -20,12 +20,14 @@ import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.WorldSavePath;
 
 import java.nio.file.Files;
@@ -77,6 +79,24 @@ import java.util.UUID;
  * hoe work and knocking the buds down a grade. Scaled to 0.85 the same sum is
  * 0.43 and the game simply never considers them heavy enough to break
  * anything. No mixin, no gamerule, and it reads as a lad rather than a bug.
+ *
+ * <h2>Why the patch stays loaded</h2>
+ *
+ * A hand is a villager, and a villager in an unloaded chunk is not slow -- it
+ * does not exist. So a crew only ever worked while somebody stood over them,
+ * which is the opposite of the point: you hire people so that you can go and
+ * do something else. Every patch whose owner is logged in now holds a chunk
+ * ticket, so the field ticks whether or not anybody is watching it.
+ *
+ * The ticket expires on its own and is re-stamped every few seconds. That is
+ * the whole of the cleanup: fire a hand, log out, restart the server, crash
+ * the server -- nothing re-stamps it, and within fifteen seconds the chunks go
+ * back to sleep. There is no list of forced chunks to leak, and nothing to
+ * remove in six different places.
+ *
+ * It is deliberately gated on the OWNER being online rather than anybody:
+ * wages already skip an absent boss, so an overnight farm would be free labour,
+ * and a server sat empty should not be ticking five fields.
  */
 public final class TrapCrew {
     /** Ticks between wage packets. Five minutes. */
@@ -118,6 +138,40 @@ public final class TrapCrew {
 
     /** Small enough that the game never counts them heavy enough to trample. */
     private static final double HAND_SCALE = 0.85;
+
+    /**
+     * The ticket that keeps a patch awake, and how often it gets re-stamped.
+     *
+     * Not persisted, on purpose. A saved ticket is a promise somebody has to
+     * keep -- some code path has to remember to take it back when the hand is
+     * fired, or the boss logs off, or the world is loaded by a version of this
+     * mod that no longer has a crew in it. An expiring one keeps itself: it
+     * lasts fifteen seconds and something has to actively want it every five,
+     * so "stop wanting it" IS the removal. Nothing to leak and nothing to
+     * clean up.
+     *
+     * Deliberately never registered in {@code Registries.TICKET_TYPE} either.
+     * Nothing serialises it, the registry is only consulted to print a name in
+     * chunk debug output, and vanilla prints "[unregistered]" there rather
+     * than falling over -- so registering it would only buy a nicer debug
+     * line at the cost of a call that throws if registries are already frozen.
+     */
+    private static final ChunkTicketType TICKET = new ChunkTicketType(
+            20 * 15, false, ChunkTicketType.Use.LOADING_AND_SIMULATION);
+    private static final int TICKET_TICKS = 20 * 5;
+
+    /**
+     * Chunks each side of the patch to hold open.
+     *
+     * A ticket set at radius r puts the middle chunk at level {@code 33 - r},
+     * and the game only ticks entities at 31 or better -- so the first two
+     * rungs buy nothing but a loaded chunk, and everything past that is real
+     * working room. Two, plus however many chunks the hand's patch actually
+     * spans, is the smallest number that has the whole patch ticking.
+     */
+    private static int ticketRadius(int reachBlocks) {
+        return 2 + (reachBlocks + 15) / 16;
+    }
 
     /**
      * Jobs in a stretch before they stop for a minute, and how long for.
@@ -260,7 +314,8 @@ public final class TrapCrew {
     /** Who they work for, where, what they've been taught, and how it's going. */
     private static final class Hand {
         final UUID boss;
-        final UUID mob;
+        /** Not final: a hand the world lost gets a new body from the whip. */
+        UUID mob;
         final String dimension;
         final BlockPos patch;
         int pace;
@@ -348,6 +403,9 @@ public final class TrapCrew {
         registerCommand();
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             int tick = server.getTicks();
+            if (tick % TICKET_TICKS == 0) {
+                keepAwake(server);
+            }
             // Per hand rather than one global beat: pace is bought per hand, so
             // a hand somebody paid 1400e to speed up has to actually run faster
             // than the one next to it.
@@ -360,6 +418,27 @@ public final class TrapCrew {
                 payday(server);
             }
         });
+    }
+
+    /**
+     * Re-stamp the ticket on every patch whose boss is logged in.
+     *
+     * Re-adding an identical ticket does not stack another one -- the game
+     * finds the one already there and pushes its expiry back out -- so this is
+     * a hash lookup a hand every five seconds, and a patch that stops being
+     * wanted simply stops being mentioned.
+     */
+    private static void keepAwake(MinecraftServer server) {
+        for (Hand hand : CREW) {
+            if (server.getPlayerManager().getPlayer(hand.boss) == null) {
+                continue;
+            }
+            ServerWorld world = worldOf(server, hand);
+            if (world != null) {
+                world.getChunkManager().addTicket(TICKET, new ChunkPos(hand.patch),
+                        ticketRadius(hand.reachBlocks()));
+            }
+        }
     }
 
     /** How many hands this player is carrying. */
@@ -513,25 +592,20 @@ public final class TrapCrew {
     // --- hiring and firing ----------------------------------------------------
 
     /**
-     * Take somebody on at this spot.
+     * Put a body on the ground at a spot, ready to be somebody's hand.
      *
-     * @return why it didn't happen, or null if it did
+     * Shared by hiring and by the whip, because the second one only works if
+     * the replacement is identical to the original in every way that matters.
+     * A replacement that forgot to be a NITWIT would quietly take up a
+     * profession and start trading, months after anybody remembers why every
+     * line of this mattered.
      */
-    public static String hire(ServerPlayerEntity boss, BlockPos patch) {
-        if (sizeOf(boss) >= MAX_HANDS) {
-            return MAX_HANDS + " hands is all one operation will carry.";
-        }
-        if (TrapMarket.wealthOf(boss) < HIRE_COST) {
-            return "Taking somebody on costs " + HIRE_COST + "e.";
-        }
-        ServerWorld world = boss.getWorld();
+    private static VillagerEntity put(ServerWorld world, BlockPos patch, float yaw) {
         VillagerEntity mob = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
         if (mob == null) {
-            return "Nobody's about.";
+            return null;
         }
-        TrapMarket.take(boss, HIRE_COST);
-
-        mob.refreshPositionAndAngles(patch.up(), boss.getYaw(), 0.0F);
+        mob.refreshPositionAndAngles(patch.up(), yaw, 0.0F);
         mob.setPersistent();
         mob.setAiDisabled(false);
         mob.setCustomName(Text.literal("Hand").formatted(Formatting.YELLOW));
@@ -545,6 +619,110 @@ public final class TrapCrew {
                         .getOrThrow(net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
         world.spawnEntity(mob);
+        return mob;
+    }
+
+    /**
+     * Get them back on the patch, whatever went wrong.
+     *
+     * Two failures wear the same face from across a field -- somebody who has
+     * wandered behind a wall, and somebody a zombie got in the night -- and
+     * until now the second one was permanent AND invisible: the hand stayed on
+     * the books forever, took no wage, did no work, and held one of the five
+     * places. One button covers both, because from where the player is stood
+     * they are the same complaint.
+     *
+     * Free, and no cooldown. It exists to undo the game going wrong, and
+     * charging for that would make a bug into a tax.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String whip(ServerPlayerEntity boss, int index) {
+        if (index < 0 || index >= CREW.size()) {
+            return "They're not on the books any more.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "That's not your hand.";
+        }
+        ServerWorld world = worldOf(boss.getServer(), hand);
+        if (world == null) {
+            return "That patch is in a world that isn't there any more.";
+        }
+
+        ChunkPos home = new ChunkPos(hand.patch);
+        VillagerEntity mob = find(boss.getServer(), hand);
+
+        // "Not found" only means "dead" once the game is actually keeping
+        // entities alive out there. Adding a ticket schedules a load; it does
+        // not finish one, so deciding on the spot would put a second villager
+        // down next to a perfectly good first one, forever. canSpawnEntitiesAt
+        // is the entity manager's own "are the entities in this chunk live",
+        // misleading name and all -- ask it, and if the answer is no, hold the
+        // patch open and let them try again in a moment.
+        if (mob == null && !world.canSpawnEntitiesAt(home)) {
+            world.getChunkManager().addTicket(TICKET, home, ticketRadius(hand.reachBlocks()));
+            world.getChunk(home.x, home.z);
+            return "That patch is still waking up. Try again in a second.";
+        }
+        world.getChunkManager().addTicket(TICKET, home, ticketRadius(hand.reachBlocks()));
+
+        boolean fresh = mob == null;
+        if (fresh) {
+            mob = put(world, hand.patch, boss.getYaw());
+            if (mob == null) {
+                return "Couldn't put anybody down there.";
+            }
+            hand.mob = mob.getUuid();
+            save();
+        }
+
+        mob.refreshPositionAndAngles(hand.patch.up(), mob.getYaw(), 0.0F);
+        mob.getNavigation().stop();
+        if (mob.isSleeping()) {
+            mob.wakeUp();
+        }
+        equip(mob, hand);
+        // Straight back on the clock: a break they are serving in a hole
+        // somewhere is not a break anybody asked for.
+        hand.restUntil = 0;
+        hand.worked = 0;
+        hand.idle = 0;
+
+        world.playSound(null, hand.patch, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
+                SoundCategory.NEUTRAL, 1.0F, 0.6F);
+        world.playSound(null, hand.patch, SoundEvents.ENTITY_VILLAGER_NO,
+                SoundCategory.NEUTRAL, 0.8F, 1.0F);
+        world.spawnParticles(ParticleTypes.CRIT, hand.patch.getX() + 0.5,
+                hand.patch.getY() + 1.2, hand.patch.getZ() + 0.5, 18, 0.4, 0.4, 0.4, 0.15);
+
+        boss.sendMessage(fresh
+                ? Text.literal("You'd lost that one. ").formatted(Formatting.YELLOW)
+                        .append(Text.literal("Somebody else is on the patch, and they "
+                                + "know everything you paid to teach.")
+                                .formatted(Formatting.GRAY))
+                : Text.literal("Back on the patch.").formatted(Formatting.GREEN), false);
+        return null;
+    }
+
+    /**
+     * Take somebody on at this spot.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String hire(ServerPlayerEntity boss, BlockPos patch) {
+        if (sizeOf(boss) >= MAX_HANDS) {
+            return MAX_HANDS + " hands is all one operation will carry.";
+        }
+        if (TrapMarket.wealthOf(boss) < HIRE_COST) {
+            return "Taking somebody on costs " + HIRE_COST + "e.";
+        }
+        ServerWorld world = boss.getWorld();
+        VillagerEntity mob = put(world, patch, boss.getYaw());
+        if (mob == null) {
+            return "Nobody's about.";
+        }
+        TrapMarket.take(boss, HIRE_COST);
 
         Hand hand = new Hand(boss.getUuid(), mob.getUuid(),
                 world.getRegistryKey().getValue().toString(), patch);
@@ -1292,21 +1470,26 @@ public final class TrapCrew {
         }
     }
 
-    private static VillagerEntity find(MinecraftServer server, Hand hand) {
+    private static ServerWorld worldOf(MinecraftServer server, Hand hand) {
         if (server == null) {
             return null;
         }
         for (ServerWorld world : server.getWorlds()) {
-            if (!world.getRegistryKey().getValue().toString().equals(hand.dimension)) {
-                continue;
-            }
-            // getEntity by uuid only finds loaded entities, which is what we
-            // want: an unloaded hand is one nobody is watching work.
-            if (world.getEntity(hand.mob) instanceof VillagerEntity found) {
-                return found;
+            if (world.getRegistryKey().getValue().toString().equals(hand.dimension)) {
+                return world;
             }
         }
         return null;
+    }
+
+    private static VillagerEntity find(MinecraftServer server, Hand hand) {
+        ServerWorld world = worldOf(server, hand);
+        // getEntity by uuid only finds loaded entities. That used to be most of
+        // the crew most of the time; now the patch holds its own ticket, so a
+        // hand nobody can find is a hand something ate. The whip is the answer
+        // to that, and it is why this staying honest matters.
+        return world != null && world.getEntity(hand.mob) instanceof VillagerEntity found
+                ? found : null;
     }
 
     // --- persistence ----------------------------------------------------------

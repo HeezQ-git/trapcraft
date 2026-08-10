@@ -1146,6 +1146,21 @@ public final class TrapGuide {
                 .append(hint("Nor wander off."))));
 
         pages.add(page(Text.empty()
+                .append(title("9c. WHILE YOU'RE AWAY\n\n"))
+                .append(body("The patch keeps going wherever you are, as "
+                        + "long as you're logged in.\n\n"))
+                .append(body("Log off and the field sleeps -- and so does "
+                        + "the wage.\n\n"))
+                .append(hint("No need to stand over anybody."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9d. THE WHIP\n\n"))
+                .append(body("Wandered off? Stuck? Whip them in /crew.\n\n"))
+                .append(body("Back to the spot, break over, free.\n\n"))
+                .append(warn("If something ATE them, it puts somebody "
+                        + "new down -- trained."))));
+
+        pages.add(page(Text.empty()
                 .append(title("10. IS IT WORTH IT?\n\n"))
                 .append(body("A hand you can't keep busy is a hand losing you "
                         + "money.\n\n"))

@@ -33,22 +33,28 @@ import java.util.List;
  * only honest way to show a ladder: "Pace 2 of 4, next rung 320e" is one item
  * with lore, and three paragraphs of tellraw pretending to be one.
  *
- *   [hand][hand][hand] . [book] . . . [hire]
- *   [pace][reach] . [job][job][job][job][job]
- *   . . . . [wages] . . . [fire]
+ *   [hand][hand][hand][hand][hand] . [book] . [hire]
+ *   [pace][reach] [job][job][job][job][job][job][job]
+ *   [job][job][whip] . [wages] . . . [fire]
  *
  * The selected hand is the one everything on the bottom two rows applies to,
  * which is why the top row is heads you click rather than a list you read.
+ *
+ * The book used to sit in the fifth head's slot, which was fine right up until
+ * somebody hired a fifth hand: the head was painted, then painted over, and
+ * the slot stayed clickable -- so hand five existed, worked, took a wage, and
+ * could only be selected by clicking a book.
  */
 public class CrewScreenHandler extends ScreenHandler {
     private static final int ROWS = 3;
     private static final int SIZE = ROWS * 9;
 
-    private static final int HELP_SLOT = 4;
+    private static final int HELP_SLOT = 6;
     private static final int HIRE_SLOT = 8;
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
     private static final int JOBS_FROM = 11;
+    private static final int WHIP_SLOT = 20;
     private static final int WAGES_SLOT = 22;
     private static final int FIRE_SLOT = 26;
 
@@ -62,6 +68,16 @@ public class CrewScreenHandler extends ScreenHandler {
      */
     private static final List<TrapCrew.Job> TEACHABLE =
             List.of(TrapCrew.Job.values());
+
+    static {
+        // The job row is laid out by counting off JOBS_FROM, so a tenth job
+        // would land on the whip and be eaten by the click handler without a
+        // word. Better to fall over the first time somebody opens the board.
+        if (JOBS_FROM + TEACHABLE.size() > WHIP_SLOT) {
+            throw new IllegalStateException(
+                    "crew board: " + TEACHABLE.size() + " jobs won't fit before the whip");
+        }
+    }
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity boss;
@@ -115,6 +131,7 @@ public class CrewScreenHandler extends ScreenHandler {
             for (int i = 0; i < TEACHABLE.size(); i++) {
                 display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(i)));
             }
+            display.setStack(WHIP_SLOT, whipTag(card));
             display.setStack(WAGES_SLOT, wages());
             display.setStack(FIRE_SLOT, fireTag(selected));
         }
@@ -150,12 +167,14 @@ public class CrewScreenHandler extends ScreenHandler {
                 + (knows.isEmpty() ? " -- nothing yet" : ": " + knows),
                 card.taught().isEmpty() ? Formatting.RED : Formatting.WHITE));
         lore.add(Text.empty());
-        // "Present" is worth a line of its own: an unloaded or dead hand does
-        // no work and takes no wages, and from the outside that is
-        // indistinguishable from one that is simply being lazy.
+        // "Present" is worth a line of its own: a hand who isn't there does no
+        // work and takes no wages, and from the outside that is
+        // indistinguishable from one that is simply being lazy. It used to
+        // also mean "you are stood too far away", which it no longer can --
+        // the patch holds itself open now, so this is a zombie or nothing.
         lore.add(card.present()
                 ? line("On the patch.", Formatting.GREEN)
-                : line("Nowhere to be seen -- unloaded, or a zombie got them.",
+                : line("Gone. Something got them -- whip a new one in.",
                 Formatting.RED));
         lore.add(line(chosen ? "Selected." : "Click to select.",
                 chosen ? Formatting.DARK_GRAY : Formatting.YELLOW));
@@ -254,6 +273,10 @@ public class CrewScreenHandler extends ScreenHandler {
                 line("Teaching costs up front AND puts", Formatting.WHITE),
                 line("the wage up for good.", Formatting.WHITE),
                 Text.empty(),
+                line("They keep working while you're", Formatting.GRAY),
+                line("elsewhere, as long as you're", Formatting.GRAY),
+                line("logged in. Log off and so do they.", Formatting.GRAY),
+                Text.empty(),
                 line("Miss a wage packet and they walk,", Formatting.DARK_GRAY),
                 line("taking everything you taught them.", Formatting.DARK_GRAY))));
         return tag;
@@ -276,6 +299,34 @@ public class CrewScreenHandler extends ScreenHandler {
                                 : can ? "Click to hire them where YOU are stood."
                                 : "You can't cover it.",
                         can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
+        return tag;
+    }
+
+    /**
+     * One button for "they aren't working and I don't care why".
+     *
+     * A lead is the closest thing the game has to a picture of a whip, and it
+     * reads at a glance in a row that is otherwise crops and tools.
+     */
+    private ItemStack whipTag(TrapCrew.Card card) {
+        boolean gone = !card.present();
+        ItemStack tag = new ItemStack(Items.LEAD);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Whip them back").formatted(gone ? Formatting.RED : Formatting.YELLOW,
+                        Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line("Drags them to the spot and ends", Formatting.GRAY));
+        lore.add(line("whatever break they were on.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(gone
+                ? line("This one is gone. Clicking puts", Formatting.RED)
+                : line("For when they've got stuck behind", Formatting.DARK_GRAY));
+        lore.add(gone
+                ? line("somebody new on the patch, trained.", Formatting.RED)
+                : line("a wall or wandered off.", Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        lore.add(line("Free. Click as often as you like.", Formatting.YELLOW));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
@@ -332,6 +383,10 @@ public class CrewScreenHandler extends ScreenHandler {
         TrapCrew.Card card = crew.get(selected);
         if (index == PACE_SLOT || index == REACH_SLOT) {
             answer(TrapCrew.buy(boss, card.index(), null, index == PACE_SLOT));
+            return;
+        }
+        if (index == WHIP_SLOT) {
+            answer(TrapCrew.whip(boss, card.index()));
             return;
         }
         if (index >= JOBS_FROM && index < JOBS_FROM + TEACHABLE.size()) {
