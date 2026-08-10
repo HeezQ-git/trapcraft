@@ -949,6 +949,14 @@ def build() -> str:
     {table(["Job", "Costs", "Wage", "What they do"], job_rows)}
     <p>The times above are what you would measure with a stopwatch, breather included
     — not the raw pass rate.</p>
+    <h3 class="sub">One chest</h3>
+    <p>This is the thing people get wrong. A hand uses <strong>the nearest container to their
+    spot</strong> — that one and no other — for everything: what it harvests into, and what it
+    draws from. Rolling wants <strong>cured buds and paper in that chest</strong>; fresh buds
+    off the plant will not do and no crafting table is involved. A different container nearer
+    their spot quietly becomes the one they use.</p>
+    <p class="note">The crew board names the chest it is actually using and marks any taught
+    job the chest cannot currently back, so you never have to guess which of the two it is.</p>
     <h3 class="sub">Crews on file</h3>
     <p><code>/crew save &lt;name&gt;</code> writes down who works where and everything
     they know; <code>/crew load &lt;name&gt;</code> buys the lot back onto the same

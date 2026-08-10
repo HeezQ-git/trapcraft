@@ -585,7 +585,8 @@ public final class TrapCrew {
     public record Card(int index, int pace, int reach, int reachBlocks, int wage,
                        String tempo, boolean present, List<Job> taught,
                        int done, int paid, int missed, int owed,
-                       String dimension, int x, int y, int z) {
+                       String dimension, int x, int y, int z,
+                       String chest, List<Job> starved) {
         /** Where they work, short enough for a tooltip. */
         public String spot() {
             return x + " " + y + " " + z;
@@ -622,10 +623,27 @@ public final class TrapCrew {
                     taught.add(job);
                 }
             }
+            // Read the chest the hand actually uses -- the nearest container
+            // to its SPOT, which is the single most misunderstood thing about
+            // the crew. Somebody with paper and buds in the wrong chest was
+            // doing everything right and getting nothing.
+            ServerWorld world = worldOf(boss.getServer(), hand);
+            net.minecraft.inventory.Inventory box = world == null ? null
+                    : nearestBox(world, hand);
+            Supplies stock = suppliesOf(box);
+            List<Job> starved = new ArrayList<>();
+            for (Job job : taught) {
+                if (!backed(job, stock)) {
+                    starved.add(job);
+                }
+            }
             out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
                     paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught,
                     hand.done, hand.paid, hand.missed, hand.owed, hand.dimension,
-                    hand.patch.getX(), hand.patch.getY(), hand.patch.getZ()));
+                    hand.patch.getX(), hand.patch.getY(), hand.patch.getZ(),
+                    box == null || hand.box == null ? null
+                            : hand.box.getX() + " " + hand.box.getY() + " " + hand.box.getZ(),
+                    starved));
         }
         return out;
     }
@@ -1568,11 +1586,7 @@ public final class TrapCrew {
         // here rather than at every square, and read at all because a hand
         // that walks to a plant it has no bone meal for does nothing for a
         // whole pass and looks exactly like a hand that is broken.
-        Supplies stock = new Supplies(holds(box, Items.BONE_MEAL), holdsSeed(box),
-                holdsRawBud(box),
-                counts(box, TrapContent.cocaLeaves) >= LeafPressBlock.LEAVES_PER_BATCH,
-                holds(box, TrapContent.cocaPaste) && holds(box, Items.BLAZE_POWDER),
-                rollable(box) != null);
+        Supplies stock = suppliesOf(box);
 
         Map<Job, BlockPos> found = new EnumMap<>(Job.class);
         int looked = 0;
@@ -1681,6 +1695,35 @@ public final class TrapCrew {
             }
         }
         return false;
+    }
+
+    /** What one chest can back, read once and shared with the board. */
+    private static Supplies suppliesOf(net.minecraft.inventory.Inventory box) {
+        return new Supplies(holds(box, Items.BONE_MEAL), holdsSeed(box),
+                holdsRawBud(box),
+                counts(box, TrapContent.cocaLeaves) >= LeafPressBlock.LEAVES_PER_BATCH,
+                holds(box, TrapContent.cocaPaste) && holds(box, Items.BLAZE_POWDER),
+                rollable(box) != null);
+    }
+
+    /**
+     * Is the chest holding what this job needs, right now?
+     *
+     * Only the jobs the CHEST backs. Picking, farmhand and tilling depend on
+     * the ground rather than the box, and reporting "nothing to pick" from a
+     * board would mean re-running the whole outward scan every time somebody
+     * opened it.
+     */
+    private static boolean backed(Job job, Supplies stock) {
+        return switch (job) {
+            case ROLL -> stock.rolling();
+            case CURE -> stock.rawBuds();
+            case PRESS -> stock.leaves();
+            case REFINE -> stock.paste();
+            case FEED -> stock.boneMeal();
+            case SOW -> stock.seeds();
+            default -> true;
+        };
     }
 
     /** What the chest can back up this pass. */

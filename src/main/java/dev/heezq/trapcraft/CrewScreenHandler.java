@@ -159,6 +159,15 @@ public class CrewScreenHandler extends ScreenHandler {
                 + card.tempo(), Formatting.GRAY));
         lore.add(line("Works " + card.reachBlocks() + " blocks around  ", Formatting.GRAY)
                 .append(plain(card.spot()).formatted(Formatting.WHITE)));
+        // The single most misunderstood thing about the crew: a hand uses ONE
+        // container, the nearest one to its spot, and nothing else in the
+        // world. Somebody with the right things in the wrong chest was doing
+        // everything right and getting nothing.
+        lore.add(card.chest() == null
+                ? line("NO CHEST in the patch. They can't work.", Formatting.RED)
+                : line("Uses the chest at  ", Formatting.DARK_GRAY)
+                .append(plain(card.chest()).formatted(Formatting.WHITE))
+                .append(plain("  (nearest one)").formatted(Formatting.DARK_GRAY)));
         lore.add(line("Wages  ", Formatting.DARK_GRAY)
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
                 .append(plain(" every five minutes ON THE CLOCK")
@@ -268,7 +277,14 @@ public class CrewScreenHandler extends ScreenHandler {
             // never rolled. A job with nothing to work on looks identical to a
             // job that is broken, and only one of them is your fault.
             lore.add(line("Wants " + job.needs() + ".", Formatting.GRAY));
-            lore.add(line("No luck? It's usually that.", Formatting.DARK_GRAY));
+            if (card.starved().contains(job)) {
+                lore.add(line("NOT RIGHT NOW -- the chest hasn't got it.",
+                        Formatting.RED, Formatting.BOLD));
+                lore.add(line("It only ever looks in ONE chest: the", Formatting.RED));
+                lore.add(line("nearest one to their spot.", Formatting.RED));
+            } else {
+                lore.add(line("Ready. The chest can back it.", Formatting.GREEN));
+            }
             lore.add(line("Shift-click to drop it.", Formatting.YELLOW));
         } else {
             lore.add(line(job.cost() == 0 ? "Free." : job.cost() + "e", Formatting.GOLD)

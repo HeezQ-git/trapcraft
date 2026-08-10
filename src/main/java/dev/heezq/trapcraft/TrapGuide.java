@@ -1461,11 +1461,19 @@ public final class TrapGuide {
                 .append(hint("Cost, then what it adds to the wage."))));
 
         pages.add(page(Text.empty()
-                .append(title("7b. WHY IT'S NOT DOING IT\n\n"))
-                .append(body("Every job wants something in the chest or the "
-                        + "patch first.\n\n"))
-                .append(body("Rolling wants CURED buds and PAPER.\n\n"))
-                .append(hint("The board says what each one wants."))));
+                .append(title("7b. ONE CHEST\n\n"))
+                .append(body("A hand uses the NEAREST container to their "
+                        + "spot. That one, and no other.\n\n"))
+                .append(body("Everything they need goes in it.\n\n"))
+                .append(warn("Another chest nearer their spot steals the "
+                        + "job."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c. NOT ROLLING?\n\n"))
+                .append(body("CURED buds AND paper, in that chest.\n\n"))
+                .append(body("No crafting table. Fresh buds won't do.\n\n"))
+                .append(hint("The board says which jobs the chest can "
+                        + "back."))));
     }
 
     private static void network(List<RawFilteredPair<Text>> pages) {
