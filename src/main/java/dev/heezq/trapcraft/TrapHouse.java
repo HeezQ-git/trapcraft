@@ -604,6 +604,7 @@ public final class TrapHouse {
      * {@link TrapMarket#take} does.
      */
     public static void stake(ServerPlayerEntity player, House house, int amount) {
+        TrapLedger.record(player, TrapLedger.Source.CASINO, -amount);
         if (house == null) {
             TrapMarket.take(player, amount);
             return;
@@ -651,10 +652,12 @@ public final class TrapHouse {
         }
         if (house == null) {
             TrapMarket.pay(player, amount);
+            TrapLedger.record(player, TrapLedger.Source.CASINO, amount);
             return amount;
         }
         int given = (int) Math.min(amount, house.balance);
         house.balance -= given;
+        TrapLedger.record(player, TrapLedger.Source.CASINO, given);
         if (owns(player, house)) {
             house.ownPlay -= given;
         } else {
@@ -681,11 +684,13 @@ public final class TrapHouse {
         }
         if (house == null) {
             TrapMarket.pay(player, amount);
+            TrapLedger.record(player, TrapLedger.Source.CASINO, amount);
             return;
         }
         int given = (int) Math.min(amount, house.balance);
         house.balance -= given;
         house.handle -= given;
+        TrapLedger.record(player, TrapLedger.Source.CASINO, given);
         TrapMarket.handOver(player, given);
         save();
     }
@@ -715,13 +720,24 @@ public final class TrapHouse {
         }
     }
 
-    /** Sweep the owner's emeralds into the vault. Returns what went in. */
+    /**
+     * Sweep the owner's emeralds into the vault. Returns what went in.
+     *
+     * Logged to the ledger as CASINO, negative, and the plan said it would not
+     * be -- on the grounds that moving your own money into your own vault is
+     * carrying rather than earning. That is true of a wallet and wrong here.
+     * A floor's profit only ever becomes the owner's when they withdraw it, so
+     * deposits out and withdrawals in is the ONLY arrangement whose running
+     * total is what the casino actually made them: put 1,000 in, take 1,200
+     * out, and the ledger reads +200, which is the truth.
+     */
     public static int deposit(ServerPlayerEntity owner, House house) {
         int found = TrapMarket.wealthOf(owner);
         if (found <= 0) {
             return 0;
         }
         TrapMarket.collect(owner, found);
+        TrapLedger.record(owner, TrapLedger.Source.CASINO, -found);
         house.balance += found;
         save();
         return found;
@@ -735,6 +751,7 @@ public final class TrapHouse {
         }
         house.balance -= taken;
         TrapMarket.handOver(owner, taken);
+        TrapLedger.record(owner, TrapLedger.Source.CASINO, taken);
         save();
         return taken;
     }

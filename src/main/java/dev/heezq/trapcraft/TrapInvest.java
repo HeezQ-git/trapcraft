@@ -132,6 +132,7 @@ public final class TrapInvest {
                 position.indexAtStart(), TrapMarket.index(), luck(player, position));
         int paid = Math.max(1, Math.round(position.principal() * multiplier));
         TrapMarket.pay(player, paid);
+        TrapLedger.record(player, TrapLedger.Source.INVEST, paid - position.principal());
         return paid;
     }
 

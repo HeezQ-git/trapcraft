@@ -553,6 +553,7 @@ public class ShopScreenHandler extends ScreenHandler {
 
         int cost = affordable * each;
         TrapMarket.take(shopper, cost);
+        TrapLedger.record(shopper, TrapLedger.Source.MARKET, -cost);
         TrapMarket.traded(entry, affordable, true);
         for (int i = 0; i < affordable; i++) {
             shopper.getInventory().offerOrDrop(entry.stack());
@@ -586,6 +587,7 @@ public class ShopScreenHandler extends ScreenHandler {
 
         TrapMarket.takeGoods(shopper, entry, 1);
         TrapMarket.pay(shopper, each);
+        TrapLedger.record(shopper, TrapLedger.Source.MARKET, each);
         TrapMarket.traded(entry, 1, false);
 
         till();

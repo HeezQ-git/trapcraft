@@ -514,6 +514,7 @@ public final class TrapContracts {
         int paid = Math.min(TrapMath.PAYOUT_CEILING,
                 Math.round(contract.payout() * TrapMath.heatMultiplier(heatTier)));
         TrapMarket.pay(player, paid);
+        TrapLedger.record(player, TrapLedger.Source.CONTRACT, paid);
 
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),

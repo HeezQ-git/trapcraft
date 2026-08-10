@@ -1098,6 +1098,7 @@ public final class TrapCrew {
                 continue;
             }
             TrapMarket.take(boss, wage);
+            TrapLedger.record(boss, TrapLedger.Source.CREW, -wage);
             boss.sendMessage(Text.literal("Wages: ").formatted(Formatting.DARK_GRAY)
                     .append(Text.literal("-" + wage + "e").formatted(Formatting.RED)), true);
         }

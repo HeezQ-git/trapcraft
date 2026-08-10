@@ -234,6 +234,7 @@ public class SellScreenHandler extends ScreenHandler {
         }
         if (paid > 0) {
             TrapMarket.pay(seller, paid);
+            TrapLedger.record(seller, TrapLedger.Source.SCRAP, paid);
             if (paid >= 500) {
                 TrapAwards.grant(seller, "liquidation");
             }

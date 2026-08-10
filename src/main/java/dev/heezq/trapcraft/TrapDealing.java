@@ -502,6 +502,8 @@ public final class TrapDealing {
 
         held.decrement(units);
         TrapMarket.pay(seller, paid);
+        TrapLedger.record(seller, craving.powder()
+                ? TrapLedger.Source.COCA : TrapLedger.Source.WEED, paid);
 
         int left = appetite - units;
         APPETITE.put(customer.getUuid(), left);

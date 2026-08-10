@@ -155,6 +155,7 @@ public final class TrapCoins {
             return "That's " + cost + "e and you haven't got it.";
         }
         TrapMarket.take(player, cost);
+        TrapLedger.record(player, TrapLedger.Source.INVEST, -cost);
 
         List<Holding> mine = BOOK.computeIfAbsent(player.getUuid(), key -> new ArrayList<>());
         Holding existing = held(player, coin);
@@ -197,6 +198,7 @@ public final class TrapCoins {
         save();
         if (paid > 0) {
             TrapMarket.pay(player, paid);
+            TrapLedger.record(player, TrapLedger.Source.INVEST, paid);
         }
         return paid;
     }

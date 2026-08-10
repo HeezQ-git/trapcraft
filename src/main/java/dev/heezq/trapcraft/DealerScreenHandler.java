@@ -221,6 +221,9 @@ public class DealerScreenHandler extends ScreenHandler {
         int paid = dealer.earnings;
         dealer.earnings = 0;
         TrapMarket.pay(boss, paid);
+        // A dealer shifts whatever you handed them, and the books do not
+        // split it back out -- it is street money either way.
+        TrapLedger.record(boss, TrapLedger.Source.WEED, paid);
         TrapDealers.touch();
         boss.getWorld().playSound(null, boss.getBlockPos(),
                 SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 0.6F, 1.6F);

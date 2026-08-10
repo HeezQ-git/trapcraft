@@ -262,6 +262,9 @@ public final class TrapStalls {
         TrapMarket.take(shopper, price - keeps);
         TrapMarket.collect(shopper, keeps);
         stall.till += keeps;
+        // The buyer's side. The seller is credited when they empty the till,
+        // not now -- crediting both here would book the sale twice.
+        TrapLedger.record(shopper, TrapLedger.Source.STALL, -price);
         save();
 
         shopper.getInventory().offerOrDrop(entry.stack());
@@ -317,6 +320,7 @@ public final class TrapStalls {
         // handOver, not pay: this money never left circulation, it was just
         // sat in a shop's till waiting to be picked up.
         TrapMarket.handOver(owner, takings);
+        TrapLedger.record(owner, TrapLedger.Source.STALL, takings);
         save();
         return takings;
     }
