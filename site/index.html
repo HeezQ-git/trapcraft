@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+<script>document.documentElement.className='js'</script>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +10,7 @@ refining, the market, stalls, crew, heat, the casino. Generated from the mod's s
 <meta name="theme-color" content="#0c0b0a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Figtree:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --ink: #0c0b0a;
@@ -35,7 +36,7 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--bone);
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif;
   font-size: clamp(1rem, .45vw + .92rem, 1.14rem);
   line-height: 1.65;
   font-optical-sizing: auto;
@@ -81,7 +82,7 @@ a { color: inherit; }
 .rail-in::-webkit-scrollbar { display: none; }
 .rail a {
   flex: 0 0 auto; text-decoration: none; white-space: nowrap;
-  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; letter-spacing: .1em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .74rem; letter-spacing: .1em;
   text-transform: uppercase; color: var(--bone-dim);
   padding: .4rem .7rem; border-radius: 2px; transition: color .25s, background .25s;
 }
@@ -104,9 +105,9 @@ a { color: inherit; }
 }
 .brand { display: none; }
 @media (min-width: 1080px) { .brand { display: block; } }
-.brand b { font-family: 'Bodoni Moda', serif; font-weight: 900; font-size: 1.5rem;
+.brand b { font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900; font-size: 1.5rem;
   letter-spacing: -.02em; display: block; line-height: 1; }
-.brand span { font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
+.brand span { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .64rem;
   letter-spacing: .22em; text-transform: uppercase; color: var(--bone-dim); }
 
 /* --- hero ---------------------------------------------------------------- */
@@ -129,20 +130,20 @@ a { color: inherit; }
 }
 .hero > * { position: relative; }
 .eyebrow {
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .3em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem; letter-spacing: .3em;
   text-transform: uppercase; color: var(--acc); margin: 0 0 1.5rem;
 }
 .hero h1 {
-  font-family: 'Bodoni Moda', serif; font-weight: 900;
-  font-size: clamp(3.2rem, 13vw, 11rem); line-height: .82; letter-spacing: -.035em;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900;
+  font-size: clamp(2.6rem, 10vw, 8.5rem); line-height: .95; letter-spacing: -.01em;
   margin: 0; text-wrap: balance;
 }
-.hero h1 em { font-style: italic; font-weight: 400; display: block;
+.hero h1 em { font-style: normal; font-weight: 400; display: block;
   color: var(--bone-dim); }
 .hero p { max-width: 46ch; margin: 2rem 0 0; color: var(--bone-dim);
   font-size: 1.15rem; }
 .figs { display: flex; flex-wrap: wrap; gap: 2.5rem; margin-top: 3.5rem;
-  font-family: 'IBM Plex Mono', monospace; }
+  font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .figs div b { display: block; font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 500;
   color: var(--bone); line-height: 1; }
 .figs div span { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
@@ -162,20 +163,20 @@ main { padding: 0 var(--pad) 8rem; }
   scroll-margin-top: 4.2rem; }
 @media (min-width: 1080px) { .sec { scroll-margin-top: 1rem; } }
 .sec-mark {
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .2em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem; letter-spacing: .2em;
   color: var(--bone-dim); margin-bottom: 1.5rem;
 }
 @media (min-width: 1400px) {
   .sec-mark { position: absolute; left: -5.5rem; top: 5.9rem; margin: 0; }
 }
-.kicker { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .22em;
+.kicker { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .7rem; letter-spacing: .22em;
   text-transform: uppercase; color: var(--acc); margin: 0 0 .5rem; }
 .sec h2 {
-  font-family: 'Bodoni Moda', serif; font-weight: 900;
-  font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: .95; letter-spacing: -.03em;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900;
+  font-size: clamp(1.9rem, 5vw, 3.4rem); line-height: 1.05; letter-spacing: 0;
   margin: 0 0 2rem;
 }
-.sub { font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 1.5rem;
+.sub { font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 700; font-size: 1.5rem;
   margin: 3rem 0 1rem; letter-spacing: -.01em; }
 .lede { font-size: 1.28rem; max-width: var(--measure); color: var(--bone); }
 .sec p { max-width: var(--measure); }
@@ -186,13 +187,13 @@ main { padding: 0 var(--pad) 8rem; }
 .dim { color: var(--bone-dim); }
 .acc { color: var(--acc); }
 .warn { color: var(--warn); }
-code { font-family: 'IBM Plex Mono', monospace; font-size: .86em; color: var(--bone);
+code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .86em; color: var(--bone);
   background: #ffffff0d; padding: .12em .4em; border-radius: 2px; }
 
 /* --- tables -------------------------------------------------------------- */
 
 .scroller { overflow-x: auto; margin: 1.75rem 0; }
-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace;
+table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: .84rem; min-width: 30rem; }
 th {
   text-align: left; font-weight: 400; font-size: .66rem; letter-spacing: .18em;
@@ -227,15 +228,15 @@ tbody tr:hover { background: #ffffff06; }
   margin-bottom: 1rem; }
 .swatch { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--tint);
   box-shadow: 0 0 2.5rem -.3rem var(--tint); }
-.tag { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .18em;
+.tag { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .62rem; letter-spacing: .18em;
   text-transform: uppercase; color: var(--bone-dim); }
-.strain h3 { font-family: 'Bodoni Moda', serif; font-size: 2rem; margin: 0 0 .4rem;
-  font-weight: 700; letter-spacing: -.02em; }
+.strain h3 { font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.75rem;
+  margin: 0 0 .4rem; font-weight: 700; }
 .blurb { color: var(--bone-dim); font-size: .95rem; margin: 0 0 1.1rem; }
-.fx { list-style: none; padding: 0; margin: 0 0 1.2rem; font-family: 'IBM Plex Mono', monospace;
+.fx { list-style: none; padding: 0; margin: 0 0 1.2rem; font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: .74rem; }
 .fx li { padding: .28rem 0; border-bottom: 1px solid #ffffff0a; }
-.stat { display: flex; gap: 2rem; margin: 0; font-family: 'IBM Plex Mono', monospace; }
+.stat { display: flex; gap: 2rem; margin: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .stat dt { font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
   color: var(--bone-dim); }
 .stat dd { margin: .2rem 0 0; font-size: 1.05rem; }
@@ -247,7 +248,7 @@ tbody tr:hover { background: #ffffff06; }
 .card { border: 1px solid var(--rule); padding: 1.6rem; background: var(--ink-2);
   transition: transform .4s cubic-bezier(.2,.7,.2,1), border-color .4s; }
 .card:hover { transform: translateY(-4px); border-color: #3d3730; }
-.card h4 { font-family: 'Bodoni Moda', serif; font-size: 1.35rem; margin: 0 0 .6rem;
+.card h4 { font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.35rem; margin: 0 0 .6rem;
   font-weight: 700; }
 .card p { margin: 0; font-size: .95rem; color: var(--bone-dim); }
 
@@ -255,17 +256,17 @@ tbody tr:hover { background: #ffffff06; }
   background: var(--rule); border: 1px solid var(--rule); }
 .chain li { background: var(--ink-2); padding: 1.4rem 1.6rem; display: flex;
   align-items: baseline; gap: 1.2rem; flex-wrap: wrap; }
-.chain .step { font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+.chain .step { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem;
   color: var(--acc); letter-spacing: .16em; }
-.chain strong { font-family: 'Bodoni Moda', serif; font-size: 1.3rem; font-weight: 700; }
-.chain .dim { font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
+.chain strong { font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.3rem; font-weight: 700; }
+.chain .dim { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .78rem;
   margin-left: auto; flex: 1 1 14rem; text-align: right; }
 @media (max-width: 620px) { .chain .dim { text-align: left; margin-left: 0; } }
 
 .pull { margin: 3rem 0; padding: 0; max-width: 52ch; }
-.pull blockquote { margin: 0; font-family: 'Bodoni Moda', serif; font-style: italic;
-  font-size: clamp(1.3rem, 3vw, 1.9rem); line-height: 1.3; letter-spacing: -.01em; }
-.pull figcaption { font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+.pull blockquote { margin: 0; font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif; font-style: italic;
+  font-size: clamp(1.2rem, 2.6vw, 1.7rem); line-height: 1.45; font-weight: 300; }
+.pull figcaption { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .68rem;
   letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim);
   margin-top: .9rem; }
 .pull figcaption::before { content: '— '; }
@@ -276,18 +277,46 @@ tbody tr:hover { background: #ffffff06; }
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
 .craft { margin: 0; text-align: center; }
 .grid3 {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
-  width: 7.5rem; margin: 0 auto; padding: 3px;
-  background: var(--rule); border: 1px solid var(--rule);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  width: 8rem; margin: 0 auto; padding: 5px;
+  background: #3b3730;
+  box-shadow: inset 2px 2px 0 #56514a, inset -2px -2px 0 #1a1815;
 }
+/* Slots are drawn the way Minecraft draws them: a sunken well with a dark
+   top-left edge and a light bottom-right one. */
 .grid3 i {
-  aspect-ratio: 1; letter-spacing: -.02em; background: var(--ink); display: grid; place-items: center;
-  font-family: 'IBM Plex Mono', monospace; font-size: .6rem; font-style: normal;
-  color: #3a352f; transition: background .3s, color .3s;
+  position: relative; aspect-ratio: 1; background: #1b1917; display: grid;
+  place-items: center; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: .58rem; font-style: normal; color: #4a443c;
+  box-shadow: inset 2px 2px 0 #0d0c0b, inset -2px -2px 0 #33302b;
+  transition: background .2s;
 }
-.grid3 i.on { background: #1e1a16; color: var(--acc); cursor: help; }
-.craft:hover .grid3 i.on { background: #262019; color: var(--bone); }
-.craft figcaption { font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+.grid3 i img {
+  width: 76%; height: 76%; object-fit: contain;
+  /* 16x16 art blown up. Without this the browser smears it. */
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+.grid3 i.on { cursor: help; }
+.grid3 i.on:hover { background: #2a2620; z-index: 3; }
+
+/* A Minecraft item tooltip, near enough. */
+.grid3 i.on::after, .made::after {
+  content: attr(data-name);
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  background: #100014f2; color: #fff; border: 2px solid #2d0a63;
+  outline: 1px solid #150127;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: .82rem;
+  padding: .3rem .55rem; white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .14s; z-index: 5;
+}
+.grid3 i.on:hover::after, .made:hover::after { opacity: 1; }
+@media (hover: none) { .grid3 i.on::after, .made::after { display: none; } }
+
+.made { position: relative; display: inline-flex; align-items: center; gap: .2rem;
+  margin-right: .45rem; vertical-align: -.35rem; }
+.made img { width: 1.3rem; height: 1.3rem; image-rendering: pixelated; }
+.made b { font-size: .7rem; color: var(--acc); font-weight: 500; }
+.craft figcaption { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .68rem;
   letter-spacing: .12em; text-transform: uppercase; color: var(--bone-dim);
   margin-top: .8rem; }
 .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
@@ -296,12 +325,12 @@ tbody tr:hover { background: #ffffff06; }
 
 /* --- reveal -------------------------------------------------------------- */
 
-.reveal { opacity: 0; transform: translateY(1.4rem);
+.js .reveal { opacity: 0; transform: translateY(1.4rem);
   transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
-.reveal.in { opacity: 1; transform: none; }
+.js .reveal.in { opacity: 1; transform: none; }
 
 footer { border-top: 1px solid var(--rule); padding: 3rem var(--pad) 5rem;
-  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; color: var(--bone-dim); }
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .74rem; color: var(--bone-dim); }
 footer a { color: var(--acc); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
 </style>
@@ -348,7 +377,7 @@ footer a:hover { text-decoration: underline; }
       <li><span class="step">04</span><strong>Roll it, or sell it cured</strong><span class="dim">+ paper</span></li>
       <li><span class="step">05</span><strong>Read the handbooks</strong><span class="dim">/guide</span></li>
     </ol>
-    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="string">STR</i><i></i><i class="on" title="string">STR</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i></div><figcaption>Drying Rack</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="glass bottle">GB</i><i class="on" title="bowl">BOW</i><i class="on" title="glass bottle">GB</i><i class="on" title="copper ingot">CI</i><i class="on" title="iron ingot">II</i><i class="on" title="copper ingot">CI</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Mixing Station</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="wool">WOO</i><i class="on" title="wool">WOO</i><i class="on" title="wool">WOO</i><i class="on" title="logs">LOG</i><i class="on" title="emerald block">EB</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Market Stall</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="amethyst shard">AS</i><i></i><i class="on" title="amethyst shard">AS</i><i class="on" title="book">BOO</i><i class="on" title="amethyst shard">AS</i><i></i><i class="on" title="compass">COM</i><i></i></div><figcaption>The Ledger</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="copper ingot">CI</i><i></i><i class="on" title="iron nugget">IN</i><i class="on" title="amethyst shard">AS</i><i class="on" title="iron nugget">IN</i><i class="on" title="iron nugget">IN</i><i class="on" title="redstone">RED</i><i class="on" title="iron nugget">IN</i></div><figcaption>Burner Phone</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="smooth stone">SS</i><i class="on" title="smooth stone">SS</i><i class="on" title="smooth stone">SS</i><i class="on" title="logs">LOG</i><i class="on" title="iron ingot">II</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Leaf Press</figcaption></figure></div>
+    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="String"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAArElEQVR42r2SsQ0DIQxFjZSGHdiBNgsguihFpoiyIGIKarfewaVTObII3HEXKZQW/P/+NwD/Oogopx8zs8SUhZnlJ/eY8jkBdV+KMcOMKe/HQETZw4wpj0m0KCum2L2rJbnokIig1eJU7Hq7f9GFEMB771otjogEZqojTO1A58Mu9ILG6fuwMacbsU62A1uwFXJbbfezVotDRHk8X5++Dn2iflObBDOaZefV8wYQu8XSclLViwAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i></i><i class="on" data-name="String"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAArElEQVR42r2SsQ0DIQxFjZSGHdiBNgsguihFpoiyIGIKarfewaVTObII3HEXKZQW/P/+NwD/Oogopx8zs8SUhZnlJ/eY8jkBdV+KMcOMKe/HQETZw4wpj0m0KCum2L2rJbnokIig1eJU7Hq7f9GFEMB771otjogEZqojTO1A58Mu9ILG6fuwMacbsU62A1uwFXJbbfezVotDRHk8X5++Dn2iflObBDOaZefV8wYQu8XSclLViwAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Stick"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWklEQVR42mNgGJLA00z0v4Yc938GBgYGJnI0OxgKkW9zZ7o63HYGBgYGRlI0y0twMhy48JbhxqOvjBTbTLQLaGYzQRfQ3GacLqCbzdTVzMDAwKAhx02+ZkoAALowQXa5xCaNAAAAAElFTkSuQmCC" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Drying Rack"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAb0lEQVR42mO01hL7z0ABYGFgYGBQlOIlS/P9Z58hBjAwMDBcvveBJM26SgIIFzAwMDBIC7ExcPGwMXz78ouBgYGBKDaKAU/f/WJgeIeQIMQWEuBiYGBgYGBioBCMemHUCygGwNI2WV64/+wz2YEAAFfFZfnHNpj6AAAAAElFTkSuQmCC" alt="" loading="lazy"></span>Drying Rack</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" data-name="Glass Bottle"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAApUlEQVR42mNgGGjAiE/ySq7nfwYGBoart+4whO+8zUiSAVeefv//49Q6OP+5gjuDr6EIhnoWXAbcf/WV4duMBgYGBgaGdx8+MsjMuEa6/zaff/OfgYGBIbb/0H9caphoFrpXnn5HsRWfK3BqhnmBJENwacZlCMVhwIQt+hgYGDDivHvthf9EGbDqwDXKYwDdnzDbsQUiI7GGMDAwMCwutGOkeoIBABsKTTaXJ2RvAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Bowl"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAvElEQVR42u2RPQvCQBBEX+IXhxBEomCjCBaCIBaCpfjT7W3tbAxIIEoQQQ4TvVhdyOnFxk6cahl4w+4s/PW1HJu5nDQzm7/eXp2PARr0PUW/W8/9IEoAOF3ctyCnCPue4izdHGwJlc/abwnFZndjf1QOQLW4QRg/gAdC1AxIS8oUKc0TjIDFWBBECWGcWgvrtSsAHOK7vYPZUGSrab208SBKjPWtXxh03AxgPmrkRWoQMODSNxaDtF7BH9IT0GhHsPrCwHYAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Glass Bottle"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAApUlEQVR42mNgGGjAiE/ySq7nfwYGBoart+4whO+8zUiSAVeefv//49Q6OP+5gjuDr6EIhnoWXAbcf/WV4duMBgYGBgaGdx8+MsjMuEa6/zaff/OfgYGBIbb/0H9caphoFrpXnn5HsRWfK3BqhnmBJENwacZlCMVhwIQt+hgYGDDivHvthf9EGbDqwDXKYwDdnzDbsQUiI7GGMDAwMCwutGOkeoIBABsKTTaXJ2RvAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Copper Ingot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABMElEQVR42tWSsUrDUBSGv0gCEZKlkLEgQgqBdBbs4JRJRxcHwaGLL+DsO3TNI3TM1kEydBC6BIKFBNpCQIeACskQyHAdJNem1HTVM11+7vefc/974N+U7znC9xyxqyuHoOZsWyYAz28FD09Lyald0OXZkGS1IS1r0rLGNjRuR0MA0Zgo+zoNTk8AJAxgG1pLbyZRfc8Rd9c3zMNAXuiCrb6L1XcZZDGAUAHyLGZ0cUX+LZKsNi3Q6rvSeB4G0jgrqp8M5mEgTXahPIulaVrWvBcVPVNvh5iWNYQB5/ePKC+LVifb0Fpwo0XA0fYPpGV9EO6ZOllRMU1yJou1oo5nS8UHYVumhPbB0eunfPdksW7vwXi2VHzPERzrMkjb0JgmuZxuG/p1E5t9iD6qTuhv1ReA/azdOFJfKwAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Iron Ingot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA4UlEQVR42tWSsY2EMBBFv08UQEANTEpEETRA5iaoA3qAzKSUQIYTZ2gskRLTgTeaPe8eWgj3XmSN9b5HMwb+DVrroLUO7/XkSpJzVVUAgCzLQtd1SurqSiqK4uXeOYdlWSAh6o70ThySaK1D3/dg5luzICIQkTwSfgDAGAMiupSICMyMpmngnMM8z79DNMagrutnJ3EgM2McRxzHAQBI0/R8CxJyJgllWf5do/ceeZ7fEr33mKYJAGCtVckwDEq2ICEx0m7bts+atVa9dBCHCPu+Y9u2UylGnX2idV0/St/FAzIEeXsjUmkUAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Copper Ingot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABMElEQVR42tWSsUrDUBSGv0gCEZKlkLEgQgqBdBbs4JRJRxcHwaGLL+DsO3TNI3TM1kEydBC6BIKFBNpCQIeACskQyHAdJNem1HTVM11+7vefc/974N+U7znC9xyxqyuHoOZsWyYAz28FD09Lyald0OXZkGS1IS1r0rLGNjRuR0MA0Zgo+zoNTk8AJAxgG1pLbyZRfc8Rd9c3zMNAXuiCrb6L1XcZZDGAUAHyLGZ0cUX+LZKsNi3Q6rvSeB4G0jgrqp8M5mEgTXahPIulaVrWvBcVPVNvh5iWNYQB5/ePKC+LVifb0Fpwo0XA0fYPpGV9EO6ZOllRMU1yJou1oo5nS8UHYVumhPbB0eunfPdksW7vwXi2VHzPERzrMkjb0JgmuZxuG/p1E5t9iD6qTuhv1ReA/azdOFJfKwAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Mixing Station"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAf0lEQVR42mMsjTL/z0ABYGFgYGB4+uoTWZqlxfggBjAwMDAceyNIkmYrkfcIF8CAopIKUZrv37uD6gVsEiSFAbKTSAVMMMaD5x8ZsLEJycENUJDkZ8DGJiTHRKqNWF1Aio3o/OGWDh48/4jiR2Q+uhxGNJIamCgukBbjIzs/AwBm5jr8vYgJRwAAAABJRU5ErkJggg==" alt="" loading="lazy"></span>Mixing Station</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" data-name="Any Wool"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACrklEQVR42j2S2XLbNgBFD0AA4qrdVqy0TvvS//+ZdiZJx0skS1YsWRspgiRI9EGNn+/MnXPnHvHt8ckbrShthZSSQZaSpSmrzU8CKRkPBwQy4OnlBa0Uk9EQgN3+QNu2iM126402DLIUgLppaBrH8XzGe8/FWpxzRGGIVord4YDRmjgK0VojbFV5KQSb7Y4gCJhNJ7Rty6koKEvLsN+nZzS2rgFIogghBMWlxP0iKK3lZjxGK8Vmu6PrOno9w3gw4Hm1Jur1uJ2MAdifTpTWcj+f0ziH2B9P/mJLLqWlnyakSQLe87BY0nUdWZKQpQnnvMBWFV9++wzAYrW+Fvzz/V/v2pY4Crm/u+N5teZSlkRhiNGKxrVcypJBlhLIgGOeE4chjXOEvR6i6zoPUNU1XddxLgoA2q7DaE2WJBitOeU5eXFhPrsFoLiUVE2NeFouPcD9fP4RtF1LHIZ44Gl5vW82naCV4mIt3kMSR3jvEee88B7Pcv1K2Ovx+dOM0lre3vcYpWi7Dq0UjXNcrGU6GuJcy7korgUPPxbeaE3bdcymE74+PCKlZNTvE0cRu8OB6Wj04cnr25Y0iUnjGABR1bUXQlBV//8cRzjnqOrmOiWK6LqOt907YdhDBYqqrjiczowGfdTjYkkQBEyGV0V/rFYIBNPJGI/ncbFESkkgJWmQsFivARhkGUYbxPPyxXs8x3OOlJK//vwDFQR8fXikcY7ZdEKWplzKkp4xH+jHc87LZoM45bn/JYwQgsY56rrB1hXWVrwfj9yMx6RJTGgMb/v9lXA0RCmFaNvWe+/ZHQ40jeN2MuaY56hAYbQiCkPqpmG1+QlAP0sxWrM/HLF1jfj723dvjOF+fse5KNjtD4TGcHd7QxAEvG63NE3DsN8nCkOeli9IKfn97hNSCP4DQ6l9zeoH4DsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Any Wool"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACrklEQVR42j2S2XLbNgBFD0AA4qrdVqy0TvvS//+ZdiZJx0skS1YsWRspgiRI9EGNn+/MnXPnHvHt8ckbrShthZSSQZaSpSmrzU8CKRkPBwQy4OnlBa0Uk9EQgN3+QNu2iM126402DLIUgLppaBrH8XzGe8/FWpxzRGGIVord4YDRmjgK0VojbFV5KQSb7Y4gCJhNJ7Rty6koKEvLsN+nZzS2rgFIogghBMWlxP0iKK3lZjxGK8Vmu6PrOno9w3gw4Hm1Jur1uJ2MAdifTpTWcj+f0ziH2B9P/mJLLqWlnyakSQLe87BY0nUdWZKQpQnnvMBWFV9++wzAYrW+Fvzz/V/v2pY4Crm/u+N5teZSlkRhiNGKxrVcypJBlhLIgGOeE4chjXOEvR6i6zoPUNU1XddxLgoA2q7DaE2WJBitOeU5eXFhPrsFoLiUVE2NeFouPcD9fP4RtF1LHIZ44Gl5vW82naCV4mIt3kMSR3jvEee88B7Pcv1K2Ovx+dOM0lre3vcYpWi7Dq0UjXNcrGU6GuJcy7korgUPPxbeaE3bdcymE74+PCKlZNTvE0cRu8OB6Wj04cnr25Y0iUnjGABR1bUXQlBV//8cRzjnqOrmOiWK6LqOt907YdhDBYqqrjiczowGfdTjYkkQBEyGV0V/rFYIBNPJGI/ncbFESkkgJWmQsFivARhkGUYbxPPyxXs8x3OOlJK//vwDFQR8fXikcY7ZdEKWplzKkp4xH+jHc87LZoM45bn/JYwQgsY56rrB1hXWVrwfj9yMx6RJTGgMb/v9lXA0RCmFaNvWe+/ZHQ40jeN2MuaY56hAYbQiCkPqpmG1+QlAP0sxWrM/HLF1jfj723dvjOF+fse5KNjtD4TGcHd7QxAEvG63NE3DsN8nCkOeli9IKfn97hNSCP4DQ6l9zeoH4DsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Any Wool"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACrklEQVR42j2S2XLbNgBFD0AA4qrdVqy0TvvS//+ZdiZJx0skS1YsWRspgiRI9EGNn+/MnXPnHvHt8ckbrShthZSSQZaSpSmrzU8CKRkPBwQy4OnlBa0Uk9EQgN3+QNu2iM126402DLIUgLppaBrH8XzGe8/FWpxzRGGIVord4YDRmjgK0VojbFV5KQSb7Y4gCJhNJ7Rty6koKEvLsN+nZzS2rgFIogghBMWlxP0iKK3lZjxGK8Vmu6PrOno9w3gw4Hm1Jur1uJ2MAdifTpTWcj+f0ziH2B9P/mJLLqWlnyakSQLe87BY0nUdWZKQpQnnvMBWFV9++wzAYrW+Fvzz/V/v2pY4Crm/u+N5teZSlkRhiNGKxrVcypJBlhLIgGOeE4chjXOEvR6i6zoPUNU1XddxLgoA2q7DaE2WJBitOeU5eXFhPrsFoLiUVE2NeFouPcD9fP4RtF1LHIZ44Gl5vW82naCV4mIt3kMSR3jvEee88B7Pcv1K2Ovx+dOM0lre3vcYpWi7Dq0UjXNcrGU6GuJcy7korgUPPxbeaE3bdcymE74+PCKlZNTvE0cRu8OB6Wj04cnr25Y0iUnjGABR1bUXQlBV//8cRzjnqOrmOiWK6LqOt907YdhDBYqqrjiczowGfdTjYkkQBEyGV0V/rFYIBNPJGI/ncbFESkkgJWmQsFivARhkGUYbxPPyxXs8x3OOlJK//vwDFQR8fXikcY7ZdEKWplzKkp4xH+jHc87LZoM45bn/JYwQgsY56rrB1hXWVrwfj9yMx6RJTGgMb/v9lXA0RCmFaNvWe+/ZHQ40jeN2MuaY56hAYbQiCkPqpmG1+QlAP0sxWrM/HLF1jfj723dvjOF+fse5KNjtD4TGcHd7QxAEvG63NE3DsN8nCkOeli9IKfn97hNSCP4DQ6l9zeoH4DsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Emerald Block"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVUlEQVR42p2TMWvCUBDHf/rsVnBLtINDFkmglg7dDejk4OcofhG/gNQv4FroUBA66OJcJPBEBIdAqboJXVM7PF98eaaFekuSl3f/u/vdXcGdtQ5caGK7pwTQu388+zlJFoTCT58Ag89XAALHA2A1GikBgMH705mIZIrY7pHuNHO+nEfU210AJTBJFkq50Uyj6XO5W2ecA8dj+faSfpcAQuEjmRIKPzcTs2baKv1Q+Ky0gG0mE51dKHyG4z5yt0YceVzZJdgQgVMJjnVhEwNQzHPSZvL4zTIMbHiSNWziYydihBGZSg2iD5VBXgkZcNohx4rmRV1vKPx0WBK3THJ3e2pjo5lhUNKghCE0HPfVu/baRn8zCBwP6cb0qh2odtTI6lqtyGmwI4OCO2sdqNQQ8+hfi1Rvd7O7kLjlEyiTtNV3KjUCx0snsXDz/HAo7r4uWudv55ofmmiNWk1dY2EAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Market Stall"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAWElEQVR42mOcVmD/n4ECwPLk1VdK9DMwMTAwMDx6+QmrJDHiTAwMDAxy4nxYFRIjzoLLFqLDAJctJIUBPv8Skmci5F9C8oMkDEbTAfF+xybPqK0gQVF2BgAV9i0QEQNtgQAAAABJRU5ErkJggg==" alt="" loading="lazy"></span>Market Stall</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" data-name="Amethyst Shard"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR42mNgGGjASIyifP/V/9HFJm4MZWRgYGBgIUZzf401ilhY3hI4m4mQZhd7D4Rzjd4zXLzKi6KGiRibtx7mZWA0es9wYbEcw75TN1HUseDSnBDowcDA8JmBgYGBQUaIgaEg6BqDnPR3DLVMhJwtI8SAYuvx8/sY1hwvY8RqADY/L1i/A6dmFAPy/Vf/l5NWZLh15ybDrTs3GfS1PzNsmSgHV/j01X0MzSgGPH11n+HR0/sMDAwMDGoq6gz985/htRlrID59dR9ukJy0Il6bcQaitJgiw9NXEJcsXD0dr2aMpBxi2fWfgYGBwdLQieHR0/vw5EoSyPdf/R9b2qcZAAAtkXA2t4qLCgAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i></i><i class="on" data-name="Amethyst Shard"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR42mNgGGjASIyifP/V/9HFJm4MZWRgYGBgIUZzf401ilhY3hI4m4mQZhd7D4Rzjd4zXLzKi6KGiRibtx7mZWA0es9wYbEcw75TN1HUseDSnBDowcDA8JmBgYGBQUaIgaEg6BqDnPR3DLVMhJwtI8SAYuvx8/sY1hwvY8RqADY/L1i/A6dmFAPy/Vf/l5NWZLh15ybDrTs3GfS1PzNsmSgHV/j01X0MzSgGPH11n+HR0/sMDAwMDGoq6gz985/htRlrID59dR9ukJy0Il6bcQaitJgiw9NXEJcsXD0dr2aMpBxi2fWfgYGBwdLQieHR0/vw5EoSyPdf/R9b2qcZAAAtkXA2t4qLCgAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Book"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABJklEQVR42q2TvUoDQRCAv42XWOjBhYNYeXBN+jRWcu9gkcIHsLISA76AhYIQsBJ8AAXxNayEgIXFgSy36ZSQxA2I5vQswmnuv9CplmW+j52dGfhjiKqEjmtE8Xkgw0y+UQW65jr25ipjHQLTKC0RVWA67h9HiZeIKlD6GrdtFkrEMlizVmia2arSkrEOeRpOGchQ1PJg6euEwG2bibumaWAbDTquEdUApJ7xNfksBOK7WC59zcbWzu8LAPZOrxgN3zPAchnS13R7fQ7Pb/E8b/GJLasebTtrHF/fEQQBl0e7ueV0e30cxwFAKcXFyT620Vh0IU/y+vZRCj68zJNtTEuUUqXg82QuMoOUJ7k5OwDIgIWTGEviEorA0mVqWfWfBSoC/y2+AflRpxWN3hb4AAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Amethyst Shard"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR42mNgGGjASIyifP/V/9HFJm4MZWRgYGBgIUZzf401ilhY3hI4m4mQZhd7D4Rzjd4zXLzKi6KGiRibtx7mZWA0es9wYbEcw75TN1HUseDSnBDowcDA8JmBgYGBQUaIgaEg6BqDnPR3DLVMhJwtI8SAYuvx8/sY1hwvY8RqADY/L1i/A6dmFAPy/Vf/l5NWZLh15ybDrTs3GfS1PzNsmSgHV/j01X0MzSgGPH11n+HR0/sMDAwMDGoq6gz985/htRlrID59dR9ukJy0Il6bcQaitJgiw9NXEJcsXD0dr2aMpBxi2fWfgYGBwdLQieHR0/vw5EoSyPdf/R9b2qcZAAAtkXA2t4qLCgAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i></i><i class="on" data-name="Compass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABJklEQVR42s2SMW6DQBBFH1bEFbBSIBcIiW4brhBXVBzEkbhIXDhNTgCVJVe4SR1QJDrEaovIFVtZaWlIEzbBYLfJb3Zn9v8/O5qBv4Y1lwzDsJ/Ll2U54d/NCZMkAUBKiVIKz/NQSgH0l0bmsnSc/mG9xvM8DocDXdeNKtm2TRAEABzznFZryxgM4rquJ8JLDEaDyWJ4uCYOw3AUd11HXdcmXtyqtnJdXvZ7Vq57lWMMkiTBtu3R48fpNDqHFqIomk5BSklRFAAIIQzh1fqZXBzHALyX5fwYm6YBoKoqANI05V4IUiDLMpRSfJ7P0z1otbaed7ve932EEMZISmmI33sAwFtRmDGaH7RaW4+bTQ/wtN2O2hhwzHPDvbnKS8eZXeXfwv+DL3MVfwI2/DThAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i></i></div><figcaption><span class="made" data-name="The Ledger"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAvklEQVR42mOsjtP+r6ciyjB5xT0GUkBuhBLDpTuvGZiQNQvxcRbj0oAuN3nFPQY9FVEGRhstuf8MFAAmbKa/+/SVgViXEHTBu09fGYT4uPG7AJ//kTVjU8OoJSP8H58NhFzGhK5ZiI+zGF8YoLuMCdPk773YXITLi0yE4h/ZYGyGYY0FXCGPTRxrLOAKVJg4QReQlBJzI5SICixsgZobocTAdOnOawZkQ5ADCx+I9pLsvXTnNSIM0F1CKCvDAAAZOkUNq0DuhgAAAABJRU5ErkJggg==" alt="" loading="lazy"></span>The Ledger</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" data-name="Copper Ingot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABMElEQVR42tWSsUrDUBSGv0gCEZKlkLEgQgqBdBbs4JRJRxcHwaGLL+DsO3TNI3TM1kEydBC6BIKFBNpCQIeACskQyHAdJNem1HTVM11+7vefc/974N+U7znC9xyxqyuHoOZsWyYAz28FD09Lyald0OXZkGS1IS1r0rLGNjRuR0MA0Zgo+zoNTk8AJAxgG1pLbyZRfc8Rd9c3zMNAXuiCrb6L1XcZZDGAUAHyLGZ0cUX+LZKsNi3Q6rvSeB4G0jgrqp8M5mEgTXahPIulaVrWvBcVPVNvh5iWNYQB5/ePKC+LVifb0Fpwo0XA0fYPpGV9EO6ZOllRMU1yJou1oo5nS8UHYVumhPbB0eunfPdksW7vwXi2VHzPERzrMkjb0JgmuZxuG/p1E5t9iD6qTuhv1ReA/azdOFJfKwAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i></i><i class="on" data-name="Iron Nugget"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR42mNgGAW0AxHxGf8j4jP+E1LHgktzUmYRg7w4LwMDAwPckBULZzASZfPN+8//f/r06f+nT5/+37z//P+iDfv+L9qw77+ljcN/olwgKczN8PztVwYGBgaGkxevM1y8e540L5y+8ZLh7z+IZdN7muDix48cwPACVj8hOxWbplFAZQAAOxk5BElSTcEAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Amethyst Shard"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABA0lEQVR42mNgGGjASIyifP/V/9HFJm4MZWRgYGBgIUZzf401ilhY3hI4m4mQZhd7D4Rzjd4zXLzKi6KGiRibtx7mZWA0es9wYbEcw75TN1HUseDSnBDowcDA8JmBgYGBQUaIgaEg6BqDnPR3DLVMhJwtI8SAYuvx8/sY1hwvY8RqADY/L1i/A6dmFAPy/Vf/l5NWZLh15ybDrTs3GfS1PzNsmSgHV/j01X0MzSgGPH11n+HR0/sMDAwMDGoq6gz985/htRlrID59dR9ukJy0Il6bcQaitJgiw9NXEJcsXD0dr2aMpBxi2fWfgYGBwdLQieHR0/vw5EoSyPdf/R9b2qcZAAAtkXA2t4qLCgAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Iron Nugget"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR42mNgGAW0AxHxGf8j4jP+E1LHgktzUmYRg7w4LwMDAwPckBULZzASZfPN+8//f/r06f+nT5/+37z//P+iDfv+L9qw77+ljcN/olwgKczN8PztVwYGBgaGkxevM1y8e540L5y+8ZLh7z+IZdN7muDix48cwPACVj8hOxWbplFAZQAAOxk5BElSTcEAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Iron Nugget"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR42mNgGAW0AxHxGf8j4jP+E1LHgktzUmYRg7w4LwMDAwPckBULZzASZfPN+8//f/r06f+nT5/+37z//P+iDfv+L9qw77+ljcN/olwgKczN8PztVwYGBgaGkxevM1y8e540L5y+8ZLh7z+IZdN7muDix48cwPACVj8hOxWbplFAZQAAOxk5BElSTcEAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Redstone"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA9UlEQVR42t2RMU4DMRBF36zibBQJuUE0OcMWdNuSA9ClywVoyTlScwEq0nGKdBHKGXKAFVKUZSU+hdeAg9kWiWnsseb9mT+G/x3LEi1LNFQzGoKvWqi9AdJji+Xqit/g24mx7vPDO1QMT5LAT94kwnkPEujGoZzIKNcZYOONRSPwxvwoZgXgoOrQni87xbnnRROabBsxdyG/7oKNu6lRjl1iJ9lB7Y1Vf18TgBWwc+Ht+SQu1OWX+NLCw1HU/egbb2wbsXNBKC7z1VwikHxNBbrsgQjPigBCgNu3ju87+PG30V85dp/jRhBI4KzAuVCM/UDt38YH+UJgOTDVwQIAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Iron Nugget"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAhklEQVR42mNgGAW0AxHxGf8j4jP+E1LHgktzUmYRg7w4LwMDAwPckBULZzASZfPN+8//f/r06f+nT5/+37z//P+iDfv+L9qw77+ljcN/olwgKczN8PztVwYGBgaGkxevM1y8e540L5y+8ZLh7z+IZdN7muDix48cwPACVj8hOxWbplFAZQAAOxk5BElSTcEAAAAASUVORK5CYII=" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Burner Phone"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbElEQVR42mO0cfL+z0ABYHn/9jXZmt+/e83AhC4YFBlHkiGM2vpm/0m1VVBIFM5nQpYgBiBrRjEAXYJYL5HsBXSvMErJKlIWjUqqWgwDlg5QApGcNEBSIKLHP1YXkBL/RCckmqUDRCy8oywWADV5KGkiZOrNAAAAAElFTkSuQmCC" alt="" loading="lazy"></span>Burner Phone</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" data-name="Smooth Stone"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQklEQVR42nWTvYrEMAyEv4PYGMyCiu1c5R32/fYZ9yHcbWEwgmAXd0WQ8P6cmkSRGc2MJz/3+/1XVck5A6CqAJRSAKi1fvQ5Z0SE1hqbqnK73ZhzEkIAIKWE1b7vHMfh4NfrFcDPbgBzTsYYjDGIMTrYnJO1jKVVrZUt58zlcvGPvXdHDyG8sDEmBlxKYRORj8E7AwOxp81rrWy1Vtdpm62sP47DZcYYGWO4pK2U4gxWur13l7aChxD8XVVfTVRV3xBjpPf+stUMNuCcM1trjX3ffVNKySmv28yTEIKfE5EzByZhddpqlfXet9ZOCd+ct1xYb7P1nIicOVgdf7/7ldk6SynxfD7PHKyJW6/SQrWyMqM9ymaiGfcOtrJZjXQPVJXe+7/RNce/RVlVTw8ej4f/rq01AETkxW37ze3+RYScM3+uh/+b/p9z1AAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Smooth Stone"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQklEQVR42nWTvYrEMAyEv4PYGMyCiu1c5R32/fYZ9yHcbWEwgmAXd0WQ8P6cmkSRGc2MJz/3+/1XVck5A6CqAJRSAKi1fvQ5Z0SE1hqbqnK73ZhzEkIAIKWE1b7vHMfh4NfrFcDPbgBzTsYYjDGIMTrYnJO1jKVVrZUt58zlcvGPvXdHDyG8sDEmBlxKYRORj8E7AwOxp81rrWy1Vtdpm62sP47DZcYYGWO4pK2U4gxWur13l7aChxD8XVVfTVRV3xBjpPf+stUMNuCcM1trjX3ffVNKySmv28yTEIKfE5EzByZhddpqlfXet9ZOCd+ct1xYb7P1nIicOVgdf7/7ldk6SynxfD7PHKyJW6/SQrWyMqM9ymaiGfcOtrJZjXQPVJXe+7/RNce/RVlVTw8ej4f/rq01AETkxW37ze3+RYScM3+uh/+b/p9z1AAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Smooth Stone"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQklEQVR42nWTvYrEMAyEv4PYGMyCiu1c5R32/fYZ9yHcbWEwgmAXd0WQ8P6cmkSRGc2MJz/3+/1XVck5A6CqAJRSAKi1fvQ5Z0SE1hqbqnK73ZhzEkIAIKWE1b7vHMfh4NfrFcDPbgBzTsYYjDGIMTrYnJO1jKVVrZUt58zlcvGPvXdHDyG8sDEmBlxKYRORj8E7AwOxp81rrWy1Vtdpm62sP47DZcYYGWO4pK2U4gxWur13l7aChxD8XVVfTVRV3xBjpPf+stUMNuCcM1trjX3ffVNKySmv28yTEIKfE5EzByZhddpqlfXet9ZOCd+ct1xYb7P1nIicOVgdf7/7ldk6SynxfD7PHKyJW6/SQrWyMqM9ymaiGfcOtrJZjXQPVJXe+7/RNce/RVlVTw8ej4f/rq01AETkxW37ze3+RYScM3+uh/+b/p9z1AAAAABJRU5ErkJggg==" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Iron Ingot"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA4UlEQVR42tWSsY2EMBBFv08UQEANTEpEETRA5iaoA3qAzKSUQIYTZ2gskRLTgTeaPe8eWgj3XmSN9b5HMwb+DVrroLUO7/XkSpJzVVUAgCzLQtd1SurqSiqK4uXeOYdlWSAh6o70ThySaK1D3/dg5luzICIQkTwSfgDAGAMiupSICMyMpmngnMM8z79DNMagrutnJ3EgM2McRxzHAQBI0/R8CxJyJgllWf5do/ceeZ7fEr33mKYJAGCtVckwDEq2ICEx0m7bts+atVa9dBCHCPu+Y9u2UylGnX2idV0/St/FAzIEeXsjUmkUAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i><i class="on" data-name="Any Log"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABVklEQVR42nVSu07DQBAcTopc2IlOcSw3nGksYdHQICpa+Af4Dv6JfyBtJJoIKRTISFS+NJad6BTswqKAAva0Z8dTec/7mJndk8eH659cG9xenUKXDQBgtSlwf3fhxDeXCVQcYLne2tzKtBD4h+d5qEyLsZiDGgP4a1DvD3h5KzCGxXwGAFiut4N/QsUBACCSvlPwWexsHE4noEEEqhN8AoEnpklov8/PQmRKItfGDhUA7GMkfag4sA13X9/ORB5bCa8f5eAxnE5QmRaZkui6zsrLlBw2OEabClQcOI7TVsgTABCR9K2mNAmdgn4hN89hkCk5MLK/b+5JJH08Pb+7EkgvTYykj9WmGG3mMCAJx5AmofWk3h/geZ5zXILvWZeN1ci1cg/owMhI5w74FnTZYDGfWVn9gyNWgifwtak4QL0/QJeNc0C5Ng470dfMmfQ30z+kyrT4BSPIoQb/dtuVAAAAAElFTkSuQmCC" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Leaf Press"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAU0lEQVR42mPsyrL5Ly0pxPD0+TsGGLh5/x2DuqIQAzLApYaJgULAmOyp9Z8SA1hgTkV3IrFeodgLgyQMkP1FjL+pGo2DKB2g+5XYsBiO6YDU7AwA4B9BDyzczOcAAAAASUVORK5CYII=" alt="" loading="lazy"></span>Leaf Press</figcaption></figure></div>
     <p class="note">Hover a square to see what goes in it. Everything here is craftable
     — nothing in this mod is creative-only.</p>
 </section>
@@ -512,7 +541,7 @@ footer a:hover { text-decoration: underline; }
     </div>
     <h3 class="sub">Ways to take it</h3>
     <div class="scroller"><table class=""><thead><tr><th>Method</th><th>What it does</th></tr></thead><tbody><tr><td><strong>Joint</strong></td><td><span class="dim">bud + paper. The portable one, and what customers buy.</span></td></tr><tr><td><strong>Bong</strong></td><td><span class="dim">water bucket once, then a cured bud a hit. Water stays; the bowl does not.</span></td></tr><tr><td><strong>Gravity bong</strong></td><td><span class="dim">water, bud, flint and steel, then pull. The heaviest hit in the mod.</span></td></tr></tbody></table></div>
-    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="bamboo">BAM</i><i></i><i class="on" title="glass">GLA</i><i class="on" title="bamboo">BAM</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i></div><figcaption>Bong</figcaption></figure></div>
+    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i></i><i class="on" data-name="Bamboo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA9UlEQVR42mNgoBAwkqohrFHoPwMDA8OvLywMG7pfMTKRqpmDU4jh1xcWhq/vIHYzkar50+tPDF/fMTLsnvuSkWgDutYlYNVMlAFhjUL/r9w5wmBpZY+hmWAghjUK/f/1hYWBgYGB4e1TTgZh6e8MGtpSDB8/fGKYXnAPvxcCSsX+c3AKMTAwMDB8fcfIcHjZQ8YN3a8Yn736wqCtrQtXx4JLM58oH1Y/Lyq7w8g94d9/nF7oWpfw/8qdI1g1YwNM6DbjCzC8KTGgVAzuLGI1w10A8zMstInVDA/Et085GRgYPjG8fcrJcHjZQ5LyBzwMyNFMFQAA8c55bqLoPlgAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i></i><i class="on" data-name="Glass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mO88OrlfwYywY1nHxhYGBgYGDZMm85IjgEaAZH/mdAFA7IyiXbR5Xv3GJjQNZPqGiZk55DjFbgBNzYsJ1mzgLAYAxMDBeDD21eUGUCxC1DCYAgbcOPZB5I1IadWJg0pAZI1Iyc4kl2ArFmWn4eBccWFm/8ZGBgYHn/8wiDLz8Pw+OMXogyS5edhYGBgYAAA7qEzHVx+8GsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Bamboo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA9UlEQVR42mNgoBAwkqohrFHoPwMDA8OvLywMG7pfMTKRqpmDU4jh1xcWhq/vIHYzkar50+tPDF/fMTLsnvuSkWgDutYlYNVMlAFhjUL/r9w5wmBpZY+hmWAghjUK/f/1hYWBgYGB4e1TTgZh6e8MGtpSDB8/fGKYXnAPvxcCSsX+c3AKMTAwMDB8fcfIcHjZQ8YN3a8Yn736wqCtrQtXx4JLM58oH1Y/Lyq7w8g94d9/nF7oWpfw/8qdI1g1YwNM6DbjCzC8KTGgVAzuLGI1w10A8zMstInVDA/Et085GRgYPjG8fcrJcHjZQ5LyBzwMyNFMFQAA8c55bqLoPlgAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Glass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mO88OrlfwYywY1nHxhYGBgYGDZMm85IjgEaAZH/mdAFA7IyiXbR5Xv3GJjQNZPqGiZk55DjFbgBNzYsJ1mzgLAYAxMDBeDD21eUGUCxC1DCYAgbcOPZB5I1IadWJg0pAZI1Iyc4kl2ArFmWn4eBccWFm/8ZGBgYHn/8wiDLz8Pw+OMXogyS5edhYGBgYAAA7qEzHVx+8GsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Glass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mO88OrlfwYywY1nHxhYGBgYGDZMm85IjgEaAZH/mdAFA7IyiXbR5Xv3GJjQNZPqGiZk55DjFbgBNzYsJ1mzgLAYAxMDBeDD21eUGUCxC1DCYAgbcOPZB5I1IadWJg0pAZI1Iyc4kl2ArFmWn4eBccWFm/8ZGBgYHn/8wiDLz8Pw+OMXogyS5edhYGBgYAAA7qEzHVx+8GsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Glass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mO88OrlfwYywY1nHxhYGBgYGDZMm85IjgEaAZH/mdAFA7IyiXbR5Xv3GJjQNZPqGiZk55DjFbgBNzYsJ1mzgLAYAxMDBeDD21eUGUCxC1DCYAgbcOPZB5I1IadWJg0pAZI1Iyc4kl2ArFmWn4eBccWFm/8ZGBgYHn/8wiDLz8Pw+OMXogyS5edhYGBgYAAA7qEzHVx+8GsAAAAASUVORK5CYII=" alt="" loading="lazy"></i><i class="on" data-name="Glass"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAlUlEQVR42mO88OrlfwYywY1nHxhYGBgYGDZMm85IjgEaAZH/mdAFA7IyiXbR5Xv3GJjQNZPqGiZk55DjFbgBNzYsJ1mzgLAYAxMDBeDD21eUGUCxC1DCYAgbcOPZB5I1IadWJg0pAZI1Iyc4kl2ArFmWn4eBccWFm/8ZGBgYHn/8wiDLz8Pw+OMXogyS5edhYGBgYAAA7qEzHVx+8GsAAAAASUVORK5CYII=" alt="" loading="lazy"></i></div><figcaption><span class="made" data-name="Bong"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPklEQVR42mNceebODH0FCRkpfm6ZZx+/Prn44MUTfQUJGQYGBgYpfm6Z7RfvnsAnz8RAIRg1YNSAUQMGiwEAA/0X3CuCDVYAAAAASUVORK5CYII=" alt="" loading="lazy"></span>Bong</figcaption></figure></div>
     <p class="note">Joints use the only vanilla animation that raises an item to the
     mouth, so it reads as smoking on a completely unmodified client.</p>
 </section>

@@ -16,11 +16,16 @@ Output is one self-contained file apart from the webfonts. Open it directly or
 push it and let the Pages workflow in .github/workflows/ serve it.
 """
 
+import base64
+import glob
 import html
+import io
 import json
 import pathlib
 import re
 import sys
+
+from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src/main/java/dev/heezq/trapcraft"
@@ -49,6 +54,119 @@ def ints(name: str, text: str) -> list[int]:
 def floats(name: str, text: str) -> list[float]:
     raw = need(name + r"\s*=\s*\{([^}]*)\}", text, name)
     return [float(n) for n in re.findall(r"-?[\d.]+", raw)]
+
+
+# --- icons ------------------------------------------------------------------
+#
+# Vanilla textures come out of the mapped client jar in the Loom cache; ours
+# come out of our own resources. Both are inlined as data URIs so the page
+# stays one file, which at 16x16 costs about twenty kilobytes for the lot.
+#
+# Vanilla assets are Mojang's. This is the same thing every Minecraft wiki in
+# existence does and it is fan content, not a redistribution of the game -- but
+# it is worth knowing that is what the base64 is, rather than discovering it.
+
+TAG_STAND_IN = {
+    "#minecraft:logs": "minecraft:oak_log",
+    "#minecraft:planks": "minecraft:oak_planks",
+    "#minecraft:wool": "minecraft:white_wool",
+}
+
+_ICONS: dict[str, str] = {}
+_JAR = None
+
+
+def jar():
+    global _JAR
+    if _JAR is None:
+        import zipfile
+        found = [j for j in glob.glob(str(
+            pathlib.Path.home() / ".gradle/caches/fabric-loom/minecraftMaven"
+                                  "/net/minecraft/minecraft-merged/*/*.jar"))
+            if "sources" not in j and "backup" not in j]
+        if not found:
+            sys.exit("gen_wiki: no Minecraft jar in the Loom cache -- "
+                     "run ./gradlew build first so the icons can be read")
+        _JAR = zipfile.ZipFile(found[0])
+    return _JAR
+
+
+def from_model(name: str):
+    """Our blocks have no single icon PNG -- they are built from face textures.
+
+    Follow the model chain the way the game does (item model -> parent block
+    model) and take the PARTICLE texture, which is exactly the representative
+    face Minecraft itself picks when it needs one image for a block. That is
+    how the ledger, the drying rack and the mixing station get an icon without
+    anybody hand-listing which face to use.
+    """
+    models = ROOT / "src/main/resources/assets/trapcraft/models"
+    seen = set()
+    ref = f"trapcraft:item/{name}"
+    for _ in range(5):
+        kind, _, leaf = ref.partition(":")[2].partition("/")
+        path = models / kind / f"{leaf}.json"
+        if not path.is_file() or str(path) in seen:
+            return None
+        seen.add(str(path))
+        body = json.loads(path.read_text())
+        textures = body.get("textures", {})
+        pick = textures.get("particle") or textures.get("layer0")
+        if pick and pick.startswith("trapcraft:"):
+            art = ROOT / ("src/main/resources/assets/trapcraft/textures/"
+                          + pick.split(":", 1)[1] + ".png")
+            if art.is_file():
+                return art.read_bytes()
+        if "parent" not in body:
+            return None
+        ref = body["parent"]
+    return None
+
+
+def icon(ident: str) -> str:
+    """A 16x16 data URI for an item id, or '' if nothing has a texture for it."""
+    ident = TAG_STAND_IN.get(ident, ident)
+    if ident in _ICONS:
+        return _ICONS[ident]
+    namespace, _, name = ident.partition(":")
+    raw = None
+    if namespace == "trapcraft":
+        for kind in ("item", "block"):
+            path = (ROOT / f"src/main/resources/assets/trapcraft/textures/{kind}/{name}.png")
+            if path.is_file():
+                raw = path.read_bytes()
+                break
+        if raw is None:
+            raw = from_model(name)
+    else:
+        # The compass and the clock have no plain texture -- they ship as
+        # thirty-two directional frames, so take the first one.
+        for candidate in (f"item/{name}", f"block/{name}",
+                          f"item/{name}_00", f"block/{name}_00"):
+            try:
+                raw = jar().read(f"assets/minecraft/textures/{candidate}.png")
+                break
+            except KeyError:
+                continue
+    if raw is None:
+        _ICONS[ident] = ""
+        return ""
+    # Animated textures ship as a vertical strip. Take the first frame, or the
+    # icon renders as a squashed column of every frame at once.
+    image = Image.open(io.BytesIO(raw)).convert("RGBA")
+    if image.height > image.width:
+        image = image.crop((0, 0, image.width, image.width))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    _ICONS[ident] = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
+    return _ICONS[ident]
+
+
+def pretty(ident: str) -> str:
+    """minecraft:oak_log -> Oak Log. #minecraft:logs -> Any Log."""
+    if ident.startswith("#"):
+        return "Any " + ident.split(":")[-1].rstrip("s").replace("_", " ").title()
+    return ident.split(":")[-1].replace("_", " ").title()
 
 
 # --- what the source says ---------------------------------------------------
@@ -126,13 +244,13 @@ def recipes() -> dict[str, dict]:
         for row in body["pattern"]:
             cells = []
             for ch in row.ljust(3):
-                ident = key.get(ch)
-                cells.append(ident.split(":")[-1].replace("_", " ") if ident else None)
+                cells.append(key.get(ch))
             grid.append(cells)
         while len(grid) < 3:
             grid.append([None, None, None])
         out[body["result"]["id"].split(":")[-1]] = {
-            "grid": grid, "count": body["result"].get("count", 1)}
+            "grid": grid, "count": body["result"].get("count", 1),
+            "result": body["result"]["id"]}
     return out
 
 
@@ -252,16 +370,19 @@ def recipe_grid(name: str, label: str) -> str:
     cells = ""
     for row in r["grid"]:
         for cell in row:
-            if cell:
-                words = cell.split()
-                short = ("".join(w[0] for w in words) if len(words) > 1
-                         else words[0][:3]).upper()
-                cells += f'<i class="on" title="{esc(cell)}">{esc(short)}</i>'
-            else:
+            if not cell:
                 cells += '<i></i>'
-    yields = f' <span class="dim">x{r["count"]}</span>' if r["count"] > 1 else ""
+                continue
+            art = icon(cell)
+            inner = (f'<img src="{art}" alt="" loading="lazy">' if art
+                     else esc(pretty(cell)[:3].upper()))
+            cells += f'<i class="on" data-name="{esc(pretty(cell))}">{inner}</i>'
+    yields = f'<b>x{r["count"]}</b>' if r["count"] > 1 else ""
+    made = icon(r["result"])
+    stamp = (f'<span class="made" data-name="{esc(label)}">'
+             f'<img src="{made}" alt="" loading="lazy">{yields}</span>' if made else yields)
     return (f'<figure class="craft reveal"><div class="grid3">{cells}</div>'
-            f'<figcaption>{esc(label)}{yields}</figcaption></figure>')
+            f'<figcaption>{stamp}{esc(label)}</figcaption></figure>')
 
 
 def craft_row(pairs) -> str:
@@ -627,6 +748,7 @@ def build() -> str:
 
 TEMPLATE = """<!doctype html>
 <html lang="en">
+<script>document.documentElement.className='js'</script>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -636,7 +758,7 @@ refining, the market, stalls, crew, heat, the casino. Generated from the mod's s
 <meta name="theme-color" content="#0c0b0a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Figtree:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {{
   --ink: #0c0b0a;
@@ -662,7 +784,7 @@ body {{
   margin: 0;
   background: var(--ink);
   color: var(--bone);
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif;
   font-size: clamp(1rem, .45vw + .92rem, 1.14rem);
   line-height: 1.65;
   font-optical-sizing: auto;
@@ -708,7 +830,7 @@ a {{ color: inherit; }}
 .rail-in::-webkit-scrollbar {{ display: none; }}
 .rail a {{
   flex: 0 0 auto; text-decoration: none; white-space: nowrap;
-  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; letter-spacing: .1em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .74rem; letter-spacing: .1em;
   text-transform: uppercase; color: var(--bone-dim);
   padding: .4rem .7rem; border-radius: 2px; transition: color .25s, background .25s;
 }}
@@ -731,9 +853,9 @@ a {{ color: inherit; }}
 }}
 .brand {{ display: none; }}
 @media (min-width: 1080px) {{ .brand {{ display: block; }} }}
-.brand b {{ font-family: 'Bodoni Moda', serif; font-weight: 900; font-size: 1.5rem;
+.brand b {{ font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900; font-size: 1.5rem;
   letter-spacing: -.02em; display: block; line-height: 1; }}
-.brand span {{ font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
+.brand span {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .64rem;
   letter-spacing: .22em; text-transform: uppercase; color: var(--bone-dim); }}
 
 /* --- hero ---------------------------------------------------------------- */
@@ -756,20 +878,20 @@ a {{ color: inherit; }}
 }}
 .hero > * {{ position: relative; }}
 .eyebrow {{
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .3em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem; letter-spacing: .3em;
   text-transform: uppercase; color: var(--acc); margin: 0 0 1.5rem;
 }}
 .hero h1 {{
-  font-family: 'Bodoni Moda', serif; font-weight: 900;
-  font-size: clamp(3.2rem, 13vw, 11rem); line-height: .82; letter-spacing: -.035em;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900;
+  font-size: clamp(2.6rem, 10vw, 8.5rem); line-height: .95; letter-spacing: -.01em;
   margin: 0; text-wrap: balance;
 }}
-.hero h1 em {{ font-style: italic; font-weight: 400; display: block;
+.hero h1 em {{ font-style: normal; font-weight: 400; display: block;
   color: var(--bone-dim); }}
 .hero p {{ max-width: 46ch; margin: 2rem 0 0; color: var(--bone-dim);
   font-size: 1.15rem; }}
 .figs {{ display: flex; flex-wrap: wrap; gap: 2.5rem; margin-top: 3.5rem;
-  font-family: 'IBM Plex Mono', monospace; }}
+  font-family: 'JetBrains Mono', ui-monospace, monospace; }}
 .figs div b {{ display: block; font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 500;
   color: var(--bone); line-height: 1; }}
 .figs div span {{ font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
@@ -789,20 +911,20 @@ main {{ padding: 0 var(--pad) 8rem; }}
   scroll-margin-top: 4.2rem; }}
 @media (min-width: 1080px) {{ .sec {{ scroll-margin-top: 1rem; }} }}
 .sec-mark {{
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .2em;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem; letter-spacing: .2em;
   color: var(--bone-dim); margin-bottom: 1.5rem;
 }}
 @media (min-width: 1400px) {{
   .sec-mark {{ position: absolute; left: -5.5rem; top: 5.9rem; margin: 0; }}
 }}
-.kicker {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .22em;
+.kicker {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .7rem; letter-spacing: .22em;
   text-transform: uppercase; color: var(--acc); margin: 0 0 .5rem; }}
 .sec h2 {{
-  font-family: 'Bodoni Moda', serif; font-weight: 900;
-  font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: .95; letter-spacing: -.03em;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 900;
+  font-size: clamp(1.9rem, 5vw, 3.4rem); line-height: 1.05; letter-spacing: 0;
   margin: 0 0 2rem;
 }}
-.sub {{ font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 1.5rem;
+.sub {{ font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-weight: 700; font-size: 1.5rem;
   margin: 3rem 0 1rem; letter-spacing: -.01em; }}
 .lede {{ font-size: 1.28rem; max-width: var(--measure); color: var(--bone); }}
 .sec p {{ max-width: var(--measure); }}
@@ -813,13 +935,13 @@ main {{ padding: 0 var(--pad) 8rem; }}
 .dim {{ color: var(--bone-dim); }}
 .acc {{ color: var(--acc); }}
 .warn {{ color: var(--warn); }}
-code {{ font-family: 'IBM Plex Mono', monospace; font-size: .86em; color: var(--bone);
+code {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .86em; color: var(--bone);
   background: #ffffff0d; padding: .12em .4em; border-radius: 2px; }}
 
 /* --- tables -------------------------------------------------------------- */
 
 .scroller {{ overflow-x: auto; margin: 1.75rem 0; }}
-table {{ width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace;
+table {{ width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: .84rem; min-width: 30rem; }}
 th {{
   text-align: left; font-weight: 400; font-size: .66rem; letter-spacing: .18em;
@@ -854,15 +976,15 @@ tbody tr:hover {{ background: #ffffff06; }}
   margin-bottom: 1rem; }}
 .swatch {{ width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--tint);
   box-shadow: 0 0 2.5rem -.3rem var(--tint); }}
-.tag {{ font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .18em;
+.tag {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .62rem; letter-spacing: .18em;
   text-transform: uppercase; color: var(--bone-dim); }}
-.strain h3 {{ font-family: 'Bodoni Moda', serif; font-size: 2rem; margin: 0 0 .4rem;
-  font-weight: 700; letter-spacing: -.02em; }}
+.strain h3 {{ font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.75rem;
+  margin: 0 0 .4rem; font-weight: 700; }}
 .blurb {{ color: var(--bone-dim); font-size: .95rem; margin: 0 0 1.1rem; }}
-.fx {{ list-style: none; padding: 0; margin: 0 0 1.2rem; font-family: 'IBM Plex Mono', monospace;
+.fx {{ list-style: none; padding: 0; margin: 0 0 1.2rem; font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: .74rem; }}
 .fx li {{ padding: .28rem 0; border-bottom: 1px solid #ffffff0a; }}
-.stat {{ display: flex; gap: 2rem; margin: 0; font-family: 'IBM Plex Mono', monospace; }}
+.stat {{ display: flex; gap: 2rem; margin: 0; font-family: 'JetBrains Mono', ui-monospace, monospace; }}
 .stat dt {{ font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
   color: var(--bone-dim); }}
 .stat dd {{ margin: .2rem 0 0; font-size: 1.05rem; }}
@@ -874,7 +996,7 @@ tbody tr:hover {{ background: #ffffff06; }}
 .card {{ border: 1px solid var(--rule); padding: 1.6rem; background: var(--ink-2);
   transition: transform .4s cubic-bezier(.2,.7,.2,1), border-color .4s; }}
 .card:hover {{ transform: translateY(-4px); border-color: #3d3730; }}
-.card h4 {{ font-family: 'Bodoni Moda', serif; font-size: 1.35rem; margin: 0 0 .6rem;
+.card h4 {{ font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.35rem; margin: 0 0 .6rem;
   font-weight: 700; }}
 .card p {{ margin: 0; font-size: .95rem; color: var(--bone-dim); }}
 
@@ -882,17 +1004,17 @@ tbody tr:hover {{ background: #ffffff06; }}
   background: var(--rule); border: 1px solid var(--rule); }}
 .chain li {{ background: var(--ink-2); padding: 1.4rem 1.6rem; display: flex;
   align-items: baseline; gap: 1.2rem; flex-wrap: wrap; }}
-.chain .step {{ font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+.chain .step {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .72rem;
   color: var(--acc); letter-spacing: .16em; }}
-.chain strong {{ font-family: 'Bodoni Moda', serif; font-size: 1.3rem; font-weight: 700; }}
-.chain .dim {{ font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
+.chain strong {{ font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: 1.3rem; font-weight: 700; }}
+.chain .dim {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .78rem;
   margin-left: auto; flex: 1 1 14rem; text-align: right; }}
 @media (max-width: 620px) {{ .chain .dim {{ text-align: left; margin-left: 0; }} }}
 
 .pull {{ margin: 3rem 0; padding: 0; max-width: 52ch; }}
-.pull blockquote {{ margin: 0; font-family: 'Bodoni Moda', serif; font-style: italic;
-  font-size: clamp(1.3rem, 3vw, 1.9rem); line-height: 1.3; letter-spacing: -.01em; }}
-.pull figcaption {{ font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+.pull blockquote {{ margin: 0; font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif; font-style: italic;
+  font-size: clamp(1.2rem, 2.6vw, 1.7rem); line-height: 1.45; font-weight: 300; }}
+.pull figcaption {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .68rem;
   letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim);
   margin-top: .9rem; }}
 .pull figcaption::before {{ content: '— '; }}
@@ -903,18 +1025,46 @@ tbody tr:hover {{ background: #ffffff06; }}
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }}
 .craft {{ margin: 0; text-align: center; }}
 .grid3 {{
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
-  width: 7.5rem; margin: 0 auto; padding: 3px;
-  background: var(--rule); border: 1px solid var(--rule);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  width: 8rem; margin: 0 auto; padding: 5px;
+  background: #3b3730;
+  box-shadow: inset 2px 2px 0 #56514a, inset -2px -2px 0 #1a1815;
 }}
+/* Slots are drawn the way Minecraft draws them: a sunken well with a dark
+   top-left edge and a light bottom-right one. */
 .grid3 i {{
-  aspect-ratio: 1; letter-spacing: -.02em; background: var(--ink); display: grid; place-items: center;
-  font-family: 'IBM Plex Mono', monospace; font-size: .6rem; font-style: normal;
-  color: #3a352f; transition: background .3s, color .3s;
+  position: relative; aspect-ratio: 1; background: #1b1917; display: grid;
+  place-items: center; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: .58rem; font-style: normal; color: #4a443c;
+  box-shadow: inset 2px 2px 0 #0d0c0b, inset -2px -2px 0 #33302b;
+  transition: background .2s;
 }}
-.grid3 i.on {{ background: #1e1a16; color: var(--acc); cursor: help; }}
-.craft:hover .grid3 i.on {{ background: #262019; color: var(--bone); }}
-.craft figcaption {{ font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+.grid3 i img {{
+  width: 76%; height: 76%; object-fit: contain;
+  /* 16x16 art blown up. Without this the browser smears it. */
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}}
+.grid3 i.on {{ cursor: help; }}
+.grid3 i.on:hover {{ background: #2a2620; z-index: 3; }}
+
+/* A Minecraft item tooltip, near enough. */
+.grid3 i.on::after, .made::after {{
+  content: attr(data-name);
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  background: #100014f2; color: #fff; border: 2px solid #2d0a63;
+  outline: 1px solid #150127;
+  font-family: 'Pixelify Sans', 'Trebuchet MS', sans-serif; font-size: .82rem;
+  padding: .3rem .55rem; white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .14s; z-index: 5;
+}}
+.grid3 i.on:hover::after, .made:hover::after {{ opacity: 1; }}
+@media (hover: none) {{ .grid3 i.on::after, .made::after {{ display: none; }} }}
+
+.made {{ position: relative; display: inline-flex; align-items: center; gap: .2rem;
+  margin-right: .45rem; vertical-align: -.35rem; }}
+.made img {{ width: 1.3rem; height: 1.3rem; image-rendering: pixelated; }}
+.made b {{ font-size: .7rem; color: var(--acc); font-weight: 500; }}
+.craft figcaption {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .68rem;
   letter-spacing: .12em; text-transform: uppercase; color: var(--bone-dim);
   margin-top: .8rem; }}
 .dot {{ display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
@@ -923,12 +1073,12 @@ tbody tr:hover {{ background: #ffffff06; }}
 
 /* --- reveal -------------------------------------------------------------- */
 
-.reveal {{ opacity: 0; transform: translateY(1.4rem);
+.js .reveal {{ opacity: 0; transform: translateY(1.4rem);
   transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }}
-.reveal.in {{ opacity: 1; transform: none; }}
+.js .reveal.in {{ opacity: 1; transform: none; }}
 
 footer {{ border-top: 1px solid var(--rule); padding: 3rem var(--pad) 5rem;
-  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; color: var(--bone-dim); }}
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .74rem; color: var(--bone-dim); }}
 footer a {{ color: var(--acc); text-decoration: none; }}
 footer a:hover {{ text-decoration: underline; }}
 </style>
