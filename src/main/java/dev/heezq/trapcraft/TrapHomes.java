@@ -234,7 +234,7 @@ public final class TrapHomes {
     public record Readout(String name, int tier, int floor, boolean sealed, boolean clash,
                           int exits, int beds, boolean crafting, boolean storage,
                           boolean cooking, boolean stall, boolean window, int lights,
-                          int kinds, int dark, float finished, boolean registered,
+                          int kinds, int dark, float finished, String roughest, boolean registered,
                           BlockPos measuredFrom, BlockPos leak, boolean buried) {
         /** One bed is the hard requirement; the rest decide the household. */
         public boolean bed() {
@@ -418,7 +418,7 @@ public final class TrapHomes {
         String name = self == null ? null : self.name;
         if (!rooms.sealed()) {
             return new Readout(name, 0, 0, false, rooms.clash(), 0, 0, false, false,
-                    false, false, false, 0, 0, 0, 0f, self != null,
+                    false, false, false, 0, 0, 0, 0f, "", self != null,
                     self == null ? null : self.anchor,
                     new BlockPos(HomeSurvey.cellX(rooms.escape()),
                             HomeSurvey.cellY(rooms.escape()),
@@ -436,7 +436,7 @@ public final class TrapHomes {
         }
         return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.beds,
                 kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
-                kit.lights, kit.kinds, kit.dark, kit.finished(), self != null,
+                kit.lights, kit.kinds, kit.dark, kit.finished(), kit.roughest(), self != null,
                 self == null ? null : self.anchor, null, false);
     }
 
@@ -992,6 +992,23 @@ public final class TrapHomes {
         /** Shell blocks, and how many of them somebody made rather than dug. */
         int shell;
         int worked;
+        /** What the rough ones actually were, commonest first when asked. */
+        final java.util.Map<Block, Integer> roughKinds = new java.util.HashMap<>();
+
+        /**
+         * The two or three blocks holding the shell back, in words.
+         *
+         * "83% worked material" is a number a player cannot act on -- they
+         * look round a house built of stone brick and planks and reasonably
+         * conclude the mod is broken. Naming the blocks turns it into a job.
+         */
+        String roughest() {
+            return roughKinds.entrySet().stream()
+                    .sorted(java.util.Map.Entry.<Block, Integer>comparingByValue().reversed())
+                    .limit(3)
+                    .map(found -> found.getKey().getName().getString())
+                    .collect(java.util.stream.Collectors.joining(", "));
+        }
 
         float finished() {
             return shell <= 0 ? 0f : (float) worked / shell;
@@ -1016,7 +1033,7 @@ public final class TrapHomes {
                 || state.isIn(net.minecraft.registry.tag.BlockTags.SAND)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_OVERWORLD)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_NETHER)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.LOGS)
+                || rawLog(state)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.SNOW)) {
             return true;
@@ -1027,6 +1044,28 @@ public final class TrapHomes {
                 || block == Blocks.CLAY || block == Blocks.PACKED_MUD
                 || block == Blocks.DIRT_PATH || block == Blocks.ICE
                 || block == Blocks.PACKED_ICE || block == Blocks.MAGMA_BLOCK;
+    }
+
+    /**
+     * A log straight off a tree, as opposed to what you did to it after.
+     *
+     * BlockTags.LOGS is every log AND every stripped log, wood block, hyphae
+     * and stem -- so a house framed in stripped spruce or oak wood was being
+     * marked down as though it had been dug out of a hillside. You cannot dig
+     * up a stripped log. Somebody stood there with an axe.
+     *
+     * The raw log stays rough, and stays rough on purpose: chopping a tree
+     * and stacking the trunk is the same act as mining cobble and stacking
+     * that, which this has always counted as digging rather than building.
+     */
+    private static boolean rawLog(BlockState state) {
+        if (!state.isIn(net.minecraft.registry.tag.BlockTags.LOGS)) {
+            return false;
+        }
+        String id = net.minecraft.registry.Registries.BLOCK
+                .getId(state.getBlock()).getPath();
+        return !id.startsWith("stripped_") && !id.endsWith("_wood")
+                && !id.endsWith("_hyphae");
     }
 
     /**
@@ -1145,7 +1184,9 @@ public final class TrapHomes {
             // a thing somebody made. What is being asked is "did you build
             // this or did you dig it", and the answer averages honestly.
             kit.shell++;
-            if (!rough(state)) {
+            if (rough(state)) {
+                kit.roughKinds.merge(block, 1, Integer::sum);
+            } else {
                 kit.worked++;
             }
             if (window(state)) {

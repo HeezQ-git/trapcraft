@@ -69,7 +69,8 @@ public class MailboxScreenHandler extends ScreenHandler {
             new Tick("Lighting", Items.TORCH, "Head height, brighter than "
                     + HomeSurvey.DARK_AT + ", at night. Ceiling torches count."),
             new Tick("Character", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " different "
-                    + "kinds of block, then " + HomeSurvey.DECOR_STEPS[1] + "."));
+                    + "kinds of block, up to "
+                    + HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1] + "."));
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity who;
@@ -384,10 +385,16 @@ public class MailboxScreenHandler extends ScreenHandler {
         } else if (reading.fittings() < HomeSurvey.FITTINGS) {
             say = "Fit it out -- a table, a chest, a furnace, a stall, a window.";
         } else if (reading.finished() < HomeSurvey.SHELL_STEPS[1]) {
+            // Name the blocks. A percentage on its own reads as an accusation
+            // nobody can answer -- you look round a house made of stone brick
+            // and planks, get told it is 83% worked, and conclude the mod is
+            // broken. The three commonest offenders turn it into a job.
             say = "Finish the shell. " + Math.round(HomeSurvey.SHELL_STEPS[1] * 100)
-                    + "% worked material, you're at " + Math.round(reading.finished() * 100) + "%.";
-        } else if (reading.kinds() < HomeSurvey.DECOR_STEPS[1]) {
-            say = "Decorate. " + HomeSurvey.DECOR_STEPS[1] + " kinds of block, you have "
+                    + "% worked material, you're at " + Math.round(reading.finished() * 100)
+                    + "%." + (reading.roughest().isEmpty() ? ""
+                            : " Mostly " + reading.roughest() + ".");
+        } else if (reading.kinds() < nextDecor(reading.kinds())) {
+            say = "Decorate. " + nextDecor(reading.kinds()) + " kinds of block, you have "
                     + reading.kinds() + ".";
         } else if (reading.roomFor() < HomeSurvey.TOP_TIER) {
             say = "More room. " + nextStep() + " squares of floor is the last step.";
@@ -430,6 +437,22 @@ public class MailboxScreenHandler extends ScreenHandler {
     @Override
     public boolean canUse(PlayerEntity player) {
         return player == who;
+    }
+
+    /**
+     * The next decor step this house has not met, or the last one.
+     *
+     * Was hardcoded to the SECOND step, which was the top when there were two
+     * of them and became "you are done" advice two thirds of the way up once
+     * there were four.
+     */
+    private static int nextDecor(int kinds) {
+        for (int step : HomeSurvey.DECOR_STEPS) {
+            if (kinds < step) {
+                return step;
+            }
+        }
+        return HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1];
     }
 
     private static MutableText plain(String text) {
