@@ -848,20 +848,62 @@ def mixing_station_assets() -> None:
 DEVICES = ["bong_dry", "bong_wet", "bong_loaded"] + [f"gravity_bong_{i}" for i in range(5)]
 
 
-def box(frm, to, tex, up=None, down=None):
-    """One cuboid, same material all round unless a cap is overridden.
+def derived_uv(frm, to, side) -> list[float]:
+    """The uv Minecraft works out for itself when a face doesn't name one.
+
+    Straight out of JsonUnbakedModel: it is the element's own footprint on
+    that face, in block coordinates.
+    """
+    x0, y0, z0 = frm
+    x1, y1, z1 = to
+    return {
+        "down": [x0, 16 - z1, x1, 16 - z0],
+        "up": [x0, z0, x1, z1],
+        "north": [16 - x1, 16 - y1, 16 - x0, 16 - y0],
+        "south": [x0, 16 - y1, x1, 16 - y0],
+        "west": [z0, 16 - y1, z1, 16 - y0],
+        "east": [16 - z1, 16 - y1, 16 - z0, 16 - y0],
+    }[side]
+
+
+def box(frm, to, tex, up=None, down=None, north=None, south=None,
+        east=None, west=None, uv=None):
+    """One cuboid, same material all round unless a face is overridden.
 
     UVs are left off so Minecraft derives them from the element's own size.
     That keeps the textures tiling at a consistent scale whatever the box is,
     which is the whole reason the glassware materials are patterns rather than
     pictures -- a hand-placed UV would stretch differently on every part.
+
+    The derivation only works INSIDE the cube, though. A bottle standing at
+    y=15.5..23 derives v from -7 to 0.5, and a negative v does not clamp: it
+    reads whatever happens to sit above that sprite in the stitched atlas. Every
+    prop standing on a table was quietly doing that. So the derived window gets
+    clipped back into the sprite, and anything that clips away to nothing --
+    a box entirely above y=16, which is most of a back bar -- falls back to the
+    whole texture.
+
+    Pass `uv` to say "the whole drawing, on every face", which is what a 2px
+    box wearing a picture of a bottle actually wants.
     """
+    picked = {"north": north, "south": south, "east": east, "west": west,
+              "up": up, "down": down}
     faces = {}
-    for side in ("north", "south", "east", "west"):
-        faces[side] = {"texture": f"#{tex}"}
-    faces["up"] = {"texture": f"#{up or tex}"}
-    faces["down"] = {"texture": f"#{down or tex}"}
+    for side, override in picked.items():
+        face = {"texture": f"#{override or tex}"}
+        window = list(uv) if uv else clip(derived_uv(frm, to, side))
+        if window != derived_uv(frm, to, side):
+            face["uv"] = window
+        faces[side] = face
     return {"from": frm, "to": to, "faces": faces}
+
+
+def clip(uv) -> list[float]:
+    """Pull a uv window back inside the sprite, or give up and use all of it."""
+    window = [min(16, max(0, round(edge, 4))) for edge in uv]
+    if window[0] == window[2] or window[1] == window[3]:
+        return [0, 0, 16, 16]
+    return window
 
 
 def tlok_model(stage: int) -> dict:
@@ -1142,25 +1184,156 @@ def table_model(top: str, furniture=None) -> dict:
             "shoe": f"{NS}:block/card_shoe",
             "chips": f"{NS}:block/chip_stack",
             "rack": f"{NS}:block/card_rack",
-            "shelf": f"{NS}:block/bar_shelf",
             "particle": f"{NS}:block/table_side",
         },
         "elements": elements,
     }
 
 
-def bar_furniture() -> list:
-    """A back shelf of bottles standing up behind the counter.
+def bar_model() -> dict:
+    """A bar, rather than a gaming table with a shelf bolted to the back.
 
-    The one piece of casino furniture that has to read as somewhere you PUT
-    things rather than somewhere you play, because it is the only block on the
-    floor the owner has a job at.
+    It was the fourth table: same four legs, same felt-less top, a plank
+    standing up behind it and a stack of chips on the front. From the customer
+    side that is a table, and the one block on the floor the owner has an
+    actual job at should not look like the three they only stand near.
+
+    So it is built the way a bar is: a panelled front you walk up to, a brass
+    foot rail to put your boot on, a counter that overhangs it, and a back bar
+    of bottles on two shelves behind. All of which only works if it can be
+    turned round -- everything here is drawn facing NORTH, and BarBlock spins
+    the carrier to match its FACING. Nothing sticks out sideways past x=0 or
+    x=16, so a row of them reads as one long counter.
+
+    Bottles and glasses name their uv, because they are pictures rather than
+    materials: the whole drawing belongs on the 2px box, not the 2px slice of
+    it that the box's own footprint would pick out.
     """
-    return [
-        box([1, 15.5, 12.5], [15, 23, 14.5], "shelf", up="shelf", down="shelf"),
-        box([0.5, 22.5, 12], [15.5, 23.8, 15], "rim", up="rim"),
-        box([2.5, 15.5, 3], [5, 17.2, 5.5], "chips"),
+    whole = [0, 0, 16, 16]
+    elements = [
+        # --- the counter you stand at ------------------------------------
+        box([1, 0, 2], [15, 1.5, 11], "wood"),                    # kick board
+        box([0.5, 1.5, 2.5], [15.5, 13, 11], "front",             # the carcass
+            up="wood", down="wood"),
+        box([0.3, 1.5, 2.2], [15.7, 2.3, 2.7], "brass"),          # beading, low
+        box([0.3, 12.2, 2.2], [15.7, 13, 2.7], "brass"),          # beading, high
+        box([3.4, 2.3, 2.2], [4.4, 12.2, 2.7], "brass"),          # stiles
+        box([11.6, 2.3, 2.2], [12.6, 12.2, 2.7], "brass"),
+        box([2.5, 1.4, -1.2], [3.5, 3.2, 0.4], "brass"),          # rail brackets
+        box([12.5, 1.4, -1.2], [13.5, 3.2, 0.4], "brass"),
+        box([0, 3.2, -1.4], [16, 4.4, -0.2], "brass"),            # the foot rail
+        # The top overhangs the front by a block-and-a-half's worth of nothing,
+        # which is the bit you lean on. table_side's brass band lands on the
+        # front edge of it, so the lip is brass without another element.
+        box([0, 13, -1.5], [16, 15.5, 11.5], "wood", up="top", uv=whole),
+
+        # --- the back bar ------------------------------------------------
+        # It stands on the floor rather than starting at counter height: a
+        # shelf of bottles hanging in the air over the keeper's head is what
+        # the old one did, and it looked like it.
+        box([0.5, 0, 12.5], [2.2, 25, 15.5], "wood"),             # uprights
+        box([13.8, 0, 12.5], [15.5, 25, 15.5], "wood"),
+        box([2.2, 0, 14.2], [13.8, 24.5, 15.5], "shelf"),         # boards behind
+        box([0.5, 15.5, 12], [15.5, 16.3, 15.6], "wood"),         # bottom shelf
+        box([0.5, 20.3, 12], [15.5, 21.1, 15.6], "wood"),         # upper shelf
+        box([0.2, 25, 12.2], [15.8, 26, 15.8], "brass"),          # cornice
     ]
+    # Two rows of stock, none of it the same height, because a shelf of
+    # identical bottles reads as a texture and a shelf of mismatched ones
+    # reads as somebody's actual back bar.
+    lower = [("green", 20.3), ("amber", 19.9), ("clear", 20.3),
+             ("green", 19.7), ("amber", 20.3)]
+    for index, (glass, height) in enumerate(lower):
+        left = 2.4 + index * 2.2
+        elements.append(box([left, 16.3, 12.8], [left + 1.8, height, 14.6],
+                            glass, uv=whole))
+    upper = [("amber", 24.6), ("clear", 24.3), ("green", 24.6), ("amber", 24.2)]
+    for index, (glass, height) in enumerate(upper):
+        left = 3.0 + index * 2.2
+        elements.append(box([left, 21.1, 12.8], [left + 1.8, height, 14.6],
+                            glass, uv=whole))
+    elements.extend([
+        # The taps, which is what tells you it's a bar and not a shop counter.
+        box([9.4, 15.5, 7.6], [12.4, 16.4, 9.8], "brass"),
+        box([10.4, 16.4, 8.2], [11.4, 20.6, 9.2], "brass"),
+        box([9.6, 19, 6.6], [10.3, 20.2, 8.4], "brass"),
+        box([11.5, 19, 6.6], [12.2, 20.2, 8.4], "brass"),
+        # Two poured and waiting on the customer's side of the taps.
+        box([3, 15.5, 4.2], [4.6, 18, 5.8], "glass", uv=whole),
+        box([5.2, 15.5, 6], [6.6, 17.7, 7.4], "glass", uv=whole),
+    ])
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "top": f"{NS}:block/bar_top",
+            "front": f"{NS}:block/bar_front",
+            "wood": f"{NS}:block/table_side",
+            "shelf": f"{NS}:block/bar_shelf",
+            "brass": f"{NS}:block/bar_brass",
+            "glass": f"{NS}:block/bar_glass",
+            "green": f"{NS}:block/bar_bottle_green",
+            "amber": f"{NS}:block/bar_bottle_amber",
+            "clear": f"{NS}:block/bar_bottle_clear",
+            "particle": f"{NS}:block/bar_front",
+        },
+        "elements": elements,
+    }
+
+
+def bar_assets() -> None:
+    """The bar: one model, four facings, and the recipe it always had.
+
+    Not table_assets() any more -- that writes a single "" variant, and a
+    block with a front needs one per direction. The four are the same model
+    turned, exactly the way vanilla writes a furnace.
+
+    These angles have to match BarBlock.spin(), which is what the server
+    actually serves; this file is only read by a client holding the mod.
+    """
+    put(f"assets/{NS}/models/block/casino_bar.json", bar_model())
+    # A block and a half tall, so it has to sit smaller and lower than a cube
+    # or the back bar hangs out of the top of the inventory slot.
+    display = held(0.66)
+    for slot in ("gui", "fixed", "ground"):
+        display[slot]["translation"][1] -= 2
+    put(f"assets/{NS}/models/item/casino_bar.json",
+        {"parent": f"{NS}:block/casino_bar", "display": display})
+    put(f"assets/{NS}/items/casino_bar.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/casino_bar"},
+    })
+    put(f"assets/{NS}/blockstates/casino_bar.json", {
+        "variants": {
+            "facing=north": {"model": f"{NS}:block/casino_bar"},
+            "facing=east": {"model": f"{NS}:block/casino_bar", "y": 90},
+            "facing=south": {"model": f"{NS}:block/casino_bar", "y": 180},
+            "facing=west": {"model": f"{NS}:block/casino_bar", "y": 270},
+        },
+    })
+    # Bottles, a barrel and planks. Cheap on purpose -- the bar is a chore you
+    # are being asked to take on, not a reward for having got somewhere.
+    put(f"data/{NS}/recipe/casino_bar.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["BHB", "PPP", "PPP"],
+        "key": {"B": "minecraft:glass_bottle", "H": "minecraft:barrel",
+                "P": "#minecraft:planks"},
+        "result": {"id": f"{NS}:casino_bar", "count": 1},
+    })
+    put(f"data/{NS}/loot_table/blocks/casino_bar.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:casino_bar"}],
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+        }],
+    })
+
+
+# Everything standing ON a table sits above y=16, where the uv Minecraft
+# derives for itself goes negative -- see box(). These are drawings of a coin,
+# a shoe, a rack and a stack of chips, so each one wants the whole drawing.
+WHOLE = [0, 0, 16, 16]
 
 
 def toss_furniture() -> list:
@@ -1171,26 +1344,26 @@ def toss_furniture() -> list:
     other, which is the entire game.
     """
     return [
-        {**box([6.5, 15.5, 7.6], [9.5, 18.5, 8.4], "coin", up="coin", down="coin"),
+        {**box([6.5, 15.5, 7.6], [9.5, 18.5, 8.4], "coin", uv=WHOLE),
          "rotation": {"origin": [8, 17, 8], "axis": "y", "angle": 22.5}},
-        box([11, 15.5, 10.5], [13.5, 17, 13], "chips"),
+        box([11, 15.5, 10.5], [13.5, 17, 13], "chips", uv=WHOLE),
     ]
 
 
 def blackjack_furniture() -> list:
     """The shoe the cards come out of, and two stacks of chips."""
     return [
-        box([9.5, 15.5, 2.5], [14, 18, 7], "shoe", up="shoe", down="shoe"),
-        box([2.5, 15.5, 10], [5, 17.5, 12.5], "chips"),
-        box([5.5, 15.5, 11.5], [8, 16.8, 14], "chips"),
+        box([9.5, 15.5, 2.5], [14, 18, 7], "shoe", uv=WHOLE),
+        box([2.5, 15.5, 10], [5, 17.5, 12.5], "chips", uv=WHOLE),
+        box([5.5, 15.5, 11.5], [8, 16.8, 14], "chips", uv=WHOLE),
     ]
 
 
 def scratch_furniture() -> list:
     """A rack of unsold cards standing up at the back of the counter."""
     return [
-        box([2.5, 15.5, 2], [13.5, 21, 3.5], "rack", up="rack", down="rack"),
-        box([10.5, 15.5, 10], [13, 17, 12.5], "chips"),
+        box([2.5, 15.5, 2], [13.5, 21, 3.5], "rack", uv=WHOLE),
+        box([10.5, 15.5, 10], [13, 17, 12.5], "chips", uv=WHOLE),
     ]
 
 
@@ -2236,12 +2409,8 @@ def main() -> None:
     table_assets("blackjack", "blackjack_top", ["APA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "P": "#minecraft:planks",
                   "W": "minecraft:green_wool"}, blackjack_furniture())
+    bar_assets()
     # Paper and gold leaf on red: a newsagent's counter, not a card table.
-    # Bottles, a barrel and planks. Cheap on purpose -- the bar is a chore you
-    # are being asked to take on, not a reward for having got somewhere.
-    table_assets("casino_bar", "bar_top", ["BHB", "PPP", "PPP"],
-                 {"B": "minecraft:glass_bottle", "H": "minecraft:barrel",
-                  "P": "#minecraft:planks"}, bar_furniture())
     table_assets("scratch", "scratch_top", ["AGA", "WWW", "PPP"],
                  {"A": "minecraft:paper", "G": "minecraft:gold_ingot",
                   "P": "#minecraft:planks", "W": "minecraft:red_wool"},

@@ -191,13 +191,25 @@
       ],
       "faces": {
         "north": {
-          "texture": "#flap"
+          "texture": "#flap",
+          "uv": [
+            2.6,
+            4,
+            13.4,
+            7.5
+          ]
         },
         "south": {
           "texture": "#flap"
         },
         "east": {
-          "texture": "#flap"
+          "texture": "#flap",
+          "uv": [
+            3.6,
+            4,
+            12.4,
+            7.5
+          ]
         },
         "west": {
           "texture": "#flap"
@@ -206,7 +218,13 @@
           "texture": "#flap"
         },
         "down": {
-          "texture": "#flap"
+          "texture": "#flap",
+          "uv": [
+            2.6,
+            3.6,
+            13.4,
+            12.4
+          ]
         }
       }
     },

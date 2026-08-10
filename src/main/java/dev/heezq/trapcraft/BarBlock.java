@@ -28,6 +28,9 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 /**
  * The counter the floor actually runs on.
  *
@@ -50,18 +53,17 @@ public class BarBlock extends Block implements PolymerBlock, PolymerTexturedBloc
     /** Which way the customer stands. The model is built facing north. */
     public static final EnumProperty<Direction> FACING = Properties.HORIZONTAL_FACING;
 
-    /** Indexed by {@link Direction#getHorizontalQuarterTurns()}. */
-    private final BlockState[] carriers = new BlockState[4];
+    private final Map<Direction, BlockState> carriers = new EnumMap<>(Direction.class);
 
     public BarBlock(Settings settings) {
         super(settings);
         for (Direction facing : Direction.Type.HORIZONTAL) {
-            carriers[facing.getHorizontalQuarterTurns()] = TrapPolymer.requestOrFallback(
+            carriers.put(facing, TrapPolymer.requestOrFallback(
                     BlockModelType.TRANSPARENT_BLOCK,
                     PolymerBlockModel.of(Identifier.of("trapcraft:block/casino_bar"),
                             0, spin(facing)),
                     () -> Blocks.DARK_OAK_PLANKS.getDefaultState(),
-                    "casino_bar facing " + facing.asString());
+                    "casino_bar facing " + facing.asString()));
         }
         setDefaultState(getDefaultState().with(FACING, Direction.NORTH));
     }
@@ -108,7 +110,7 @@ public class BarBlock extends Block implements PolymerBlock, PolymerTexturedBloc
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return carriers[state.get(FACING).getHorizontalQuarterTurns()];
+        return carriers.get(state.get(FACING));
     }
 
     @Override

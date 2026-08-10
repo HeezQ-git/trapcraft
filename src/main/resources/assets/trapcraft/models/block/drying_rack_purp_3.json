@@ -412,7 +412,13 @@
           "texture": "#bud"
         },
         "east": {
-          "texture": "#bud"
+          "texture": "#bud",
+          "uv": [
+            1.2,
+            6,
+            2.3,
+            12
+          ]
         },
         "west": {
           "texture": "#bud"
@@ -421,7 +427,13 @@
           "texture": "#bud"
         },
         "down": {
-          "texture": "#bud"
+          "texture": "#bud",
+          "uv": [
+            4.5,
+            1.2,
+            11.5,
+            2.3
+          ]
         }
       }
     },
@@ -470,7 +482,13 @@
       ],
       "faces": {
         "north": {
-          "texture": "#bud"
+          "texture": "#bud",
+          "uv": [
+            1.2,
+            6,
+            2.3,
+            12
+          ]
         },
         "south": {
           "texture": "#bud"

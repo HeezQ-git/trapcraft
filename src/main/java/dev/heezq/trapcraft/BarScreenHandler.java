@@ -39,6 +39,16 @@ public class BarScreenHandler extends ScreenHandler {
     private final SimpleInventory shelf = new SimpleInventory(SIZE);
     private final ServerPlayerEntity keeper;
     private final TrapHouse.House house;
+    /**
+     * Set while the sign column is being repainted.
+     *
+     * paintSign() writes into the same inventory the listener is watching, so
+     * without this the first item anybody put on the shelf went setStack ->
+     * markDirty -> writeBack -> paintSign -> setStack until the stack ran out
+     * and took the server down with it. It did, twice, on the day the bar
+     * shipped.
+     */
+    private boolean painting;
 
     public BarScreenHandler(int syncId, PlayerInventory playerInventory,
                             TrapHouse.House house) {
@@ -74,8 +84,13 @@ public class BarScreenHandler extends ScreenHandler {
     }
 
     private void paintSign() {
-        for (int index = STOCK; index < SIZE; index++) {
-            shelf.setStack(index, sign(index - STOCK));
+        painting = true;
+        try {
+            for (int index = STOCK; index < SIZE; index++) {
+                shelf.setStack(index, sign(index - STOCK));
+            }
+        } finally {
+            painting = false;
         }
     }
 
@@ -92,10 +107,18 @@ public class BarScreenHandler extends ScreenHandler {
                     line("Served punters stay. Dry bar, they", Formatting.GRAY),
                     line("have a go and leave.", Formatting.GRAY),
                     Text.empty(),
-                    line("Your own product is worth "
-                            + Math.round(TrapMath.SERVED_PRODUCT / TrapMath.SERVED_FOOD)
-                            + "x what", Formatting.WHITE),
-                    line("food is. That's what the farm is for.", Formatting.WHITE)));
+                    // Rounded to a whole multiple this read "worth 1x what
+                    // food is", which is both wrong and an argument for not
+                    // bothering. 1.6 against 1.15 is a percentage, not a
+                    // multiple; the multiple is in the habit it builds.
+                    line("Product keeps them "
+                            + Math.round((TrapMath.SERVED_PRODUCT
+                            / TrapMath.SERVED_FOOD - 1) * 100) + "% longer",
+                            Formatting.WHITE),
+                    line("than food, and builds "
+                            + TrapMath.BAR_ADDICTION_PRODUCT / TrapMath.BAR_ADDICTION_FOOD
+                            + "x the habit.", Formatting.WHITE),
+                    line("That's what the farm is for.", Formatting.WHITE)));
             tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
             return tag;
         }
@@ -133,6 +156,9 @@ public class BarScreenHandler extends ScreenHandler {
      * that loses everything to a disconnect.
      */
     private void writeBack() {
+        if (painting) {
+            return;   // our own brush, not somebody putting a stack down
+        }
         house.bar.clear();
         for (int index = 0; index < STOCK; index++) {
             ItemStack stack = shelf.getStack(index);

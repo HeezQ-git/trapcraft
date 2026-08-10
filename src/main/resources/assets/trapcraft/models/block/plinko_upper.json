@@ -187,7 +187,13 @@
           "texture": "#frame"
         },
         "east": {
-          "texture": "#frame"
+          "texture": "#frame",
+          "uv": [
+            7.8,
+            12.4,
+            8.6,
+            13
+          ]
         },
         "west": {
           "texture": "#frame"
@@ -196,7 +202,13 @@
           "texture": "#frame"
         },
         "down": {
-          "texture": "#frame"
+          "texture": "#frame",
+          "uv": [
+            0.5,
+            7.8,
+            15.5,
+            8.6
+          ]
         }
       }
     }

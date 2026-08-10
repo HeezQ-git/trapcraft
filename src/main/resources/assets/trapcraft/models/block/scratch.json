@@ -10,7 +10,6 @@
     "shoe": "trapcraft:block/card_shoe",
     "chips": "trapcraft:block/chip_stack",
     "rack": "trapcraft:block/card_rack",
-    "shelf": "trapcraft:block/bar_shelf",
     "particle": "trapcraft:block/table_side"
   },
   "elements": [
@@ -219,22 +218,58 @@
       ],
       "faces": {
         "north": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "south": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "east": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "west": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "up": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "down": {
-          "texture": "#rack"
+          "texture": "#rack",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     },
@@ -251,22 +286,58 @@
       ],
       "faces": {
         "north": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "south": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "east": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "west": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "up": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         },
         "down": {
-          "texture": "#chips"
+          "texture": "#chips",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
         }
       }
     }

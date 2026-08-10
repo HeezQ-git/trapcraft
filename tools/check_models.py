@@ -84,6 +84,28 @@ def xray_holes() -> list[str]:
     return problems
 
 
+def effective_uv(element: dict, side: str, face: dict) -> list[float]:
+    """The uv this face will actually be drawn with.
+
+    A face without a uv gets one derived from where the element sits, and that
+    derivation is only inside the sprite if the element is inside the cube. A
+    bottle standing at y=15.5..23 derives v from -7, and negative v does not
+    clamp -- it reads whatever was stitched above that sprite in the atlas.
+    """
+    if "uv" in face:
+        return face["uv"]
+    x0, y0, z0 = element["from"]
+    x1, y1, z1 = element["to"]
+    return {
+        "down": [x0, 16 - z1, x1, 16 - z0],
+        "up": [x0, z0, x1, z1],
+        "north": [16 - x1, 16 - y1, 16 - x0, 16 - y0],
+        "south": [x0, 16 - y1, x1, 16 - y0],
+        "west": [z0, 16 - y1, z1, 16 - y0],
+        "east": [16 - z1, 16 - y1, 16 - z0, 16 - y0],
+    }[side]
+
+
 def texture_exists(ref: str) -> bool:
     """trapcraft:block/foo -> textures/block/foo.png. Vanilla refs are assumed."""
     if not ref.startswith("trapcraft:"):
@@ -149,6 +171,13 @@ def main() -> None:
                     problems.append(
                         f"{rel}: element {i} face {side} uses {ref}, "
                         f"which isn't in textures {sorted(textures)}")
+                uv = effective_uv(element, side, face)
+                if min(uv) < 0 or max(uv) > 16:
+                    problems.append(
+                        f"{rel}: element {i} face {side} reads uv {uv}, which is "
+                        f"outside the sprite -- it will sample whatever is next "
+                        f"to this texture in the atlas. Name a uv, or move it "
+                        f"inside the cube")
 
         # A model with elements needs a particle texture or breaking it crashes
         # the particle renderer looking for one.

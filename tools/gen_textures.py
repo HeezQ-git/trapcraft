@@ -1311,43 +1311,163 @@ xxxxxxxxxxxxxxxx
 ................
 """
 
-# The bar top: bottles and glasses lined up along a dark wood counter.
+# --- the bar --------------------------------------------------------------
+#
+# Its own palette rather than more keys bolted onto TABLE_PAL, which is
+# already shared by six maps and warns you about exactly this. The bar stopped
+# being a gaming table with props on it when it got a front, and the front is
+# the whole reason it now has to be placed facing somewhere.
+
+BAR_PAL = {
+    "x": "#140d08",     # outline / seam
+    "k": "#0b0704",     # deep shadow
+    "w": "#3a2415",     # counter wood
+    "W": "#5a3a22",     # wood, lit
+    "d": "#26160c",     # wood, shadow
+    "v": "#6b4526",     # panel field
+    "m": "#c9a227",     # brass
+    "M": "#f0cf5a",     # brass, lit
+    "n": "#8a6a1c",     # brass, shadow
+    "l": "#e8e2d4",     # bottle label
+    "L": "#f7f3e8",     # label, lit
+    "c": "#b9c6cc",     # tumbler glass
+    "C": "#e6f0f4",     # tumbler glass, lit
+    "s": "#7a4a18",     # what's in the tumbler
+    # 1 and 2 are the glass the BOTTLE map is filled with, so one drawing
+    # gives you the whole back bar. See BAR_GLASSWARE.
+}
+
+# What the bottles are made of. Dark first, then the highlight.
+BAR_GLASSWARE = {
+    "green": ("#1e6b3a", "#37a05c"),
+    "amber": ("#8a4a12", "#c9761f"),
+    "clear": ("#5f7d86", "#9fc0cb"),
+}
+
+# The counter top, seen from above: polished wood, two rings somebody didn't
+# wipe up, and the brass strip along the customer's edge.
 BAR_TOP = """
-xxxxxxxxxxxxxxxx
-xWWWWWWWWWWWWWWx
-xWdWWWWWWWWdWWWx
-xWWWWWWWWWWWWWWx
-xxxxxxxxxxxxxxxx
-xCcCcCcCcCcCcCcx
-xcCcCcCcCcCcCcCx
-xxxxxxxxxxxxxxxx
-xWWWWdWWWWWWWWWx
-xWWWWWWWWWdWWWWx
-xxxxxxxxxxxxxxxx
-xOoOoOoOoOoOoOox
-xoOoOoOoOoOoOoOx
-xxxxxxxxxxxxxxxx
-xWdWWWWWWWWWWdWx
-xxxxxxxxxxxxxxxx
+mMMMMMMMMMMMMMMm
+wwwwwwwwwwwwwwww
+wWWWWWWWWWWWWWWw
+wWWdWWWWWWWdWWWw
+wWWWWWWWWWWWWWWw
+wWWWWWxxWWWWWWWw
+wWWWWxWWxWWWWWWw
+wWWWWxWWxWWWdWWw
+wWWWWWxxWWWWWWWw
+wWdWWWWWWWWWWWWw
+wWWWWWWWWWxxWWWw
+wWWWWWWWWxWWxWWw
+wWWWWdWWWxWWxWWw
+wWWWWWWWWWxxWWWw
+wWWWWWWWWWWWWWWw
+wwwwwwwwwwwwwwww
 """
 
-# The bottle shelf that stands up behind it.
+# The panelled front the customer stands at: two fielded panels, brass beading
+# top and bottom. Every pixel is painted, because this one gets stretched over
+# boxes of every shape and a transparent row would read as a hole in the bar.
+BAR_FRONT = """
+mMMMMMMMMMMMMMMm
+wwwwwwwwwwwwwwww
+wdxxxxxdwdxxxxxd
+wxvvvvvxwxvvvvvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvWWWvxwxvWWWvx
+wxvvvvvxwxvvvvvx
+wdxxxxxdwdxxxxxd
+wwwwwwwwwwwwwwww
+mMMMMMMMMMMMMMMm
+dddddddddddddddd
+"""
+
+# The back board the bottles stand against: tongue-and-groove, dark.
 BAR_SHELF = """
-xxxxxxxxxxxxxxxx
-xmMmMmMmMmMmMmMx
-xxxxxxxxxxxxxxxx
-xOxCxOxCxOxCxOxx
-xOxCxOxCxOxCxOxx
-xOxCxOxCxOxCxOxx
-xxxxxxxxxxxxxxxx
-xmMmMmMmMmMmMmMx
-xxxxxxxxxxxxxxxx
-xCxOxCxOxCxOxCxx
-xCxOxCxOxCxOxCxx
-xCxOxCxOxCxOxCxx
-xxxxxxxxxxxxxxxx
-xmMmMmMmMmMmMmMx
-xxxxxxxxxxxxxxxx
+dddddddddddddddd
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+wWWWwdwWWWwdwWWw
+dddddddddddddddd
+"""
+
+# Brass, mottled rather than banded, because it is worn by the foot rail
+# (horizontal) and the tap tower (vertical) and a stripe can only be right for
+# one of them.
+BAR_BRASS = """
+nmmMMMMmmMMMMmmn
+mMMMMMMMMMMMMMMm
+mMMmMMMMmMMMMMMm
+mMMMMMMMMMMMmMMm
+mMMMMmMMMMMMMMMm
+mMMMMMMMMMmMMMMm
+mMMmMMMMMMMMMMMm
+mMMMMMMMMmMMMMMm
+mMMMMMmMMMMMMMMm
+mMMMMMMMMMMMmMMm
+mMMmMMMMMMMMMMMm
+mMMMMMMMmMMMMMMm
+mMMMMMMMMMMMMMMm
+mMMMMmMMMMMMMMMm
+mMMMMMMMMMMMMMMm
+nmmMMMMmmMMMMmmn
+"""
+
+# One bottle, drawn once and filled three times. Every element that uses it
+# names uv [0,0,16,16], so the whole drawing lands on a 2px-wide box and you
+# get a bottle rather than a slice of one.
+BAR_BOTTLE = """
+......xxxx......
+......x11x......
+......x11x......
+......x21x......
+.....xx11xx.....
+....xx1111xx....
+...xx111111xx...
+...x1llllll1x...
+...x1LLLLLL1x...
+...x1llllll1x...
+...x11111111x...
+...x12111111x...
+...x11111112x...
+...x11111111x...
+...xxxxxxxxxx...
+................
+"""
+
+# A tumbler with something brown in it, stood on the counter.
+BAR_GLASS = """
+................
+...xxxxxxxxxx...
+...xCccccccCx...
+...xcCccccccx...
+...xcssssssCx...
+...xcsssssssx...
+...xcssssssCx...
+...xcsssssssx...
+...xcssssssCx...
+...xcsssssssx...
+...xcssssssCx...
+...xcsssssssx...
+....xsssssCx....
+....xxxxxxxx....
+................
 ................
 """
 
@@ -2869,9 +2989,16 @@ def main() -> None:
     write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
     write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")
     write(render(TABLE_LEG, TABLE_PAL), "block", "table_leg.png")
-    write(render(BAR_TOP, TABLE_PAL), "block", "bar_top.png")
-    write(render(BAR_SHELF, TABLE_PAL), "block", "bar_shelf.png")
     write(render(TABLE_RIM, TABLE_PAL), "block", "table_rim.png")
+
+    write(render(BAR_TOP, BAR_PAL), "block", "bar_top.png")
+    write(render(BAR_FRONT, BAR_PAL), "block", "bar_front.png")
+    write(render(BAR_SHELF, BAR_PAL), "block", "bar_shelf.png")
+    write(render(BAR_BRASS, BAR_PAL), "block", "bar_brass.png")
+    write(render(BAR_GLASS, BAR_PAL), "block", "bar_glass.png")
+    for colour, (dark, lit) in BAR_GLASSWARE.items():
+        write(render(BAR_BOTTLE, {**BAR_PAL, "1": dark, "2": lit}),
+              "block", f"bar_bottle_{colour}.png")
     write(render(TOSS_COIN, TABLE_PAL), "block", "toss_coin.png")
     write(render(CARD_SHOE, TABLE_PAL), "block", "card_shoe.png")
     write(render(CHIP_STACK, TABLE_PAL), "block", "chip_stack.png")

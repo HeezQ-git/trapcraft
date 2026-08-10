@@ -245,16 +245,40 @@
       ],
       "faces": {
         "north": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            6.5,
+            2.2,
+            9.5,
+            3
+          ]
         },
         "south": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            6.5,
+            2.2,
+            9.5,
+            3
+          ]
         },
         "east": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            6.5,
+            2.2,
+            9.5,
+            3
+          ]
         },
         "west": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            6.5,
+            2.2,
+            9.5,
+            3
+          ]
         },
         "up": {
           "texture": "#rim"
@@ -277,16 +301,40 @@
       ],
       "faces": {
         "north": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            2.5,
+            2.8,
+            13.5,
+            4.5
+          ]
         },
         "south": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            2.5,
+            2.8,
+            13.5,
+            4.5
+          ]
         },
         "east": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            12.8,
+            2.8,
+            14.4,
+            4.5
+          ]
         },
         "west": {
-          "texture": "#rim"
+          "texture": "#rim",
+          "uv": [
+            1.6,
+            2.8,
+            3.2,
+            4.5
+          ]
         },
         "up": {
           "texture": "#rim"
@@ -309,16 +357,40 @@
       ],
       "faces": {
         "north": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            10.5,
+            1.8,
+            12.5,
+            2.8
+          ]
         },
         "south": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            3.5,
+            1.8,
+            5.5,
+            2.8
+          ]
         },
         "east": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            13.1,
+            1.8,
+            14.1,
+            2.8
+          ]
         },
         "west": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            1.9,
+            1.8,
+            2.9,
+            2.8
+          ]
         },
         "up": {
           "texture": "#wheel"
@@ -341,16 +413,40 @@
       ],
       "faces": {
         "north": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            7,
+            1.8,
+            9,
+            2.8
+          ]
         },
         "south": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            7,
+            1.8,
+            9,
+            2.8
+          ]
         },
         "east": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            13.1,
+            1.8,
+            14.1,
+            2.8
+          ]
         },
         "west": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            1.9,
+            1.8,
+            2.9,
+            2.8
+          ]
         },
         "up": {
           "texture": "#wheel"
@@ -373,16 +469,40 @@
       ],
       "faces": {
         "north": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            3.5,
+            1.8,
+            5.5,
+            2.8
+          ]
         },
         "south": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            10.5,
+            1.8,
+            12.5,
+            2.8
+          ]
         },
         "east": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            13.1,
+            1.8,
+            14.1,
+            2.8
+          ]
         },
         "west": {
-          "texture": "#wheel"
+          "texture": "#wheel",
+          "uv": [
+            1.9,
+            1.8,
+            2.9,
+            2.8
+          ]
         },
         "up": {
           "texture": "#wheel"
