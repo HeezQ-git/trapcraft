@@ -914,10 +914,11 @@ class FormulaTest {
 
     @Test
     void aFloorNobodyHasHeardOfDrawsLeast() {
-        float unknown = TrapMath.floorPull(0, 0);
-        float known = TrapMath.floorPull(100, 0);
-        float hooked = TrapMath.floorPull(0, 100);
-        float best = TrapMath.floorPull(100, 100);
+        int town = TrapMath.PULL_AT;
+        float unknown = TrapMath.floorPull(0, 0, town);
+        float known = TrapMath.floorPull(100, 0, town);
+        float hooked = TrapMath.floorPull(0, 100, town);
+        float best = TrapMath.floorPull(100, 100, town);
         assertTrue(unknown < known && unknown < hooked && known < best,
                 unknown + " " + known + " " + hooked + " " + best);
         assertTrue(unknown > 0.0f, "even an unknown room gets somebody");
@@ -925,6 +926,36 @@ class FormulaTest {
         // payouts -- and that is the loop that stops a casino being a hoard.
         assertTrue(known > hooked, "paying people out should matter most");
         assertTrue(best <= 2.5f, "the draw must not run away: " + best);
+    }
+
+    /**
+     * The complaint this was written for: a floor was earning about fifteen
+     * hundred an hour off customers who came from nowhere at all.
+     */
+    @Test
+    void punterscomeOutOfTheHousing() {
+        float empty = TrapMath.floorPull(100, 100, 0);
+        float town = TrapMath.floorPull(100, 100, TrapMath.PULL_AT);
+        assertTrue(empty < town / 4, "no town should mean almost no trade: "
+                + empty + " against " + town);
+        assertTrue(empty > 0, "a passer-by or two, though");
+        assertEquals(town, TrapMath.floorPull(100, 100, TrapMath.PULL_AT * 10), 0.001f,
+                "and a bigger town does not run away with it");
+    }
+
+    /** A shabby cabinet has to cost something, or the hammer is a chore. */
+    @Test
+    void wornMachinesTurnTradeAway() {
+        assertEquals(0f, TrapMath.jamChance(0), 0.001f);
+        assertEquals(0f, TrapMath.jamChance(TrapMath.JAM_FROM - 1), 0.001f);
+        assertTrue(TrapMath.jamChance(TrapMath.WEAR_BROKEN - 1) > 0.3f,
+                "nearly dead should be turning a lot away");
+        float last = -1;
+        for (int wear = 0; wear <= TrapMath.WEAR_BROKEN; wear++) {
+            float now = TrapMath.jamChance(wear);
+            assertTrue(now >= last, "jamming should never improve with wear");
+            last = now;
+        }
     }
 
     @Test

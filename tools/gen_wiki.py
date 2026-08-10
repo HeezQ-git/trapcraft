@@ -304,6 +304,11 @@ def gather() -> None:
     DATA["slot_sizes"] = ints("SLOT_SIZES", math)
     DATA["climb_return"] = float(need(r"CLIMB_RETURN = ([\d.]+)f", math, "CLIMB_RETURN"))
     DATA["roulette_pockets"] = int(need(r"ROULETTE_POCKETS = (\d+)", math, "roulette"))
+    DATA["pull_at"] = int(need(r"PULL_AT = (\d+)", math, "PULL_AT"))
+    DATA["pull_floor"] = float(need(r"PULL_FLOOR = ([\d.]+)f", math, "PULL_FLOOR"))
+    DATA["jam_from"] = int(need(r"JAM_FROM = (\d+)", math, "JAM_FROM"))
+    DATA["wear_broken"] = int(need(r"WEAR_BROKEN = (\d+)", math, "WEAR_BROKEN"))
+    DATA["wear_per_rounds"] = int(need(r"WEAR_PER_ROUNDS = (\d+)", math, "WEAR_PER_ROUNDS"))
 
     DATA["pace_ticks"] = ints("PACE_TICKS", crew)
     DATA["pace_cost"] = ints("PACE_COST", crew)
@@ -907,9 +912,20 @@ def build() -> str:
     want to lose it. The Climb pays {d['climb_return'] * 100:.1f}% at
     <em>every</em> rung — there is no correct place to stop, which makes it nerve rather
     than arithmetic.</p>
+    <h3 class="sub">Where the punters come from</h3>
+    <p><strong>The town.</strong> Punters are people and people live in houses, so trade
+    scales with the housed population up to {d['pull_at']} grades — and a floor with no city
+    behind it gets only the {round(d['pull_floor'] * 100)}% who were walking past. Reputation
+    and addiction still do the rest, and they still have to be earned.</p>
+    <h3 class="sub">Machines wear out, and it shows</h3>
+    <p>Every cabinet gains a wear point about one round in {d['wear_per_rounds']}, and dies at
+    {d['wear_broken']}. Past <strong>{d['jam_from']}</strong> it starts swallowing money and
+    sending punters back out of the door, so the hammer pays for itself in trade rather than
+    in tidiness. The card shows the worst cabinet on the floor and you get told the moment one
+    crosses the line.</p>
     <p class="note">A floor is a business, not a tap. Punters have to be served from
-    your own stash, machines wear out, a pit boss costs a flat wage against a
-    proportional skim, and an unattended floor earns very close to nothing.</p>"""))
+    your own stash, a pit boss costs a flat wage against a proportional skim, and an
+    unattended floor earns very close to nothing.</p>"""))
 
     cmd_rows = [
         ["<code>/wiki</code>", "This page, as a clickable link in chat"],

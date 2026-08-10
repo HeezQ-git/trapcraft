@@ -170,7 +170,7 @@ public final class TrapHouse {
 
         /** How hard this floor pulls people in, as a multiplier. */
         public float pull() {
-            return TrapMath.floorPull(rep, addiction);
+            return TrapMath.floorPull(rep, addiction, TrapHomes.population());
         }
 
         /** Is the floor running generous right now? */
@@ -320,6 +320,17 @@ public final class TrapHouse {
         WEAR.remove(wire);
         save();
         return cost;
+    }
+
+    /** The shabbiest cabinet on this floor, 0 fresh .. 100 in pieces. */
+    public static int worstWear(House house) {
+        int worst = 0;
+        for (var wire : WIRES.entrySet()) {
+            if (wire.getValue().equals(house.id)) {
+                worst = Math.max(worst, wearAt(wire.getKey()));
+            }
+        }
+        return worst;
     }
 
     /** Average condition of this floor, 0 fresh .. 100 in pieces. */

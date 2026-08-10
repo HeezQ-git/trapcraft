@@ -1470,10 +1470,52 @@ public final class TrapMath {
      * See {@link #houseRepTarget} for what a name is worth and
      * {@link #addictionAfter} for why the regulars leave.
      */
-    public static float floorPull(int rep, int addiction) {
+    /** Housed people it takes to fill a floor. */
+    public static final int PULL_AT = 12;
+    /** Trade a floor draws off passers-by with no town behind it. */
+    public static final float PULL_FLOOR = 0.15f;
+
+    /**
+     * How much trade a floor draws, and where that trade comes FROM.
+     *
+     * The population term is the point. This used to start at 0.55 with no
+     * reference to the world at all, so a casino in an empty wilderness pulled
+     * over half the trade of one in a city -- and a floor left running earned
+     * about fifteen hundred an hour off customers who came from nowhere,
+     * which is a faucet with a felt top.
+     *
+     * Punters are PEOPLE. People live in houses. A town of {@link #PULL_AT}
+     * housed grades fills a floor; no town at all leaves you the fifteen
+     * percent who were walking past anyway. Reputation and addiction still do
+     * the rest of the work, and they still have to be earned.
+     *
+     * @param population housed grades, from TrapHomes
+     */
+    public static float floorPull(int rep, int addiction, int population) {
         float known = Math.max(0, Math.min(HOUSE_STAT_MAX, rep)) / (float) HOUSE_STAT_MAX;
         float hooked = Math.max(0, Math.min(HOUSE_STAT_MAX, addiction)) / (float) HOUSE_STAT_MAX;
-        return 0.55f + 0.85f * known + 0.60f * hooked;
+        float town = PULL_FLOOR + (1.0f - PULL_FLOOR)
+                * Math.min(1.0f, Math.max(0, population) / (float) PULL_AT);
+        return town * (0.55f + 0.85f * known + 0.60f * hooked);
+    }
+
+    /** Wear at which a cabinet starts letting people down. */
+    public static final int JAM_FROM = 45;
+
+    /**
+     * Odds a worn cabinet swallows somebody's money and they walk out.
+     *
+     * Wear used to cost nothing but a rep point, which meant a hammer was a
+     * chore with no consequence and a floor of half-dead machines earned the
+     * same as a floor of new ones. Now a shabby cabinet turns trade away at
+     * the door, so the repair pays for itself in the only currency that
+     * matters: punters who actually play.
+     */
+    public static float jamChance(int wear) {
+        if (wear < JAM_FROM) {
+            return 0f;
+        }
+        return 0.45f * (wear - JAM_FROM) / (float) (WEAR_BROKEN - JAM_FROM);
     }
 
     /** What one wired machine costs to keep lit, per beat. */

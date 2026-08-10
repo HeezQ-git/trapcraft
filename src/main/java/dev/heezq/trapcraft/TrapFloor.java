@@ -304,7 +304,8 @@ public final class TrapFloor {
     /** The draw of whoever owns the machine at this wire. */
     private static float pullOf(String wire) {
         TrapHouse.House house = TrapHouse.byId(TrapHouse.wires().get(wire));
-        return house == null ? 0.55f : house.pull();
+        return house == null
+                ? TrapMath.floorPull(0, 0, TrapHomes.population()) : house.pull();
     }
 
     /** Has this floor got machines that are loaded but every one of them busy? */
@@ -329,7 +330,7 @@ public final class TrapFloor {
     }
 
     private static float bestPull() {
-        float best = 0.55f;
+        float best = TrapMath.floorPull(0, 0, TrapHomes.population());
         for (TrapHouse.House house : TrapHouse.all()) {
             best = Math.max(best, house.pull());
         }
@@ -589,6 +590,19 @@ public final class TrapFloor {
             punter.discard();
             return;
         }
+        // A shabby cabinet loses you the punter at the door. Wear used to cost
+        // nothing but a rep point, which made the hammer a chore with no
+        // consequence -- a floor of half-dead machines earned exactly what a
+        // floor of new ones did.
+        if (random.nextFloat() < TrapMath.jamChance(TrapHouse.wearAt(world, pos))) {
+            TrapHouse.turnedAway(house);
+            world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                    SoundCategory.BLOCKS, 0.5F, 0.5F);
+            world.spawnParticles(ParticleTypes.SMOKE, pos.getX() + 0.5,
+                    pos.getY() + 1.2, pos.getZ() + 0.5, 8, 0.3, 0.3, 0.3, 0.01);
+            punter.discard();
+            return;
+        }
         // Served at the door, out of your own stash. This is the whole
         // difference between a floor and a faucet: a dry bar means one go and
         // out, and that is most of the trade gone.
@@ -705,18 +719,35 @@ public final class TrapFloor {
         // Machines wear out. A busy floor throws up something to fix every ten
         // minutes or so, and a shabby one is worth less to its own name --
         // which is what stops the hammer being a chore with no consequence.
-        if (world.getRandom().nextInt(TrapMath.WEAR_PER_ROUNDS) == 0
-                && TrapHouse.wearOne(TrapHouse.wireAt(world, pos))) {
-            world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_LAND,
-                    SoundCategory.BLOCKS, 0.6F, 0.6F);
-            world.spawnParticles(ParticleTypes.LARGE_SMOKE,
-                    pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
-                    25, 0.35, 0.35, 0.35, 0.02);
-            for (ServerPlayerEntity nearby : world.getPlayers()) {
-                if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
-                    nearby.sendMessage(Text.literal("A machine's gone down at "
-                                    + pos.getX() + ", " + pos.getZ() + ". It wants a hammer.")
-                            .formatted(Formatting.RED), false);
+        if (world.getRandom().nextInt(TrapMath.WEAR_PER_ROUNDS) == 0) {
+            boolean died = TrapHouse.wearOne(TrapHouse.wireAt(world, pos));
+            if (died) {
+                world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_LAND,
+                        SoundCategory.BLOCKS, 0.6F, 0.6F);
+                world.spawnParticles(ParticleTypes.LARGE_SMOKE,
+                        pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
+                        25, 0.35, 0.35, 0.35, 0.02);
+                for (ServerPlayerEntity nearby : world.getPlayers()) {
+                    if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
+                        nearby.sendMessage(Text.literal("A machine's gone down at "
+                                        + pos.getX() + ", " + pos.getZ()
+                                        + ". It wants a hammer.")
+                                .formatted(Formatting.RED), false);
+                    }
+                }
+            } else if (TrapHouse.wearAt(world, pos) == TrapMath.JAM_FROM) {
+                // One word, once, at the exact point it starts costing money.
+                // Wear has been climbing on every cabinet since this mod
+                // shipped with nothing anywhere showing it, which is how a
+                // maintenance system stays invisible for months.
+                for (ServerPlayerEntity nearby : world.getPlayers()) {
+                    if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
+                        nearby.sendMessage(Text.literal("A cabinet's getting shabby at "
+                                        + pos.getX() + ", " + pos.getZ() + ". ")
+                                .formatted(Formatting.YELLOW)
+                                .append(Text.literal("It's started turning punters away.")
+                                        .formatted(Formatting.GRAY)), false);
+                    }
                 }
             }
         }

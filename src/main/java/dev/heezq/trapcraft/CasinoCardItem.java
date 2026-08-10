@@ -104,6 +104,27 @@ public class CasinoCardItem extends Item implements PolymerItem {
                                 Formatting.BOLD)));
         lore.add(line(machines + (machines == 1 ? " machine" : " machines") + " on the floor",
                 Formatting.DARK_GRAY));
+        // The gauge that was never there. Wear has been accumulating on every
+        // cabinet since the day this mod shipped and nothing anywhere showed
+        // it, so "do the machines break?" was a question the game gave its
+        // owner no way to answer. They do, at 100.
+        int worst = TrapHouse.worstWear(house);
+        if (machines > 0) {
+            lore.add(line("Condition  ", Formatting.GRAY)
+                    .append(plain((100 - worst) + "%")
+                            .formatted(worst >= TrapMath.JAM_FROM ? Formatting.RED
+                                    : Formatting.WHITE))
+                    .append(plain(worst >= TrapMath.JAM_FROM
+                                    ? "  worst cabinet is turning people away"
+                                    : "  all sound").formatted(Formatting.DARK_GRAY)));
+        }
+        int town = TrapHomes.population();
+        lore.add(line("Trade  ", Formatting.GRAY)
+                .append(plain(String.format("%.2fx", house.pull()))
+                        .formatted(Formatting.WHITE))
+                .append(plain("  from " + town + (town == 1 ? " townsperson" : " townspeople"))
+                        .formatted(town >= TrapMath.PULL_AT ? Formatting.DARK_GRAY
+                                : Formatting.RED)));
         if (house.handle > 0) {
             // Net of upkeep and the cut. The gross figure flattered a
             // ten-machine floor by a third, and a business you are judging by
