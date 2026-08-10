@@ -1028,12 +1028,26 @@ public final class TrapHomes {
      * ones vanilla leaves out of every useful tag and which are exactly what
      * a thrown-together shelter is built of.
      */
+    /**
+     * Did the world hand you this, or did you make it?
+     *
+     * Logs are NOT on this list, and were until somebody with a spruce cabin
+     * asked why their house was 83% built. A log wall is a style; nobody
+     * accidentally builds one, the way they accidentally build a dirt box.
+     * The rule exists to stop a hole in a hillside grading like a house, and
+     * a log cabin is not a hole in a hillside.
+     *
+     * What is left is the stuff you can pick up with a shovel or a pick and
+     * put straight back down in the same shape: earth, sand, gravel, the
+     * stone the ground is made of, and the cobble it leaves when you break
+     * it. Everything else -- planks, bricks, glass, wool, logs, and anything
+     * a mod ships to decorate with -- is a thing somebody chose.
+     */
     private static boolean rough(BlockState state) {
         if (state.isIn(net.minecraft.registry.tag.BlockTags.DIRT)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.SAND)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_OVERWORLD)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_NETHER)
-                || rawLog(state)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)
                 || state.isIn(net.minecraft.registry.tag.BlockTags.SNOW)) {
             return true;
@@ -1044,28 +1058,6 @@ public final class TrapHomes {
                 || block == Blocks.CLAY || block == Blocks.PACKED_MUD
                 || block == Blocks.DIRT_PATH || block == Blocks.ICE
                 || block == Blocks.PACKED_ICE || block == Blocks.MAGMA_BLOCK;
-    }
-
-    /**
-     * A log straight off a tree, as opposed to what you did to it after.
-     *
-     * BlockTags.LOGS is every log AND every stripped log, wood block, hyphae
-     * and stem -- so a house framed in stripped spruce or oak wood was being
-     * marked down as though it had been dug out of a hillside. You cannot dig
-     * up a stripped log. Somebody stood there with an axe.
-     *
-     * The raw log stays rough, and stays rough on purpose: chopping a tree
-     * and stacking the trunk is the same act as mining cobble and stacking
-     * that, which this has always counted as digging rather than building.
-     */
-    private static boolean rawLog(BlockState state) {
-        if (!state.isIn(net.minecraft.registry.tag.BlockTags.LOGS)) {
-            return false;
-        }
-        String id = net.minecraft.registry.Registries.BLOCK
-                .getId(state.getBlock()).getPath();
-        return !id.startsWith("stripped_") && !id.endsWith("_wood")
-                && !id.endsWith("_hyphae");
     }
 
     /**
