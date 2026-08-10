@@ -310,7 +310,10 @@ public final class TrapShops {
             return;
         }
         Random random = server.getOverworld().getRandom();
-        if (random.nextFloat() > Math.min(0.9f, people * PULL)) {
+        // Street Lamps: a lit town is a town people go out in.
+        float pull = people * PULL
+                * (TrapCity.built(TrapCity.Work.LAMPS) ? TrapCity.LAMPS_TRADE : 1f);
+        if (random.nextFloat() > Math.min(0.95f, pull)) {
             return;
         }
 

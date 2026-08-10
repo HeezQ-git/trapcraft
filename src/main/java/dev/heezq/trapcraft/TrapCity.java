@@ -100,6 +100,94 @@ public final class TrapCity {
         }
     }
 
+    /**
+     * What the purse can be spent ON, besides handing it out.
+     *
+     * A treasury with no sink is a scoreboard, and a scoreboard nobody can
+     * spend is a reason to stop collecting. Each of these is bought once,
+     * permanently, by anybody, and announced -- the same rule as a withdrawal,
+     * for the same reason.
+     *
+     * All four are things that only make sense for a CITY. The roads reward
+     * building near each other, the lamps reward having somewhere to shop, the
+     * watch is the city answering the thing that makes farms dangerous, and
+     * the exchange is what a market town does to a market.
+     */
+    public enum Work {
+        WATCH("The Watch", "Patrols come round half as often", 4000),
+        ROADS("Paved Roads", "Houses near the vault grade one higher", 6000),
+        LAMPS("Street Lamps", "Townspeople go shopping far more", 3000),
+        EXCHANGE("The Exchange", "The counter pays better for everything", 8000);
+
+        private final String display;
+        private final String blurb;
+        private final int cost;
+
+        Work(String display, String blurb, int cost) {
+            this.display = display;
+            this.blurb = blurb;
+            this.cost = cost;
+        }
+
+        public String display() {
+            return display;
+        }
+
+        public String blurb() {
+            return blurb;
+        }
+
+        public int cost() {
+            return cost;
+        }
+    }
+
+    /** How far the paving reaches from the vault. */
+    public static final int ROADS_REACH = 64;
+    /** What the watch does to a raid cooldown. */
+    public static final float WATCH_COOLDOWN = 2.0f;
+    /** What the lamps do to shop trade. */
+    public static final float LAMPS_TRADE = 1.6f;
+    /** What the exchange adds to what the counter pays. */
+    public static final float EXCHANGE_SELL = 1.12f;
+
+    private static final java.util.Set<Work> BUILT = java.util.EnumSet.noneOf(Work.class);
+
+    public static boolean built(Work work) {
+        return BUILT.contains(work);
+    }
+
+    /** @return why it didn't happen, or null if it did */
+    public static String build(ServerPlayerEntity who, Work work) {
+        if (!founded()) {
+            return "There's no city to build it in.";
+        }
+        if (BUILT.contains(work)) {
+            return "Already built.";
+        }
+        if (treasury < work.cost()) {
+            return work.display() + " costs " + work.cost() + "e and the purse holds "
+                    + treasury + "e.";
+        }
+        treasury -= work.cost();
+        BUILT.add(work);
+        save();
+        announce(who.getServer(), Text.literal(work.display().toUpperCase(java.util.Locale.ROOT))
+                .formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("\n  " + who.getGameProfile().getName() + " spent "
+                        + work.cost() + "e of the city's money. " + work.blurb() + ".")
+                        .formatted(Formatting.GRAY))
+                .append(Text.literal("\n  " + treasury + "e left in the purse.")
+                        .formatted(Formatting.DARK_GRAY)));
+        return null;
+    }
+
+    /** Is this spot close enough to the vault for the paving to reach it? */
+    public static boolean paved(String dimension, BlockPos pos) {
+        return built(Work.ROADS) && founded() && dimension.equals(vaultWorld)
+                && Math.sqrt(pos.getSquaredDistance(vaultAt)) <= ROADS_REACH;
+    }
+
     /** In-game days between budgets. */
     private static final int BUDGET_DAYS = 2;
     /** Under this and the city puts rates up; over it and they come down. */
@@ -388,6 +476,14 @@ public final class TrapCity {
         }
         who.sendMessage(Text.literal("  Nothing sold to customers or dealers is taxed.")
                 .formatted(Formatting.DARK_GRAY), false);
+        for (Work work : Work.values()) {
+            who.sendMessage(Text.literal("  " + work.display())
+                    .formatted(built(work) ? Formatting.GREEN : Formatting.DARK_GRAY)
+                    .append(Text.literal(built(work) ? "  built" : "  " + work.cost() + "e")
+                            .formatted(built(work) ? Formatting.GREEN : Formatting.GOLD))
+                    .append(Text.literal("  " + work.blurb()).formatted(Formatting.DARK_GRAY)),
+                    false);
+        }
     }
 
     // --- persistence ----------------------------------------------------------
@@ -400,6 +496,7 @@ public final class TrapCity {
         vaultAt = null;
         vaultWorld = null;
         lastBudget = -1;
+        BUILT.clear();
         for (Duty duty : Duty.values()) {
             RATES.put(duty, duty.start());
         }
@@ -420,6 +517,14 @@ public final class TrapCity {
                             vaultWorld = parts[1];
                             vaultAt = new BlockPos(Integer.parseInt(parts[2]),
                                     Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+                        }
+                    }
+                    case "built" -> {
+                        try {
+                            BUILT.add(Work.valueOf(parts[1]));
+                        } catch (IllegalArgumentException gone) {
+                            // A public work this version no longer has. The
+                            // city keeps the money it spent and forgets it.
                         }
                     }
                     case "duty" -> {
@@ -451,6 +556,9 @@ public final class TrapCity {
                 out.append("vault ").append(vaultWorld).append(' ')
                         .append(vaultAt.getX()).append(' ').append(vaultAt.getY())
                         .append(' ').append(vaultAt.getZ()).append('\n');
+            }
+            for (Work work : BUILT) {
+                out.append("built ").append(work.name()).append('\n');
             }
             for (Duty duty : Duty.values()) {
                 out.append("duty ").append(duty.name()).append(' ')

@@ -205,7 +205,12 @@ public final class TrapDealers {
         // Turns over on its own, so the same three faces aren't there all
         // week -- but only while nobody is looking at it, since a board that
         // reshuffles under your cursor is worse than a stale one.
-        if (drawn == null || now - drawn > BOARD_TICKS) {
+        // The board cannot get BIGGER -- it is drawn as a hopper and a hopper
+        // is five slots -- so a busy city turns it over faster instead. Same
+        // effect on how much work there is, no new container type.
+        int stale = Math.max(BOARD_TICKS / 3,
+                BOARD_TICKS - TrapHomes.population() * 20 * 20);
+        if (drawn == null || now - drawn > stale) {
             reroll(boss, false);
         }
         return OFFERS.getOrDefault(boss.getUuid(), List.of());

@@ -324,6 +324,12 @@ public final class TrapHomes {
         Fittings kit = fittings(world, rooms.inside());
         int tier = HomeSurvey.tier(true, floor, kit.bed, !rooms.exits().isEmpty(),
                 kit.finished(), kit.count(), kit.kinds, kit.dark, kit.lights);
+        // Paved Roads. A house on a proper street is worth more than the same
+        // house in a field, which is the only thing in this mod that rewards
+        // building NEAR each other -- and a city is a lot of people who did.
+        if (tier > 0 && self != null && TrapCity.paved(self.dimension, self.anchor)) {
+            tier = Math.min(HomeSurvey.TOP_TIER, tier + 1);
+        }
         return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.bed,
                 kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
                 kit.lights, kit.kinds, kit.dark, kit.finished(), self != null);

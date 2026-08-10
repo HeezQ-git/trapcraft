@@ -34,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -495,6 +496,7 @@ public final class TrapCrew {
             }
             if (tick % CLOCK_TICKS == 0) {
                 clock(server);
+                shiftBell(server);
             }
         });
     }
@@ -1437,6 +1439,88 @@ public final class TrapCrew {
         mob.getBrain().remember(MemoryModuleType.WALK_TARGET,
                 new WalkTarget(target, speed, 1));
         mob.getBrain().remember(MemoryModuleType.LOOK_TARGET, new BlockPosLookTarget(target));
+    }
+
+    // --- the bell -------------------------------------------------------------
+
+    /**
+     * Bosses already told the sun is up, and how many of theirs were out in it.
+     *
+     * Not saved. A restart at noon means the next thing a boss hears is the
+     * crew turning in at dusk, which is a missed line rather than a wrong one
+     * -- and the alternative is a file that has to be kept honest against
+     * firing, walkouts and dimensions that are not there any more.
+     */
+    private static final Map<UUID, Integer> ON_SHIFT = new HashMap<>();
+
+    /**
+     * Tell a boss when their crew starts and stops.
+     *
+     * They have downed tools at dusk and got up at dawn since the day they
+     * were put on daylight only, and the only way to find that out was to walk
+     * to the field and look. A hand you cannot see is a wage you forget you
+     * are paying, so the two moments that change what it buys are the two
+     * moments worth a line.
+     *
+     * Counted per boss, not per hand: five people knocking off together is one
+     * event, and five chat lines is spam. Hiring or firing mid-shift only
+     * moves the number quietly -- the bell is rung by the sun, not the payroll.
+     */
+    private static void shiftBell(MinecraftServer server) {
+        Map<UUID, Integer> up = new HashMap<>();
+        for (Hand hand : CREW) {
+            up.putIfAbsent(hand.boss, 0);
+            ServerWorld world = worldOf(server, hand);
+            if (world != null && onTheClock(world)) {
+                up.merge(hand.boss, 1, Integer::sum);
+            }
+        }
+        // Somebody who fired the lot at noon is not told at dusk that people
+        // who no longer work here have gone to bed.
+        ON_SHIFT.keySet().retainAll(up.keySet());
+
+        for (Map.Entry<UUID, Integer> boss : up.entrySet()) {
+            int now = boss.getValue();
+            Integer was = ON_SHIFT.get(boss.getKey());
+            if (now > 0) {
+                ON_SHIFT.put(boss.getKey(), now);
+                if (was == null) {
+                    ring(server, boss.getKey(), now, true);
+                }
+            } else if (was != null) {
+                // They are in bed by the time we count, so the line says how
+                // many walked off the patch, not how many are on it.
+                ON_SHIFT.remove(boss.getKey());
+                ring(server, boss.getKey(), was, false);
+            }
+        }
+    }
+
+    /** One notice, to one player, and only if they are here to read it. */
+    private static void ring(MinecraftServer server, UUID who, int hands, boolean dawn) {
+        ServerPlayerEntity boss = server.getPlayerManager().getPlayer(who);
+        if (boss == null) {
+            return;   // the flag still flipped; they just missed the bell
+        }
+        // Text.empty() as the root on purpose: style inherits down a chain, so
+        // hanging the gray half off a BOLD header would print the whole thing
+        // bold. Siblings each keep their own.
+        boss.sendMessage(Text.empty()
+                .append(Text.literal(dawn ? "SHIFT ON" : "SHIFT OVER")
+                        .formatted(dawn ? Formatting.GOLD : Formatting.BLUE, Formatting.BOLD))
+                .append(Text.literal("  ·  ").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal(hands + (hands == 1 ? " hand" : " hands"))
+                        .formatted(Formatting.WHITE))
+                .append(Text.literal(dawn ? " out on the patch" : " gone to bed")
+                        .formatted(Formatting.GRAY))
+                .append(Text.literal("\n   " + (dawn
+                        ? "Wages are running again until dusk."
+                        : "Nothing picked and nothing charged till dawn."))
+                        .formatted(Formatting.DARK_GRAY)), false);
+        boss.playSoundToPlayer(dawn
+                ? SoundEvents.BLOCK_NOTE_BLOCK_BELL.value()
+                : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                SoundCategory.NEUTRAL, 0.35F, dawn ? 1.4F : 0.7F);
     }
 
     // --- finding something to do ----------------------------------------------

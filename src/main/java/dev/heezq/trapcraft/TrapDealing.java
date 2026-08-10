@@ -49,6 +49,8 @@ public final class TrapDealing {
     private static final int CHECK_INTERVAL = 20 * 15;
     /** Chance per check, so roughly one visit every 7-8 minutes while holding. */
     private static final int SPAWN_CHANCE = 30;
+    /** However big the town gets, customers never come faster than this. */
+    private static final int SPAWN_FLOOR = 12;
 
     /** How long they'll hang around before giving up on you. */
     public static final int LIFETIME_TICKS = 20 * 180;
@@ -219,7 +221,12 @@ public final class TrapDealing {
         if (hasCustomer(player)) {
             return;   // one at a time; a queue of junkies is a mob, not a deal
         }
-        if (player.getWorld().getRandom().nextInt(SPAWN_CHANCE) != 0) {
+        // A city is a market. Every housed head shortens the odds, down to a
+        // floor -- deliberately an UPSIDE rather than a gate, because the
+        // black market existing without a city is the whole premise and it
+        // predates the city by about a hundred versions.
+        int odds = Math.max(SPAWN_FLOOR, SPAWN_CHANCE - TrapHomes.population());
+        if (player.getWorld().getRandom().nextInt(odds) != 0) {
             return;
         }
 

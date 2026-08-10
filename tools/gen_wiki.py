@@ -348,6 +348,14 @@ def gather() -> None:
     DATA["broke"] = int(need(r"BROKE = (\d+)", city, "BROKE"))
     DATA["flush"] = int(need(r"FLUSH = (\d+)", city, "FLUSH"))
     DATA["budget_days"] = int(need(r"BUDGET_DAYS = (\d+)", city, "BUDGET_DAYS"))
+    works = city[city.index("public enum Work {"):]
+    works = works[:works.index(";")]
+    DATA["works"] = [{"name": m[1], "blurb": m[2], "cost": int(m[3])} for m in re.findall(
+        r'(\w+)\(\s*"([^"]+)",\s*"([^"]+)",\s*(\d+)\)', works, re.S)]
+    declared_works = len(re.findall(r"^\s{8}[A-Z_]+\(", works, re.M))
+    if declared_works != len(DATA["works"]):
+        raise SystemExit(f"  parsed {len(DATA['works'])} works but "
+                         f"{declared_works} are declared")
     DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", java("TrapShops"), "RETAIL"))
     DATA["rent"] = ints("RENT", homes)
     DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
@@ -726,6 +734,17 @@ def build() -> str:
     <p class="note"><strong>Nothing sold to customers or dealers is taxed at all.</strong>
     That is not an oversight either — the black market pays better per hour precisely because
     it pays nothing to anybody, and that is a problem worth having.</p>
+    <h3 class="sub">What the purse buys</h3>
+    <p>A treasury with no sink is a scoreboard. Each of these is bought once, permanently, by
+    anybody, from the vault — and announced, the same rule as a withdrawal and for the same
+    reason.</p>
+    {table(["Public work", "Does", "Costs"], [
+        [esc(w["name"]), f'<span class="dim">{esc(w["blurb"])}</span>', f'{w["cost"]}e']
+        for w in d["works"]])}
+    <p class="note">All four only make sense for a <em>city</em>. The roads are the one thing
+    in the game that rewards building near each other; the watch is the city answering the
+    thing that makes farms dangerous; and the exchange pays everybody, including whoever never
+    leaves their farm.</p>
     <h3 class="sub">Shops the town walks into</h3>
     <p>A <strong>market shelf</strong> over a chest or barrel sells what is in it — not to
     players, but to the city. Townspeople come out of the housing, walk to the building, take

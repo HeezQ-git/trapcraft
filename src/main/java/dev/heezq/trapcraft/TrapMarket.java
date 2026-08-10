@@ -209,7 +209,12 @@ public final class TrapMarket {
     }
 
     public static int sellPrice(MinecraftServer server, ShopStock.Entry entry) {
-        return TrapMath.sellPrice(buyPrice(server, entry));
+        int paid = TrapMath.sellPrice(buyPrice(server, entry));
+        // The Exchange. A market town gets a better counter, which is the one
+        // public work that pays everybody including whoever never leaves their
+        // farm.
+        return TrapCity.built(TrapCity.Work.EXCHANGE)
+                ? Math.round(paid * TrapCity.EXCHANGE_SELL) : paid;
     }
 
     /**

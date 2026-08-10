@@ -260,7 +260,12 @@ public final class TrapHeat {
      * purely how often they do.
      */
     private static long cooldownFor(int tier, int heat) {
-        long base = COOLDOWN_TICKS[tier];
+        // The Watch. A city that has paid for patrols of its own gets fewer
+        // of the other sort -- which is the first thing the purse buys that
+        // the growers care about, and deliberately so.
+        long base = TrapCity.built(TrapCity.Work.WATCH)
+                ? Math.round(COOLDOWN_TICKS[tier] * TrapCity.WATCH_COOLDOWN)
+                : COOLDOWN_TICKS[tier];
         int cap = THRESHOLDS[THRESHOLDS.length - 1];
         if (tier < THRESHOLDS.length - 1 || heat <= cap) {
             return base;

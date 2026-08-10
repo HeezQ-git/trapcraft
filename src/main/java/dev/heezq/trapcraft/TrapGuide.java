@@ -262,6 +262,14 @@ public final class TrapGuide {
                 .append(hint("Each one has a floor and a ceiling."))));
 
         pages.add(page(Text.empty()
+                .append(title("1d2. PUBLIC WORKS\n\n"))
+                .append(body("The purse buys things for the whole "
+                        + "town.\n\n"))
+                .append(body("The Watch, Paved Roads, Street Lamps, The "
+                        + "Exchange.\n\n"))
+                .append(hint("Anybody may buy one. Everybody is told."))));
+
+        pages.add(page(Text.empty()
                 .append(title("1e. THE SHOPS\n\n"))
                 .append(body("Put a market shelf over a chest and stock "
                         + "it.\n\n"))

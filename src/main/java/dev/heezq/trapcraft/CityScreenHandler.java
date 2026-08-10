@@ -33,7 +33,7 @@ import java.util.List;
  * announcement is the whole of the accountability, and it is enough.
  *
  *   [purse] . [essentials][materials][luxury][income][gaming][rent][ledger]
- *   . . [take 64][take 256][take 1024][take all] . . .
+ *   . . [take 64][take 256][take 1024][take all] . [works..]
  *   . . . . [what it is for] . . . .
  */
 public class CityScreenHandler extends ScreenHandler {
@@ -44,9 +44,14 @@ public class CityScreenHandler extends ScreenHandler {
     private static final int LEDGER_SLOT = 8;
     private static final int TAKE_FROM = 11;
     private static final int ABOUT_SLOT = 22;
+    private static final int WORKS_FROM = 16;
 
     /** What each withdraw button is worth. Null means everything. */
     private static final Integer[] TAKES = {64, 256, 1024, null};
+
+    /** One per public work, in declaration order. */
+    private static final Item[] WORK_ICONS = {
+            Items.CROSSBOW, Items.STONE_BRICKS, Items.LANTERN, Items.GOLD_INGOT};
 
     private static final Item[] ICONS = {
             Items.BREAD, Items.BRICKS, Items.AMETHYST_SHARD, Items.PAPER,
@@ -60,6 +65,11 @@ public class CityScreenHandler extends ScreenHandler {
                 || RATES_FROM + ICONS.length > LEDGER_SLOT) {
             throw new IllegalStateException("city board: "
                     + TrapCity.Duty.values().length + " duties won't fit");
+        }
+        if (WORK_ICONS.length != TrapCity.Work.values().length
+                || WORKS_FROM + WORK_ICONS.length > SIZE) {
+            throw new IllegalStateException("city board: "
+                    + TrapCity.Work.values().length + " works won't fit");
         }
     }
 
@@ -98,6 +108,10 @@ public class CityScreenHandler extends ScreenHandler {
         display.setStack(LEDGER_SLOT, raised());
         for (int i = 0; i < TAKES.length; i++) {
             display.setStack(TAKE_FROM + i, take(TAKES[i]));
+        }
+        TrapCity.Work[] works = TrapCity.Work.values();
+        for (int i = 0; i < works.length; i++) {
+            display.setStack(WORKS_FROM + i, work(works[i], WORK_ICONS[i]));
         }
         display.setStack(ABOUT_SLOT, about());
         sendContentUpdates();
@@ -178,6 +192,36 @@ public class CityScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /**
+     * Something the purse can be spent ON.
+     *
+     * A treasury with no sink is a scoreboard, and a scoreboard nobody can
+     * spend is a reason to stop collecting.
+     */
+    private ItemStack work(TrapCity.Work work, Item icon) {
+        boolean done = TrapCity.built(work);
+        boolean can = !done && TrapCity.treasury() >= work.cost();
+        ItemStack tag = new ItemStack(done || can ? icon : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(work.display()).formatted(done ? Formatting.GREEN
+                        : can ? Formatting.YELLOW : Formatting.DARK_GRAY, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line(work.blurb() + ".", Formatting.GRAY));
+        lore.add(Text.empty());
+        if (done) {
+            lore.add(line("Built. Nothing more to pay.", Formatting.GREEN));
+        } else {
+            lore.add(line(work.cost() + "e out of the purse", Formatting.GOLD));
+            lore.add(line(can ? "Click to build it."
+                    : "The purse is " + (work.cost() - TrapCity.treasury()) + "e short.",
+                    can ? Formatting.YELLOW : Formatting.DARK_GRAY));
+            lore.add(Text.empty());
+            lore.add(line("Anybody may. Everybody is told.", Formatting.DARK_GRAY));
+        }
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack about() {
         ItemStack tag = new ItemStack(Items.BELL);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -200,6 +244,17 @@ public class CityScreenHandler extends ScreenHandler {
     public void onSlotClick(int index, int button, SlotActionType type, PlayerEntity clicker) {
         if (index < 0 || index >= SIZE) {
             super.onSlotClick(index, button, type, clicker);
+            return;
+        }
+        if (index >= WORKS_FROM && index < WORKS_FROM + WORK_ICONS.length) {
+            String no = TrapCity.build(who, TrapCity.Work.values()[index - WORKS_FROM]);
+            if (no != null) {
+                who.sendMessage(Text.literal(no).formatted(Formatting.GRAY), true);
+                click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
+            } else {
+                click(SoundEvents.BLOCK_VAULT_ACTIVATE, 1.0F);
+            }
+            paint();
             return;
         }
         if (index >= TAKE_FROM && index < TAKE_FROM + TAKES.length) {
