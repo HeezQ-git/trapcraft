@@ -605,6 +605,10 @@ public final class TrapHouse {
      */
     public static void stake(ServerPlayerEntity player, House house, int amount) {
         TrapLedger.record(player, TrapLedger.Source.CASINO, -amount);
+        // Gaming duty is on the HANDLE -- every stake laid, win or lose --
+        // which is how every real one works and is the only version that
+        // cannot be dodged by a lucky night. Winnings are not taxed again.
+        TrapCity.charge(player, amount, TrapCity.Duty.GAMING);
         if (house == null) {
             TrapMarket.take(player, amount);
             return;

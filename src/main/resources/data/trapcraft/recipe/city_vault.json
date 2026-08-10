@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GIG",
+    "IEI",
+    "GIG"
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "I": "minecraft:iron_ingot",
+    "E": "minecraft:emerald_block"
+  },
+  "result": {
+    "id": "trapcraft:city_vault",
+    "count": 1
+  }
+}

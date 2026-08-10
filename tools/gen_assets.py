@@ -481,6 +481,8 @@ def lang() -> None:
         "item.trapcraft.market_stall": "Market Stall",
         "block.trapcraft.mailbox": "Mailbox",
         "item.trapcraft.mailbox": "Mailbox",
+        "block.trapcraft.city_vault": "City Vault",
+        "item.trapcraft.city_vault": "City Vault",
         "block.trapcraft.slot_machine": "Lucky Streak",
         "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
@@ -1333,6 +1335,8 @@ def advancements() -> None:
           f"{NS}:market_stall", "root", trigger=has(f"{NS}:market_stall"))
     award("address", "An Address", "Put a mailbox on a room somebody could live in.",
           f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
+    award("founded", "Founded", "Put the city vault down and start taxing everybody.",
+          f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
     award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
           f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
     award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
@@ -1944,6 +1948,60 @@ def mailbox_model() -> dict:
     }
 
 
+def vault_assets() -> None:
+    """A solid cube, so it may honestly claim the FULL_BLOCK carrier.
+
+    Everything civic in this mod is going to end up next to this block, and a
+    hollow model on a solid carrier is the X-ray hole check_models.py exists to
+    catch. A vault is supposed to be a solid lump anyway.
+    """
+    # Written out as an explicit element rather than inheriting block/cube,
+    # because check_models.py measures face coverage off a model's OWN
+    # elements -- and a model that keeps its geometry in a vanilla parent
+    # reads as an empty shell it cannot vouch for. Spelling the cube out is
+    # cheaper than teaching the checker to trust a parent it never loads.
+    put(f"assets/{NS}/models/block/city_vault.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "face": f"{NS}:block/city_vault_face",
+            "side": f"{NS}:block/city_vault_side",
+            "top": f"{NS}:block/city_vault_top",
+            "particle": f"{NS}:block/city_vault_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#face"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#top"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/city_vault.json", {"parent": f"{NS}:block/city_vault"})
+    put(f"assets/{NS}/items/city_vault.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/city_vault"},
+    })
+    put(f"data/{NS}/loot_table/blocks/city_vault.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:city_vault"}]}],
+    })
+    # Gold and iron round an emerald block. Dear enough that founding the city
+    # is a decision somebody saved up for, cheap enough that it happens.
+    put(f"data/{NS}/recipe/city_vault.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["GIG", "IEI", "GIG"],
+        "key": {"G": "minecraft:gold_ingot", "I": "minecraft:iron_ingot",
+                "E": "minecraft:emerald_block"},
+        "result": {"id": f"{NS}:city_vault", "count": 1},
+    })
+
+
 def mailbox_assets() -> None:
     put(f"assets/{NS}/models/block/mailbox.json", mailbox_model())
     put(f"assets/{NS}/models/item/mailbox.json", {"parent": f"{NS}:block/mailbox"})
@@ -2049,6 +2107,7 @@ def main() -> None:
     phone_assets()
     stall_assets()
     mailbox_assets()
+    vault_assets()
     slot_assets()
     tags()
     worldgen()

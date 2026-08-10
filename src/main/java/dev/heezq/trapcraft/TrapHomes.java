@@ -252,6 +252,12 @@ public final class TrapHomes {
         if (atMailbox(world, pos) != null) {
             return "That box already belongs to a house.";
         }
+        // No city, no register. There is nobody to file the deed with, nowhere
+        // for the rates to go, and no purse to pay for the road outside.
+        if (!TrapCity.founded()) {
+            return "There's no city yet -- nobody to register a house with. "
+                    + "Somebody has to put a city vault down first.";
+        }
         Ground ground = new Ground(world, null);
         HomeSurvey.Rooms rooms = HomeSurvey.survey(ground, pos.getX(), pos.getY(), pos.getZ());
         if (rooms.clash()) {

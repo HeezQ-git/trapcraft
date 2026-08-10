@@ -246,8 +246,13 @@ public final class TrapStalls {
             return "There's nothing under this stall.";
         }
         int price = TrapMath.stallPrice(TrapMarket.buyPrice(shopper.getServer(), entry));
-        if (TrapMarket.wealthOf(shopper) < price) {
-            return "That's " + price + "e, and you haven't got it.";
+        // A neighbour's stall is still a shop, so it pays the same duty the
+        // counter does -- otherwise the city would quietly fund itself out of
+        // whoever could not be bothered to walk across town.
+        TrapCity.Duty band = TrapCity.forGoods(entry.category());
+        int duty = TrapCity.dutyOn(price, band);
+        if (TrapMarket.wealthOf(shopper) < price + duty) {
+            return "That's " + (price + duty) + "e, and you haven't got it.";
         }
         if (!take(box, entry, entry.count())) {
             return "They've sold out of that.";
@@ -262,6 +267,7 @@ public final class TrapStalls {
         TrapMarket.take(shopper, price - keeps);
         TrapMarket.collect(shopper, keeps);
         stall.till += keeps;
+        TrapCity.charge(shopper, price, band);
         // The buyer's side. The seller is credited when they empty the till,
         // not now -- crediting both here would book the sale twice.
         TrapLedger.record(shopper, TrapLedger.Source.STALL, -price);

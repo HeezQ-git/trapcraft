@@ -288,14 +288,25 @@ public class ShopScreenHandler extends ScreenHandler {
 
         List<Text> lore = new ArrayList<>();
         float flow = TrapMarket.pressureOf(entry);
+        // Prices on the shelf are what you actually hand over, duty included.
+        // A ticket that says one number and a till that charges another is how
+        // every shop in the world annoys people.
+        TrapCity.Duty band = TrapCity.forGoods(entry.category());
+        int vat = TrapCity.dutyOn(buy, band);
+        int income = TrapCity.dutyOn(sell, TrapCity.Duty.INCOME);
         lore.add(line("Buy    ", Formatting.DARK_GRAY)
-                .append(plain(buy + "e").formatted(Formatting.GREEN))
+                .append(plain((buy + vat) + "e").formatted(Formatting.GREEN))
+                .append(plain(vat == 0 ? "" : "   inc " + vat + "e "
+                        + band.display().toLowerCase(java.util.Locale.ROOT))
+                        .formatted(Formatting.DARK_GRAY))
                 .append(plain(move == 0 ? "" : move > 0 ? "   +" + move + "%" : "   " + move + "%")
                         .formatted(move > 0 ? Formatting.RED : Formatting.AQUA)));
         lore.add(line("Sell   ", Formatting.DARK_GRAY)
                 .append(sell > 0
-                        ? plain(sell + "e").formatted(Formatting.GOLD)
-                        : plain("not bought here").formatted(Formatting.DARK_GRAY)));
+                        ? plain((sell - income) + "e").formatted(Formatting.GOLD)
+                        : plain("not bought here").formatted(Formatting.DARK_GRAY))
+                .append(plain(sell > 0 && income > 0 ? "   after " + income + "e income" : "")
+                        .formatted(Formatting.DARK_GRAY)));
         if (Math.abs(flow) > 0.02f) {
             // Order flow is the part of the price a player caused, so say so
             // plainly rather than burying it in the percentage.
@@ -538,15 +549,20 @@ public class ShopScreenHandler extends ScreenHandler {
 
     private void buy(ShopStock.Entry entry, int lots) {
         int each = TrapMarket.buyPrice(shopper.getServer(), entry);
+        // VAT rides on top of the shelf price and the affordability sum has to
+        // know about it, or the shop offers four and charges for four and a
+        // bit -- which is the one thing a counter must never do.
+        TrapCity.Duty band = TrapCity.forGoods(entry.category());
+        int withDuty = each + TrapCity.dutyOn(each, band);
         int purse = TrapMarket.wealthOf(shopper);
 
         // Buy as many as they can afford rather than refusing outright: asking
         // for four and getting three is a better shop than getting nothing.
-        int affordable = Math.min(lots, purse / each);
+        int affordable = Math.min(lots, purse / withDuty);
         if (affordable <= 0) {
             deny();
             shopper.sendMessage(plain("You're ").formatted(Formatting.GRAY)
-                    .append(plain((each - purse) + "e").formatted(Formatting.RED))
+                    .append(plain((withDuty - purse) + "e").formatted(Formatting.RED))
                     .append(plain(" short of a " + name(entry) + ".").formatted(Formatting.GRAY)), false);
             return;
         }
@@ -554,6 +570,7 @@ public class ShopScreenHandler extends ScreenHandler {
         int cost = affordable * each;
         TrapMarket.take(shopper, cost);
         TrapLedger.record(shopper, TrapLedger.Source.MARKET, -cost);
+        int duty = TrapCity.charge(shopper, cost, band);
         TrapMarket.traded(entry, affordable, true);
         for (int i = 0; i < affordable; i++) {
             shopper.getInventory().offerOrDrop(entry.stack());
@@ -564,7 +581,10 @@ public class ShopScreenHandler extends ScreenHandler {
                 .append(plain((affordable * entry.count()) + "x ").formatted(Formatting.WHITE))
                 .append(plain(name(entry)).formatted(Formatting.WHITE))
                 .append(plain(" for ").formatted(Formatting.GRAY))
-                .append(plain(cost + "e").formatted(Formatting.GREEN))
+                .append(plain((cost + duty) + "e").formatted(Formatting.GREEN))
+                .append(plain(duty > 0 ? "   " + duty + "e of that is " + band.display()
+                        .toLowerCase(java.util.Locale.ROOT) + " duty" : "")
+                        .formatted(Formatting.DARK_GRAY))
                 .append(plain(affordable < lots ? "   that's all you could afford" : "")
                         .formatted(Formatting.DARK_GRAY)), false);
     }
@@ -588,6 +608,10 @@ public class ShopScreenHandler extends ScreenHandler {
         TrapMarket.takeGoods(shopper, entry, 1);
         TrapMarket.pay(shopper, each);
         TrapLedger.record(shopper, TrapLedger.Source.MARKET, each);
+        // Paid gross and taxed after, which is the same emerald count as
+        // paying net but keeps the market index honest: the counter really did
+        // create `each`, and the city really did take a slice of it.
+        int duty = TrapCity.charge(shopper, each, TrapCity.Duty.INCOME);
         TrapMarket.traded(entry, 1, false);
 
         till();
@@ -595,7 +619,9 @@ public class ShopScreenHandler extends ScreenHandler {
                 .append(plain(entry.count() + "x ").formatted(Formatting.WHITE))
                 .append(plain(name(entry)).formatted(Formatting.WHITE))
                 .append(plain(" for ").formatted(Formatting.GRAY))
-                .append(plain(each + "e").formatted(Formatting.GOLD)), false);
+                .append(plain((each - duty) + "e").formatted(Formatting.GOLD))
+                .append(plain(duty > 0 ? "   after " + duty + "e income duty" : "")
+                        .formatted(Formatting.DARK_GRAY)), false);
     }
 
     // --- trimmings ------------------------------------------------------------

@@ -276,6 +276,7 @@ def gather() -> None:
     heat = java("TrapHeat")
     rack = java("DryingRackBlock")
     homes = java("HomeSurvey")
+    city = java("TrapCity")
     press = java("LeafPressBlock")
 
     DATA["strains"] = strains()
@@ -324,6 +325,24 @@ def gather() -> None:
     DATA["fittings"] = int(need(r"FITTINGS = (\d+)", homes, "FITTINGS"))
     DATA["top_tier"] = int(need(r"TOP_TIER = (\d+)", homes, "TOP_TIER"))
     DATA["span"] = int(need(r"SPAN = (\d+)", homes, "SPAN"))
+    # DOTALL, because a blurb long enough to wrap is a blurb this would
+    # otherwise drop in silence -- INCOME did exactly that on the first run,
+    # and a tax table missing a tax is the worst kind of generated page.
+    body = city[city.index("public enum Duty {"):]
+    body = body[:body.index(";")]
+    DATA["duties"] = [
+        {"name": m[1], "blurb": m[2], "start": int(m[3]),
+         "floor": int(m[4]), "ceiling": int(m[5])}
+        for m in re.findall(
+            r'(\w+)\(\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)',
+            body, re.S)]
+    declared = len(re.findall(r"^\s{8}[A-Z_]+\(", body, re.M))
+    if declared != len(DATA["duties"]):
+        raise SystemExit(f"  parsed {len(DATA['duties'])} duties but "
+                         f"{declared} are declared -- the tax table would be wrong")
+    DATA["broke"] = int(need(r"BROKE = (\d+)", city, "BROKE"))
+    DATA["flush"] = int(need(r"FLUSH = (\d+)", city, "FLUSH"))
+    DATA["budget_days"] = int(need(r"BUDGET_DAYS = (\d+)", city, "BUDGET_DAYS"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -514,7 +533,8 @@ def build() -> str:
         ("01", "grow", "The Grow"), ("02", "cure", "Curing & Rolling"),
         ("03", "blends", "Blends"), ("04", "high", "The High"),
         ("05", "coca", "The Coca Line"), ("06", "market", "The Market"),
-        ("07", "stalls", "Stalls"), ("08", "homes", "Housing"),
+        ("07", "stalls", "Stalls"), ("08", "city", "The City"),
+        ("08b", "homes", "Housing"),
         ("09", "crew", "The Crew"),
         ("10", "heat", "Heat & Raids"), ("11", "street", "The Street"),
         ("12", "casino", "The House"), ("13", "commands", "Commands"),
@@ -675,7 +695,36 @@ def build() -> str:
     <p class="note">The market screen tells you when a neighbour has a line cheaper,
     with their name and coordinates. <code>/stalls</code> lists the lot.</p>"""))
 
-    sections.append(section("08", "homes", "Housing", "a room the city can see", f"""
+    sections.append(section("08", "city", "The City", "the public purse", f"""
+    <p class="lede">Nothing is taxed until somebody crafts a <strong>city vault</strong> and
+    puts it down, and no house can be registered either — there is nobody to register it
+    with. Put one down and both start, server-wide, with an announcement.</p>
+    <p>There is one vault and one purse. Every duty anybody pays goes into it, and
+    <strong>anybody may spend it</strong> — every withdrawal is announced to everyone on the
+    server. That is a decision, not an oversight: three friends can agree what the money is
+    for in ten seconds, and a voting interface would be a menu standing where a conversation
+    should be.</p>
+    <p class="note">Breaking the vault spends nothing. The money is in the city's books, not
+    in the block — it just means nobody can reach it, or file a house, until one is stood up
+    again.</p>
+    <h3 class="sub">What is taxed</h3>
+    {table(["Duty", "On", "Starts at", "Band"], [
+        [esc(x["name"]), f'<span class="dim">{esc(x["blurb"])}</span>',
+         f'{x["start"]}%', f'{x["floor"]}–{x["ceiling"]}%'] for x in d["duties"]])}
+    <p>Buying pays a duty on top of the shelf price — and the shelf price you see already
+    includes it, at the counter and at a neighbour's stall alike. Being paid has income duty
+    taken out of it. Every stake laid on a casino floor pays gaming duty, win or lose, which
+    is the only version that cannot be dodged by a lucky night.</p>
+    <p class="note"><strong>Nothing sold to customers or dealers is taxed at all.</strong>
+    That is not an oversight either — the black market pays better per hour precisely because
+    it pays nothing to anybody, and that is a problem worth having.</p>
+    <h3 class="sub">The budget</h3>
+    <p>Rates move on their own every {d['budget_days']} days and the change is announced with
+    its reason. Under {d['broke']}e in the purse and everything goes up; over {d['flush']}e and
+    everything comes down; otherwise each rate wanders a point either way inside its band.
+    <code>/city</code> prints the current table and what each duty has raised.</p>"""))
+
+    sections.append(section("08b", "homes", "Housing", "a room the city can see", f"""
     <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room once and
     right-click it. It walks the walls and tells you what you have built — and once it
     passes, that room is an address.</p>
@@ -829,6 +878,7 @@ def build() -> str:
         ["<code>/guide</code>", "Six handbooks — grower, refiner, street, crew, casino, city"],
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
+        ["<code>/city</code>", "The purse, the current duties, and what each has raised"],
         ["<code>/homes</code>", "Every house on the register, and its grade"],
         ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],
         ["<code>/crew</code>", "The crew board — hire, train, pay"],

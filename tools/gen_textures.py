@@ -2410,6 +2410,81 @@ xxxxxxxxxxxxxxxx
 """
 
 
+# --- the city vault ---------------------------------------------------------
+#
+# Stone and brass with a green seam down the middle: it has to read as civic
+# rather than as another machine, and as somewhere money is KEPT rather than
+# somewhere money is played with. Nothing else in this mod is grey.
+
+VAULT_PAL = {
+    "s": "#6a6a6e",     # stone
+    "S": "#8b8b90",     # stone, lit
+    "d": "#46464a",     # stone, shadow
+    "m": "#b08a2a",     # brass
+    "M": "#e0bb56",     # brass, lit
+    "g": "#1f7a45",     # emerald seam
+    "G": "#35b168",     # emerald, lit
+    "x": "#26262a",     # outline
+}
+
+VAULT_FACE = """
+xxxxxxxxxxxxxxxx
+xSsssssssssssSsx
+xsddddddddddddsx
+xsdmmmmmmmmmmdsx
+xsdmMMMMMMMMmdsx
+xsdmMggggggMmdsx
+xsdmMgGGGGgMmdsx
+xsdmMgGxxGgMmdsx
+xsdmMgGxxGgMmdsx
+xsdmMgGGGGgMmdsx
+xsdmMggggggMmdsx
+xsdmMMMMMMMMmdsx
+xsdmmmmmmmmmmdsx
+xsddddddddddddsx
+xSsssssssssssSsx
+xxxxxxxxxxxxxxxx
+"""
+
+VAULT_SIDE = """
+xxxxxxxxxxxxxxxx
+xSsssssssssssSsx
+xsddddddddddddsx
+xsdsssssssssssdx
+xsdsSsssssssSsdx
+xsdsssssssssssdx
+xsdmmmmmmmmmmdsx
+xsdmMMMMMMMMmdsx
+xsdmmmmmmmmmmdsx
+xsdsssssssssssdx
+xsdsSsssssssSsdx
+xsdsssssssssssdx
+xsddddddddddddsx
+xSsssssssssssSsx
+xsddddddddddddsx
+xxxxxxxxxxxxxxxx
+"""
+
+VAULT_TOP = """
+xxxxxxxxxxxxxxxx
+xSssssssssssssSx
+xsdddddddddddddx
+xsdmmmmmmmmmmmdx
+xsdmMMMMMMMMMmdx
+xsdmMgggggggMmdx
+xsdmMgGGGGGgMmdx
+xsdmMgGGGGGgMmdx
+xsdmMgGGGGGgMmdx
+xsdmMgggggggMmdx
+xsdmMMMMMMMMMmdx
+xsdmmmmmmmmmmmdx
+xsdddddddddddddx
+xSssssssssssssSx
+xsdddddddddddddx
+xxxxxxxxxxxxxxxx
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2516,6 +2591,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(VAULT_FACE, VAULT_PAL), "block", "city_vault_face.png")
+    write(render(VAULT_SIDE, VAULT_PAL), "block", "city_vault_side.png")
+    write(render(VAULT_TOP, VAULT_PAL), "block", "city_vault_top.png")
     write(render(MAILBOX_BOX, MAILBOX_PAL), "block", "mailbox_box.png")
     write(render(MAILBOX_POST, MAILBOX_PAL), "block", "mailbox_post.png")
     write(render(MAILBOX_FLAG, MAILBOX_PAL), "block", "mailbox_flag.png")

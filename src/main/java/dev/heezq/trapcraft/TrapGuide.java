@@ -231,7 +231,38 @@ public final class TrapGuide {
     /** Every page below reads its numbers off {@link HomeSurvey}. */
     private static void cityBook(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. THE MAILBOX\n\n"))
+                .append(title("1. THE VAULT\n\n"))
+                .append(body("Craft one, put it down. That founds the "
+                        + "city.\n\n"))
+                .append(body("Until then nothing is taxed and no house "
+                        + "can be registered.\n\n"))
+                .append(hint("One only. Right-click for the purse."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1b. THE PURSE\n\n"))
+                .append(body("Every duty paid goes in it.\n\n"))
+                .append(body("Anybody may take from it. Everybody is "
+                        + "told who did.\n\n"))
+                .append(hint("/city prints the books."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1c. THE DUTIES\n\n"))
+                .append(body("Essentials, materials, luxury: paid "
+                        + "buying.\n"))
+                .append(body("Income: out of what you're paid.\n"))
+                .append(body("Gaming: on every stake.\n\n"))
+                .append(warn("Customers and dealers pay nothing."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1d. THE BUDGET\n\n"))
+                .append(body("Rates move on their own every couple of "
+                        + "days, and it is announced.\n\n"))
+                .append(body("An empty purse puts them up. A full one "
+                        + "brings them down.\n\n"))
+                .append(hint("Each one has a floor and a ceiling."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. THE MAILBOX\n\n"))
                 .append(body("Stand one inside the room ONCE and right-click "
                         + "it.\n\n"))
                 .append(body("It walks the walls, grades the place, and puts "
@@ -239,14 +270,14 @@ public final class TrapGuide {
                 .append(hint("Then it belongs outside. See the next page."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. MOVING IT\n\n"))
+                .append(title("3. MOVING IT\n\n"))
                 .append(body("Sneak + right-click, empty-handed.\n\n"))
                 .append(body("It comes off the wall with the address on "
                         + "it. Nail it up outside.\n\n"))
                 .append(hint("The house stays where it was measured."))));
 
         pages.add(page(Text.empty()
-                .append(title("2b. IF IT GETS LOST\n\n"))
+                .append(title("3b. IF IT GETS LOST\n\n"))
                 .append(body("Blank box, back inside: it takes the job "
                         + "again.\n\n"))
                 .append(body("Blank box outside: it serves your nearest "
@@ -254,14 +285,14 @@ public final class TrapGuide {
                 .append(hint("/homes demolish drops the one you stand in."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. WHAT COUNTS\n\n"))
+                .append(title("4. WHAT COUNTS\n\n"))
                 .append(body("Sealed. Walls, floor, roof, no gaps.\n\n"))
                 .append(body("Doors are walls -- a shut bedroom door still "
                         + "counts as your room.\n\n"))
                 .append(hint("A door onto the street is the way in."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. THE FIVE MUSTS\n\n"))
+                .append(title("5. THE FIVE MUSTS\n\n"))
                 .append(body("Sealed.\n"))
                 .append(body(HomeSurvey.MIN_FLOOR + " blocks of floor.\n"))
                 .append(body("A bed.\n"))
@@ -270,7 +301,7 @@ public final class TrapGuide {
                 .append(warn("Miss one and it is not a house."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. THE GRADE\n\n"))
+                .append(title("6. THE GRADE\n\n"))
                 .append(body("Points, " + HomeSurvey.topPoints()
                         + " of them. Two a grade.\n\n"))
                 .append(warn("SIZE CAPS IT. " + HomeSurvey.FLOOR_STEPS[1]
@@ -280,7 +311,7 @@ public final class TrapGuide {
                 .append(hint("Upstairs counts. Every storey."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. THE POINTS\n\n"))
+                .append(title("7. THE POINTS\n\n"))
                 .append(body("Built, not dug: "
                         + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% then "
                         + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "%.\n"))
@@ -291,21 +322,21 @@ public final class TrapGuide {
                 .append(body("No dark corners.\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("7. GROUND\n\n"))
+                .append(title("8. GROUND\n\n"))
                 .append(body("Two houses can't share it.\n\n"))
                 .append(body("Flats side by side are fine. So is one above "
                         + "another.\n\n"))
                 .append(hint("Up to " + HomeSurvey.SPAN + " blocks from the box."))));
 
         pages.add(page(Text.empty()
-                .append(title("8. IT KEEPS LOOKING\n\n"))
+                .append(title("9. IT KEEPS LOOKING\n\n"))
                 .append(body("Every couple of minutes it measures again.\n\n"))
                 .append(body("Knock a wall through or take the bed and the "
                         + "grade drops.\n\n"))
                 .append(hint("/homes lists everybody's."))));
 
         pages.add(page(Text.empty()
-                .append(title("9. WHAT IT IS FOR\n\n"))
+                .append(title("10. WHAT IT IS FOR\n\n"))
                 .append(body("Nothing yet. Tenants come next, and they pay "
                         + "rent into the box.\n\n"))
                 .append(body("Better grade, better tenant.\n\n"))

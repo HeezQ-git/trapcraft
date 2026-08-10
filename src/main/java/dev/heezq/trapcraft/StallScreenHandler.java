@@ -98,8 +98,10 @@ public class StallScreenHandler extends ScreenHandler {
 
     private ItemStack tag(ShopStock.Entry entry, int held) {
         int market = TrapMarket.buyPrice(shopper.getServer(), entry);
+        int duty = TrapCity.dutyOn(TrapMath.stallPrice(market),
+                TrapCity.forGoods(entry.category()));
         int price = TrapMath.stallPrice(market);
-        boolean can = TrapMarket.wealthOf(shopper) >= price;
+        boolean can = TrapMarket.wealthOf(shopper) >= price + duty;
 
         ItemStack tag = entry.stack();
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -107,9 +109,12 @@ public class StallScreenHandler extends ScreenHandler {
                         .formatted(can ? Formatting.WHITE : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line(price + "e", Formatting.GREEN)
-                .append(plain("   market " + market + "e").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("You save " + (market - price) + "e a lot.", Formatting.AQUA));
+        int counter = market + TrapCity.dutyOn(market, TrapCity.forGoods(entry.category()));
+        lore.add(line((price + duty) + "e", Formatting.GREEN)
+                .append(plain(duty == 0 ? "" : "   inc " + duty + "e duty")
+                        .formatted(Formatting.DARK_GRAY))
+                .append(plain("   counter " + counter + "e").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("You save " + (counter - price - duty) + "e a lot.", Formatting.AQUA));
         lore.add(Text.empty());
         lore.add(line(held / entry.count() + " lots on the table", Formatting.GRAY));
         lore.add(Text.empty());
