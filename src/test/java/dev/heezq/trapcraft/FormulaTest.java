@@ -2,6 +2,8 @@ package dev.heezq.trapcraft;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1672,6 +1674,65 @@ class FormulaTest {
     @Test
     void aggregateIgnoresEmptyFinds() {
         assertTrue(TrapMath.aggregate(List.of(Map.entry("ghost", 0))).isEmpty());
+    }
+
+    // --- the earnings ledger --------------------------------------------------
+
+    @Test
+    void everySourceKnowsWhetherItIsDeclared() {
+        assertFalse(TrapLedger.Source.WEED.declared(), "drug money is not declared");
+        assertFalse(TrapLedger.Source.COCA.declared());
+        assertTrue(TrapLedger.Source.STALL.declared(), "a stall is a legitimate shop");
+        assertTrue(TrapLedger.Source.CASINO.declared());
+        assertTrue(TrapLedger.Source.RENT.declared());
+    }
+
+    /** The audit reads exactly this split, so it is worth pinning before it exists. */
+    @Test
+    void declaredAndUndeclaredSplitCleanly() {
+        long declared = java.util.Arrays.stream(TrapLedger.Source.values())
+                .filter(TrapLedger.Source::declared).count();
+        assertTrue(declared >= 6, "most sources should be above board");
+        assertTrue(declared < TrapLedger.Source.values().length,
+                "at least one source has to be black market or the audit is pointless");
+    }
+
+    @Test
+    void rollupTotalsBySourceAndKeepsNamesApart() {
+        Map<String, Map<TrapLedger.Source, Integer>> book = new LinkedHashMap<>();
+        TrapLedger.tally(book, "HeezQ", TrapLedger.Source.WEED, 120);
+        TrapLedger.tally(book, "HeezQ", TrapLedger.Source.WEED, 80);
+        TrapLedger.tally(book, "HeezQ", TrapLedger.Source.CREW, -40);
+        TrapLedger.tally(book, "KARTGERL", TrapLedger.Source.CASINO, 500);
+
+        assertEquals(200, book.get("HeezQ").get(TrapLedger.Source.WEED));
+        assertEquals(-40, book.get("HeezQ").get(TrapLedger.Source.CREW));
+        assertEquals(500, book.get("KARTGERL").get(TrapLedger.Source.CASINO));
+        assertEquals(160, TrapLedger.net(book.get("HeezQ")));
+    }
+
+    @Test
+    void undeclaredIsSummedSeparatelyForTheAudit() {
+        Map<TrapLedger.Source, Integer> mine = new EnumMap<>(TrapLedger.Source.class);
+        mine.put(TrapLedger.Source.WEED, 900);
+        mine.put(TrapLedger.Source.STALL, 100);
+        assertEquals(100, TrapLedger.declaredOf(mine));
+        assertEquals(900, TrapLedger.undeclaredOf(mine));
+    }
+
+    /**
+     * Spending is not negative earning and must not net off against it.
+     *
+     * The audit compares wealth GROWTH against declared INCOME, so a landlord
+     * who spent four hundred emeralds at the shop this week has not thereby
+     * declared four hundred emeralds of income.
+     */
+    @Test
+    void spendingDoesNotCountAsDeclaredIncome() {
+        Map<TrapLedger.Source, Integer> mine = new EnumMap<>(TrapLedger.Source.class);
+        mine.put(TrapLedger.Source.MARKET, -400);
+        mine.put(TrapLedger.Source.RENT, 60);
+        assertEquals(60, TrapLedger.declaredOf(mine), "only money coming IN is income");
     }
 
     // --- growing --------------------------------------------------------------
