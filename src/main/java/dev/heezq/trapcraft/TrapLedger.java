@@ -179,6 +179,18 @@ public final class TrapLedger {
      *
      * @param delta what it did to their pocket -- negative for money going out
      */
+    /**
+     * Today's book for one player, or an empty row.
+     *
+     * The revenue office reads this. Handed out as an unmodifiable view
+     * because the ledger is the only thing allowed to write to it -- an audit
+     * that could edit the evidence is not an audit.
+     */
+    public static Map<Source, Integer> today(String who) {
+        Map<Source, Integer> row = TODAY.get(who);
+        return row == null ? Map.of() : java.util.Collections.unmodifiableMap(row);
+    }
+
     public static void record(ServerPlayerEntity who, Source source, int delta) {
         if (who == null || delta == 0 || rows == null) {
             return;

@@ -4,6 +4,7 @@
   "package": "dev.heezq.trapcraft.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "CreeperEntityMixin",
     "MobEntityAccessor"
   ],
   "injectors": {

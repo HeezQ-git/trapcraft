@@ -1465,6 +1465,10 @@ public final class TrapCrew {
      * Counted per boss, not per hand: five people knocking off together is one
      * event, and five chat lines is spam. Hiring or firing mid-shift only
      * moves the number quietly -- the bell is rung by the sun, not the payroll.
+     *
+     * A boss with hands in the Nether never hears it, which is right: fixed
+     * time means {@link #onTheClock} is never true there and those hands have
+     * never worked a minute.
      */
     private static void shiftBell(MinecraftServer server) {
         Map<UUID, Integer> up = new HashMap<>();
@@ -1475,24 +1479,10 @@ public final class TrapCrew {
                 up.merge(hand.boss, 1, Integer::sum);
             }
         }
-        // Somebody who fired the lot at noon is not told at dusk that people
-        // who no longer work here have gone to bed.
-        ON_SHIFT.keySet().retainAll(up.keySet());
-
-        for (Map.Entry<UUID, Integer> boss : up.entrySet()) {
-            int now = boss.getValue();
-            Integer was = ON_SHIFT.get(boss.getKey());
-            if (now > 0) {
-                ON_SHIFT.put(boss.getKey(), now);
-                if (was == null) {
-                    ring(server, boss.getKey(), now, true);
-                }
-            } else if (was != null) {
-                // They are in bed by the time we count, so the line says how
-                // many walked off the patch, not how many are on it.
-                ON_SHIFT.remove(boss.getKey());
-                ring(server, boss.getKey(), was, false);
-            }
+        // Who to tell, and what about, is in TrapMath so it can be checked
+        // without a world. Sign says which way the shift went.
+        for (Map.Entry<UUID, Integer> bell : TrapMath.shiftBells(ON_SHIFT, up).entrySet()) {
+            ring(server, bell.getKey(), Math.abs(bell.getValue()), bell.getValue() > 0);
         }
     }
 

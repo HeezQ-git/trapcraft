@@ -2184,6 +2184,47 @@ public final class TrapMath {
                 / (jobsPerShift * 20.0f);
     }
 
+    /**
+     * Which bosses have just started or finished a shift, and with how many.
+     *
+     * Here rather than in the crew because it is a state machine and state
+     * machines are what go quietly wrong: the failures are a line every second
+     * instead of one at dawn, or a line about people who were fired an hour
+     * ago. Both are cheap to check and neither is visible in a screenshot.
+     *
+     * {@code known} is what the caller last saw -- present means on shift, the
+     * value is how many were out -- and it is updated in place. {@code up} is
+     * every boss with anybody on the books at all, against how many of them
+     * are in daylight this second. The answer is one entry per boss worth
+     * telling: positive for a shift starting, negative for one ending.
+     *
+     * An ending carries the count from {@code known} on purpose. By the time
+     * the sun is down, "how many are out" is zero, and zero is not the number
+     * anybody wants read back to them.
+     */
+    public static <K> Map<K, Integer> shiftBells(Map<K, Integer> known, Map<K, Integer> up) {
+        // Firing the lot at noon is not a shift ending, so a boss who no
+        // longer has anybody is dropped rather than rung.
+        known.keySet().retainAll(up.keySet());
+
+        Map<K, Integer> bells = new LinkedHashMap<>();
+        for (Map.Entry<K, Integer> boss : up.entrySet()) {
+            int now = boss.getValue();
+            Integer was = known.get(boss.getKey());
+            if (now > 0) {
+                // Hiring mid-shift moves the number without ringing anything.
+                known.put(boss.getKey(), now);
+                if (was == null) {
+                    bells.put(boss.getKey(), now);
+                }
+            } else if (was != null) {
+                known.remove(boss.getKey());
+                bells.put(boss.getKey(), -was);
+            }
+        }
+        return bells;
+    }
+
     // --- the coin toss ----------------------------------------------------------
 
     /**

@@ -398,6 +398,11 @@ public final class TrapDealers {
      * there -- which is the quiet cost of calling one in and the reason not to
      * leave them parked.
      */
+    /** Dealers on everybody's books, for the city's balance log. */
+    public static int count() {
+        return BOOK.size();
+    }
+
     private static void round(MinecraftServer server) {
         long timeOfDay = server.getOverworld().getTimeOfDay() % 24000L;
         float hour = TrapMath.dealerHourFactor(timeOfDay);

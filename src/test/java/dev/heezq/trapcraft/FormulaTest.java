@@ -1935,4 +1935,56 @@ class FormulaTest {
                     "interval " + interval + " gets no breather at all");
         }
     }
+
+    // --- the shift bell -------------------------------------------------------
+
+    /**
+     * Dawn rings once, the day is quiet, dusk rings once with the count that
+     * was working -- and the whole thing is called every second, so "quiet"
+     * is the assertion that matters.
+     */
+    @Test
+    void theBellRingsTwiceADay() {
+        Map<String, Integer> known = new LinkedHashMap<>();
+
+        assertEquals(Map.of("boss", 3), TrapMath.shiftBells(known, Map.of("boss", 3)));
+        for (int second = 0; second < 60; second++) {
+            assertTrue(TrapMath.shiftBells(known, Map.of("boss", 3)).isEmpty(),
+                    "rang again mid-shift at second " + second);
+        }
+        assertEquals(Map.of("boss", -3), TrapMath.shiftBells(known, Map.of("boss", 0)));
+        assertTrue(TrapMath.shiftBells(known, Map.of("boss", 0)).isEmpty(),
+                "rang the night bell twice");
+    }
+
+    /** Hiring at noon changes the number without saying anything. */
+    @Test
+    void hiringMidShiftIsQuiet() {
+        Map<String, Integer> known = new LinkedHashMap<>();
+        TrapMath.shiftBells(known, Map.of("boss", 1));
+
+        assertTrue(TrapMath.shiftBells(known, Map.of("boss", 4)).isEmpty(), "rang for a hire");
+        assertEquals(Map.of("boss", -4), TrapMath.shiftBells(known, Map.of("boss", 0)),
+                "dusk should count everyone, including the ones hired at noon");
+    }
+
+    /** Firing the lot is not a shift ending, and nobody is told one happened. */
+    @Test
+    void firingTheLotRingsNothing() {
+        Map<String, Integer> known = new LinkedHashMap<>();
+        TrapMath.shiftBells(known, Map.of("boss", 2));
+
+        assertTrue(TrapMath.shiftBells(known, Map.of()).isEmpty(), "rang for people who left");
+        assertTrue(known.isEmpty(), "a boss with no crew is still on the books");
+    }
+
+    /** One boss's dusk is not another's, and neither hears the other's bell. */
+    @Test
+    void bossesAreRungSeparately() {
+        Map<String, Integer> known = new LinkedHashMap<>();
+        TrapMath.shiftBells(known, Map.of("overworld", 2, "nether", 0));
+
+        assertEquals(Map.of("overworld", -2, "nether", 1),
+                TrapMath.shiftBells(known, Map.of("overworld", 0, "nether", 1)));
+    }
 }

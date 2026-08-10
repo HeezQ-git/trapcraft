@@ -188,6 +188,71 @@ public final class TrapCity {
                 && Math.sqrt(pos.getSquaredDistance(vaultAt)) <= ROADS_REACH;
     }
 
+    /**
+     * Laws the council passes when the city needs them, and repeals when it
+     * does not.
+     *
+     * Reactive, never random. A rule that arrives for no reason is weather,
+     * and nobody plays around weather -- but a levy that turns up because the
+     * purse is empty is a thing the room did to itself, and the constitution
+     * ends up reading as a history of the server.
+     */
+    public enum Act {
+        LEVY("The Levy", "Every rate up while the purse is empty", 3),
+        CRACKDOWN("The Crackdown", "Patrols come round far more often", 0),
+        STANDARDS("Housing Standards", "A grade one is no longer fit to let", 0),
+        DRIVE("The Revenue Drive", "The office takes a harder share of what it finds", 0);
+
+        private final String display;
+        private final String blurb;
+        private final int rateBump;
+
+        Act(String display, String blurb, int rateBump) {
+            this.display = display;
+            this.blurb = blurb;
+            this.rateBump = rateBump;
+        }
+
+        public String display() {
+            return display;
+        }
+
+        public String blurb() {
+            return blurb;
+        }
+
+        public int rateBump() {
+            return rateBump;
+        }
+    }
+
+    /** Heat across the server that brings the constable out. */
+    public static final int CRACKDOWN_HEAT = 260;
+    /** Housed grades at which the city starts turning its nose up. */
+    public static final int STANDARDS_AT = 30;
+    /** Undeclared money a day, server-wide, that sets the office off. */
+    public static final int DRIVE_AT = 2500;
+
+    private static final java.util.Set<Act> ACTS = java.util.EnumSet.noneOf(Act.class);
+    private static final Map<Act, Long> PASSED = new EnumMap<>(Act.class);
+
+    public static boolean inForce(Act act) {
+        return ACTS.contains(act);
+    }
+
+    public static long passedOn(Act act) {
+        return PASSED.getOrDefault(act, 0L);
+    }
+
+    /** What a duty actually charges, acts and all. */
+    public static int chargedRate(Duty duty) {
+        int rate = rateOf(duty);
+        for (Act act : ACTS) {
+            rate += act.rateBump();
+        }
+        return Math.max(0, Math.min(duty.ceiling() + 6, rate));
+    }
+
     /** In-game days between budgets. */
     private static final int BUDGET_DAYS = 2;
     /** Under this and the city puts rates up; over it and they come down. */
@@ -201,6 +266,8 @@ public final class TrapCity {
     private static BlockPos vaultAt;
     private static long lastBudget = -1;
     private static Path saveFile;
+    private static Path logFile;
+    private static long lastLogged = -1;
 
     private TrapCity() {
     }
@@ -213,6 +280,11 @@ public final class TrapCity {
             // a Minecraft day.
             if (server.getTicks() % 200 == 0) {
                 budget(server);
+                long day = server.getOverworld().getTimeOfDay() / 24000L;
+                if (day != lastLogged) {
+                    lastLogged = day;
+                    logDay(server, day);
+                }
             }
         });
     }
@@ -289,7 +361,7 @@ public final class TrapCity {
         if (!founded() || amount <= 0) {
             return 0;
         }
-        return Math.max(1, Math.round(amount * rateOf(duty) / 100.0f));
+        return Math.max(1, Math.round(amount * chargedRate(duty) / 100.0f));
     }
 
     /** The band a shop line falls in. Food is not decoration. */
@@ -395,6 +467,7 @@ public final class TrapCity {
             return;
         }
         lastBudget = day;
+        sitting(server, overworld, day);
 
         String why;
         int move;
@@ -426,6 +499,166 @@ public final class TrapCity {
                 .append(Text.literal(table.toString()).formatted(Formatting.WHITE))
                 .append(Text.literal("\n  /city").formatted(Formatting.GREEN))
                 .append(Text.literal("  for the whole table.").formatted(Formatting.DARK_GRAY)));
+    }
+
+    /**
+     * The council sits: what is true right now, and what the law says about it.
+     *
+     * Every act is re-checked from scratch rather than toggled, so a condition
+     * that clears repeals its act without anybody having to remember to. That
+     * is the difference between a law and a debuff.
+     */
+    private static void sitting(MinecraftServer server, ServerWorld overworld, long day) {
+        java.util.EnumMap<Act, Boolean> wanted = new java.util.EnumMap<>(Act.class);
+        wanted.put(Act.LEVY, treasury < BROKE);
+        wanted.put(Act.CRACKDOWN,
+                TrapHeat.measureHeat(overworld, overworld.getSpawnPos()) >= CRACKDOWN_HEAT
+                        || TrapLaw.serverHeat() >= CRACKDOWN_HEAT);
+        wanted.put(Act.STANDARDS, TrapHomes.population() >= STANDARDS_AT);
+        wanted.put(Act.DRIVE, TrapLaw.undeclaredToday() >= DRIVE_AT);
+
+        for (var row : wanted.entrySet()) {
+            Act act = row.getKey();
+            boolean now = row.getValue();
+            if (now == ACTS.contains(act)) {
+                continue;
+            }
+            if (now) {
+                ACTS.add(act);
+                PASSED.put(act, day);
+                announce(server, Text.literal("PASSED  ").formatted(Formatting.RED,
+                                Formatting.BOLD)
+                        .append(Text.literal(act.display()).formatted(Formatting.WHITE,
+                                Formatting.BOLD))
+                        .append(Text.literal("\n  " + act.blurb() + ".")
+                                .formatted(Formatting.GRAY))
+                        .append(Text.literal("\n  /law").formatted(Formatting.GREEN))
+                        .append(Text.literal("  for the constitution.")
+                                .formatted(Formatting.DARK_GRAY)));
+            } else {
+                ACTS.remove(act);
+                PASSED.remove(act);
+                announce(server, Text.literal("REPEALED  ").formatted(Formatting.GREEN,
+                                Formatting.BOLD)
+                        .append(Text.literal(act.display()).formatted(Formatting.WHITE))
+                        .append(Text.literal(". The reason for it has gone.")
+                                .formatted(Formatting.GRAY)));
+            }
+        }
+        TrapLaw.lawChanged(server);
+    }
+
+    /**
+     * One row a day of everything worth balancing against.
+     *
+     * Written whether or not anybody asked, because the alternative is tuning
+     * a nine-system economy off a feeling. The earnings ledger already says
+     * what each PLAYER made; this says what the CITY did, which is the half
+     * nobody could see.
+     */
+    private static void logDay(MinecraftServer server, long day) {
+        if (logFile == null) {
+            return;
+        }
+        try {
+            boolean fresh = !Files.exists(logFile);
+            StringBuilder row = new StringBuilder();
+            if (fresh) {
+                row.append("day,online,population,houses,housed,tenants,avg_grade,")
+                        .append("purse,raised_total,");
+                for (Duty duty : Duty.values()) {
+                    row.append("rate_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
+                            .append(',');
+                }
+                for (Duty duty : Duty.values()) {
+                    row.append("raised_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
+                            .append(',');
+                }
+                row.append("acts,works,shelves,shelf_sales,shelf_tills,")
+                        .append("casino_balance,casino_handle,casino_net,worst_wear,")
+                        .append("crew,crew_payroll,dealers,heat,market_index,supply,")
+                        .append("declared,undeclared,washed,owed\n");
+            }
+
+            int houses = TrapHomes.all().size();
+            int housed = 0;
+            int grades = 0;
+            for (TrapHomes.Home home : TrapHomes.all()) {
+                grades += home.tier();
+                if (home.tenant() != null) {
+                    housed++;
+                }
+            }
+            int shelfSales = 0;
+            for (TrapShops.Shelf shelf : TrapShops.all()) {
+                shelfSales += shelf.sold();
+            }
+            long casinoBalance = 0;
+            long casinoHandle = 0;
+            long casinoNet = 0;
+            int worstWear = 0;
+            for (TrapHouse.House house : TrapHouse.all()) {
+                casinoBalance += house.balance;
+                casinoHandle += house.handle;
+                casinoNet += house.handle - house.paid;
+                worstWear = Math.max(worstWear, TrapHouse.worstWear(house));
+            }
+            int crew = 0;
+            int payroll = 0;
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                crew += TrapCrew.sizeOf(player);
+                payroll += TrapCrew.payrollOf(player);
+            }
+
+            row.append(day).append(',')
+                    .append(server.getPlayerManager().getCurrentPlayerCount()).append(',')
+                    .append(TrapHomes.population()).append(',')
+                    .append(houses).append(',').append(housed).append(',').append(housed)
+                    .append(',')
+                    .append(houses == 0 ? 0 : String.format("%.2f", grades / (float) houses))
+                    .append(',')
+                    .append(treasury).append(',');
+            int raised = 0;
+            for (Duty duty : Duty.values()) {
+                raised += takenBy(duty);
+            }
+            row.append(raised).append(',');
+            for (Duty duty : Duty.values()) {
+                row.append(chargedRate(duty)).append(',');
+            }
+            for (Duty duty : Duty.values()) {
+                row.append(takenBy(duty)).append(',');
+            }
+            StringBuilder acts = new StringBuilder();
+            for (Act act : ACTS) {
+                acts.append(acts.isEmpty() ? "" : "|").append(act.name());
+            }
+            StringBuilder works = new StringBuilder();
+            for (Work work : BUILT) {
+                works.append(works.isEmpty() ? "" : "|").append(work.name());
+            }
+            row.append(acts.isEmpty() ? "-" : acts).append(',')
+                    .append(works.isEmpty() ? "-" : works).append(',')
+                    .append(TrapShops.all().size()).append(',')
+                    .append(shelfSales).append(',')
+                    .append(TrapShops.tillsHeld()).append(',')
+                    .append(casinoBalance).append(',').append(casinoHandle).append(',')
+                    .append(casinoNet).append(',').append(worstWear).append(',')
+                    .append(crew).append(',').append(payroll).append(',')
+                    .append(TrapDealers.count()).append(',')
+                    .append(TrapLaw.serverHeat()).append(',')
+                    .append(String.format("%.3f", TrapMarket.index())).append(',')
+                    .append(Math.round(TrapMarket.supplyNow())).append(',')
+                    .append(TrapLaw.declaredToday()).append(',')
+                    .append(TrapLaw.undeclaredToday()).append(',')
+                    .append(TrapLaw.washedToday()).append(',')
+                    .append(TrapLaw.owedTotal()).append('\n');
+            Files.writeString(logFile, row.toString(), java.nio.charset.StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't write the city log: {}", failure.toString());
+        }
     }
 
     private static void announce(MinecraftServer server, Text what) {
@@ -490,6 +723,9 @@ public final class TrapCity {
 
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.txt");
+        logFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.csv");
+        ACTS.clear();
+        PASSED.clear();
         RATES.clear();
         TAKEN.clear();
         treasury = 0;
@@ -517,6 +753,16 @@ public final class TrapCity {
                             vaultWorld = parts[1];
                             vaultAt = new BlockPos(Integer.parseInt(parts[2]),
                                     Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+                        }
+                    }
+                    case "act" -> {
+                        try {
+                            ACTS.add(Act.valueOf(parts[1]));
+                            PASSED.put(Act.valueOf(parts[1]),
+                                    parts.length >= 3 ? Long.parseLong(parts[2]) : 0L);
+                        } catch (IllegalArgumentException gone) {
+                            // An act this version no longer has. Repealed by
+                            // the only authority that outranks the council.
                         }
                     }
                     case "built" -> {
@@ -559,6 +805,10 @@ public final class TrapCity {
             }
             for (Work work : BUILT) {
                 out.append("built ").append(work.name()).append('\n');
+            }
+            for (Act act : ACTS) {
+                out.append("act ").append(act.name()).append(' ')
+                        .append(passedOn(act)).append('\n');
             }
             for (Duty duty : Duty.values()) {
                 out.append("duty ").append(duty.name()).append(' ')

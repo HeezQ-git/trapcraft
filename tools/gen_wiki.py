@@ -348,6 +348,16 @@ def gather() -> None:
     DATA["broke"] = int(need(r"BROKE = (\d+)", city, "BROKE"))
     DATA["flush"] = int(need(r"FLUSH = (\d+)", city, "FLUSH"))
     DATA["budget_days"] = int(need(r"BUDGET_DAYS = (\d+)", city, "BUDGET_DAYS"))
+    law = java("TrapLaw")
+    DATA["looks_away"] = int(need(r"LOOKS_AWAY = (\d+)", law, "LOOKS_AWAY"))
+    DATA["assessment"] = float(need(r"ASSESSMENT = ([\d.]+)f", law, "ASSESSMENT"))
+    DATA["wash_cut"] = float(need(r"WASH_CUT = ([\d.]+)f", law, "WASH_CUT"))
+    acts = city[city.index("public enum Act {"):]
+    acts = acts[:acts.index(";")]
+    DATA["acts"] = [{"name": m[1], "blurb": m[2]} for m in re.findall(
+        r'(\w+)\(\s*"([^"]+)",\s*"([^"]+)",\s*(\d+)\)', acts, re.S)]
+    if len(re.findall(r"^\s{8}[A-Z_]+\(", acts, re.M)) != len(DATA["acts"]):
+        raise SystemExit("  the acts table would be wrong")
     works = city[city.index("public enum Work {"):]
     works = works[:works.index(";")]
     DATA["works"] = [{"name": m[1], "blurb": m[2], "cost": int(m[3])} for m in re.findall(
@@ -761,6 +771,26 @@ def build() -> str:
     the shop tells them. <code>/shops</code> lists the counters and the head count.</p>
     <p class="note">Townspeople buy food far more often than anything else, which is both true
     and the reason this is built for whoever is doing the farming.</p>
+    <h3 class="sub">The revenue office</h3>
+    <p>Everything legal pays duty and everything illegal pays nothing, which on its own just
+    means drugs are better. The office is the other end of that: it reads what came in against
+    what you declared, and over <strong>{d['looks_away']}e a day it cannot account for</strong>
+    it assesses you for {round(d['assessment'] * 100)}% of the excess. Cannot pay? The debt
+    stands and you carry heat until it is settled — <code>/law pay</code>.</p>
+    <h3 class="sub">The wash</h3>
+    <p><code>/wash &lt;amount&gt;</code> runs dirty money through your own till at a
+    {round(d['wash_cut'] * 100)}% cut and the office stops asking about it. It is
+    <strong>capped by what that till actually turned over</strong> — a shop that sold nothing
+    explains nothing, however much its owner would like it to. A real business is the licence
+    to launder and its size is the limit, which is why a market shelf and a casino floor are
+    worth owning for a reason other than what they earn.</p>
+    <h3 class="sub">Acts</h3>
+    <p>The council passes laws when the city needs them and repeals them when it does not.
+    Reactive, never random — a rule that arrives for no reason is weather, and nobody plays
+    around weather. <code>/law</code> hands you the constitution, written fresh the moment you
+    ask.</p>
+    {table(["Act", "Passes when"], [[esc(a["name"]), f'<span class="dim">{esc(a["blurb"])}</span>']
+                                    for a in d["acts"]])}
     <h3 class="sub">The budget</h3>
     <p>Rates move on their own every {d['budget_days']} days and the change is announced with
     its reason. Under {d['broke']}e in the purse and everything goes up; over {d['flush']}e and
@@ -952,6 +982,8 @@ def build() -> str:
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
         ["<code>/city</code>", "The purse, the current duties, and what each has raised"],
+        ["<code>/law</code>", "The constitution, written the moment you ask"],
+        ["<code>/wash</code>", "Run takings through your own till, at a cut"],
         ["<code>/homes</code>", "Every house on the register, and its grade"],
         ["<code>/shops</code>", "Every market shelf, and how many townspeople there are"],
         ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],

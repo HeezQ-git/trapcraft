@@ -270,6 +270,22 @@ public final class TrapGuide {
                 .append(hint("Anybody may buy one. Everybody is told."))));
 
         pages.add(page(Text.empty()
+                .append(title("1g. THE OFFICE\n\n"))
+                .append(body("It reads what you earned against what you "
+                        + "declared.\n\n"))
+                .append(body("Over " + TrapLaw.LOOKS_AWAY + "e a day it "
+                        + "can't account for, it bills you.\n\n"))
+                .append(warn("Owe it and you're watched. /law pay"))));
+
+        pages.add(page(Text.empty()
+                .append(title("1h. THE WASH\n\n"))
+                .append(body("/wash <amount>\n\n"))
+                .append(body("Dirty money through your own till, "
+                        + Math.round(TrapLaw.WASH_CUT * 100) + "% cut.\n\n"))
+                .append(hint("Capped by what that till really took. No "
+                        + "shop, no cover."))));
+
+        pages.add(page(Text.empty()
                 .append(title("1e. THE SHOPS\n\n"))
                 .append(body("Put a market shelf over a chest and stock "
                         + "it.\n\n"))

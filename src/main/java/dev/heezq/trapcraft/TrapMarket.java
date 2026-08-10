@@ -180,6 +180,11 @@ public final class TrapMarket {
     }
 
     /** The current cost multiplier from the money supply. */
+    /** The raw money supply, for the city's balance log. */
+    public static float supplyNow() {
+        return supply;
+    }
+
     public static float index() {
         return TrapMath.marketIndex(supply, baseline);
     }
