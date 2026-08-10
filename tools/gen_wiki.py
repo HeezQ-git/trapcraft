@@ -344,6 +344,8 @@ def gather() -> None:
     DATA["flush"] = int(need(r"FLUSH = (\d+)", city, "FLUSH"))
     DATA["budget_days"] = int(need(r"BUDGET_DAYS = (\d+)", city, "BUDGET_DAYS"))
     DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", java("TrapShops"), "RETAIL"))
+    DATA["rent"] = ints("RENT", homes)
+    DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -795,8 +797,27 @@ def build() -> str:
     one above another. A house reaches at most {d['span']} blocks from its mailbox, and it
     re-measures itself every couple of minutes, so knocking a wall through or taking the
     bed out shows up on its own. <code>/homes</code> lists everybody's.</p>
-    <p class="note">Nothing rents yet. Tenants are next, and they will pay into the
-    box.</p>"""))
+    <h3 class="sub">Somebody moves in</h3>
+    <p>Any grade above nothing attracts a tenant within a day. They pay into the mailbox
+    every day and opening it takes the rent — there is no second thing to click.</p>
+    {table(["Grade", "Rent a day"], [[str(i), f"{d['rent'][i]}e"]
+                                     for i in range(1, len(d['rent']))])}
+    <p>Anchored so a grade-five house pays for about one flat-out crew hand. Passive income
+    should be a supplement you are pleased with, not a reason to stop farming.</p>
+    <h3 class="sub">Mood, and the letters</h3>
+    <p>Tenants hold a mood out of 100. Dark corners and a falling grade wear it down, and
+    <strong>an unhappy tenant pays less before they pay nothing</strong> — so a slide shows up
+    in the money before it shows up as an empty house. Under {d['mood_leaving']} they are
+    packing.</p>
+    <p>They write, and the letters are in the mailbox: <em>"The light on the landing has
+    gone."</em> <em>"There's something growing next door. I can smell it."</em> That is the
+    whole tutorial for this system, and it needed no page.</p>
+    <h3 class="sub">Not next door</h3>
+    <p>A grow within scanning distance of somebody's front room empties it. A small one leaves
+    them miserable and paying two fifths; anything bigger and they go. <strong>The plantation
+    and the apartment block cannot be the same place</strong> — that tension is what the whole
+    city design was built around, and it is the only thing in the mod that makes the two halves
+    of it argue over the same ground.</p>"""))
 
     sections.append(section("09", "crew", "The Crew", "somebody to do the picking", f"""
     <p class="lede">{d['hire']}e to take somebody on, then {d['wage']}e every five

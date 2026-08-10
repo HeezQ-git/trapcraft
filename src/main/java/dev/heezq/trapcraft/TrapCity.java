@@ -62,7 +62,8 @@ public final class TrapCity {
         LUXURY("Luxury", "Decoration, tools, enchantments, the rare stuff", 12, 6, 22),
         INCOME("Income", "Anything you are paid -- the counter, contracts, the pawn desk",
                 10, 4, 20),
-        GAMING("Gaming", "Every stake laid on a casino floor", 6, 2, 14);
+        GAMING("Gaming", "Every stake laid on a casino floor", 6, 2, 14),
+        RENT("Rent", "What a tenant pays their landlord", 6, 2, 14);
 
         private final String display;
         private final String blurb;

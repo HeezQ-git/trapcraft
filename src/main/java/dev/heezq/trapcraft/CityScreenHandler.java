@@ -32,7 +32,7 @@ import java.util.List;
  * people on it is a menu standing where a conversation should be. The
  * announcement is the whole of the accountability, and it is enough.
  *
- *   [purse] . [essentials][materials][luxury][income][gaming] . [ledger]
+ *   [purse] . [essentials][materials][luxury][income][gaming][rent][ledger]
  *   . . [take 64][take 256][take 1024][take all] . . .
  *   . . . . [what it is for] . . . .
  */
@@ -49,7 +49,8 @@ public class CityScreenHandler extends ScreenHandler {
     private static final Integer[] TAKES = {64, 256, 1024, null};
 
     private static final Item[] ICONS = {
-            Items.BREAD, Items.BRICKS, Items.AMETHYST_SHARD, Items.PAPER, Items.GOLD_NUGGET};
+            Items.BREAD, Items.BRICKS, Items.AMETHYST_SHARD, Items.PAPER,
+            Items.GOLD_NUGGET, Items.RED_BED};
 
     static {
         // One icon per duty, and the row is drawn by index. A sixth duty would

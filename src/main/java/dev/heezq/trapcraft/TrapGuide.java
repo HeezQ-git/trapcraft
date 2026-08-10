@@ -352,11 +352,30 @@ public final class TrapGuide {
                 .append(hint("/homes lists everybody's."))));
 
         pages.add(page(Text.empty()
-                .append(title("10. WHAT IT IS FOR\n\n"))
-                .append(body("Nothing yet. Tenants come next, and they pay "
-                        + "rent into the box.\n\n"))
-                .append(body("Better grade, better tenant.\n\n"))
-                .append(hint("Build something worth renting."))));
+                .append(title("10. SOMEBODY MOVES IN\n\n"))
+                .append(body("Any grade at all attracts somebody within a "
+                        + "day.\n\n"))
+                .append(body("They pay daily. Open the box and it's "
+                        + "yours.\n\n"))
+                .append(hint("Grade 1: " + HomeSurvey.RENT[1] + "e. Grade "
+                        + HomeSurvey.TOP_TIER + ": "
+                        + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11. MOOD\n\n"))
+                .append(body("Dark corners and a falling grade wear them "
+                        + "down.\n\n"))
+                .append(body("An unhappy tenant pays less. At "
+                        + HomeSurvey.MOOD_LEAVING + " they're packing.\n\n"))
+                .append(hint("They write. Read the post in the mailbox."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12. NOT NEXT DOOR\n\n"))
+                .append(body("A grow near a house empties it.\n\n"))
+                .append(body("Small: they stay, miserable, paying two "
+                        + "fifths.\n\n"))
+                .append(warn("Anything bigger and they go. Keep the "
+                        + "plantation away from the flats."))));
     }
 
     /**

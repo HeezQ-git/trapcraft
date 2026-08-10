@@ -33,7 +33,7 @@ import java.util.List;
  *
  *   [grade] . [floor][sealed][ways in][built] . . [again]
  *   [bed][craft][store][cook][stall][window][dark][decor] .
- *   . . . . [what's next] . . . .
+ *   [who lives here] . [the post] . [what's next] . . .
  *
  * Nothing here is buyable. The only button is "look again", and the only other
  * thing you can do is take the box down -- which is the block's job, not this
@@ -51,6 +51,8 @@ public class MailboxScreenHandler extends ScreenHandler {
     private static final int AGAIN_SLOT = 8;
     private static final int LIST_FROM = 9;
     private static final int NEXT_SLOT = 22;
+    private static final int TENANT_SLOT = 18;
+    private static final int POST_SLOT = 20;
 
     /** One line of the checklist: what it is, what it looks like, is it there. */
     private record Tick(String name, Item icon, String blurb) {
@@ -156,6 +158,8 @@ public class MailboxScreenHandler extends ScreenHandler {
         for (int i = 0; i < LIST.size(); i++) {
             display.setStack(LIST_FROM + i, tick(LIST.get(i), got[i], detail[i]));
         }
+        display.setStack(TENANT_SLOT, tenant());
+        display.setStack(POST_SLOT, post());
         display.setStack(NEXT_SLOT, next());
         sendContentUpdates();
     }
@@ -212,6 +216,71 @@ public class MailboxScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(item.blurb(), Formatting.GRAY),
                 line(detail, got ? Formatting.GREEN : Formatting.RED))));
+        return tag;
+    }
+
+    /**
+     * Who lives here, and how they are getting on.
+     *
+     * Mood is printed as a number AND as a sentence, because "48" tells you
+     * where you are and "thinking about leaving" tells you what it means.
+     */
+    private ItemStack tenant() {
+        String who = home.tenant();
+        int mood = home.mood();
+        ItemStack tag = new ItemStack(who == null ? Items.BARRIER
+                : mood < HomeSurvey.MOOD_LEAVING ? Items.WITHER_ROSE
+                : mood >= HomeSurvey.MOOD_MAX ? Items.CAKE : Items.BREAD);
+        tag.set(DataComponentTypes.CUSTOM_NAME, who == null
+                ? plain("Nobody lives here").formatted(Formatting.RED, Formatting.BOLD)
+                : plain(who).formatted(Formatting.AQUA, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        if (who == null) {
+            lore.add(line(reading.tier() > 0
+                            ? "Somebody will turn up. Give it a day."
+                            : "Nobody will, while it's graded nothing.",
+                    reading.tier() > 0 ? Formatting.GRAY : Formatting.RED));
+        } else {
+            lore.add(line("Mood  ", Formatting.DARK_GRAY)
+                    .append(plain(mood + " of " + HomeSurvey.MOOD_MAX)
+                            .formatted(mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED
+                                    : Formatting.WHITE)));
+            lore.add(line(mood < HomeSurvey.MOOD_LEAVING ? "Packing."
+                            : mood < 50 ? "Fed up."
+                            : mood < HomeSurvey.MOOD_MAX ? "Settled enough."
+                            : "Very happy here.",
+                    mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED : Formatting.GRAY));
+            lore.add(Text.empty());
+            lore.add(line("Pays  ", Formatting.DARK_GRAY)
+                    .append(plain(HomeSurvey.rentDue(reading.tier(), mood) + "e a day")
+                            .formatted(Formatting.GREEN))
+                    .append(plain("  of " + HomeSurvey.RENT[Math.min(reading.tier(),
+                            HomeSurvey.RENT.length - 1)] + "e").formatted(Formatting.DARK_GRAY)));
+            lore.add(line("An unhappy tenant pays less before", Formatting.DARK_GRAY));
+            lore.add(line("they pay nothing at all.", Formatting.DARK_GRAY));
+        }
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
+    /** The letters, which are the whole tutorial for this system. */
+    private ItemStack post() {
+        List<String> letters = home.letters();
+        ItemStack tag = new ItemStack(letters.isEmpty() ? Items.PAPER : Items.WRITTEN_BOOK);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("The post").formatted(Formatting.GOLD, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        if (letters.isEmpty()) {
+            lore.add(line("Nothing through the door.", Formatting.DARK_GRAY));
+        } else {
+            for (String letter : letters) {
+                lore.add(line("\"" + letter + "\"", Formatting.WHITE));
+            }
+        }
+        lore.add(Text.empty());
+        lore.add(line("Rent lands in here. Opening this", Formatting.DARK_GRAY));
+        lore.add(line("screen already took it.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 

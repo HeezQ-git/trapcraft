@@ -301,7 +301,7 @@ public final class TrapMarket {
      */
     private static float heldElsewhere() {
         return TrapHouse.floatHeld() + TrapCity.treasury()
-                + TrapStalls.tillsHeld() + TrapShops.tillsHeld();
+                + TrapStalls.tillsHeld() + TrapShops.tillsHeld() + TrapHomes.tillsHeld();
     }
 
     /**

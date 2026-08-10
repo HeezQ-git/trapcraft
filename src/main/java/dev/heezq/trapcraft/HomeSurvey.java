@@ -405,6 +405,86 @@ public final class HomeSurvey {
         return Math.min(earned, sizeTier(floor));
     }
 
+    // --- somebody lives there -------------------------------------------------
+
+    /**
+     * What a tenant pays a day, by grade.
+     *
+     * Anchored so a grade five pays for about one flat-out crew hand. Passive
+     * income ought to be a supplement somebody is pleased with rather than a
+     * reason to stop farming, and a house that out-earned the field it stands
+     * next to would quietly end the growing half of the mod.
+     */
+    public static final int[] RENT = {0, 24, 60, 120, 190, 280};
+
+    /** Mood runs 0 to 100 and moves at most this much a day. */
+    public static final int MOOD_MAX = 100;
+    public static final int MOOD_STEP = 15;
+    /** Mood a tenant starts on, so a new one has a little patience. */
+    public static final int MOOD_START = 70;
+    /** Each dark square on the floor costs this much of the target. */
+    public static final int GLOOM_COST = 4;
+    /**
+     * What a grow next door costs, and what each tier of it costs on top.
+     *
+     * A curve rather than a cliff, because heat tier 0 already means a grow
+     * big enough to attract a patrol -- so the smallest thing that registers
+     * should already be a serious problem, and anything above it should be
+     * unliveable. Tier 0 leaves them miserable and paying two fifths; tier 1
+     * and up puts the target under {@link #MOOD_LEAVING} and they pack.
+     *
+     * This is the load-bearing tension of the whole city design: the
+     * plantation and the apartment block cannot be the same place.
+     */
+    public static final int HEAT_COST = 60;
+    public static final int HEAT_STEP = 30;
+    /** Under this and they are packing. */
+    public static final int MOOD_LEAVING = 25;
+
+    /**
+     * What the place would settle at if nothing else changed.
+     *
+     * Separate from the drift so a house can be diagnosed: the target is the
+     * verdict on the building, and the mood is how far the person living in it
+     * has got round to feeling it.
+     *
+     * @param tier     0 means condemned, and nobody stays in a condemned house
+     * @param dark     floor squares under {@link #DARK_AT}
+     * @param heatTier -1 for nothing growing nearby, 0 and up for a grow
+     */
+    public static int moodTarget(int tier, int dark, int heatTier) {
+        if (tier <= 0) {
+            return 0;
+        }
+        int target = MOOD_MAX - Math.max(0, dark) * GLOOM_COST;
+        if (heatTier >= 0) {
+            target -= HEAT_COST + heatTier * HEAT_STEP;
+        }
+        return Math.max(0, Math.min(MOOD_MAX, target));
+    }
+
+    /** One day of feeling it. */
+    public static int moodDrift(int mood, int target) {
+        if (mood < target) {
+            return Math.min(target, mood + MOOD_STEP);
+        }
+        return Math.max(target, mood - MOOD_STEP);
+    }
+
+    /**
+     * What actually lands in the till, mood and all.
+     *
+     * A slide shows up in the money before it shows up as an empty house,
+     * which is the difference between a system that warns you and a system
+     * that surprises you.
+     */
+    public static int rentDue(int tier, int mood) {
+        if (tier <= 0 || tier >= RENT.length || mood <= 0) {
+            return 0;
+        }
+        return Math.max(1, Math.round(RENT[tier] * Math.min(MOOD_MAX, mood) / (float) MOOD_MAX));
+    }
+
     // --- claims ---------------------------------------------------------------
 
     /**

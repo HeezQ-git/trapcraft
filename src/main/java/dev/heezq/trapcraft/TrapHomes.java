@@ -68,6 +68,13 @@ public final class TrapHomes {
 
     /** Ticks between one house being looked at again. */
     private static final int SURVEY_TICKS = 240;
+    /** Letters kept on a mailbox. Nobody reads the fifth. */
+    private static final int LETTERS_KEPT = 3;
+    /** Names the city hands out. Nobody is "Tenant".*/
+    private static final String[] NAMES = {
+            "Alma", "Bertie", "Cass", "Dot", "Edwin", "Fen", "Greta", "Hal",
+            "Isolde", "Jory", "Kit", "Lom", "Maud", "Ned", "Orla", "Pike",
+            "Quill", "Rina", "Sef", "Tam", "Ubel", "Vesta", "Wren", "Yorick"};
 
     /** One address. */
     public static final class Home {
@@ -83,6 +90,42 @@ public final class TrapHomes {
         int tier;
         int floor;
         String name;
+        /** Who lives here, or null. The body is decoration; this is the person. */
+        String tenant;
+        UUID body;
+        int mood;
+        /** Rent waiting to be picked up out of the mailbox. */
+        int till;
+        /** The last in-game day rent was taken, so a restart cannot double it. */
+        long lastRent = -1;
+        /** Newest first, and short. Nobody reads the fifth letter. */
+        final List<String> letters = new ArrayList<>();
+
+        public String tenant() {
+            return tenant;
+        }
+
+        public int mood() {
+            return mood;
+        }
+
+        public int till() {
+            return till;
+        }
+
+        public List<String> letters() {
+            return letters;
+        }
+
+        void write(String letter) {
+            if (!letters.isEmpty() && letters.get(0).equals(letter)) {
+                return;   // they already said that
+            }
+            letters.add(0, letter);
+            while (letters.size() > LETTERS_KEPT) {
+                letters.remove(letters.size() - 1);
+            }
+        }
 
         Home(UUID id, UUID owner, String ownerName, String dimension, BlockPos anchor) {
             this.id = id;
@@ -196,9 +239,35 @@ public final class TrapHomes {
     public static int population() {
         int people = 0;
         for (Home home : HOMES) {
-            people += home.tier;
+            if (home.tenant != null) {
+                people += home.tier;
+            }
         }
         return people;
+    }
+
+    /** Rent sat in mailboxes, which is money nobody is carrying. */
+    public static int tillsHeld() {
+        int total = 0;
+        for (Home home : HOMES) {
+            total += home.till;
+        }
+        return total;
+    }
+
+    /** Empty the mailbox into the landlord's pockets. */
+    public static int collect(ServerPlayerEntity owner, Home home) {
+        int takings = home.till;
+        if (takings <= 0) {
+            return 0;
+        }
+        home.till = 0;
+        // handOver, not pay: the tenant's emeralds entered the world the day
+        // they paid. Paying again here would mint the same rent twice.
+        TrapMarket.handOver(owner, takings);
+        TrapLedger.record(owner, TrapLedger.Source.RENT, takings);
+        save();
+        return takings;
     }
 
     public static Home byId(UUID id) {
@@ -392,6 +461,166 @@ public final class TrapHomes {
             return;
         }
         measure(world, home);
+        live(server, world, home);
+    }
+
+    // --- somebody lives there -------------------------------------------------
+
+    /**
+     * One house, once round the loop: who is in it and how they are getting on.
+     *
+     * Hung off the same round-robin as the survey rather than a clock of its
+     * own, so a city of a hundred houses costs exactly what a city of ten does
+     * per tick and every house is looked at in turn. The day number is the
+     * gate, so a house whose chunk was asleep for three days is not owed three
+     * days of rent -- it is owed one, which is the honest reading of a landlord
+     * who was not there.
+     */
+    private static void live(MinecraftServer server, ServerWorld world, Home home) {
+        long day = world.getTimeOfDay() / 24000L;
+        if (home.tenant == null) {
+            if (home.tier > 0) {
+                moveIn(world, home, day);
+            }
+            return;
+        }
+        keepBody(world, home);
+        if (home.lastRent == day) {
+            return;
+        }
+        home.lastRent = day;
+
+        int heat = TrapHeat.tierAt(world, home.anchor);
+        Readout now = look(world, home.anchor, home);
+        int target = HomeSurvey.moodTarget(home.tier, now.dark(), heat);
+        int was = home.mood;
+        home.mood = HomeSurvey.moodDrift(home.mood, target);
+        complain(home, now, heat, was);
+
+        if (home.mood <= 0) {
+            moveOut(server, world, home, heat >= 0
+                    ? "couldn't stand what's growing next door"
+                    : home.tier <= 0 ? "the place fell down round them"
+                    : "had enough of the state of the place");
+            return;
+        }
+
+        int rent = HomeSurvey.rentDue(home.tier, home.mood);
+        if (rent > 0) {
+            TrapCity.Duty duty = TrapCity.Duty.RENT;
+            int owed = TrapCity.dutyOn(rent, duty);
+            // Minted, like a shopper's money: a tenant is not a player and
+            // their emeralds were never in the world before. Split at once
+            // between the mailbox and the purse, both of which the market
+            // resample knows to count.
+            TrapMarket.minted(rent + owed);
+            home.till += rent;
+            TrapCity.receive(owed, duty);
+            ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
+            if (owner != null) {
+                owner.sendMessage(Text.literal("Rent from " + home.name + ": ")
+                        .formatted(Formatting.DARK_GRAY)
+                        .append(Text.literal("+" + rent + "e").formatted(Formatting.GREEN))
+                        .append(Text.literal(owed > 0 ? "   " + owed + "e duty" : "")
+                                .formatted(Formatting.DARK_GRAY)), true);
+            }
+        }
+        save();
+    }
+
+    /** Somebody takes the place on. */
+    private static void moveIn(ServerWorld world, Home home, long day) {
+        home.tenant = NAMES[Math.floorMod((int) (home.id.getLeastSignificantBits() + day),
+                NAMES.length)];
+        home.mood = HomeSurvey.MOOD_START;
+        home.lastRent = day;
+        home.letters.clear();
+        home.write(home.tenant + " has moved in. Rent starts tomorrow.");
+        keepBody(world, home);
+        save();
+        ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(home.owner);
+        if (owner != null) {
+            owner.sendMessage(Text.literal("Somebody's moved into " + home.name + ". ")
+                    .formatted(Formatting.GREEN, Formatting.BOLD)
+                    .append(Text.literal(home.tenant + " pays "
+                            + HomeSurvey.RENT[Math.min(home.tier, HomeSurvey.RENT.length - 1)]
+                            + "e a day into the mailbox, less if they're unhappy.")
+                            .formatted(Formatting.GRAY)), false);
+        }
+    }
+
+    /** And gives it up. */
+    private static void moveOut(MinecraftServer server, ServerWorld world, Home home,
+                                String why) {
+        String who = home.tenant;
+        if (home.body != null && world.getEntity(home.body) != null) {
+            world.getEntity(home.body).discard();
+        }
+        home.tenant = null;
+        home.body = null;
+        home.mood = 0;
+        home.write(who + " has gone. They " + why + ".");
+        save();
+        ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
+        if (owner != null) {
+            owner.sendMessage(Text.literal(home.name + " is empty. ")
+                    .formatted(Formatting.RED, Formatting.BOLD)
+                    .append(Text.literal(who + " " + why + ".").formatted(Formatting.GRAY)),
+                    false);
+        }
+    }
+
+    /**
+     * Say what is wrong, once, in words.
+     *
+     * The letters are the tutorial and they are the reason this system needs
+     * no wiki page: a person who reads "the light on the landing has gone"
+     * knows exactly what to do, and nobody had to explain a lighting formula
+     * to them.
+     */
+    private static void complain(Home home, Readout now, int heat, int was) {
+        if (heat >= 0) {
+            home.write("There's something growing next door. I can smell it.");
+        } else if (!now.sealed()) {
+            home.write("The roof is open to the sky.");
+        } else if (now.dark() > 0) {
+            home.write("The light on the landing has gone. " + now.dark()
+                    + " dark " + (now.dark() == 1 ? "corner" : "corners") + ".");
+        } else if (home.mood > was && home.mood >= HomeSurvey.MOOD_MAX) {
+            home.write("Lovely here. Thank you.");
+        }
+    }
+
+    /**
+     * Keep a villager standing in the house, if anybody is about to see it.
+     *
+     * Decoration, and deliberately so. The tenant is the record; this is the
+     * body, and it is allowed to be missing, eaten or left in an unloaded
+     * chunk without anybody losing a day's rent over it.
+     */
+    private static void keepBody(ServerWorld world, Home home) {
+        if (home.body != null && world.getEntity(home.body) != null) {
+            return;
+        }
+        net.minecraft.entity.passive.VillagerEntity body =
+                net.minecraft.entity.EntityType.VILLAGER.create(
+                        world, net.minecraft.entity.SpawnReason.EVENT);
+        if (body == null) {
+            return;
+        }
+        body.refreshPositionAndAngles(home.anchor.up(), world.getRandom().nextFloat() * 360f, 0f);
+        body.setPersistent();
+        body.setCustomName(Text.literal(home.tenant).formatted(Formatting.AQUA));
+        body.setCustomNameVisible(true);
+        // NITWIT for the same reason the crew are: a professionless villager
+        // takes a job from any workstation it wanders past and starts trading,
+        // which would undercut the shop its landlord built downstairs.
+        body.setVillagerData(body.getVillagerData().withProfession(
+                world.getRegistryManager()
+                        .getOrThrow(net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
+                        .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
+        world.spawnEntity(body);
+        home.body = body.getUuid();
     }
 
     private static void announce(MinecraftServer server, Home home, int was) {
@@ -813,8 +1042,12 @@ public final class TrapHomes {
                     .append(Text.literal(home.tier == 0 ? "  condemned"
                                     : "  grade " + home.tier)
                             .formatted(home.tier == 0 ? Formatting.RED : Formatting.GREEN))
-                    .append(Text.literal("  " + home.floor + " blocks  "
-                                    + home.anchor.getX() + " " + home.anchor.getY()
+                    .append(Text.literal(home.tenant == null ? "  empty"
+                                    : "  " + home.tenant + " (" + home.mood + ")")
+                            .formatted(home.tenant == null ? Formatting.DARK_GRAY
+                                    : home.mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED
+                                    : Formatting.AQUA))
+                    .append(Text.literal("  " + home.anchor.getX() + " " + home.anchor.getY()
                                     + " " + home.anchor.getZ())
                             .formatted(Formatting.DARK_GRAY)), false);
         }
@@ -830,7 +1063,11 @@ public final class TrapHomes {
                 return;
             }
             for (String line : Files.readAllLines(saveFile)) {
-                String[] parts = line.trim().split("\\s+", 19);
+                // Tenant fields ride BEFORE the name, because the name is the
+                // greedy tail and always has been. A file written by step two
+                // has 19 fields and loads as an empty house, which is exactly
+                // what those houses were.
+                String[] parts = line.trim().split("\\s+", 24);
                 if (parts.length < 19) {
                     continue;
                 }
@@ -845,7 +1082,16 @@ public final class TrapHomes {
                 home.mailbox = "-".equals(parts[15]) ? null
                         : new BlockPos(Integer.parseInt(parts[15]), Integer.parseInt(parts[16]),
                         Integer.parseInt(parts[17]));
-                home.name = parts[18];
+                if (parts.length >= 24) {
+                    home.tenant = "-".equals(parts[18]) ? null : parts[18];
+                    home.body = "-".equals(parts[19]) ? null : UUID.fromString(parts[19]);
+                    home.mood = Integer.parseInt(parts[20]);
+                    home.till = Integer.parseInt(parts[21]);
+                    home.lastRent = Long.parseLong(parts[22]);
+                    home.name = parts[23];
+                } else {
+                    home.name = parts[18];
+                }
                 HOMES.add(home);
             }
         } catch (Exception failure) {
@@ -873,6 +1119,11 @@ public final class TrapHomes {
                         + " " + home.mailbox.getZ());
                 // Name last and unsplit, so somebody can call their house
                 // whatever they like without the file needing quoting.
+                out.append(' ').append(home.tenant == null ? "-" : home.tenant)
+                        .append(' ').append(home.body == null ? "-" : home.body)
+                        .append(' ').append(home.mood)
+                        .append(' ').append(home.till)
+                        .append(' ').append(home.lastRent);
                 out.append(' ').append(home.name.replace('\n', ' ')).append('\n');
             }
             Files.writeString(saveFile, out.toString());

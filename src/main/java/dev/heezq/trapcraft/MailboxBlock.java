@@ -145,6 +145,17 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
         }
 
         TrapHomes.Home reading = home;
+        // The post is also the rent book. Emptying it on the way into the
+        // screen means a landlord never has to be told there is a second
+        // thing to click.
+        if (home.owner().equals(who.getUuid())) {
+            int rent = TrapHomes.collect(who, home);
+            if (rent > 0) {
+                who.sendMessage(Text.literal("Rent: ").formatted(Formatting.DARK_GRAY)
+                        .append(Text.literal("+" + rent + "e").formatted(Formatting.GREEN)),
+                        false);
+            }
+        }
         ground.playSound(null, pos, SoundEvents.ITEM_BOOK_PAGE_TURN,
                 SoundCategory.BLOCKS, 0.8F, 1.0F);
         who.openHandledScreen(new SimpleNamedScreenHandlerFactory(

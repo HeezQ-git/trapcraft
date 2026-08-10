@@ -316,6 +316,65 @@ class SurveyTest {
                 1 + Math.min(HomeSurvey.TOP_TIER - 1, HomeSurvey.topPoints() / 2));
     }
 
+    // --- somebody lives there -------------------------------------------------
+
+    @Test
+    void betterHousesPayMore() {
+        int last = -1;
+        for (int tier = 0; tier <= HomeSurvey.TOP_TIER; tier++) {
+            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX);
+            assertTrue(rent > last, "grade " + tier + " pays " + rent);
+            last = rent;
+        }
+    }
+
+    @Test
+    void anUnhappyTenantPaysLess() {
+        int happy = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX);
+        int fed = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX / 2);
+        assertTrue(fed < happy, fed + " should be under " + happy);
+        assertEquals(0, HomeSurvey.rentDue(3, 0), "nobody pays on the way out");
+        assertEquals(0, HomeSurvey.rentDue(0, HomeSurvey.MOOD_MAX), "nor for a condemned room");
+    }
+
+    /** The tension the whole design was built around. */
+    @Test
+    void aGrowNextDoorDrivesThemOut() {
+        assertEquals(HomeSurvey.MOOD_MAX, HomeSurvey.moodTarget(5, 0, -1),
+                "nothing growing, nothing wrong");
+
+        // Tier 0 already means a grow big enough to attract a patrol, so the
+        // smallest thing that registers should already hurt: they stay, and
+        // they pay well under half.
+        int smallest = HomeSurvey.moodTarget(5, 0, 0);
+        assertTrue(smallest > 0 && smallest < HomeSurvey.MOOD_MAX / 2,
+                "a grow next door should more than halve it, got " + smallest);
+        assertTrue(HomeSurvey.rentDue(5, smallest) < HomeSurvey.RENT[5] / 2);
+
+        // Anything bigger and they go.
+        for (int tier = 1; tier <= 3; tier++) {
+            assertTrue(HomeSurvey.moodTarget(5, 0, tier) < HomeSurvey.MOOD_LEAVING,
+                    "heat tier " + tier + " has to empty the place");
+        }
+    }
+
+    @Test
+    void darkCornersMakeThemMiserable() {
+        assertTrue(HomeSurvey.moodTarget(3, 5, -1) < HomeSurvey.moodTarget(3, 0, -1));
+        assertEquals(0, HomeSurvey.moodTarget(3, 999, -1), "never below nothing");
+        assertEquals(0, HomeSurvey.moodTarget(0, 0, -1), "nobody stays in a condemned house");
+    }
+
+    @Test
+    void moodMovesADayAtATime() {
+        assertEquals(HomeSurvey.MOOD_START + HomeSurvey.MOOD_STEP,
+                HomeSurvey.moodDrift(HomeSurvey.MOOD_START, HomeSurvey.MOOD_MAX));
+        assertEquals(HomeSurvey.MOOD_START - HomeSurvey.MOOD_STEP,
+                HomeSurvey.moodDrift(HomeSurvey.MOOD_START, 0));
+        assertEquals(40, HomeSurvey.moodDrift(40, 40), "settled is settled");
+        assertEquals(45, HomeSurvey.moodDrift(50, 45), "never overshoots");
+    }
+
     // --- claims ---------------------------------------------------------------
 
     @Test
