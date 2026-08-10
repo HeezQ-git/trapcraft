@@ -114,11 +114,23 @@ public final class TrapHomes {
         /** Who lives here, or null. The body is decoration; this is the person. */
         String tenant;
         /**
-         * How many people live here, recomputed by every survey.
+         * How many people live here. Held in memory, never written down.
          *
-         * Stored rather than worked out at rent time, for the same reason the
-         * grade is: charging rent would otherwise mean walking the walls of
-         * every house on the server once a day.
+         * Kept off disk on purpose, and the reason is worth the paragraph.
+         * The name is the LAST field of a line and it is the tail of a
+         * limited split, which is what lets a house be called whatever its
+         * owner likes without the file needing quotes. That makes the format
+         * unable to grow a field at the end: writing the household before the
+         * name and reading it back by counting fields works perfectly until
+         * somebody's house is called "HeezQ's place", at which point the two
+         * words of the name make an old line look like a new one, the name
+         * gets read as a number, and the WHOLE REGISTER fails to parse. Every
+         * house on the server disappears, rent stops, and a mailbox nailed up
+         * outside reports that the house it cannot find is not sealed.
+         *
+         * It does not need to be on disk anyway: every survey pass recomputes
+         * it, which is a few seconds after a restart, and rent is daily. One
+         * is a safe reading for that gap and it corrects itself.
          */
         int heads = 1;
         UUID body;
@@ -1462,6 +1474,12 @@ public final class TrapHomes {
 
     // --- persistence ----------------------------------------------------------
 
+    /** Enough of a bad line to find it in the file, without spamming the log. */
+    private static String failureText(String line) {
+        String trimmed = line.trim();
+        return trimmed.length() <= 60 ? trimmed : trimmed.substring(0, 60) + "...";
+    }
+
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-homes.txt");
         HOMES.clear();
@@ -1474,7 +1492,16 @@ public final class TrapHomes {
                 // greedy tail and always has been. A file written by step two
                 // has 19 fields and loads as an empty house, which is exactly
                 // what those houses were.
-                String[] parts = line.trim().split("\\s+", 25);
+                //
+                // The name being the tail also means this format CANNOT grow a
+                // field at the end. A household count written there read back
+                // as part of a two-word house name, threw, and -- because the
+                // whole file used to be parsed inside one try -- took every
+                // house on the server with it. Rent stopped, mailboxes could
+                // not find the houses they were nailed to, and the only sign
+                // of it was one warning in the log.
+                try {
+                String[] parts = line.trim().split("\\s+", 24);
                 if (parts.length < 19) {
                     continue;
                 }
@@ -1495,12 +1522,7 @@ public final class TrapHomes {
                     home.mood = Integer.parseInt(parts[20]);
                     home.till = Integer.parseInt(parts[21]);
                     home.lastRent = Long.parseLong(parts[22]);
-                    // A file written before houses held families has the name
-                    // where the household is now. One tenant is the right
-                    // reading of it, and the next survey corrects it anyway.
-                    boolean withHeads = parts.length >= 25;
-                    home.heads = withHeads ? Integer.parseInt(parts[23]) : 1;
-                    home.name = withHeads ? parts[24] : parts[23];
+                    home.name = parts[23];
                 } else {
                     // A step-two line, whose name is the greedy tail of a
                     // NINETEEN-field split. Read at 24 it stops being greedy,
@@ -1510,10 +1532,17 @@ public final class TrapHomes {
                     home.name = line.trim().split("\\s+", 19)[18];
                 }
                 HOMES.add(home);
+                } catch (Exception bad) {
+                    // One line, not the file. A house lost is a house; a file
+                    // lost is everybody's.
+                    TrapCraft.LOGGER.warn("skipped an unreadable house: {} -- {}",
+                            failureText(line), bad.toString());
+                }
             }
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't read the housing register: {}", failure.toString());
         }
+        TrapCraft.LOGGER.info("housing register: {} houses", HOMES.size());
     }
 
     private static void save() {
@@ -1540,8 +1569,7 @@ public final class TrapHomes {
                         .append(' ').append(home.body == null ? "-" : home.body)
                         .append(' ').append(home.mood)
                         .append(' ').append(home.till)
-                        .append(' ').append(home.lastRent)
-                        .append(' ').append(home.heads);
+                        .append(' ').append(home.lastRent);
                 out.append(' ').append(home.name.replace('\n', ' ')).append('\n');
             }
             Files.writeString(saveFile, out.toString());
