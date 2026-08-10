@@ -31,7 +31,7 @@ public final class TrapGuide {
     }
 
     /**
-     * One command, three books.
+     * One command, five books.
      *
      * Plain Brigadier literals rather than an argument with a
      * SuggestionProvider: literals tab-complete and produce a sensible error
@@ -48,17 +48,20 @@ public final class TrapGuide {
                                 .executes(context -> give(context.getSource(), createCoca())))
                         .then(CommandManager.literal("street")
                                 .executes(context -> give(context.getSource(), createStreet())))
+                        .then(CommandManager.literal("crew")
+                                .executes(context -> give(context.getSource(), createCrew())))
                         .then(CommandManager.literal("casino")
                                 .executes(context -> give(context.getSource(), createCasino())))));
     }
 
-    /** Bare /guide lists the three rather than erroring at you. */
+    /** Bare /guide lists them rather than erroring at you. */
     private static int menu(net.minecraft.server.command.ServerCommandSource source) {
         source.sendFeedback(() -> Text.empty()
                 .append(Text.literal("The Trap House\n").formatted(Formatting.DARK_GREEN, Formatting.BOLD))
                 .append(pick("grower", "growing, curing, rolling, heat"))
                 .append(pick("refiner", "the coca line"))
                 .append(pick("street", "paranoia, the ledger, contracts"))
+                .append(pick("crew", "hiring hands, and what they cost"))
                 .append(pick("casino", "running a floor")), false);
         return 1;
     }
@@ -120,14 +123,29 @@ public final class TrapGuide {
     }
 
     /**
-     * The third book: everything that isn't a product line.
+     * The fourth book: the people who work for you.
      *
-     * Paranoia, the Ledger and Contracts all cut across weed and coca both, so
-     * putting them in either handbook would have meant writing them twice or
-     * hiding them in the wrong one.
+     * Split out for the same reason the casino was. The crew used to be three
+     * pages in the middle of the grower's handbook, back when a hand did one
+     * thing and cost one number. It is now a ladder, a patch and five jobs
+     * that each move the wage, and that is a decision worth ten pages -- but
+     * only if somebody can find them.
      */
+    public static ItemStack createCrew() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("THE CREW"))
+                .append(Text.literal("\nforeman's handbook\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("Hands work a patch, take a wage, and walk if you "
+                        + "can't make it.\n\n"))
+                .append(hint("Growing: /guide grower"))));
+        crewBook(pages);
+        return book("The Crew", pages);
+    }
+
     /**
-     * The fourth book: running a floor.
+     * The fifth book: running a floor.
      *
      * Split out because the casino stopped being a machine you place and
      * became a business with staff, running costs, a reputation and a
@@ -267,6 +285,13 @@ public final class TrapGuide {
                 .append(warn("A bad night really can lose money."))));
     }
 
+    /**
+     * The third book: everything that isn't a product line.
+     *
+     * Paranoia, the Ledger and Contracts all cut across weed and coca both, so
+     * putting them in either handbook would have meant writing them twice or
+     * hiding them in the wrong one.
+     */
     public static ItemStack createStreet() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         streetCover(pages);
@@ -911,35 +936,128 @@ public final class TrapGuide {
                 .append(hint("Reads 22 across, 10 tall."))));
     }
 
+    /**
+     * What stayed in the grower's handbook once the crew moved out.
+     *
+     * The search is a RAID page, not a crew page -- it only ever sat next to
+     * them because both were about your farm being looked after or looked at.
+     */
     private static void crew(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("8b. THE CREW\n\n"))
-                .append(body("/crew hire  -  " + TrapCrew.HIRE_COST + "e\n\n"))
-                .append(body("They work " + TrapCrew.REACH + " blocks around where "
-                        + "you stood, picking and stashing.\n\n"))
-                .append(hint("Three hands is the most you can carry."))));
+                .append(body("Hire hands to work a patch for you: picking, "
+                        + "farming, curing, sowing.\n\n"))
+                .append(body(TrapCrew.HIRE_COST + "e each, then wages.\n\n"))
+                .append(hint("The lot of it: /guide crew"))));
 
         pages.add(page(Text.empty()
-                .append(title("8c. TRAINING\n\n"))
-                .append(body("/crew opens the board.\n\n"))
-                .append(body("Buy pace, a bigger patch, and jobs: farming, "
-                        + "tilling, sowing, curing, feeding.\n\n"))
-                .append(hint("Flat out is a job every "
-                        + TrapCrew.PACE_TICKS[TrapCrew.PACE_TICKS.length - 1] / 20 + "s."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8d. WAGES\n\n"))
-                .append(body(TrapCrew.WAGE + "e each, every five minutes, "
-                        + "harvest or no harvest.\n\n"))
-                .append(body("Everything you teach them puts that up.\n\n"))
-                .append(warn("Miss a payday and they walk. No warning, no debt."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8e. THE SEARCH\n\n"))
+                .append(title("8c. THE SEARCH\n\n"))
                 .append(body("A raid doesn't just swing axes. They walk to "
                         + "your chests and take product.\n\n"))
                 .append(body("Only product. Seeds and gear are safe.\n\n"))
                 .append(hint("Bury it, split it, or stand in the way."))));
+    }
+
+    // --- the crew handbook ----------------------------------------------------
+
+    /**
+     * Every page below reads its numbers off {@link TrapCrew}.
+     *
+     * Which matters more here than anywhere else in this book, because the
+     * crew is the one system in the mod where the whole decision IS the
+     * numbers: what a rung costs, what it does to the wage, and whether the
+     * two are worth it. A handbook quoting a pace ladder somebody has since
+     * retuned would be worse than no handbook at all.
+     */
+    private static void crewBook(List<RawFilteredPair<Text>> pages) {
+        int top = TrapCrew.PACE_TICKS.length - 1;
+        int wide = TrapCrew.REACH_BLOCKS.length - 1;
+
+        pages.add(page(Text.empty()
+                .append(title("1. HIRING\n\n"))
+                .append(body("Stand where you want the work done:\n\n"))
+                .append(body("/crew hire  -  " + TrapCrew.HIRE_COST + "e\n\n"))
+                .append(body("That spot is their patch. They never leave it.\n\n"))
+                .append(hint(TrapCrew.MAX_HANDS + " hands is the most you can carry."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. THE CHEST\n\n"))
+                .append(body("Everything they pick goes in the nearest "
+                        + "container to the patch.\n\n"))
+                .append(body("They take seeds and bone meal back out of that "
+                        + "same chest.\n\n"))
+                .append(warn("No chest, and the drops land on the floor."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. THE BOARD\n\n"))
+                .append(body("/crew\n\n"))
+                .append(body("Top row is your hands. Click one, then buy pace, "
+                        + "patch or a job for them.\n\n"))
+                .append(hint("Each hand is trained on its own."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. PACE\n\n"))
+                .append(body(TrapCrew.PACE_NAME[0] + ": a job every "
+                        + TrapCrew.paceLabel(0) + ".\n\n"))
+                .append(body(TrapCrew.PACE_NAME[top] + ": every "
+                        + TrapCrew.paceLabel(top) + ", and they walk quicker.\n\n"))
+                .append(hint(top + " rungs, " + TrapCrew.PACE_COST[1] + "e to "
+                        + TrapCrew.PACE_COST[top] + "e."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. THE PATCH\n\n"))
+                .append(body("They work a box " + TrapCrew.REACH_BLOCKS[0]
+                        + " blocks around the spot, up to " + TrapCrew.REACH_BLOCKS[wide]
+                        + ".\n\n"))
+                .append(body("Wider is more ground and more wage, not more "
+                        + "speed.\n\n"))
+                .append(hint("Buy pace first. An idle hand still eats."))));
+
+        jobs(pages);
+
+        pages.add(page(Text.empty()
+                .append(title("8. WAGES\n\n"))
+                .append(body(TrapCrew.WAGE + "e each, every five minutes, "
+                        + "harvest or no harvest.\n\n"))
+                .append(body("Every rung and job puts that up.\n\n"))
+                .append(warn("Miss a payday and they walk, and take what you "
+                        + "taught them with them."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. WHAT THEY WON'T DO\n\n"))
+                .append(body("Pull a rack early. That costs a grade.\n\n"))
+                .append(body("Bone meal YOUR crops. Same reason.\n\n"))
+                .append(body("Tread farmland back into dirt.\n\n"))
+                .append(hint("Nor wander off."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. IS IT WORTH IT?\n\n"))
+                .append(body("A hand you can't keep busy is a hand losing you "
+                        + "money.\n\n"))
+                .append(body("Work out what the patch brings in per five "
+                        + "minutes, then read the wage.\n\n"))
+                .append(hint("/crew shows the payroll, and what you're carrying."))));
+    }
+
+    /** The five you can teach, priced off the enum so the board can't disagree. */
+    private static void jobs(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("6. WHAT THEY DO\n\n"))
+                .append(body(TrapCrew.Job.PICK.display() + " comes free: your "
+                        + "ripe plants, into the chest.\n\n"))
+                .append(body("The rest is taught, one hand at a time.\n\n"))
+                .append(hint("A job costs once, then every packet after."))));
+
+        MutableText list = Text.empty().append(title("7. THE JOBS\n\n"));
+        for (TrapCrew.Job job : TrapCrew.Job.values()) {
+            if (job.free()) {
+                continue;
+            }
+            list.append(body(job.display() + "  " + job.cost() + "e  +"
+                    + job.wage() + "e\n"));
+        }
+        pages.add(page(list.append(Text.literal("\n"))
+                .append(hint("Cost, then what it adds to the wage."))));
     }
 
     private static void network(List<RawFilteredPair<Text>> pages) {

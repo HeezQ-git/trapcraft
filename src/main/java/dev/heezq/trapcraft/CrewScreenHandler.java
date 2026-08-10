@@ -128,7 +128,7 @@ public class CrewScreenHandler extends ScreenHandler {
                         .append(plain(chosen ? "  <" : "").formatted(Formatting.GOLD)));
         List<Text> lore = new ArrayList<>();
         lore.add(line(TrapCrew.PACE_NAME[card.pace()] + " -- a job every "
-                + card.seconds() + "s", Formatting.GRAY));
+                + card.tempo(), Formatting.GRAY));
         lore.add(line("Works " + card.reachBlocks() + " blocks around the spot",
                 Formatting.GRAY));
         lore.add(line("Wages  ", Formatting.DARK_GRAY)
@@ -171,15 +171,15 @@ public class CrewScreenHandler extends ScreenHandler {
                                 .formatted(Formatting.WHITE)));
         List<Text> lore = new ArrayList<>();
         lore.add(pace
-                ? line("Now: a job every " + card.seconds() + "s.", Formatting.GRAY)
+                ? line("Now: a job every " + card.tempo() + ".", Formatting.GRAY)
                 : line("Now: " + card.reachBlocks() + " blocks around the spot.",
                 Formatting.GRAY));
         if (top) {
             lore.add(line("Top of the ladder.", Formatting.GOLD));
         } else {
             lore.add(pace
-                    ? line("Next: every " + TrapCrew.PACE_TICKS[rung + 1] / 20
-                    + "s, and they walk quicker.", Formatting.WHITE)
+                    ? line("Next: every " + TrapCrew.paceLabel(rung + 1)
+                    + ", and they walk quicker.", Formatting.WHITE)
                     : line("Next: " + TrapCrew.REACH_BLOCKS[rung + 1] + " blocks.",
                     Formatting.WHITE));
             lore.add(Text.empty());

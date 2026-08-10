@@ -122,13 +122,15 @@ Two things worth knowing about how it works:
 
 ## The guide books
 
-`/guide` — three books under one command, with tab-completion:
+`/guide` — five books under one command, with tab-completion:
 
 | Command | Covers |
 |---------|--------|
 | `/guide grower` | growing, curing, rolling, heat |
 | `/guide refiner` | the coca line |
 | `/guide street` | paranoia, the ledger, contracts |
+| `/guide crew` | hiring hands, the ladders, what they cost |
+| `/guide casino` | running a floor |
 
 Every number on every page is read from the constant that governs it, so
 retuning a mechanic retunes the book and it can never quietly start lying.

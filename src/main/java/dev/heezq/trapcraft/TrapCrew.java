@@ -180,6 +180,20 @@ public final class TrapCrew {
      * The wage numbers are cumulative, not per rung, because what a hand costs
      * should be readable off what they are rather than off their history.
      */
+    /**
+     * How often a hand acts, said out loud.
+     *
+     * Exists because {@code ticks / 20} is integer division and the top rung
+     * is thirty ticks, so both the board and the handbook were flatly telling
+     * people "a job every 1s" for something that takes one and a half. A book
+     * that rounds a number it quotes is a book that has started lying, which
+     * is the one thing this mod's guide is not allowed to do.
+     */
+    public static String paceLabel(int level) {
+        int ticks = PACE_TICKS[Math.max(0, Math.min(level, PACE_TICKS.length - 1))];
+        return ticks % 20 == 0 ? ticks / 20 + "s" : String.format("%.1fs", ticks / 20.0f);
+    }
+
     public static final int[] PACE_TICKS = {200, 120, 80, 50, 30};
     public static final int[] PACE_COST = {0, 150, 320, 700, 1400};
     public static final int[] PACE_WAGE = {0, 6, 14, 26, 44};
@@ -306,7 +320,7 @@ public final class TrapCrew {
 
     /** One row of the crew screen. */
     public record Card(int index, int pace, int reach, int reachBlocks, int wage,
-                       int seconds, boolean present, List<Job> taught) {
+                       String tempo, boolean present, List<Job> taught) {
     }
 
     public static List<Card> cardsFor(ServerPlayerEntity boss) {
@@ -323,7 +337,7 @@ public final class TrapCrew {
                 }
             }
             out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
-                    hand.interval() / 20, find(boss.getServer(), hand) != null, taught));
+                    paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught));
         }
         return out;
     }
