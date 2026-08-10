@@ -69,18 +69,58 @@ inside, then move outside" work at all.
 
 ### What counts as the house
 
-A flood fill from the anchor, capped at 4096 blocks.
+A flood fill from the anchor, in two phases.
 
-**The rule: if you could walk there without breaking anything, it is your
-house.** The fill passes through air, doors, trapdoors, fence gates, ladders
-and any non-solid block. Consequences, all of them wanted:
+The first draft of this said the fill should pass through doors, so that a
+bedroom with the door shut still counted. That is wrong and would have failed
+on every house ever built: a front door is a door, so the fill would walk
+straight out of it and into the world. "Passes through doors" and "sealed
+room" are the same sentence contradicting itself.
 
-- A bedroom with the door shut still counts.
-- Stairs and ladders make multi-storey houses work with no extra code.
-- A sealed void with no way in does **not** count, which closes the obvious
-  exploit of walling off a cavern to inflate floor area.
-- A fill that escapes hits the cap and fails with "this room isn't sealed" --
-  the same check as "is this a house".
+**Phase one -- doors are walls.** The fill expands into air only, plus a short
+allowlist of things you can stand in (ladders, torches, carpets, signs,
+flowers). Doors, gates, trapdoors, glass, fences and slabs all stop it. So it
+closes on any normal building. Capped at 4096 blocks and ~48 blocks from the
+anchor on any axis.
+
+**Phase two -- probe each door on the boundary** with its own bounded fill of
+about 512 blocks:
+
+- Closes within budget: it is a room. Merge it, and queue any doors it found.
+- Escapes its budget: that is the outdoors. Do not merge. That door is a front
+  door.
+
+Iterative rather than recursive, against a global budget of ~8192, so nested
+rooms and porches resolve without a depth limit.
+
+Worked example, and the case that settled the design:
+
+    [bedroom]--door--[hall]--door--[porch]--door--[street]
+
+The bedroom probe closes and merges. The porch probe closes -- doors are walls
+to a probe too, so the outer door bounds it -- and merges. The outer door's
+probe escapes, so it does not merge, and it is the front door. Two doors side
+by side as a wide entrance both escape and neither merges. A garage with an
+inner door and a garage door resolves the same way, with no special case.
+
+Consequences, all of them wanted:
+
+- A bedroom with the door shut counts.
+- Leaving the front door open does not break the house, because door state is
+  irrelevant to a fill that treats doors as walls.
+- Stairs and ladders make multi-storey work with no extra code.
+- A sealed void with no way in does not count, closing the obvious exploit of
+  walling off a cavern to inflate floor area.
+- The house learns its own exterior doors for free -- the probes that escaped
+  -- which step 3 needs for tenant pathing and for posting letters.
+- "This room isn't sealed" now means a genuine hole in the wall rather than
+  "you built a door".
+
+**It cannot loop.** The fill is breadth-first against a visited set, so a block
+is never revisited whether the fill escapes or not; the caps bound total work;
+and it stops dead at an unloaded chunk border rather than pulling the world
+into memory. Worst realistic case is a few thousand block reads, once every
+two minutes.
 
 Minimum 3x3 floor. Claims may not overlap; the fill stops at another house's
 claim.
