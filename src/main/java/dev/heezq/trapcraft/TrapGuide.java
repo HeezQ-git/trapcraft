@@ -1222,6 +1222,14 @@ public final class TrapGuide {
                         + TrapCrew.PACE_COST[top] + "e."))));
 
         pages.add(page(Text.empty()
+                .append(title("5b. MOVING THEM\n\n"))
+                .append(body("Each one has their own spot. Stand where you "
+                        + "want them and open /crew.\n\n"))
+                .append(body("\"Work here instead\" moves the spot and "
+                        + "them with it.\n\n"))
+                .append(hint("Works between worlds too."))));
+
+        pages.add(page(Text.empty()
                 .append(title("5. THE PATCH\n\n"))
                 .append(body("They work a box " + TrapCrew.REACH_BLOCKS[0]
                         + " blocks around the spot, up to " + TrapCrew.REACH_BLOCKS[wide]

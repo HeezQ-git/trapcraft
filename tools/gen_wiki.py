@@ -746,6 +746,10 @@ def build() -> str:
     not have to stand over anybody. If one wanders off or something eats it, the
     <strong>whip</strong> on the crew board drags it back, and puts a trained
     replacement down if the body is gone.</p>
+    <p>Every hand has <strong>its own spot</strong> — wherever you were standing when you
+    took them on — and it moves. Walk to the new field, open the board, and
+    <strong>Work here instead</strong> moves the spot and the person with it, across
+    worlds if you like. They forget the old bed and the old chest and find new ones.</p>
     <h3 class="sub">Pace</h3>
     {table(["Rung", "A job every", "Costs", "Wage"], pace_rows)}
     <h3 class="sub">Jobs</h3>

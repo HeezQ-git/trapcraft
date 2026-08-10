@@ -372,8 +372,16 @@ public final class TrapCrew {
         final UUID boss;
         /** Not final: a hand the world lost gets a new body from the whip. */
         UUID mob;
-        final String dimension;
-        final BlockPos patch;
+        /**
+         * Where this one works. Theirs alone, and it moves.
+         *
+         * Every hand has had its own spot since the first one was hired --
+         * wherever you were standing when you took them on -- but there was no
+         * way to change it afterwards, so a farm that outgrew its first corner
+         * meant firing people and re-teaching them somewhere else.
+         */
+        String dimension;
+        BlockPos patch;
         int pace;
         int reach;
         /** Bit per {@link Job} ordinal. Blank on hire -- see SLOTS. */
@@ -540,7 +548,12 @@ public final class TrapCrew {
      */
     public record Card(int index, int pace, int reach, int reachBlocks, int wage,
                        String tempo, boolean present, List<Job> taught,
-                       int done, int paid, int missed, int owed) {
+                       int done, int paid, int missed, int owed,
+                       String dimension, int x, int y, int z) {
+        /** Where they work, short enough for a tooltip. */
+        public String spot() {
+            return x + " " + y + " " + z;
+        }
         /** Emeralds per job so far, or -1 before they have done anything. */
         public float perJob() {
             return done <= 0 ? -1 : (float) paid / done;
@@ -575,7 +588,8 @@ public final class TrapCrew {
             }
             out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
                     paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught,
-                    hand.done, hand.paid, hand.missed, hand.owed));
+                    hand.done, hand.paid, hand.missed, hand.owed, hand.dimension,
+                    hand.patch.getX(), hand.patch.getY(), hand.patch.getZ()));
         }
         return out;
     }
@@ -801,6 +815,87 @@ public final class TrapCrew {
                                 + "know everything you paid to teach.")
                                 .formatted(Formatting.GRAY))
                 : Text.literal("Back on the patch.").formatted(Formatting.GREEN), false);
+        return null;
+    }
+
+    /**
+     * Send one of them somewhere else to work.
+     *
+     * The patch is the whole of a hand's world -- what they harvest, how far
+     * they will wander, which chest they fill, where the whip drops them and
+     * which chunks stay awake for them. Moving it is therefore one action and
+     * not five, and it takes the body with it: a hand whose spot moved but who
+     * stayed put would spend the next minute walking and look broken.
+     *
+     * Across dimensions it is a new body on the same books. A villager cannot
+     * be handed through a portal without a lot of ceremony, and everything
+     * that matters about a hand -- the training, the pace, the wage, the
+     * ledger -- lives on this side anyway.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String move(ServerPlayerEntity boss, int index, BlockPos to) {
+        if (index < 0 || index >= CREW.size()) {
+            return "They're not on the books any more.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "That's not your hand.";
+        }
+        ServerWorld world = boss.getWorld();
+        String dimension = world.getRegistryKey().getValue().toString();
+        BlockPos spot = to.toImmutable();
+        if (spot.equals(hand.patch) && dimension.equals(hand.dimension)) {
+            return "That's where they already work.";
+        }
+
+        VillagerEntity mob = find(boss.getServer(), hand);
+        boolean moved = dimension.equals(hand.dimension);
+        if (!moved) {
+            if (mob != null) {
+                mob.discard();
+            }
+            mob = put(world, spot, boss.getYaw());
+            if (mob == null) {
+                return "Couldn't put anybody down there.";
+            }
+            hand.mob = mob.getUuid();
+        }
+
+        hand.dimension = dimension;
+        hand.patch = spot;
+        // The old bed is somebody else's problem now, and the box they were
+        // filling is probably three hundred blocks away. Both are found again
+        // on the next pass; remembering either would be remembering a lie.
+        hand.bed = null;
+        hand.box = null;
+        hand.idle = 0;
+        hand.restUntil = 0;
+        world.getChunkManager().addTicket(TICKET, new ChunkPos(spot),
+                ticketRadius(hand.reachBlocks()));
+        if (mob != null) {
+            if (moved) {
+                mob.refreshPositionAndAngles(spot.up(), mob.getYaw(), 0.0F);
+                mob.getNavigation().stop();
+                if (mob.isSleeping()) {
+                    mob.wakeUp();
+                }
+            }
+            equip(mob, hand);
+        }
+        // A hand nothing could find is a hand something ate. The spot still
+        // moves -- it is the boss's decision, not the body's -- and the whip
+        // will put somebody down on the new one.
+        save();
+
+        world.playSound(null, spot, SoundEvents.ENTITY_VILLAGER_YES,
+                SoundCategory.NEUTRAL, 0.9F, 1.0F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, spot.getX() + 0.5,
+                spot.getY() + 1.2, spot.getZ() + 0.5, 16, 0.4, 0.4, 0.4, 0.02);
+        boss.sendMessage(Text.literal("They work here now. ").formatted(Formatting.GREEN)
+                .append(Text.literal(spot.getX() + " " + spot.getY() + " " + spot.getZ()
+                        + (moved ? "" : ", and somebody new is stood on it."))
+                        .formatted(Formatting.GRAY)), false);
         return null;
     }
 

@@ -35,7 +35,7 @@ import java.util.List;
  *
  *   [hand][hand][hand][hand][hand] . [book] . [hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][whip] . [wages] . [plans] . [fire]
+ *   [job][job][whip][move][wages] . [plans] . [fire]
  *
  * The selected hand is the one everything on the bottom two rows applies to,
  * which is why the top row is heads you click rather than a list you read.
@@ -55,6 +55,7 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int REACH_SLOT = 10;
     private static final int JOBS_FROM = 11;
     private static final int WHIP_SLOT = 20;
+    private static final int MOVE_SLOT = 21;
     private static final int PLANS_SLOT = 24;
     private static final int WAGES_SLOT = 22;
     private static final int FIRE_SLOT = 26;
@@ -133,6 +134,7 @@ public class CrewScreenHandler extends ScreenHandler {
                 display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(i)));
             }
             display.setStack(WHIP_SLOT, whipTag(card));
+            display.setStack(MOVE_SLOT, moveTag(card));
             display.setStack(PLANS_SLOT, plansTag());
             display.setStack(WAGES_SLOT, wages());
             display.setStack(FIRE_SLOT, fireTag(selected));
@@ -155,8 +157,8 @@ public class CrewScreenHandler extends ScreenHandler {
         List<Text> lore = new ArrayList<>();
         lore.add(line(TrapCrew.PACE_NAME[card.pace()] + " -- a job every "
                 + card.tempo(), Formatting.GRAY));
-        lore.add(line("Works " + card.reachBlocks() + " blocks around the spot",
-                Formatting.GRAY));
+        lore.add(line("Works " + card.reachBlocks() + " blocks around  ", Formatting.GRAY)
+                .append(plain(card.spot()).formatted(Formatting.WHITE)));
         lore.add(line("Wages  ", Formatting.DARK_GRAY)
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
                 .append(plain(" every five minutes ON THE CLOCK")
@@ -291,6 +293,8 @@ public class CrewScreenHandler extends ScreenHandler {
                 line("and run /crew hire. They work a box", Formatting.GRAY),
                 line("around that spot and put everything", Formatting.GRAY),
                 line("in the nearest chest to it.", Formatting.GRAY),
+                line("Each one has their own. Move it with", Formatting.GRAY),
+                line("the compass, from wherever you stand.", Formatting.GRAY),
                 Text.empty(),
                 line("TWO JOBS EACH. Want a third thing", Formatting.WHITE),
                 line("done? Hire a third person.", Formatting.WHITE),
@@ -384,6 +388,38 @@ public class CrewScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /**
+     * Send this one somewhere else.
+     *
+     * Wherever the player is standing when they click, which is why /crew
+     * opens from anywhere: walk to the new field, open the board, click. No
+     * coordinates to type and no wand to lose.
+     */
+    private ItemStack moveTag(TrapCrew.Card card) {
+        boolean here = boss.getBlockPos().getX() == card.x()
+                && boss.getBlockPos().getY() == card.y()
+                && boss.getBlockPos().getZ() == card.z();
+        ItemStack tag = new ItemStack(here ? Items.GRAY_DYE : Items.COMPASS);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Work here instead").formatted(here ? Formatting.DARK_GRAY
+                        : Formatting.AQUA, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line("Their spot moves to where you are", Formatting.GRAY));
+        lore.add(line("stood, and so do they.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(line("Now:  ", Formatting.DARK_GRAY)
+                .append(plain(card.spot()).formatted(Formatting.WHITE)));
+        lore.add(line("You:  ", Formatting.DARK_GRAY)
+                .append(plain(boss.getBlockPos().getX() + " " + boss.getBlockPos().getY()
+                        + " " + boss.getBlockPos().getZ()).formatted(Formatting.WHITE)));
+        lore.add(Text.empty());
+        lore.add(line(here ? "You're stood on it." : "Click to move them.",
+                here ? Formatting.DARK_GRAY : Formatting.YELLOW));
+        lore.add(line("They forget the bed and the chest.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack wages() {
         int payroll = TrapCrew.payrollOf(boss);
         ItemStack tag = new ItemStack(Items.CLOCK);
@@ -441,6 +477,10 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         if (index == WHIP_SLOT) {
             answer(TrapCrew.whip(boss, card.index()));
+            return;
+        }
+        if (index == MOVE_SLOT) {
+            answer(TrapCrew.move(boss, card.index(), boss.getBlockPos()));
             return;
         }
         if (index >= JOBS_FROM && index < JOBS_FROM + TEACHABLE.size()) {
