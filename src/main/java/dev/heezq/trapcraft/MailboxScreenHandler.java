@@ -265,6 +265,19 @@ public class MailboxScreenHandler extends ScreenHandler {
                             HomeSurvey.RENT.length - 1)] + "e").formatted(Formatting.DARK_GRAY)));
             lore.add(line("An unhappy tenant pays less before", Formatting.DARK_GRAY));
             lore.add(line("they pay nothing at all.", Formatting.DARK_GRAY));
+            lore.add(Text.empty());
+            TrapHomes.Craving wants = home.craving();
+            lore.add(wants == null
+                    ? line("Not after anything today.", Formatting.DARK_GRAY)
+                    : line("Wants ", Formatting.GRAY)
+                    .append(plain(wants.count() + "x " + wants.label())
+                            .formatted(Formatting.WHITE))
+                    .append(plain("  for " + wants.price() + "e")
+                            .formatted(Formatting.GREEN)));
+            if (wants != null) {
+                lore.add(line("Find them and right-click, holding it.",
+                        Formatting.DARK_GRAY));
+            }
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;

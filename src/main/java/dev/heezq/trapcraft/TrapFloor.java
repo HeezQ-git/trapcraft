@@ -559,19 +559,30 @@ public final class TrapFloor {
             return;   // no room to walk in from; nobody comes tonight
         }
 
-        VillagerEntity punter = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
+        // A resident first, if one lives near enough to walk. The punters who
+        // appeared out of nowhere were always a stand-in for a town that did
+        // not exist yet; it does now, and somebody who pays you rent walking
+        // into your casino is worth more than any number of strangers.
+        VillagerEntity punter = resident(world, pos);
+        boolean local = punter != null;
         if (punter == null) {
-            return;
+            punter = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
+            if (punter == null) {
+                return;
+            }
+            punter.refreshPositionAndAngles(from, random.nextFloat() * 360.0F, 0.0F);
+            punter.setPersistent();
+            punter.setSilent(true);
         }
-        punter.refreshPositionAndAngles(from, random.nextFloat() * 360.0F, 0.0F);
-        punter.setPersistent();
-        punter.setSilent(true);
         punter.addCommandTag(PUNTER_TAG);
         // NITWIT or they take a job and start trading, which is somebody
-        // else's feature turning up inside this one.
-        punter.setVillagerData(punter.getVillagerData().withProfession(
-                world.getRegistryManager().getOrThrow(RegistryKeys.VILLAGER_PROFESSION)
-                        .getOrThrow(VillagerProfession.NITWIT)));
+        // else's feature turning up inside this one. A resident already is
+        // one, and keeps their own name over their head all evening.
+        if (!local) {
+            punter.setVillagerData(punter.getVillagerData().withProfession(
+                    world.getRegistryManager().getOrThrow(RegistryKeys.VILLAGER_PROFESSION)
+                            .getOrThrow(VillagerProfession.NITWIT)));
+        }
 
         // Capped by how full the room already is: a busy floor is a cheap
         // floor. See TrapMath.punterStakeCeiling.
@@ -792,6 +803,22 @@ public final class TrapFloor {
     }
 
     /** They've had enough. Say so, and go. */
+    /**
+     * A tenant near enough to fancy a night out, or null.
+     *
+     * Theirs is the body the register knows about, so it must be given back
+     * rather than binned when the evening ends -- see {@link #leave}.
+     */
+    private static VillagerEntity resident(ServerWorld world, BlockPos machine) {
+        for (VillagerEntity villager : world.getEntitiesByClass(VillagerEntity.class,
+                new net.minecraft.util.math.Box(machine).expand(40),
+                found -> found.getCommandTags().contains(TrapHomes.TENANT_TAG)
+                        && !found.getCommandTags().contains(PUNTER_TAG))) {
+            return villager;
+        }
+        return null;
+    }
+
     private static void leave(ServerWorld world, VillagerEntity body, Punter punter) {
         int net = punter.won - punter.lost;
         world.spawnParticles(net >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER,
@@ -799,6 +826,13 @@ public final class TrapFloor {
         world.playSound(null, body.getBlockPos(),
                 net >= 0 ? SoundEvents.ENTITY_VILLAGER_YES : SoundEvents.ENTITY_VILLAGER_NO,
                 SoundCategory.NEUTRAL, 0.6F, 1.0F);
+        // A resident goes home. Only the strangers are binned -- discarding a
+        // tenant here would have the casino quietly eating the town that feeds
+        // it, one punter at a time.
+        if (body.getCommandTags().contains(TrapHomes.TENANT_TAG)) {
+            body.removeCommandTag(PUNTER_TAG);
+            return;
+        }
         body.discard();
     }
 

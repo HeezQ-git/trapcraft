@@ -396,6 +396,21 @@ public final class TrapGuide {
                         + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e."))));
 
         pages.add(page(Text.empty()
+                .append(title("10b. THEY BUY\n\n"))
+                .append(body("Right-click a resident, empty hand. They'll "
+                        + "say what they fancy.\n\n"))
+                .append(body("Hold it, click again, and they pay -- "
+                        + "dirty.\n\n"))
+                .append(hint("New fancy most days. Price varies."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10c. THEY GAMBLE\n\n"))
+                .append(body("A resident near a wired machine will walk in "
+                        + "and play it.\n\n"))
+                .append(body("Same person. They go home after.\n\n"))
+                .append(hint("Build the casino where people live."))));
+
+        pages.add(page(Text.empty()
                 .append(title("11. MOOD\n\n"))
                 .append(body("Dark corners and a falling grade wear them "
                         + "down.\n\n"))

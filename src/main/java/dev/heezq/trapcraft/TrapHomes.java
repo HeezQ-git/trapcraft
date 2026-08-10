@@ -15,9 +15,13 @@ import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.WorldSavePath;
@@ -117,6 +121,12 @@ public final class TrapHomes {
         long lastRent = -1;
         /** Newest first, and short. Nobody reads the fifth letter. */
         final List<String> letters = new ArrayList<>();
+        /** What they fancy off the street today, or null. */
+        Craving craving;
+
+        public Craving craving() {
+            return craving;
+        }
 
         public String tenant() {
             return tenant;
@@ -222,6 +232,25 @@ public final class TrapHomes {
         }
     }
 
+    /**
+     * Something a tenant wants off the street, and what they'll pay.
+     *
+     * The city buying drugs from the people who live in it is the last knot
+     * this design needed tying. The customers who wander in from nowhere were
+     * always a stand-in; these are the same people paying your rent, and
+     * selling to them is the reason to walk round your own town.
+     *
+     * The price is rolled per craving and sits well over the counter, because
+     * somebody who has decided they want a Purp joint tonight is not shopping
+     * around -- same reasoning as the visiting customers, and the same reason
+     * this is worth doing at all.
+     */
+    public record Craving(Item item, int count, int price, String label) {
+    }
+
+    /** Odds a tenant fancies something on any given day. */
+    private static final float CRAVING_ODDS = 0.55f;
+
     private static final List<Home> HOMES = new ArrayList<>();
     private static Path saveFile;
     private static int cursor;
@@ -232,6 +261,23 @@ public final class TrapHomes {
     public static void register() {
         ServerLifecycleEvents.SERVER_STARTED.register(TrapHomes::load);
         registerCommand();
+        // Every interaction with a tenant, handled here and nowhere else --
+        // and consuming it, because a villager whose trade screen opens is a
+        // villager offering somebody else's feature inside this one.
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
+                (player, world, hand, entity, hit) -> {
+                    if (world.isClient() || !(player instanceof ServerPlayerEntity who)
+                            || !(entity instanceof net.minecraft.entity.passive.VillagerEntity)
+                            || !entity.getCommandTags().contains(TENANT_TAG)) {
+                        return net.minecraft.util.ActionResult.PASS;
+                    }
+                    Home home = byBody(entity.getUuid());
+                    if (home == null) {
+                        return net.minecraft.util.ActionResult.SUCCESS;
+                    }
+                    talk(who, home, player.getStackInHand(hand));
+                    return net.minecraft.util.ActionResult.SUCCESS;
+                });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (server.getTicks() % SURVEY_TICKS == 0) {
                 rounds(server);
@@ -561,6 +607,11 @@ public final class TrapHomes {
             return;
         }
 
+        // A new fancy each day, sometimes none at all. Rolled off the world's
+        // random so two people asking the same tenant get the same answer.
+        home.craving = world.getRandom().nextFloat() < CRAVING_ODDS
+                ? roll(world.getRandom(), home.mood) : null;
+
         int rent = HomeSurvey.rentDue(home.tier, home.mood);
         if (rent > 0) {
             TrapCity.Duty duty = TrapCity.Duty.RENT;
@@ -582,6 +633,137 @@ public final class TrapHomes {
             }
         }
         save();
+    }
+
+    /**
+     * What somebody fancies, and what they will pay for it.
+     *
+     * Weighted towards joints, which are the thing a person in a house buys
+     * of an evening; powder is rarer and dearer, and a raw bud is what you
+     * sell to somebody who could not get anything better. Mood shades the
+     * price -- a tenant who likes where they live pays a bit over.
+     */
+    private static Craving roll(net.minecraft.util.math.random.Random random, int mood) {
+        Strain strain = Strain.values()[random.nextInt(Strain.values().length)];
+        int roll = random.nextInt(10);
+        Item item;
+        String label;
+        int each;
+        if (roll < 5) {
+            item = TrapContent.joint(strain);
+            label = strain.display() + " Joint";
+            each = 22 + random.nextInt(14);
+        } else if (roll < 8) {
+            item = TrapContent.driedBud(strain);
+            label = "Cured " + strain.display();
+            each = 15 + random.nextInt(10);
+        } else {
+            item = TrapContent.cocaPowder;
+            label = "Powder";
+            each = 48 + random.nextInt(30);
+        }
+        int count = 1 + random.nextInt(4);
+        float liking = 0.85f + 0.3f * Math.max(0, Math.min(HomeSurvey.MOOD_MAX, mood))
+                / HomeSurvey.MOOD_MAX;
+        return new Craving(item, count, Math.max(1, Math.round(each * count * liking)), label);
+    }
+
+    /**
+     * Somebody stops a tenant in the street.
+     *
+     * Empty-handed asks; holding the thing sells it. That is the whole
+     * interface, and it is the same one the visiting customers use -- because
+     * from where the player is stood these ARE customers, they just happen to
+     * pay the rent as well.
+     */
+    private static void talk(ServerPlayerEntity who, Home home, ItemStack held) {
+        Craving wants = home.craving;
+        ServerWorld world = who.getWorld();
+
+        if (wants != null && held.isOf(wants.item())) {
+            String no = sellTo(who, home);
+            if (no != null) {
+                who.sendMessage(Text.literal(no).formatted(Formatting.GRAY), false);
+                return;
+            }
+            world.playSound(null, who.getBlockPos(), SoundEvents.ENTITY_VILLAGER_YES,
+                    SoundCategory.NEUTRAL, 0.9F, 1.1F);
+            who.sendMessage(Text.literal("Sold. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                    .append(Text.literal(wants.count() + "x " + wants.label() + " to "
+                            + home.tenant + " for ").formatted(Formatting.GRAY))
+                    .append(Text.literal(wants.price() + "e dirty")
+                            .formatted(Formatting.DARK_GREEN)), false);
+            return;
+        }
+
+        if (wants == null) {
+            who.sendMessage(Text.literal(home.tenant).formatted(Formatting.AQUA)
+                    .append(Text.literal(" isn't after anything today.")
+                            .formatted(Formatting.GRAY)), false);
+            return;
+        }
+        who.sendMessage(Text.literal(home.tenant).formatted(Formatting.AQUA, Formatting.BOLD)
+                .append(Text.literal(" wants ").formatted(Formatting.GRAY))
+                .append(Text.literal(wants.count() + "x " + wants.label())
+                        .formatted(Formatting.WHITE))
+                .append(Text.literal("  and will pay ").formatted(Formatting.GRAY))
+                .append(Text.literal(wants.price() + "e").formatted(Formatting.GREEN))
+                .append(Text.literal("\n  Hold it and click them again. They pay dirty.")
+                        .formatted(Formatting.DARK_GRAY)), false);
+        world.playSound(null, who.getBlockPos(), SoundEvents.ENTITY_VILLAGER_AMBIENT,
+                SoundCategory.NEUTRAL, 0.7F, 1.0F);
+    }
+
+    /** The tenant this villager is, or null. */
+    public static Home byBody(java.util.UUID body) {
+        for (Home home : HOMES) {
+            if (body.equals(home.body)) {
+                return home;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sell a tenant what they asked for.
+     *
+     * Paid in dirty emeralds, recorded undeclared and stirring the street,
+     * exactly like a customer at the door -- because that is what this is. The
+     * only difference is that this one pays you rent as well.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String sellTo(ServerPlayerEntity seller, Home home) {
+        Craving wants = home.craving;
+        if (wants == null) {
+            return home.tenant + " isn't after anything today.";
+        }
+        int held = 0;
+        for (int slot = 0; slot < seller.getInventory().size(); slot++) {
+            if (seller.getInventory().getStack(slot).isOf(wants.item())) {
+                held += seller.getInventory().getStack(slot).getCount();
+            }
+        }
+        if (held < wants.count()) {
+            return home.tenant + " wants " + wants.count() + "x " + wants.label()
+                    + " for " + wants.price() + "e. You've " + held + ".";
+        }
+        int owed = wants.count();
+        for (int slot = 0; slot < seller.getInventory().size() && owed > 0; slot++) {
+            ItemStack stack = seller.getInventory().getStack(slot);
+            if (stack.isOf(wants.item())) {
+                int taken = Math.min(owed, stack.getCount());
+                stack.decrement(taken);
+                owed -= taken;
+            }
+        }
+        TrapLaw.payDirty(seller, wants.price());
+        TrapLedger.record(seller, wants.item() == TrapContent.cocaPowder
+                ? TrapLedger.Source.COCA : TrapLedger.Source.WEED, wants.price());
+        TrapHeat.stirTheStreet(seller.getWorld(), wants.count());
+        home.craving = null;
+        save();
+        return null;
     }
 
     /** Somebody takes the place on. */
