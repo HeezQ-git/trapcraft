@@ -64,7 +64,8 @@ public class MailboxScreenHandler extends ScreenHandler {
             new Tick("Somewhere to put things", Items.CHEST, "A chest or a barrel."),
             new Tick("Somewhere to cook", Items.FURNACE, "A furnace, smoker or blast furnace."),
             new Tick("Somewhere to shop", Items.EMERALD, "A market stall, indoors."),
-            new Tick("A window", Items.GLASS, "Glass or panes in the wall."),
+            new Tick("A window", Items.GLASS,
+                    "Glass, panes, or anything a mod calls a window."),
             new Tick("Lighting", Items.TORCH, "Head height, brighter than "
                     + HomeSurvey.DARK_AT + ", at night. Ceiling torches count."),
             new Tick("Character", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " different "

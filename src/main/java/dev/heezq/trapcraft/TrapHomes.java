@@ -939,13 +939,28 @@ public final class TrapHomes {
     /**
      * Something you can see out of. A house with no windows is a cell.
      *
-     * IMPERMEABLE is the tag every glass block in the game is in -- it is
-     * what stops water going through -- so modded glass is covered without
-     * naming any of it. Panes have no tag of their own and need the class.
+     * Three tests, and the third is the one that matters on a pack this size.
+     * IMPERMEABLE catches vanilla glass and anything a mod puts in it; the
+     * class catches panes and bars, which have no tag of their own.
+     *
+     * And then the NAME. Macaw's Windows ships two hundred and two window
+     * blocks and puts exactly eighteen of them -- the mosaic glass -- into
+     * IMPERMEABLE; the windows themselves live in a tag of the mod's own,
+     * which nothing here could be expected to know about. Somebody with a
+     * house full of real windows was being told to fit one.
+     *
+     * Reading the id is not elegant, but a mod that ships a block called
+     * "acacia_window" has told us what it is in the only vocabulary every mod
+     * shares. It generalises to the next one, which naming a tag would not.
      */
     private static boolean window(BlockState state) {
-        return state.isIn(net.minecraft.registry.tag.BlockTags.IMPERMEABLE)
-                || state.getBlock() instanceof net.minecraft.block.PaneBlock;
+        if (state.isIn(net.minecraft.registry.tag.BlockTags.IMPERMEABLE)
+                || state.getBlock() instanceof net.minecraft.block.PaneBlock) {
+            return true;
+        }
+        String id = net.minecraft.registry.Registries.BLOCK
+                .getId(state.getBlock()).getPath();
+        return id.contains("window") || id.contains("glass");
     }
 
     /**
@@ -1047,14 +1062,23 @@ public final class TrapHomes {
         if (block instanceof BedBlock) {
             kit.bed = true;
         }
+        // Same reasoning as the window, applied to the rest of the list before
+        // somebody has to report it: a hundred and thirty-six mods ship
+        // furniture, and the ones that do not extend a vanilla class have
+        // still called the thing what it is.
+        String id = net.minecraft.registry.Registries.BLOCK.getId(block).getPath();
         if (block instanceof net.minecraft.block.CraftingTableBlock
-                || block instanceof net.minecraft.block.CrafterBlock) {
+                || block instanceof net.minecraft.block.CrafterBlock
+                || id.contains("crafting") || id.contains("workbench")) {
             kit.crafting = true;
         }
-        if (block instanceof AbstractFurnaceBlock) {
+        if (block instanceof AbstractFurnaceBlock
+                || id.contains("furnace") || id.contains("oven")
+                || id.contains("stove") || id.contains("kitchen")) {
             kit.cooking = true;
         } else if (block instanceof ChestBlock || block instanceof BarrelBlock
-                || block instanceof ShulkerBoxBlock) {
+                || block instanceof ShulkerBoxBlock
+                || id.contains("cabinet") || id.contains("cupboard")) {
             kit.storage = true;
         } else {
             // The catch-all for the modded chests, cabinets and cupboards that
