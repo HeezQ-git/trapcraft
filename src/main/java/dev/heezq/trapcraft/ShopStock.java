@@ -102,12 +102,14 @@ public final class ShopStock {
             "minecraft:redstone", Formatting.YELLOW, "Redstone and hardware");
     public static final Category ENCHANTS = new Category("enchants", "Enchantments",
             "minecraft:enchanted_book", Formatting.LIGHT_PURPLE, "Books, bought not ground for");
+    public static final Category NETHER = new Category("nether", "The Nether",
+            "minecraft:netherrack", Formatting.DARK_RED, "Everything from down there");
     public static final Category RARE = new Category("rare", "The Good Stuff",
             "minecraft:nether_star", Formatting.DARK_PURPLE, "If you can afford it");
 
     public static final List<Category> CATEGORIES =
             List.of(BUILDING, WOOD, DECOR, GARDEN, FARMING, FOOD,
-                    MATERIALS, UTILITY, ENCHANTS, RARE);
+                    MATERIALS, NETHER, UTILITY, ENCHANTS, RARE);
 
     /**
      * Items the market must never trade, at any price.
@@ -333,7 +335,6 @@ public final class ShopStock {
         // which is how these twenty-nine were found.
         Category c = GARDEN;
         // Light
-        add(c, "minecraft:soul_torch", 16, 7);
         add(c, "minecraft:end_rod", 8, 20);
         for (String dye : new String[]{"white", "orange", "magenta", "light_blue", "yellow",
                 "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown",
@@ -381,6 +382,7 @@ public final class ShopStock {
         timber();
         decoration();
         garden();
+        nether();
         seeds();
         kitchen();
         materials();
@@ -399,10 +401,6 @@ public final class ShopStock {
         add(c, "minecraft:oxidized_copper", 32, 14);
         add(c, "minecraft:waxed_copper_block", 4, 34);
         add(c, "minecraft:cut_copper", 32, 16);
-        add(c, "minecraft:magma_block", 16, 20);
-        add(c, "minecraft:soul_sand", 32, 10);
-        add(c, "minecraft:soul_soil", 32, 10);
-        add(c, "minecraft:polished_blackstone_brick_slab", 32, 8);
         add(c, "minecraft:white_terracotta", 32, 11);
         add(c, "minecraft:orange_terracotta", 32, 11);
         add(c, "minecraft:light_blue_terracotta", 32, 11);
@@ -419,11 +417,6 @@ public final class ShopStock {
         add(c, "minecraft:smooth_red_sandstone", 32, 8);
         add(c, "minecraft:chiseled_sandstone", 32, 9);
         add(c, "minecraft:chiseled_red_sandstone", 32, 9);
-        add(c, "minecraft:smooth_basalt", 32, 8);
-        add(c, "minecraft:polished_basalt", 32, 8);
-        add(c, "minecraft:polished_blackstone", 32, 10);
-        add(c, "minecraft:polished_blackstone_bricks", 32, 12);
-        add(c, "minecraft:gilded_blackstone", 8, 45);
         add(c, "minecraft:cracked_stone_bricks", 32, 9);
         add(c, "minecraft:cracked_deepslate_bricks", 32, 11);
         add(c, "minecraft:chiseled_deepslate", 32, 11);
@@ -434,14 +427,10 @@ public final class ShopStock {
         add(c, "minecraft:polished_tuff", 32, 9);
         add(c, "minecraft:end_stone_bricks", 32, 18);
         add(c, "minecraft:purpur_pillar", 16, 22);
-        add(c, "minecraft:red_nether_bricks", 32, 16);
-        add(c, "minecraft:chiseled_nether_bricks", 16, 15);
         add(c, "minecraft:chiseled_quartz_block", 32, 24);
         add(c, "minecraft:quartz_bricks", 32, 24);
         add(c, "minecraft:prismarine_bricks", 32, 24);
         add(c, "minecraft:dark_prismarine", 32, 26);
-        add(c, "minecraft:glowstone", 16, 28);
-        add(c, "minecraft:shroomlight", 8, 30);
         add(c, "minecraft:ochre_froglight", 4, 45);
         add(c, "minecraft:verdant_froglight", 4, 45);
         add(c, "minecraft:bone_block", 16, 18);
@@ -463,8 +452,6 @@ public final class ShopStock {
         add(c, "minecraft:cobbled_deepslate", 64, 18);
         add(c, "minecraft:polished_deepslate", 32, 9);
         add(c, "minecraft:deepslate_bricks", 32, 10);
-        add(c, "minecraft:blackstone", 32, 9);
-        add(c, "minecraft:basalt", 32, 7);
         add(c, "minecraft:sandstone", 64, 7);
         add(c, "minecraft:red_sandstone", 64, 7);
         add(c, "minecraft:sand", 64, 5);
@@ -483,9 +470,6 @@ public final class ShopStock {
         add(c, "minecraft:prismarine", 16, 20);
         add(c, "minecraft:sea_lantern", 8, 30);
         add(c, "minecraft:obsidian", 8, 34);
-        add(c, "minecraft:crying_obsidian", 4, 44);
-        add(c, "minecraft:netherrack", 64, 4);
-        add(c, "minecraft:nether_bricks", 32, 14);
         add(c, "minecraft:end_stone", 32, 18);
         add(c, "minecraft:purpur_block", 16, 20);
         add(c, "minecraft:scaffolding", 32, 9);
@@ -506,8 +490,6 @@ public final class ShopStock {
             add(c, "minecraft:" + wood + "_planks", 64, 5);
             add(c, "minecraft:" + wood + "_sapling", 8, 5);
         }
-        add(c, "minecraft:crimson_stem", 32, 12);
-        add(c, "minecraft:warped_stem", 32, 12);
         add(c, "minecraft:bamboo", 32, 4);
         add(c, "minecraft:moss_block", 16, 10);
         add(c, "minecraft:vine", 16, 6);
@@ -592,6 +574,84 @@ public final class ShopStock {
      * uncrafting hay bales into wheat mints money, too high and baking bread
      * does. The window is wide, but it is a window.
      */
+    /**
+     * The Nether shelf.
+     *
+     * These were scattered across Building, Timber, Materials and Utility,
+     * which is defensible one line at a time and useless to somebody who has
+     * just come back through a portal wanting to build with what they saw.
+     * Prices are carried over exactly as they were -- this is a shelf, not a
+     * repricing.
+     *
+     * Quartz and obsidian deliberately stay on the building shelf. They come
+     * from down there, but nobody browsing for nether decoration is looking
+     * for a quartz block, and everybody browsing for building stone is.
+     */
+    private static void nether() {
+        Category c = NETHER;
+        add(c, "minecraft:netherrack", 64, 4);
+        add(c, "minecraft:nether_bricks", 32, 14);
+        add(c, "minecraft:red_nether_bricks", 32, 16);
+        add(c, "minecraft:chiseled_nether_bricks", 16, 15);
+        add(c, "minecraft:magma_block", 16, 20);
+        add(c, "minecraft:soul_sand", 32, 10);
+        add(c, "minecraft:soul_soil", 32, 10);
+        add(c, "minecraft:glowstone", 16, 28);
+        add(c, "minecraft:shroomlight", 8, 30);
+        add(c, "minecraft:crying_obsidian", 4, 44);
+        add(c, "minecraft:gilded_blackstone", 8, 45);
+        add(c, "minecraft:blackstone", 32, 9);
+        add(c, "minecraft:basalt", 32, 7);
+        add(c, "minecraft:smooth_basalt", 32, 8);
+        add(c, "minecraft:polished_basalt", 32, 8);
+        add(c, "minecraft:polished_blackstone", 32, 10);
+        add(c, "minecraft:polished_blackstone_bricks", 32, 12);
+        add(c, "minecraft:polished_blackstone_brick_slab", 32, 8);
+        add(c, "minecraft:crimson_stem", 32, 12);
+        add(c, "minecraft:warped_stem", 32, 12);
+        add(c, "minecraft:nether_wart_block", 8, 26);
+        add(c, "minecraft:warped_wart_block", 8, 26);
+        add(c, "minecraft:nether_brick", 32, 10);
+        add(c, "minecraft:soul_campfire", 4, 18);
+        add(c, "minecraft:soul_lantern", 8, 18);
+        add(c, "minecraft:soul_torch", 16, 7);
+
+        // --- the rest of it, which the market never sold ---
+        // Fungal wood, priced off the stems it comes from.
+        add(c, "minecraft:crimson_planks", 64, 12);
+        add(c, "minecraft:warped_planks", 64, 12);
+        add(c, "minecraft:stripped_crimson_stem", 32, 12);
+        add(c, "minecraft:stripped_warped_stem", 32, 12);
+        add(c, "minecraft:crimson_hyphae", 32, 14);
+        add(c, "minecraft:warped_hyphae", 32, 14);
+        add(c, "minecraft:crimson_fence", 16, 10);
+        add(c, "minecraft:warped_fence", 16, 10);
+        add(c, "minecraft:crimson_door", 8, 8);
+        add(c, "minecraft:warped_door", 8, 8);
+        add(c, "minecraft:crimson_trapdoor", 8, 10);
+        add(c, "minecraft:warped_trapdoor", 8, 10);
+        // Ground cover and the things that grow out of it.
+        add(c, "minecraft:crimson_nylium", 16, 14);
+        add(c, "minecraft:warped_nylium", 16, 14);
+        add(c, "minecraft:crimson_fungus", 8, 10);
+        add(c, "minecraft:warped_fungus", 8, 10);
+        add(c, "minecraft:crimson_roots", 16, 8);
+        add(c, "minecraft:warped_roots", 16, 8);
+        add(c, "minecraft:nether_sprouts", 16, 8);
+        add(c, "minecraft:weeping_vines", 16, 10);
+        add(c, "minecraft:twisting_vines", 16, 10);
+        // Brick and blackstone trim.
+        add(c, "minecraft:cracked_nether_bricks", 32, 15);
+        add(c, "minecraft:nether_brick_fence", 16, 12);
+        add(c, "minecraft:chiseled_polished_blackstone", 32, 12);
+        add(c, "minecraft:cracked_polished_blackstone_bricks", 32, 12);
+        add(c, "minecraft:quartz_pillar", 16, 22);
+        // Ore, priced above what smelting it returns.
+        add(c, "minecraft:nether_gold_ore", 16, 26);
+        add(c, "minecraft:nether_quartz_ore", 16, 18);
+        add(c, "minecraft:lodestone", 1, 10);
+    }
+
     private static void seeds() {
         Category c = FARMING;
         add(c, "minecraft:beetroot_seeds", 16, 12);
@@ -766,8 +826,6 @@ public final class ShopStock {
         add(c, "minecraft:redstone_block", 4, 30);
         add(c, "minecraft:clay", 16, 10);
         add(c, "minecraft:brick", 32, 10);
-        add(c, "minecraft:nether_wart_block", 8, 26);
-        add(c, "minecraft:warped_wart_block", 8, 26);
         add(c, "minecraft:ender_eye", 4, 70);
         add(c, "minecraft:chorus_fruit", 16, 20);
         add(c, "minecraft:popped_chorus_fruit", 16, 24);
@@ -824,7 +882,6 @@ public final class ShopStock {
         add(c, "minecraft:scute", 2, 45);
         add(c, "minecraft:echo_shard", 2, 90);
         add(c, "minecraft:glowstone_dust", 16, 12);
-        add(c, "minecraft:nether_brick", 32, 10);
         add(c, "minecraft:blaze_powder", 8, 24);
         add(c, "minecraft:fermented_spider_eye", 4, 14);
         add(c, "minecraft:brown_mushroom_block", 8, 8);
@@ -843,7 +900,7 @@ public final class ShopStock {
         add(c, "minecraft:crossbow", 1, 16);
         add(c, "minecraft:spectral_arrow", 8, 24);
         add(c, "minecraft:carrot_on_a_stick", 1, 20);
-        add(c, "minecraft:warped_fungus_on_a_stick", 1, 28);
+        add(c, "minecraft:warped_fungus_on_a_stick", 1, 22);
         add(c, "minecraft:map", 4, 12);
         add(c, "minecraft:filled_map", 1, 10);
         add(c, "minecraft:writable_book", 4, 14);
@@ -856,10 +913,9 @@ public final class ShopStock {
         add(c, "minecraft:lightning_rod", 2, 20);
         add(c, "minecraft:daylight_detector", 2, 20);
         add(c, "minecraft:lectern", 2, 16);
-        add(c, "minecraft:fletching_table", 1, 12);
+        add(c, "minecraft:fletching_table", 1, 8);
         add(c, "minecraft:stonecutter", 1, 7);
         add(c, "minecraft:campfire", 4, 12);
-        add(c, "minecraft:soul_campfire", 4, 18);
         add(c, "minecraft:beehive", 2, 20);
         add(c, "minecraft:bundle", 1, 13);
         add(c, "minecraft:activator_rail", 8, 26);
@@ -867,7 +923,6 @@ public final class ShopStock {
         add(c, "minecraft:bell", 1, 45);
         add(c, "minecraft:torch", 32, 4);
         add(c, "minecraft:lantern", 8, 14);
-        add(c, "minecraft:soul_lantern", 8, 18);
         add(c, "minecraft:chest", 4, 8);
         add(c, "minecraft:barrel", 4, 9);
         add(c, "minecraft:furnace", 2, 8);
@@ -907,9 +962,9 @@ public final class ShopStock {
         add(c, "minecraft:bookshelf", 4, 26);
         add(c, "minecraft:anvil", 1, 70);
         add(c, "minecraft:grindstone", 1, 18);
-        add(c, "minecraft:smithing_table", 1, 18);
-        add(c, "minecraft:cartography_table", 1, 16);
-        add(c, "minecraft:loom", 1, 14);
+        add(c, "minecraft:smithing_table", 1, 11);
+        add(c, "minecraft:cartography_table", 4, 8);
+        add(c, "minecraft:loom", 1, 9);
         add(c, "minecraft:composter", 1, 10);
         add(c, "minecraft:cauldron", 1, 18);
         add(c, "minecraft:brewing_stand", 1, 24);

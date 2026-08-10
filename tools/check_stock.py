@@ -147,6 +147,16 @@ def craft_loops(source: str) -> list[str]:
     Vanilla recipes only -- modded ones live in mod jars this can't see. It
     still catches the whole vanilla food tree, which is where the raw crops
     everybody farms turn into things worth selling.
+
+    KNOWN BLIND SPOT: catalogue lines whose id is BUILT rather than written --
+    `add(c, "minecraft:" + wood + "_planks", 64, 5)` and the dye and wool loops
+    like it -- never reach the price map, because the regex above can only read
+    string literals. Recipes taking those ingredients are therefore costed off
+    the cheapest LITERAL member of the tag instead of the true cheapest, which
+    understates nothing and overstates the cost. Adding one literal plank line
+    for the nether shelf is what first made six wooden workstations visible as
+    money printers; the rest of the timber catalogue is still invisible. Worth
+    closing by expanding the loops, and worth knowing about until somebody does.
     """
     unit = {}
     for ident, count, base in re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source):

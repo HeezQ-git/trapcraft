@@ -28,6 +28,26 @@ import java.util.Map;
  * just picking your favourite strain and doubling it.
  */
 public record Blend(List<Strain> parts, int grade) {
+    /**
+     * Sorted on the way in, and that is the whole of a real bug.
+     *
+     * A Blend rides on the itemstack as a data component, and components are
+     * compared by VALUE -- so a list is only equal to a list with the same
+     * things in the same order. Kush-then-Haze and Haze-then-Kush are the same
+     * mix by every rule this class has ({@link #named} sorts before matching,
+     * {@link #shares} is an EnumMap, the display name comes out identical) but
+     * they were two different components, so two jars of visibly the same thing
+     * refused to stack and there was nothing on either to say why.
+     *
+     * Canonicalising here rather than at the mixing station catches every route
+     * in -- the station, the codec, and anything added later -- and it also
+     * quietly repairs old items, because loading one decodes through this
+     * constructor and re-encodes sorted.
+     */
+    public Blend {
+        parts = parts.stream().sorted().toList();
+    }
+
     /** Four is the cap: past that everything averages into the same grey mush. */
     public static final int MAX_PARTS = 4;
     public static final int MIN_PARTS = 2;

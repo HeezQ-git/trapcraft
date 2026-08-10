@@ -95,7 +95,27 @@ public final class TrapDealing {
                             && entity instanceof WanderingTraderEntity customer
                             && customer.getCommandTags().contains(TAG)) {
                         Customer record = CUSTOMERS.get(customer.getUuid());
-                        if (record != null && player instanceof ServerPlayerEntity seller) {
+                        if (record == null) {
+                            // Tagged as ours, but we have no record of them --
+                            // an ORPHAN, and the reason a customer who ran off
+                            // and came back opened a vanilla trade screen.
+                            //
+                            // CUSTOMERS is memory-only, and findCustomer only
+                            // ever sees LOADED entities. Anything that puts
+                            // distance between the two -- a restart, or a
+                            // trader fleeing a monster into a chunk nobody is
+                            // keeping loaded -- drops the record while the
+                            // entity carries on existing. Falling through to
+                            // PASS then handed the player the wandering
+                            // trader's own stock, which is exactly what this
+                            // callback exists to prevent.
+                            //
+                            // They are not a customer any more, so they leave.
+                            sober(customer);
+                            leave(customer);
+                            return net.minecraft.util.ActionResult.SUCCESS;
+                        }
+                        if (player instanceof ServerPlayerEntity seller) {
                             // The trade screen never opens for a customer.
                             //
                             // It cannot draw a payout for a Polymer item -- the
@@ -236,6 +256,7 @@ public final class TrapDealing {
                 .formatted(Formatting.DARK_GREEN));
         customer.setCustomNameVisible(true);
         customer.addCommandTag(TAG);
+        sober(customer);
         // Vanilla's own timer as a backstop: if the server restarts and our
         // in-memory record is lost, they still wander off on their own instead
         // of standing in a field forever.
@@ -252,6 +273,33 @@ public final class TrapDealing {
         world.playSound(null, spot, SoundEvents.ENTITY_WANDERING_TRADER_YES,
                 SoundCategory.NEUTRAL, 0.7F, 0.8F);
         return true;
+    }
+
+    /**
+     * Take the bottles off them, once, for good.
+     *
+     * A wandering trader carries two {@code HoldInHandsGoal}s: invisibility at
+     * dusk and milk at dawn. Somebody who has come to buy from you has no
+     * business turning invisible halfway through, and the old answer was to
+     * strip the effect and the bottle every single tick.
+     *
+     * That is where the noise came from. The goal's own stop() plays a sound
+     * and its shouldContinue() is only "am I still using the item", so clearing
+     * their hand every tick stopped and restarted the goal every tick -- and
+     * every stop played the drink sound. A drinking noise twenty times a second
+     * for as long as the customer stood there, caused entirely by the fix for
+     * the invisibility.
+     *
+     * Removing the goal removes both, and the per-pass stripping with them.
+     */
+    private static void sober(WanderingTraderEntity customer) {
+        ((dev.heezq.trapcraft.mixin.MobEntityAccessor) customer).getGoalSelector()
+                .clear(goal -> goal instanceof net.minecraft.entity.ai.goal.HoldInHandsGoal);
+        // Belt and braces for anyone who spawned before this existed and is
+        // still stood in somebody's field holding a potion.
+        customer.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.INVISIBILITY);
+        customer.equipStack(net.minecraft.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        customer.equipStack(net.minecraft.entity.EquipmentSlot.OFFHAND, ItemStack.EMPTY);
     }
 
     /** A clear surface spot near the player but not on top of them. */
@@ -327,23 +375,7 @@ public final class TrapDealing {
                 return false;
             }
 
-            // Wandering traders drink an invisibility potion at night. That's
-            // fine for a vanilla trader wandering the wilds and useless for
-            // somebody who is supposed to be walking up to you, so it gets
-            // stripped every pass rather than fought at the AI level.
-            //
-            // The EFFECT and the BOTTLE are two separate problems: removing the
-            // effect alone leaves them stood there holding a potion forever,
-            // because the drink goal keeps re-arming and we keep cancelling its
-            // result. Take the bottle out of their hands too.
-            entity.removeStatusEffect(net.minecraft.entity.effect.StatusEffects.INVISIBILITY);
-            for (var slot : new net.minecraft.entity.EquipmentSlot[]{
-                    net.minecraft.entity.EquipmentSlot.MAINHAND,
-                    net.minecraft.entity.EquipmentSlot.OFFHAND}) {
-                if (!entity.getEquippedStack(slot).isEmpty()) {
-                    entity.equipStack(slot, ItemStack.EMPTY);
-                }
-            }
+            // The invisibility is dealt with once, at spawn -- see sober().
 
             // Re-assert what they buy, every pass, unconditionally.
             //

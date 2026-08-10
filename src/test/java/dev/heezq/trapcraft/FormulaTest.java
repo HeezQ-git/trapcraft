@@ -98,6 +98,43 @@ class FormulaTest {
                 TrapMath.payout(999999, 9999, 9, 99, 999));
     }
 
+    /**
+     * A name has a top, and past it nothing keeps growing.
+     *
+     * Rep fed four multipliers with a ceiling on none of them, so it kept
+     * climbing while the payout ran into PAYOUT_CEILING and stopped -- every
+     * job on a veteran's board paying the same and asking for more product
+     * than the last. This is the check that says the top rung is still a rung.
+     */
+    @Test
+    void reputationHasACeiling() {
+        assertEquals(TrapMath.payout(100, 8, 2, 0, TrapMath.REP_MAX),
+                TrapMath.payout(100, 8, 2, 0, TrapMath.REP_MAX * 20),
+                "past the cap, more rep must buy nothing");
+        assertTrue(TrapMath.payout(100, 8, 2, 0, TrapMath.REP_MAX)
+                > TrapMath.payout(100, 8, 2, 0, 0), "but getting there must be worth it");
+    }
+
+    /** And it must not be worth so much that nothing else on the job matters. */
+    @Test
+    void reputationIsNotTheWholeJob() {
+        int nobody = TrapMath.payout(100, 8, 2, 0, 0);
+        int somebody = TrapMath.payout(100, 8, 2, 0, TrapMath.REP_MAX);
+        assertTrue(somebody < nobody * 2, "a maxed name doubled the money, got "
+                + nobody + " -> " + somebody);
+    }
+
+    /** Hot work pays, and the premium is the same wherever it gets applied. */
+    @Test
+    void theHeatPremiumIsOneNumber() {
+        assertEquals(1.0f, TrapMath.heatMultiplier(0), 0.0001f);
+        assertEquals(TrapMath.payout(100, 8, 2, 4, 0),
+                Math.min(TrapMath.PAYOUT_CEILING,
+                        Math.round(TrapMath.payout(100, 8, 2, 0, 0)
+                                * TrapMath.heatMultiplier(4))),
+                "the drop pays the premium the board would have quoted");
+    }
+
     // --- market ---------------------------------------------------------------
 
     @Test

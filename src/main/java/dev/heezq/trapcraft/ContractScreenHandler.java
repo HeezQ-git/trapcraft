@@ -93,7 +93,10 @@ public class ContractScreenHandler extends ScreenHandler {
                     field("Deadline", String.format("%d:%02d", seconds / 60, seconds % 60),
                             seconds <= 300 ? Formatting.RED : Formatting.WHITE),
                     rule(),
-                    field("Pays", job.payout() + " emeralds", Formatting.GREEN),
+                    // The cold price. Running hot adds to it at the drop, not
+                    // here -- see the note in TrapContracts.board.
+                    field("Pays", job.payout() + " emeralds, more if you're hot",
+                            Formatting.GREEN),
                     field("Rep", "+" + job.rep(), Formatting.GREEN),
                     Text.empty(),
                     plain("▸ Click to take it").formatted(Formatting.DARK_AQUA))));

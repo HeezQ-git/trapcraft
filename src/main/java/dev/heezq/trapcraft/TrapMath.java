@@ -86,12 +86,50 @@ public final class TrapMath {
      * @param gradeIndex quality demanded, higher is better (Quality.index())
      * @param rep        reputation carried on the phone
      */
+    /**
+     * The most reputation anybody's name is worth.
+     *
+     * A cap, because there wasn't one and rep is the input to four separate
+     * multipliers: what the board asks for, how much of it, the standing
+     * bonus, and the dealer discount. Three of those were unbounded and they
+     * multiply, so a name kept climbing forever while the payout ran into
+     * {@link #PAYOUT_CEILING} and stopped -- which meant that past about rep 90
+     * every job on the board paid exactly the same and simply demanded more
+     * product than the last one. Reputation was quietly becoming a punishment
+     * at the top and a runaway in the middle.
+     *
+     * Fifty is roughly three days of taking every job. Past that a name is as
+     * good as it gets, which is what a ladder with a top rung means.
+     */
+    public static final int REP_MAX = 50;
+    /**
+     * What each point of standing is worth on a payout.
+     *
+     * Was 0.02, which made rep 40 a 1.8x multiplier on top of bigger and
+     * better-graded jobs -- three compounding bonuses off one stat, and the
+     * reason forty felt like it broke the game. At 0.015 a maxed name is
+     * 1.75x, and it is the last of the three to arrive rather than the first.
+     */
+    public static final float REP_STEP = 0.015f;
+
+    /** How much hot work pays over cold. */
+    public static final float HEAT_STEP = 0.15f;
+
+    public static float heatMultiplier(int heatTier) {
+        return 1.0f + Math.max(0, heatTier) * HEAT_STEP;
+    }
+
+    /** A name is only ever worth so much, however many jobs you have run. */
+    public static int standing(int rep) {
+        return Math.max(0, Math.min(rep, REP_MAX));
+    }
+
     public static int payout(int distanceBlocks, int quantity, int gradeIndex,
                              int heatTier, int rep) {
         int base = Math.max(0, quantity) * (2 + Math.max(0, gradeIndex));
         int distance = Math.max(0, distanceBlocks) / 50;
-        float heat = 1.0f + Math.max(0, heatTier) * 0.15f;
-        float standing = 1.0f + Math.max(0, rep) * 0.02f;
+        float heat = heatMultiplier(heatTier);
+        float standing = 1.0f + standing(rep) * REP_STEP;
 
         int total = Math.round((base + distance) * heat * standing);
         return Math.min(PAYOUT_CEILING, Math.max(0, total));

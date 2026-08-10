@@ -12,6 +12,7 @@
     "client": ["dev.heezq.trapcraft.client.TrapCraftClient"]
   },
   "mixins": [
+    "trapcraft.mixins.json",
     {
       "config": "trapcraft.client.mixins.json",
       "environment": "client"

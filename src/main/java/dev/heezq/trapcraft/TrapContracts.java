@@ -139,8 +139,18 @@ public final class TrapContracts {
                 default -> Contract.Form.EITHER.ordinal();
             };
 
-            int heatTier = TrapHeat.carryingHeat(player);
-            int payout = TrapMath.payout(distance, quantity, grade, heatTier, rep);
+            // Priced COLD, and the heat bonus is worked out when you hand it
+            // over instead. It used to read the heat you happened to be
+            // carrying while the board was open, which is a hole rather than a
+            // mechanic: light yourself up, open the phone, take the job at the
+            // hot price, then sit somewhere quiet until the heat drains and
+            // deliver it in perfect safety. You were being paid for risk at
+            // the one moment you were guaranteed not to be running any.
+            //
+            // It also made a liar of the docstring above -- a board that is
+            // supposed to be stable until tomorrow was quoting a different
+            // number every time your heat moved.
+            int payout = TrapMath.payout(distance, quantity, grade, 0, rep);
             int seconds = BASE_SECONDS + distance / 100 * SECONDS_PER_100;
 
             jobs.add(new Contract(strain.ordinal(), grade, quantity,
@@ -497,7 +507,13 @@ public final class TrapContracts {
         dismissContact(player);
         takeCompass(player, contract);
         adjustRep(phone, contract.rep());
-        TrapMarket.pay(player, contract.payout());
+        // The heat premium is settled HERE, off what the player is actually
+        // carrying at the drop. That is the risk the mod claims to be paying
+        // for, and it is the only moment it is real.
+        int heatTier = TrapHeat.carryingHeat(player);
+        int paid = Math.min(TrapMath.PAYOUT_CEILING,
+                Math.round(contract.payout() * TrapMath.heatMultiplier(heatTier)));
+        TrapMarket.pay(player, paid);
 
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -506,8 +522,12 @@ public final class TrapContracts {
                 SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 0.8F, 1.5F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 player.getX(), player.getEyeY(), player.getZ(), 20, 0.5, 0.5, 0.5, 0.02);
-        player.sendMessage(Text.literal("Paid. " + contract.payout() + " emeralds, +"
-                        + contract.rep() + " rep.").formatted(Formatting.GREEN), false);
+        player.sendMessage(Text.literal("Paid. " + paid + " emeralds, +"
+                        + contract.rep() + " rep.").formatted(Formatting.GREEN)
+                .append(Text.literal(heatTier > 0
+                                ? "  (+" + (paid - contract.payout()) + " for running hot)"
+                                : "  (cold run, no premium)")
+                        .formatted(Formatting.DARK_GRAY)), false);
         // A drop is the biggest handover in the mod and the one with a paper
         // trail leading back to a phone, so it rolls on the whole quantity.
         TrapStickup.afterDeal(player, contract.quantity(), contract.minGrade());
@@ -580,12 +600,35 @@ public final class TrapContracts {
         return null;
     }
 
+    /**
+     * Clamped on the way OUT as well as the way in.
+     *
+     * Writing the cap only would leave every phone that already exists sitting
+     * above it -- and those are precisely the phones this is meant to rein in.
+     * Reading through the clamp heals them the moment somebody opens the board,
+     * with no migration and no reset of a name people earned.
+     */
     public static int repOf(ItemStack phone) {
         Integer value = phone.get(TrapComponents.rep);
-        return value == null ? 0 : value;
+        return value == null ? 0 : TrapMath.standing(value);
     }
 
+    /**
+     * Rep, clamped at both ends.
+     *
+     * The ceiling is the important half and it did not exist. Rep feeds four
+     * things at once -- the grade the board asks for, the quantity, the
+     * standing bonus on the payout and the discount on hiring a dealer -- and
+     * with nothing stopping it, a name climbed forever while the payout hit
+     * its ceiling and stayed there. Every job on a veteran's board paid the
+     * same and asked for more product than the last one.
+     *
+     * See {@link TrapMath#REP_MAX}. Clamping here as well as in the payout is
+     * deliberate: this is where the number is STORED, so a phone can never
+     * carry a figure the rest of the mod would have to keep defending against.
+     */
     public static void adjustRep(ItemStack phone, int delta) {
-        phone.set(TrapComponents.rep, Math.max(0, repOf(phone) + delta));
+        phone.set(TrapComponents.rep,
+                Math.min(TrapMath.REP_MAX, Math.max(0, repOf(phone) + delta)));
     }
 }
