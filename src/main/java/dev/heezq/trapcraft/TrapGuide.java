@@ -27,6 +27,16 @@ import java.util.List;
  * whole point of it being a knowledge base rather than a leaflet.
  */
 public final class TrapGuide {
+    /**
+     * Where the wiki lives.
+     *
+     * Published by the workflow in .github/workflows from the site/ folder,
+     * which tools/gen_wiki.py builds out of this same source -- so the page a
+     * player opens from here and the book they get from /guide are quoting the
+     * same constants and cannot disagree.
+     */
+    public static final String WIKI = "https://heezq-git.github.io/trapcraft/";
+
     private TrapGuide() {
     }
 
@@ -52,6 +62,50 @@ public final class TrapGuide {
                                 .executes(context -> give(context.getSource(), createCrew())))
                         .then(CommandManager.literal("casino")
                                 .executes(context -> give(context.getSource(), createCasino())))));
+        registerWiki();
+    }
+
+    /**
+     * /wiki -- the whole thing, on a page, clickable.
+     *
+     * A separate top-level command rather than a branch of /guide, because
+     * somebody who wants the website is not browsing a list of books and
+     * should not have to learn that it lives under one.
+     */
+    private static void registerWiki() {
+        CommandRegistrationCallback.EVENT.register((dispatcher, access, env) ->
+                dispatcher.register(CommandManager.literal("wiki")
+                        .executes(context -> {
+                            context.getSource().sendFeedback(() -> link(), false);
+                            return 1;
+                        })));
+    }
+
+    /**
+     * The clickable line.
+     *
+     * Underlined and coloured because an unstyled link does not read as one,
+     * and carrying its own hover text because the client's "are you sure you
+     * want to open this website" prompt shows the raw URL -- somebody should
+     * know where they are going before that appears, not because of it.
+     */
+    private static MutableText link() {
+        return Text.empty()
+                .append(Text.literal("The Field Manual\n")
+                        .formatted(Formatting.GOLD, Formatting.BOLD))
+                .append(Text.literal("  Everything in the game, in one place.\n")
+                        .formatted(Formatting.GRAY))
+                .append(Text.literal("  " + WIKI)
+                        .formatted(Formatting.GREEN, Formatting.UNDERLINE)
+                        .styled(style -> style
+                                .withClickEvent(new net.minecraft.text.ClickEvent.OpenUrl(
+                                        java.net.URI.create(WIKI)))
+                                .withHoverEvent(new net.minecraft.text.HoverEvent.ShowText(
+                                        Text.literal("Open it in your browser")))))
+                .append(Text.literal("\n  Books instead: ").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("/guide").formatted(Formatting.GREEN)
+                        .styled(style -> style.withClickEvent(
+                                new net.minecraft.text.ClickEvent.RunCommand("/guide"))));
     }
 
     /** Bare /guide lists them rather than erroring at you. */
@@ -62,7 +116,12 @@ public final class TrapGuide {
                 .append(pick("refiner", "the coca line"))
                 .append(pick("street", "paranoia, the ledger, contracts"))
                 .append(pick("crew", "hiring hands, and what they cost"))
-                .append(pick("casino", "running a floor")), false);
+                .append(pick("casino", "running a floor"))
+                .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
+                        .styled(style -> style.withClickEvent(
+                                new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
+                        .append(Text.literal("  all of it, on a page\n")
+                                .formatted(Formatting.DARK_GRAY))), false);
         return 1;
     }
 
@@ -354,6 +413,13 @@ public final class TrapGuide {
                 .append(body("Build a stall and somebody will trade with you.\n\n"))
                 .append(item("Wool Wool Wool\nLog  Emrld Log\nLog  Log  Log\n\n"))
                 .append(hint("Emerald block in the middle."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4y. THE WIKI\n\n"))
+                .append(body("/wiki\n\n"))
+                .append(body("Every strain, price, tier and recipe on one "
+                        + "page, in a browser.\n\n"))
+                .append(hint("Same numbers as these books."))));
 
         pages.add(page(Text.empty()
                 .append(title("4z. THE BOOKS\n\n"))

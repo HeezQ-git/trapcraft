@@ -721,6 +721,7 @@ def build() -> str:
     proportional skim, and an unattended floor earns very close to nothing.</p>"""))
 
     cmd_rows = [
+        ["<code>/wiki</code>", "This page, as a clickable link in chat"],
         ["<code>/guide</code>", "Five handbooks — grower, refiner, street, crew, casino"],
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
