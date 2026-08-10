@@ -1090,7 +1090,12 @@ public final class TrapHomes {
                     home.lastRent = Long.parseLong(parts[22]);
                     home.name = parts[23];
                 } else {
-                    home.name = parts[18];
+                    // A step-two line, whose name is the greedy tail of a
+                    // NINETEEN-field split. Read at 24 it stops being greedy,
+                    // and "HeezQ's place" quietly became "HeezQ's" -- so the
+                    // old format has to be re-read at its own width rather
+                    // than picked out of the wider one.
+                    home.name = line.trim().split("\\s+", 19)[18];
                 }
                 HOMES.add(home);
             }
