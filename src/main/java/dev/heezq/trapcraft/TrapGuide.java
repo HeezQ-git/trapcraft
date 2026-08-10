@@ -658,8 +658,11 @@ public final class TrapGuide {
         pages.add(page(Text.empty()
                 .append(title("1. GROWING\n\n"))
                 .append(body("Plant seeds on farmland. Dirt and grass work too, just slower.\n\n"))
-                .append(body("Four stages. Water speeds it up.\n\n"))
-                .append(hint("It won't uproot itself if the farmland dries out."))));
+                .append(body("Four stages. Watered: ~" + Math.round(TrapMath.stageMinutes(
+                        TrapMath.WEED_GROWTH_ROLLS_WET, 3) * 3) + " min. Dry: ~"
+                        + Math.round(TrapMath.stageMinutes(
+                        TrapMath.WEED_GROWTH_ROLLS_DRY, 3) * 3) + " min.\n\n"))
+                .append(hint("Water is worth 3 quality points AND half the wait."))));
 
         pages.add(page(Text.empty()
                 .append(title("1b. HARVEST\n\n"))

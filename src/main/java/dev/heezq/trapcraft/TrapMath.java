@@ -1094,13 +1094,35 @@ public final class TrapMath {
      * which is indistinguishable from broken and is exactly what it was
      * reported as.
      *
-     * Cannabis lives with the same formula and is fine, because Quality pays
-     * three points for moisture 7 and so everybody plants it on wet farmland.
      * Coca has no grade at all -- its value is in the press and the refiner --
      * so nothing ever told anyone the substrate mattered. Rather than invent a
-     * reason to care, the bush now simply ignores it.
+     * reason to care, the bush simply ignores it.
+     *
+     * Faster than weed on purpose, which reverses the old intent and is
+     * correct: a bush is three quarters of the way to nothing on its own. The
+     * leaves still have to go through the press and then the refiner before
+     * they are worth anything, so the growing is the short end of that chain
+     * and pricing it as the long end just made people stop farming it.
      */
-    public static final int COCA_GROWTH_ROLLS = 13;
+    public static final int COCA_GROWTH_ROLLS = 6;
+
+    /**
+     * Random ticks a cannabis plant waits, watered and not.
+     *
+     * Same fix as the coca bush and the same cause -- vanilla's moisture
+     * scaling only recognising {@code Blocks.FARMLAND}, so a plant on any of
+     * the pack's forty food mods' farmland crawled at two hours a stage while
+     * scoring full marks for quality. Weed keeps a real wet/dry gap because
+     * "keep water close" is the oldest rule in this mod and is already worth
+     * three quality points; it should be worth time too. Dry is now twice as
+     * slow rather than eight times, and {@link CannabisCropBlock#hydrated}
+     * decides which applies for BOTH the speed and the grade.
+     *
+     * Wet is held at what a well-run farm already measured, because that is
+     * the case nobody complained about.
+     */
+    public static final int WEED_GROWTH_ROLLS_WET = 13;
+    public static final int WEED_GROWTH_ROLLS_DRY = 26;
 
     // --- the kitchen ------------------------------------------------------------
 

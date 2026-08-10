@@ -241,22 +241,48 @@ public class CannabisCropBlock extends CropBlock implements PolymerTexturedBlock
      * checkerboard of two strains breeds and a scattered field mostly doesn't.
      */
     /**
-     * How many random ticks are thrown away for each one that grows the plant.
+     * Whether the ground under this plant counts as watered.
      *
-     * Cannabis has four stages where wheat has eight, so a plain vanilla crop
-     * tick moves it twice as far -- which made a field go from seed to harvest
-     * in about the time wheat takes to sprout. Gating the tick puts it back on
-     * the slow side of wheat, which is where a crop worth this much money
-     * belongs.
+     * ONE definition, used by both the grade and the growth rate, and that is
+     * the whole reason it exists as a method. It used to be inlined in
+     * {@link #gradeAt} while growth went through vanilla's own moisture check
+     * -- and vanilla's counts {@code Blocks.FARMLAND} and nothing else. On any
+     * of the forty food mods' farmland the two disagreed: full marks for
+     * quality, no credit at all for speed, so you got Fire-grade weed at eight
+     * times the growing time and nothing in the game ever said so.
      */
-    private static final int GROWTH_PATIENCE = 4;
+    static boolean hydrated(net.minecraft.world.BlockView world, BlockPos pos) {
+        BlockState floor = world.getBlockState(pos.down());
+        return floor.contains(Properties.MOISTURE) && floor.get(Properties.MOISTURE) >= 7;
+    }
 
+    /**
+     * Grows on its own clock, like the coca bush, and for the same reason.
+     *
+     * This gated {@code super.randomTick}, which is vanilla crop growth --
+     * correct, but scaled by a moisture reading that only recognises vanilla
+     * farmland. Wet vanilla farmland came out at about a quarter of an hour a
+     * stage and everything else at two hours, which is the difference between
+     * a crop and a rumour.
+     *
+     * Watered ground still grows faster, deliberately: "keep water close" is
+     * the oldest rule in this mod and it is worth three quality points, so it
+     * should be worth time as well. What changed is that dry ground is now
+     * twice as slow rather than eight times, and that modded farmland finally
+     * counts as the farmland it obviously is.
+     */
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        // super.randomTick is vanilla crop growth and nothing else, so gating
-        // it slows the plant without touching light or moisture rules.
-        if (random.nextInt(GROWTH_PATIENCE) == 0) {
-            super.randomTick(state, world, pos, random);
+        // The one vanilla rule kept: a plant still needs light to grow, so a
+        // cellar farm still fails and still says so by simply standing still.
+        if (world.getBaseLightLevel(pos, 0) >= 9) {
+            int age = getAge(state);
+            int rolls = hydrated(world, pos)
+                    ? TrapMath.WEED_GROWTH_ROLLS_WET : TrapMath.WEED_GROWTH_ROLLS_DRY;
+            if (age < getMaxAge() && random.nextInt(rolls) == 0) {
+                world.setBlockState(pos, withAge(age + 1), Block.NOTIFY_LISTENERS);
+                state = world.getBlockState(pos);
+            }
         }
 
         if (!isMature(state)) {
@@ -288,13 +314,9 @@ public class CannabisCropBlock extends CropBlock implements PolymerTexturedBlock
 
     /** Reads the conditions the plant actually grew in, at the moment you pick it. */
     private Quality gradeAt(ServerWorld world, BlockPos pos, BlockState state) {
-        BlockState floor = world.getBlockState(pos.down());
-        // Same breadth as placement: modded farmland should score for hydration
-        // too, or growing on it would silently cost you 3 quality points.
-        boolean hydrated = floor.contains(Properties.MOISTURE)
-                && floor.get(Properties.MOISTURE) >= 7;
         int light = world.getBaseLightLevel(pos, 0);
-        return Quality.fromConditions(hydrated, light, world.isSkyVisible(pos), state.get(RUSHED));
+        return Quality.fromConditions(hydrated(world, pos), light,
+                world.isSkyVisible(pos), state.get(RUSHED));
     }
 
     /**

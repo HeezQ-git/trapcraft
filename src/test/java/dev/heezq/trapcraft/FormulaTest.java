@@ -1648,11 +1648,45 @@ class FormulaTest {
      * that says "about a quarter of an hour" is only worth having if something
      * checks it still means that.
      */
+    /** Three stages, so the useful figure is what the whole plant costs you. */
+    private static float seedToRipe(int rolls) {
+        return TrapMath.stageMinutes(rolls, 3) * 3;
+    }
+
+    /**
+     * Nothing may take so long that people stop believing it grows.
+     *
+     * The bug this guards was not a wrong formula, it was a right formula
+     * nobody had costed: vanilla's moisture scaling put a coca bush on dirt at
+     * two hours a stage, so the last stage was never reached by anybody. These
+     * numbers are only worth having if something checks they still mean what
+     * they say.
+     */
     @Test
-    void aCocaBushRipensInsideAnEvening() {
-        float stage = TrapMath.stageMinutes(TrapMath.COCA_GROWTH_ROLLS, 3);
-        assertTrue(stage > 8 && stage < 25, "a stage takes " + stage + " minutes");
-        assertTrue(stage * 3 < 60, "seed to ripe takes " + stage * 3 + " minutes");
+    void everythingRipensInsideOneSession() {
+        assertTrue(seedToRipe(TrapMath.COCA_GROWTH_ROLLS) < 30,
+                "coca takes " + seedToRipe(TrapMath.COCA_GROWTH_ROLLS) + " minutes");
+        assertTrue(seedToRipe(TrapMath.WEED_GROWTH_ROLLS_WET) < 60,
+                "watered weed takes " + seedToRipe(TrapMath.WEED_GROWTH_ROLLS_WET));
+        // The dry case is the one that was six hours. It is allowed to be a
+        // punishment; it is not allowed to be a wall.
+        assertTrue(seedToRipe(TrapMath.WEED_GROWTH_ROLLS_DRY) < 120,
+                "dry weed takes " + seedToRipe(TrapMath.WEED_GROWTH_ROLLS_DRY));
+    }
+
+    /** And nothing may be so fast that farming it stops being a wait at all. */
+    @Test
+    void nothingRipensInstantly() {
+        for (int rolls : new int[]{TrapMath.COCA_GROWTH_ROLLS,
+                TrapMath.WEED_GROWTH_ROLLS_WET, TrapMath.WEED_GROWTH_ROLLS_DRY}) {
+            assertTrue(seedToRipe(rolls) > 10, rolls + " rolls is " + seedToRipe(rolls) + " min");
+        }
+    }
+
+    /** Keeping water close has to be worth time, not just quality points. */
+    @Test
+    void wateredWeedBeatsDryWeed() {
+        assertTrue(TrapMath.WEED_GROWTH_ROLLS_WET < TrapMath.WEED_GROWTH_ROLLS_DRY);
     }
 
     @Test
