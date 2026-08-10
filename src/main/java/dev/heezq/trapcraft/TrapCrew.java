@@ -105,6 +105,32 @@ public final class TrapCrew {
     /** Small enough that the game never counts them heavy enough to trample. */
     private static final double HAND_SCALE = 0.85;
 
+    /**
+     * Jobs in a stretch before they stop for a minute, and how long for.
+     *
+     * A hand that works every ten seconds without pause, all night, is not
+     * somebody you hired -- it is a hopper with a face, and the whole point of
+     * the crew being people is that people are worse than hoppers in
+     * interesting ways. A shift and a breather is the cheapest way to say so
+     * that does not turn into a stamina bar nobody asked for.
+     */
+    private static final int JOBS_PER_SHIFT = 12;
+    private static final int BREAK_TICKS = 20 * 45;
+
+    /**
+     * Whether they work nights.
+     *
+     * They do not, and this is the bigger half of the same nerf: a patch is
+     * only worked for the daylight part of the cycle, so a hand's output is
+     * roughly halved and the wage is not. Sleeping through the dark also means
+     * a farm is quiet at exactly the hours a raid turns up, which is a real
+     * consequence rather than a flavour note -- nobody is picking your field
+     * while the pillagers are in it.
+     */
+    private static boolean onTheClock(ServerWorld world) {
+        return world.isDay();
+    }
+
     // --- what a hand can be taught -------------------------------------------
 
     /**
@@ -195,7 +221,10 @@ public final class TrapCrew {
     }
 
     public static final int[] PACE_TICKS = {200, 120, 80, 50, 30};
-    public static final int[] PACE_COST = {0, 150, 320, 700, 1400};
+    // Steeper than it was. A maxed hand is now a project you save for rather
+    // than something you buy on the way past, which is what "each tier should
+    // cost more" has to mean once the tiers actually matter.
+    public static final int[] PACE_COST = {0, 200, 450, 1000, 2200};
     public static final int[] PACE_WAGE = {0, 6, 14, 26, 44};
     public static final String[] PACE_NAME = {"Plodding", "Steady", "Brisk", "Quick", "Flat out"};
 
@@ -220,6 +249,12 @@ public final class TrapCrew {
         int jobs = 1 << Job.PICK.ordinal();
         /** Passes since anything actually got done. Not saved -- it's a mood. */
         int idle;
+        /** Jobs done since the last breather. */
+        int worked;
+        /** Server tick they are back on the clock. */
+        int restUntil;
+        /** Bed they have been using, so they go back to the same one. */
+        BlockPos bed;
         /**
          * Where the chest was last time. Not saved either.
          *
@@ -587,6 +622,17 @@ public final class TrapCrew {
         ServerWorld world = (ServerWorld) mob.getWorld();
         equip(mob, hand);
 
+        if (!onTheClock(world)) {
+            knockOff(world, mob, hand);
+            return;
+        }
+        if (mob.isSleeping()) {
+            mob.wakeUp();
+        }
+        if (server.getTicks() < hand.restUntil) {
+            return;   // on a break; they are stood about on purpose
+        }
+
         // Keep them on the job. The old one wandered out of the field and came
         // back minutes later because nothing ever told it not to: a villager
         // with no walk target goes and finds one. Handing it a target every
@@ -634,6 +680,52 @@ public final class TrapCrew {
         }
         hand.idle = 0;
         doWork(world, mob, hand, job, box);
+        if (++hand.worked >= JOBS_PER_SHIFT) {
+            hand.worked = 0;
+            hand.restUntil = server.getTicks() + BREAK_TICKS;
+            world.spawnParticles(ParticleTypes.SPLASH, mob.getX(), mob.getEyeY(), mob.getZ(),
+                    5, 0.2, 0.1, 0.2, 0.01);
+        }
+    }
+
+    /**
+     * Night. Find a bed inside the patch and get in it, or stand at the spot.
+     *
+     * The bed is looked for once and then remembered, because the search is
+     * the same outward scan everything else here uses and running it every
+     * night for every hand is a lot of block reads for a question whose answer
+     * changes about never. If somebody takes the bed away they get the scan
+     * again the next night.
+     */
+    private static void knockOff(ServerWorld world, VillagerEntity mob, Hand hand) {
+        hand.worked = 0;
+        if (hand.bed != null && !(world.getBlockState(hand.bed).getBlock()
+                instanceof net.minecraft.block.BedBlock)) {
+            hand.bed = null;
+        }
+        if (hand.bed == null) {
+            for (BlockPos pos : BlockPos.iterateOutwards(hand.patch, hand.reachBlocks(), 4,
+                    hand.reachBlocks())) {
+                if (world.getBlockState(pos).getBlock() instanceof net.minecraft.block.BedBlock) {
+                    hand.bed = pos.toImmutable();
+                    break;
+                }
+            }
+        }
+        if (hand.bed == null) {
+            // Nowhere to sleep, so they just stop where the work is. Somebody
+            // who wants their hand tucked up can build them a room, which is
+            // a nicer reason to build one than decoration.
+            walkTo(mob, hand.patch, hand);
+            return;
+        }
+        if (mob.getBlockPos().isWithinDistance(hand.bed, 2.0)) {
+            if (!mob.isSleeping()) {
+                mob.sleep(hand.bed);
+            }
+        } else {
+            walkTo(mob, hand.bed, hand);
+        }
     }
 
     private static void walkTo(VillagerEntity mob, BlockPos target, Hand hand) {

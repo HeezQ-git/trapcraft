@@ -42,7 +42,16 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
     public static final IntProperty PROGRESS = IntProperty.of("progress", 0, DONE);
 
     /** Leaves consumed per batch. */
-    public static final int LEAVES_PER_BATCH = 3;
+    /**
+     * Leaves one batch of paste takes.
+     *
+     * Raised from three when the coca line turned out to be earning about five
+     * times what weed does per plant-minute. A bush drops two to four leaves,
+     * so a batch is now two bushes rather than one -- which is also the honest
+     * fiction, since the whole point of the refined line is that it needs a
+     * FIELD behind it rather than a window box.
+     */
+    public static final int LEAVES_PER_BATCH = 5;
     private static final int STEP_TICKS = 600;   // 30s a step, 90s total
 
     private final BlockState emptyState;

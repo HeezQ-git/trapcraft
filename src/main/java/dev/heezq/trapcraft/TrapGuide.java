@@ -880,9 +880,24 @@ public final class TrapGuide {
     private static void heat(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("8. HEAT\n\n"))
-                .append(body("A grow in the open gets noticed. You get a warning first.\n\n"))
-                .append(body("Bigger plot, bigger crew, sooner they return.\n\n"))
-                .append(hint("Grow indoors, or split it up."))));
+                .append(body("A grow in the open gets noticed. You get a warning.\n\n"))
+                .append(body("Bigger plot, sooner they come back.\n\n"))
+                .append(hint("Past the top tier, sooner still."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8a. BOTH LINES\n\n"))
+                .append(body("Coca counts now. So do presses and refiners.\n\n"))
+                .append(body("Weed AND coca in one place is worth "
+                        + Math.round((TrapHeat.MIXED_TRADE - 1) * 100)
+                        + "% more heat than the two apart.\n\n"))
+                .append(hint("Two sheds beat one shed."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8a3. WALLS\n\n"))
+                .append(body("Sealing the grow in buys you time, not safety.\n\n"))
+                .append(body("If they can't find a way round, they come "
+                        + "through the wall.\n\n"))
+                .append(warn("Obsidian stops them. Dirt does not."))));
 
         pages.add(page(Text.empty()
                 .append(title("8b. THE NUMBERS\n\n"))
@@ -949,9 +964,9 @@ public final class TrapGuide {
     private static void checking(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("8a2. /HEAT\n\n"))
-                .append(body("How hot the spot you're on is, and what "
-                        + "it would bring.\n\n"))
+                .append(body("How hot this spot is, and what it brings.\n\n"))
                 .append(body("Ripe 3, hidden 2, growing 1, rack 1.\n\n"))
+                .append(body("Coca the same. Machines 2.\n\n"))
                 .append(hint("Reads 22 across, 10 tall."))));
     }
 
@@ -1043,7 +1058,14 @@ public final class TrapGuide {
                         + "taught them with them."))));
 
         pages.add(page(Text.empty()
-                .append(title("9. WHAT THEY WON'T DO\n\n"))
+                .append(title("9. HOURS\n\n"))
+                .append(body("Daylight only.\n\n"))
+                .append(body("At dusk they find a bed in the patch and turn "
+                        + "in. Build them one.\n\n"))
+                .append(hint("They take breathers, too."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9b. WHAT THEY WON'T DO\n\n"))
                 .append(body("Pull a rack early. That costs a grade.\n\n"))
                 .append(body("Bone meal YOUR crops. Same reason.\n\n"))
                 .append(body("Tread farmland back into dirt.\n\n"))

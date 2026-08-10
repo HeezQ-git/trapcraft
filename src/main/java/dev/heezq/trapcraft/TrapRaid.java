@@ -45,8 +45,21 @@ public final class TrapRaid {
 
     /** One raid in progress, and what it is working through. */
     private record Search(ServerWorld world, BlockPos site, List<MobEntity> raiders,
-                          int[] left, int[] clean) {
+                          int[] left, int[] clean, int[] stuck) {
     }
+
+    /**
+     * Steps of getting nowhere before they start taking the wall apart.
+     *
+     * A bunker used to be a complete answer. Raiders steer by navigation, a
+     * sealed room has no path into it, so they milled about outside until the
+     * clock ran out and the grow was untouched every single time -- which made
+     * the whole heat system a one-off building cost rather than an ongoing
+     * risk. Walling it in should COST them time, not end the conversation.
+     */
+    private static final int BREACH_AFTER = 12;
+    /** Blocks one breach takes out. Enough to get through a wall, not a room. */
+    private static final int BREACH_BLOCKS = 3;
 
     private static final List<Search> RUNNING = new ArrayList<>();
 
@@ -68,7 +81,7 @@ public final class TrapRaid {
             return;
         }
         RUNNING.add(new Search(world, site, raiders, new int[]{SEARCH_TICKS},
-                new int[]{1}));
+                new int[]{1}, new int[]{0}));
     }
 
     /**
@@ -99,11 +112,19 @@ public final class TrapRaid {
         }
         search.clean()[0] = 0;
 
+        MobEntity closest = null;
+        double closestDistance = Double.MAX_VALUE;
         for (MobEntity raider : search.raiders()) {
-            if (raider.squaredDistanceTo(target.getX() + 0.5, target.getY() + 0.5,
-                    target.getZ() + 0.5) <= REACH * REACH) {
+            double distance = raider.squaredDistanceTo(target.getX() + 0.5,
+                    target.getY() + 0.5, target.getZ() + 0.5);
+            if (distance <= REACH * REACH) {
+                search.stuck()[0] = 0;
                 ransack(search.world(), target, raider);
                 return true;   // one container per step, so it reads as searching
+            }
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = raider;
             }
             // Steering by navigation rather than by adding an AI goal: the
             // goal selector is protected and would need a mixin, and all this
@@ -111,7 +132,68 @@ public final class TrapRaid {
             raider.getNavigation().startMovingTo(
                     target.getX() + 0.5, target.getY(), target.getZ() + 0.5, 1.0);
         }
+
+        // Nobody got there. Give them a while to walk round the front, and
+        // then let them make their own door.
+        if (closest != null && ++search.stuck()[0] >= BREACH_AFTER) {
+            search.stuck()[0] = 0;
+            breach(search.world(), closest, target);
+        }
         return true;
+    }
+
+    /**
+     * They come through the wall.
+     *
+     * A few blocks along the line from the raider to the stash, and only ever
+     * a few -- this is a hole to get an arm through, not a demolition. What it
+     * costs a builder is the wall; what it costs the raid is the twenty-odd
+     * seconds of BREACH_AFTER it took to decide to do it, which is time not
+     * spent carrying product away.
+     *
+     * Hardness is the defence that still works. Anything they cannot break by
+     * hand -- obsidian, a wall of blocks with no hardness to speak of -- stops
+     * the ray dead, so a vault is still a vault and a dirt shed is still a
+     * dirt shed. That is a better answer than "bunkers don't work" and a much
+     * better one than "bunkers always work".
+     */
+    private static void breach(ServerWorld world, MobEntity raider, BlockPos target) {
+        net.minecraft.util.math.Vec3d from = raider.getEyePos();
+        net.minecraft.util.math.Vec3d to = net.minecraft.util.math.Vec3d.ofCenter(target);
+        net.minecraft.util.math.Vec3d step = to.subtract(from).normalize();
+
+        int broken = 0;
+        boolean announced = false;
+        for (double along = 1.0; along < REACH + 24 && broken < BREACH_BLOCKS; along += 0.5) {
+            BlockPos pos = BlockPos.ofFloored(from.add(step.multiply(along)));
+            var state = world.getBlockState(pos);
+            if (state.isAir() || pos.equals(target)) {
+                continue;
+            }
+            float hardness = state.getHardness(world, pos);
+            // Negative is unbreakable (bedrock); the cutoff is roughly
+            // "harder than iron", which is where obsidian sits.
+            if (hardness < 0 || hardness > 25.0f) {
+                break;
+            }
+            if (world.getBlockEntity(pos) != null) {
+                break;   // never chew through somebody's chest to reach another
+            }
+            world.breakBlock(pos, false);
+            broken++;
+            if (!announced) {
+                announced = true;
+                world.playSound(null, pos, net.minecraft.sound.SoundEvents.ENTITY_RAVAGER_ROAR,
+                        net.minecraft.sound.SoundCategory.HOSTILE, 1.0F, 0.8F);
+                for (ServerPlayerEntity player : world.getPlayers()) {
+                    if (player.getBlockPos().isWithinDistance(pos, 64)) {
+                        player.sendMessage(net.minecraft.text.Text.literal(
+                                        "They're coming through the wall.")
+                                .formatted(net.minecraft.util.Formatting.RED), false);
+                    }
+                }
+            }
+        }
     }
 
     /** The closest container within reach of the site that has product in it. */

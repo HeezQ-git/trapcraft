@@ -470,7 +470,7 @@ public final class TrapDealing {
             if (!held.isOf(TrapContent.cocaPowder)) {
                 return false;
             }
-            each = premium(TrapComponents.getPurity(held).emeralds() * 2);
+            each = premium(TrapComponents.getPurity(held).emeralds());
         } else if (craving.isMix()) {
             Blend blend = matchingMix(held, craving);
             if (blend == null) {
@@ -947,7 +947,7 @@ public final class TrapDealing {
         }
         var item = stack.getItem();
         if (item == TrapContent.cocaPowder) {
-            return premium(TrapComponents.getPurity(stack).emeralds() * 2);
+            return premium(TrapComponents.getPurity(stack).emeralds());
         }
         if (item == TrapContent.blendBudItem || item == TrapContent.blendJointItem) {
             Blend blend = TrapComponents.getBlend(stack);

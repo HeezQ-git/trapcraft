@@ -204,7 +204,8 @@ public final class TrapHeat {
             return;
         }
 
-        int tier = tierFor(measureHeat(world, pos));
+        int heat = measureHeat(world, pos);
+        int tier = tierFor(heat);
         if (tier < 0) {
             return;
         }
@@ -214,7 +215,7 @@ public final class TrapHeat {
         // cooldown to the biggest one.
         long now = world.getTime();
         Long last = lastRaid.get(world.getRegistryKey());
-        if (last != null && now - last < COOLDOWN_TICKS[tier]) {
+        if (last != null && now - last < cooldownFor(tier, heat)) {
             return;
         }
 
@@ -238,6 +239,39 @@ public final class TrapHeat {
 
     public static long cooldownMinutes(int tier) {
         return COOLDOWN_TICKS[tier] / 20 / 60;
+    }
+
+    /** The least time that may ever pass between two visits. */
+    private static final long COOLDOWN_FLOOR = 20L * 90;
+
+    /**
+     * How long until the next visit, given how far PAST the top tier you are.
+     *
+     * The tier ladder stops at {@link #THRESHOLDS}, so before this there was
+     * no difference at all between an operation at the cap and one at four
+     * times the cap -- both got the same squad on the same four-minute clock,
+     * and the correct play was therefore to build the biggest grow you could
+     * physically fit, because nothing past 175 heat cost you anything.
+     *
+     * Now the cooldown shortens in proportion. Twice the cap is twice as
+     * often, three times is three times, down to a floor of ninety seconds so
+     * a mega-farm is under near-constant pressure rather than under an
+     * unsurvivable one. The tier -- who turns up -- is unchanged; this is
+     * purely how often they do.
+     */
+    private static long cooldownFor(int tier, int heat) {
+        long base = COOLDOWN_TICKS[tier];
+        int cap = THRESHOLDS[THRESHOLDS.length - 1];
+        if (tier < THRESHOLDS.length - 1 || heat <= cap) {
+            return base;
+        }
+        return Math.max(COOLDOWN_FLOOR, Math.round(base * (cap / (double) heat)));
+    }
+
+    /** For /heat, so a player can see what their size is actually costing. */
+    public static long cooldownMinutesAt(int heat) {
+        int tier = tierFor(heat);
+        return tier < 0 ? 0 : cooldownFor(tier, heat) / 20 / 60;
     }
 
     /** Highest tier this heat reaches, or -1 for "nobody cares yet". */
@@ -305,8 +339,26 @@ public final class TrapHeat {
      * Public so /heat can show a player the same number this uses. A
      * diagnostic that computes its own answer is a diagnostic that lies.
      */
+    /**
+     * What running both lines in one place costs you.
+     *
+     * A field of weed is a farm somebody might explain away. A field of weed
+     * with the coca line running through it is an OPERATION, and the whole
+     * point of heat is that the size of the thing is what gets noticed. Coca
+     * used to be worth nothing at all here -- a full refinery generated
+     * literally zero heat -- so the safest possible layout was to put the
+     * expensive half of the mod next to the cheap half and let the cheap half
+     * take all the risk.
+     *
+     * Applied only when BOTH are present, so a pure coca grower and a pure
+     * weed grower are each measured on their own merits and only the person
+     * doing both pays for doing both.
+     */
+    public static final float MIXED_TRADE = 1.35f;
+
     public static int measureHeat(ServerWorld world, BlockPos centre) {
-        int heat = 0;
+        int weed = 0;
+        int coca = 0;
         BlockPos.Mutable cursor = new BlockPos.Mutable();
         for (int dx = -RADIUS; dx <= RADIUS; dx++) {
             for (int dz = -RADIUS; dz <= RADIUS; dz++) {
@@ -321,18 +373,27 @@ public final class TrapHeat {
                         // life -- doubly so since growth was slowed.
                         boolean seen = world.isSkyVisible(cursor);
                         if (crop.isMature(state)) {
-                            heat += seen ? 3 : 2;
+                            weed += seen ? 3 : 2;
                         } else {
-                            heat += seen ? 1 : 0;
+                            weed += seen ? 1 : 0;
                         }
+                    } else if (state.getBlock() instanceof CocaCropBlock bush) {
+                        boolean seen = world.isSkyVisible(cursor);
+                        coca += bush.isMature(state) ? (seen ? 3 : 2) : (seen ? 1 : 0);
                     } else if (state.getBlock() instanceof DryingRackBlock
                             && state.get(DryingRackBlock.OCCUPIED)) {
-                        heat += 1;
+                        weed += 1;
+                    } else if (state.getBlock() instanceof RefinerBlock
+                            || state.getBlock() instanceof LeafPressBlock) {
+                        // The machinery is as damning as the plants. A shed of
+                        // presses is not a hobby.
+                        coca += 2;
                     }
                 }
             }
         }
-        return heat;
+        int total = weed + coca;
+        return weed > 0 && coca > 0 ? Math.round(total * MIXED_TRADE) : total;
     }
 
     /** What tier this heat reaches, or -1. Public for the diagnostic. */

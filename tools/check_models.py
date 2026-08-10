@@ -91,6 +91,26 @@ def texture_exists(ref: str) -> bool:
     return (TEXTURES / (ref.split(":", 1)[1] + ".png")).is_file()
 
 
+def effect_icons() -> list[str]:
+    """Every registered status effect needs an icon in textures/mob_effect.
+
+    Vanilla draws a missing one as the black-and-purple chequer in the effect
+    list and the inventory, and says nothing anywhere -- which from the outside
+    is indistinguishable from the mod being broken. Wired shipped without one
+    and stayed that way until somebody thought to mention the purple squares.
+
+    Read off the registration call rather than a list, so a fourth effect is
+    covered the day it is added instead of the day somebody remembers.
+    """
+    content = (SRC / "TrapContent.java").read_text()
+    problems = []
+    for name in re.findall(r'RegistryKeys\.STATUS_EFFECT, TrapCraft\.id\("([a-z_]+)"\)', content):
+        if not (TEXTURES / "mob_effect" / f"{name}.png").is_file():
+            problems.append(f"status effect '{name}' has no textures/mob_effect/{name}.png "
+                            f"-- it will render as missing-texture purple")
+    return problems
+
+
 def main() -> None:
     problems = []
     checked = 0
@@ -136,6 +156,7 @@ def main() -> None:
             problems.append(f"{rel}: has elements but no particle texture")
 
     problems.extend(xray_holes())
+    problems.extend(effect_icons())
 
     for problem in problems:
         print(f"  {problem}")
