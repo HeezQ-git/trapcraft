@@ -1,14 +1,15 @@
 # Publishes site/ to GitHub Pages on every push to the default branch.
 #
-# The page is REGENERATED here rather than trusted from the commit, so a
-# tuning pass that forgot to run gen_wiki.py cannot ship a wiki that
-# disagrees with the mod. If the generator can't find a constant it exits
-# non-zero and the deploy fails, which is the point.
+# Deliberately dumb: it uploads what was committed and nothing else. The wiki
+# is GENERATED, and the freshness check for it lives in tools/check_wiki.py,
+# which deploy.py runs before shipping. It has to: the icons are read out of
+# the Minecraft jar in the local Loom cache, so the page can only be built on
+# a machine that has built the mod. A runner cannot do it and should not try.
 name: wiki
 
 on:
   push:
-    branches: [master, main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -21,28 +22,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Regenerate the wiki from source
-        run: python3 tools/gen_wiki.py
-      - name: Fail if it differs from what was committed
-        run: git diff --exit-code site/ || (echo "::error::site/ is stale -- run python3 tools/gen_wiki.py and commit" && exit 1)
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4
