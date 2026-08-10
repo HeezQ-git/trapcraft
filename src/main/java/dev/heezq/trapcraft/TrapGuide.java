@@ -356,6 +356,13 @@ public final class TrapGuide {
                 .append(hint("Emerald block in the middle."))));
 
         pages.add(page(Text.empty()
+                .append(title("4z. THE BOOKS\n\n"))
+                .append(body("Every emerald earned is written down, tagged "
+                        + "with the job it came from.\n\n"))
+                .append(body("/earnings  -  today, everybody.\n\n"))
+                .append(hint("Full history in the world folder."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4a. YOUR STALL\n\n"))
                 .append(body("Put a chest UNDER the one you placed. The "
                         + "contents go on sale.\n\n"))
