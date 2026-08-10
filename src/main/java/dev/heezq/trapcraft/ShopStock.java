@@ -227,6 +227,7 @@ public final class ShopStock {
     private static void stockTheKitchen() {
         int foods = 0;
         int seeds = 0;
+        int dearest = 0;
         for (Item item : Registries.ITEM) {
             String id = Registries.ITEM.getId(item).toString();
             if (DECLARED.containsKey(id) || NEVER_STOCK.contains(id) || CURRENCY.contains(id)) {
@@ -234,20 +235,28 @@ public final class ShopStock {
             }
             FoodComponent food = item.getComponents().get(DataComponentTypes.FOOD);
             if (food != null) {
-                int count = food.nutrition() >= 8 ? 1 : food.nutrition() >= 5 ? 2 : 4;
-                int base = Math.max(3, Math.round(count
-                        * (food.nutrition() * 0.8f + food.saturation() * 0.5f + 1.0f)));
-                STOCK.add(new Entry(FOOD, item, id, count, base,
+                int each = TrapMath.foodPrice(food.nutrition(), food.saturation(),
+                        item.getDefaultStack().getMaxCount());
+                int count = TrapMath.foodLot(each);
+                STOCK.add(new Entry(FOOD, item, id, count, each * count,
                         new ItemStack(item, count), item.getName().getString()));
                 foods++;
+                dearest = each > dearest ? each : dearest;
             } else if (plantable(item)) {
-                STOCK.add(new Entry(FARMING, item, id, 8, 14,
+                STOCK.add(new Entry(FARMING, item, id, 8, SEED_LOT,
                         new ItemStack(item, 8), item.getName().getString()));
                 seeds++;
             }
         }
-        TrapCraft.LOGGER.info("market: found {} foods and {} seeds in the registry", foods, seeds);
+        // Logged with the top of the range, because a food mod that ships a
+        // dish with absurd nutrition would quietly become the best money on the
+        // server and there is nothing in game that would ever point at it.
+        TrapCraft.LOGGER.info("market: found {} foods and {} seeds in the registry, "
+                + "dearest helping {}e", foods, seeds, dearest);
     }
+
+    /** What eight of anybody's seeds cost. Cheap: they come out of grass. */
+    private static final int SEED_LOT = 12;
 
     /**
      * Put every flower, sapling and leaf in the game on the garden shelf.
@@ -388,7 +397,7 @@ public final class ShopStock {
         add(c, "minecraft:exposed_copper", 32, 14);
         add(c, "minecraft:weathered_copper", 32, 14);
         add(c, "minecraft:oxidized_copper", 32, 14);
-        add(c, "minecraft:waxed_copper_block", 8, 28);
+        add(c, "minecraft:waxed_copper_block", 4, 34);
         add(c, "minecraft:cut_copper", 32, 16);
         add(c, "minecraft:magma_block", 16, 20);
         add(c, "minecraft:soul_sand", 32, 10);
@@ -439,8 +448,8 @@ public final class ShopStock {
         add(c, "minecraft:dripstone_block", 32, 8);
         add(c, "minecraft:pale_moss_block", 16, 14);
         add(c, "minecraft:pearlescent_froglight", 4, 45);
-        add(c, "minecraft:cobblestone", 64, 4);
-        add(c, "minecraft:stone", 64, 6);
+        add(c, "minecraft:cobblestone", 64, 20);
+        add(c, "minecraft:stone", 64, 24);
         add(c, "minecraft:smooth_stone", 64, 8);
         add(c, "minecraft:stone_bricks", 64, 8);
         add(c, "minecraft:mossy_stone_bricks", 32, 10);
@@ -450,8 +459,8 @@ public final class ShopStock {
         add(c, "minecraft:granite", 64, 5);
         add(c, "minecraft:calcite", 32, 8);
         add(c, "minecraft:tuff", 64, 6);
-        add(c, "minecraft:deepslate", 64, 6);
-        add(c, "minecraft:cobbled_deepslate", 64, 5);
+        add(c, "minecraft:deepslate", 64, 22);
+        add(c, "minecraft:cobbled_deepslate", 64, 18);
         add(c, "minecraft:polished_deepslate", 32, 9);
         add(c, "minecraft:deepslate_bricks", 32, 10);
         add(c, "minecraft:blackstone", 32, 9);
@@ -506,9 +515,9 @@ public final class ShopStock {
         add(c, "minecraft:oak_leaves", 64, 4);
         add(c, "minecraft:podzol", 32, 8);
         add(c, "minecraft:mycelium", 16, 14);
-        add(c, "minecraft:brown_mushroom", 16, 6);
-        add(c, "minecraft:red_mushroom", 16, 6);
-        add(c, "minecraft:kelp", 16, 5);
+        add(c, "minecraft:brown_mushroom", 16, 32);
+        add(c, "minecraft:red_mushroom", 16, 32);
+        add(c, "minecraft:kelp", 16, 32);
         add(c, "minecraft:sea_pickle", 8, 12);
         add(c, "minecraft:cactus", 16, 6);
         add(c, "minecraft:dead_bush", 8, 4);
@@ -566,88 +575,124 @@ public final class ShopStock {
         add(c, "minecraft:paper", 32, 6);
     }
 
+    /**
+     * The raw end of the food chain, and the thing this market got worst.
+     *
+     * A stack of wheat used to fetch three emeralds. A field is an hour of
+     * tilling, planting, waiting and walking back, and it paid less than
+     * breaking one plant of the crop this mod is named after -- so the person
+     * doing the farming was subsidising everybody else, and correctly said so.
+     *
+     * These are now priced so a nine-by-nine takes about what a customer visit
+     * takes, which is the comparison that matters: it is a job on this server
+     * rather than a chore somebody does out of politeness. Cooking is still the
+     * better end of it, because a dish is several of these plus a fire.
+     *
+     * Every number here is bounded on both sides by check_stock.py: too low and
+     * uncrafting hay bales into wheat mints money, too high and baking bread
+     * does. The window is wide, but it is a window.
+     */
     private static void seeds() {
         Category c = FARMING;
-        add(c, "minecraft:beetroot_seeds", 16, 3);
-        add(c, "minecraft:melon_seeds", 8, 5);
-        add(c, "minecraft:pumpkin_seeds", 8, 5);
+        add(c, "minecraft:beetroot_seeds", 16, 12);
+        add(c, "minecraft:melon_seeds", 8, 8);
+        add(c, "minecraft:pumpkin_seeds", 8, 8);
         add(c, "minecraft:torchflower_seeds", 1, 40);
         add(c, "minecraft:pitcher_pod", 1, 40);
-        add(c, "minecraft:carrot", 16, 4);
-        add(c, "minecraft:potato", 16, 4);
-        add(c, "minecraft:wheat", 32, 6);
-        add(c, "minecraft:beetroot", 16, 5);
-        add(c, "minecraft:sugar_cane", 16, 6);
-        add(c, "minecraft:cocoa_beans", 16, 7);
-        add(c, "minecraft:nether_wart", 16, 14);
-        add(c, "minecraft:sweet_berries", 16, 5);
-        add(c, "minecraft:glow_berries", 16, 9);
+        add(c, "minecraft:carrot", 16, 20);
+        add(c, "minecraft:potato", 16, 20);
+        add(c, "minecraft:wheat", 16, 40);
+        // One beetroot per plant, where a carrot patch gives two to five, so
+        // it is priced per plant rather than per item like the rest.
+        add(c, "minecraft:beetroot", 16, 34);
+        add(c, "minecraft:sugar_cane", 16, 20);
+        add(c, "minecraft:cocoa_beans", 16, 18);
+        add(c, "minecraft:nether_wart", 16, 30);
+        add(c, "minecraft:sweet_berries", 16, 16);
+        add(c, "minecraft:glow_berries", 16, 22);
         add(c, "minecraft:bone_meal", 32, 9);
-        add(c, "minecraft:hay_block", 8, 10);
-        add(c, "minecraft:egg", 16, 5);
-        add(c, "minecraft:wheat_seeds", 16, 3);
+        // Nine wheat in a coat. Priced inside the window that stops it being
+        // an uncrafting bench: below 9x wheat's sell price and a bale bought
+        // here is nine wheat sold back for more.
+        add(c, "minecraft:hay_block", 4, 100);
+        add(c, "minecraft:egg", 16, 16);
+        add(c, "minecraft:wheat_seeds", 16, 12);
 
         // --- modded crops. Absent ids drop out at startup. ---
-        add(c, "farmersdelight:tomato_seeds", 8, 8);
-        add(c, "farmersdelight:cabbage_seeds", 8, 8);
-        add(c, "farmersdelight:rice", 16, 8);
-        add(c, "farmersdelight:tomato", 12, 8);
-        add(c, "farmersdelight:cabbage", 8, 8);
-        add(c, "farmersdelight:onion", 12, 7);
-        add(c, "farmersdelight:straw", 16, 5);
-        add(c, "culturaldelights:cucumber_seeds", 8, 8);
-        add(c, "culturaldelights:eggplant_seeds", 8, 8);
-        add(c, "culturaldelights:corn_kernels", 8, 8);
-        add(c, "culturaldelights:cucumber", 12, 7);
-        add(c, "culturaldelights:eggplant", 12, 7);
-        add(c, "culturaldelights:corn_cob", 12, 8);
-        add(c, "culturaldelights:avocado", 8, 12);
+        // Same lift as the vanilla crops above, and for the same reason: these
+        // are what the kitchen mods actually want you to grow, and they were
+        // priced under a quarter of what the dishes made from them fetch.
+        add(c, "farmersdelight:tomato_seeds", 8, 12);
+        add(c, "farmersdelight:cabbage_seeds", 8, 12);
+        add(c, "farmersdelight:rice", 16, 26);
+        add(c, "farmersdelight:tomato", 12, 26);
+        add(c, "farmersdelight:cabbage", 8, 20);
+        add(c, "farmersdelight:onion", 12, 24);
+        add(c, "farmersdelight:straw", 16, 10);
+        add(c, "culturaldelights:cucumber_seeds", 8, 12);
+        add(c, "culturaldelights:eggplant_seeds", 8, 12);
+        add(c, "culturaldelights:corn_kernels", 8, 12);
+        add(c, "culturaldelights:cucumber", 12, 24);
+        add(c, "culturaldelights:eggplant", 12, 24);
+        add(c, "culturaldelights:corn_cob", 12, 26);
+        add(c, "culturaldelights:avocado", 8, 26);
         add(c, "culturaldelights:avocado_sapling", 4, 14);
-        add(c, "rusticdelight:bell_pepper_seeds", 8, 8);
-        add(c, "rusticdelight:cotton_seeds", 8, 9);
-        add(c, "rusticdelight:coffee_beans", 12, 12);
-        add(c, "rusticdelight:bell_pepper_red", 8, 9);
-        add(c, "rusticdelight:bell_pepper_green", 8, 9);
-        add(c, "rusticdelight:bell_pepper_yellow", 8, 9);
-        add(c, "rusticdelight:cotton_boll", 12, 9);
-        add(c, "alcocraftplus:hop_seeds", 8, 10);
+        add(c, "rusticdelight:bell_pepper_seeds", 8, 12);
+        add(c, "rusticdelight:cotton_seeds", 8, 12);
+        add(c, "rusticdelight:coffee_beans", 12, 30);
+        add(c, "rusticdelight:bell_pepper_red", 8, 20);
+        add(c, "rusticdelight:bell_pepper_green", 8, 20);
+        add(c, "rusticdelight:bell_pepper_yellow", 8, 20);
+        add(c, "rusticdelight:cotton_boll", 12, 22);
+        add(c, "alcocraftplus:hop_seeds", 8, 14);
     }
 
     /**
      * Food, priced to be worth farming.
      *
-     * Smaller lots at higher prices than the raw ingredients suggest, because
-     * the sell side is 35% and a realistic price on a stack of bread means a
-     * day in the fields pays about four emeralds. Food is the one thing on this
-     * server that renews itself, so it earns like a crop rather than like
-     * gravel. The luxuries -- golden apples, cake -- keep their old prices;
-     * they are already anchored against the top shelf.
+     * These sit on {@link TrapMath#foodPrice}, the same curve every food the
+     * registry turns up is priced by, so a loaf of bread and a modded loaf of
+     * bread cost the same -- which they emphatically did not, by a factor of
+     * four, for as long as there were two ways to get on this shelf.
+     *
+     * They are hand-written anyway, because the curve reads nutrition and
+     * nutrition doesn't know what a recipe costs. A bowl of mushroom stew is
+     * two mushrooms and a bowl however filling vanilla says it is, and pricing
+     * it off its stomach rather than its shopping list turned a mushroom farm
+     * into a mint. Every one of these is bounded by check_stock.py against the
+     * real vanilla recipe, which is what the exceptions are for.
+     *
+     * The luxuries -- golden apples, cake -- keep their old prices; they are
+     * already anchored against the top shelf.
      */
     private static void kitchen() {
         Category c = FOOD;
-        add(c, "minecraft:bread", 8, 16);
-        add(c, "minecraft:cooked_beef", 6, 26);
-        add(c, "minecraft:cooked_porkchop", 6, 26);
-        add(c, "minecraft:cooked_chicken", 6, 21);
-        add(c, "minecraft:cooked_mutton", 6, 23);
-        add(c, "minecraft:cooked_rabbit", 6, 23);
-        add(c, "minecraft:cooked_salmon", 6, 23);
-        add(c, "minecraft:cooked_cod", 6, 21);
-        add(c, "minecraft:baked_potato", 8, 16);
-        add(c, "minecraft:pumpkin_pie", 4, 31);
+        add(c, "minecraft:bread", 4, 24);
+        add(c, "minecraft:cooked_beef", 4, 36);
+        add(c, "minecraft:cooked_porkchop", 4, 36);
+        add(c, "minecraft:cooked_chicken", 4, 28);
+        add(c, "minecraft:cooked_mutton", 4, 30);
+        add(c, "minecraft:cooked_rabbit", 4, 25);
+        add(c, "minecraft:cooked_salmon", 4, 30);
+        add(c, "minecraft:cooked_cod", 4, 25);
+        add(c, "minecraft:baked_potato", 8, 22);
+        add(c, "minecraft:pumpkin_pie", 4, 36);
         add(c, "minecraft:cake", 1, 14);
-        add(c, "minecraft:cookie", 8, 16);
-        add(c, "minecraft:apple", 8, 18);
-        add(c, "minecraft:melon_slice", 8, 13);
-        add(c, "minecraft:dried_kelp", 8, 13);
-        add(c, "minecraft:mushroom_stew", 2, 21);
-        add(c, "minecraft:rabbit_stew", 2, 36);
-        add(c, "minecraft:beetroot_soup", 2, 23);
-        add(c, "minecraft:suspicious_stew", 2, 18);
-        add(c, "minecraft:golden_carrot", 8, 46);
+        // Eight from two wheat and a cocoa bean, which is the cheapest food in
+        // the game to mass produce and priced like it. It was 2e each, and a
+        // crafting table full of them out-earned the farm they came from.
+        add(c, "minecraft:cookie", 8, 13);
+        add(c, "minecraft:apple", 8, 40);
+        add(c, "minecraft:melon_slice", 8, 28);
+        add(c, "minecraft:dried_kelp", 8, 32);
+        add(c, "minecraft:mushroom_stew", 2, 16);
+        add(c, "minecraft:rabbit_stew", 2, 56);
+        add(c, "minecraft:beetroot_soup", 2, 34);
+        add(c, "minecraft:suspicious_stew", 2, 20);
+        add(c, "minecraft:golden_carrot", 8, 72);
         add(c, "minecraft:milk_bucket", 1, 12);
         add(c, "minecraft:honey_bottle", 2, 36);
-        add(c, "minecraft:sugar", 8, 13);
+        add(c, "minecraft:sugar", 8, 20);
 
         add(c, "farmersdelight:hamburger", 2, 47);
         add(c, "farmersdelight:chicken_sandwich", 2, 42);
@@ -713,11 +758,11 @@ public final class ShopStock {
         Category c = MATERIALS;
         add(c, "minecraft:coal_block", 8, 22);
         add(c, "minecraft:raw_iron_block", 2, 40);
-        add(c, "minecraft:raw_copper_block", 2, 24);
+        add(c, "minecraft:raw_copper_block", 2, 12);
         add(c, "minecraft:raw_gold_block", 2, 60);
         add(c, "minecraft:iron_block", 2, 40);
         add(c, "minecraft:gold_block", 2, 70);
-        add(c, "minecraft:lapis_block", 4, 50);
+        add(c, "minecraft:lapis_block", 4, 34);
         add(c, "minecraft:redstone_block", 4, 30);
         add(c, "minecraft:clay", 16, 10);
         add(c, "minecraft:brick", 32, 10);
@@ -733,7 +778,7 @@ public final class ShopStock {
         add(c, "minecraft:bowl", 32, 6);
         add(c, "minecraft:slime_block", 4, 40);
         add(c, "minecraft:honey_block", 4, 34);
-        add(c, "minecraft:dried_kelp_block", 8, 20);
+        add(c, "minecraft:dried_kelp_block", 4, 72);
         add(c, "minecraft:cobweb", 8, 26);
         add(c, "minecraft:turtle_scute", 2, 50);
         add(c, "minecraft:rabbit_foot", 2, 45);
@@ -745,21 +790,21 @@ public final class ShopStock {
         add(c, "minecraft:raw_iron", 16, 16);
         add(c, "minecraft:iron_ingot", 8, 18);
         add(c, "minecraft:iron_nugget", 32, 6);
-        add(c, "minecraft:raw_copper", 32, 10);
-        add(c, "minecraft:copper_ingot", 16, 10);
+        add(c, "minecraft:raw_copper", 32, 22);
+        add(c, "minecraft:copper_ingot", 16, 24);
         add(c, "minecraft:raw_gold", 8, 24);
         add(c, "minecraft:gold_ingot", 8, 26);
-        add(c, "minecraft:gold_nugget", 32, 5);
+        add(c, "minecraft:gold_nugget", 32, 12);
         add(c, "minecraft:redstone", 32, 12);
         add(c, "minecraft:lapis_lazuli", 32, 14);
         add(c, "minecraft:quartz", 32, 18);
         add(c, "minecraft:diamond", 1, 42);
-        add(c, "minecraft:amethyst_shard", 8, 20);
+        add(c, "minecraft:amethyst_shard", 8, 40);
         add(c, "minecraft:netherite_scrap", 1, 260);
         add(c, "minecraft:ancient_debris", 1, 300);
-        add(c, "minecraft:flint", 16, 5);
-        add(c, "minecraft:string", 16, 6);
-        add(c, "minecraft:leather", 8, 12);
+        add(c, "minecraft:flint", 16, 24);
+        add(c, "minecraft:string", 16, 32);
+        add(c, "minecraft:leather", 8, 32);
         add(c, "minecraft:rabbit_hide", 8, 9);
         add(c, "minecraft:feather", 16, 6);
         add(c, "minecraft:bone", 16, 6);
@@ -795,7 +840,7 @@ public final class ShopStock {
         add(c, "minecraft:furnace_minecart", 1, 30);
         add(c, "minecraft:oak_boat", 2, 12);
         add(c, "minecraft:oak_chest_boat", 2, 18);
-        add(c, "minecraft:crossbow", 1, 26);
+        add(c, "minecraft:crossbow", 1, 16);
         add(c, "minecraft:spectral_arrow", 8, 24);
         add(c, "minecraft:carrot_on_a_stick", 1, 20);
         add(c, "minecraft:warped_fungus_on_a_stick", 1, 28);
@@ -808,15 +853,15 @@ public final class ShopStock {
         add(c, "minecraft:ominous_bottle", 2, 90);
         add(c, "minecraft:mace", 1, 900);
         add(c, "minecraft:heavy_core", 1, 700);
-        add(c, "minecraft:lightning_rod", 2, 24);
+        add(c, "minecraft:lightning_rod", 2, 20);
         add(c, "minecraft:daylight_detector", 2, 20);
         add(c, "minecraft:lectern", 2, 16);
         add(c, "minecraft:fletching_table", 1, 12);
-        add(c, "minecraft:stonecutter", 1, 12);
+        add(c, "minecraft:stonecutter", 1, 7);
         add(c, "minecraft:campfire", 4, 12);
         add(c, "minecraft:soul_campfire", 4, 18);
         add(c, "minecraft:beehive", 2, 20);
-        add(c, "minecraft:bundle", 1, 26);
+        add(c, "minecraft:bundle", 1, 13);
         add(c, "minecraft:activator_rail", 8, 26);
         add(c, "minecraft:firework_rocket", 16, 16);
         add(c, "minecraft:bell", 1, 45);
@@ -852,13 +897,13 @@ public final class ShopStock {
         add(c, "minecraft:water_bucket", 1, 12);
         add(c, "minecraft:lava_bucket", 1, 26);
         add(c, "minecraft:shears", 1, 12);
-        add(c, "minecraft:flint_and_steel", 1, 12);
+        add(c, "minecraft:flint_and_steel", 1, 8);
         add(c, "minecraft:compass", 1, 20);
         add(c, "minecraft:clock", 1, 22);
-        add(c, "minecraft:spyglass", 1, 30);
+        add(c, "minecraft:spyglass", 1, 13);
         add(c, "minecraft:name_tag", 1, 40);
         add(c, "minecraft:lead", 2, 10);
-        add(c, "minecraft:saddle", 1, 55);
+        add(c, "minecraft:saddle", 1, 30);
         add(c, "minecraft:bookshelf", 4, 26);
         add(c, "minecraft:anvil", 1, 70);
         add(c, "minecraft:grindstone", 1, 18);
@@ -867,13 +912,13 @@ public final class ShopStock {
         add(c, "minecraft:loom", 1, 14);
         add(c, "minecraft:composter", 1, 10);
         add(c, "minecraft:cauldron", 1, 18);
-        add(c, "minecraft:brewing_stand", 1, 40);
+        add(c, "minecraft:brewing_stand", 1, 24);
         add(c, "minecraft:ender_chest", 1, 90);
         add(c, "minecraft:shulker_box", 1, 150);
         add(c, "minecraft:tnt", 4, 30);
-        add(c, "minecraft:bow", 1, 20);
+        add(c, "minecraft:bow", 1, 13);
         add(c, "minecraft:arrow", 32, 12);
-        add(c, "minecraft:fishing_rod", 1, 16);
+        add(c, "minecraft:fishing_rod", 1, 9);
         add(c, "minecraft:boat", 1, 8);
     }
 
@@ -1001,7 +1046,7 @@ public final class ShopStock {
         add(c, "minecraft:music_disc_pigstep", 1, 480);
         add(c, "minecraft:wither_skeleton_skull", 1, 420);
         add(c, "minecraft:dragon_head", 1, 1100);
-        add(c, "minecraft:end_crystal", 2, 260);
+        add(c, "minecraft:end_crystal", 2, 210);
     }
 
     private ShopStock() {

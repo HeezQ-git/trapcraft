@@ -915,13 +915,22 @@ public final class TrapGuide {
                 .append(hint("Three hands is the most you can carry."))));
 
         pages.add(page(Text.empty()
-                .append(title("8c. WAGES\n\n"))
+                .append(title("8c. TRAINING\n\n"))
+                .append(body("/crew opens the board.\n\n"))
+                .append(body("Buy pace, a bigger patch, and jobs: farming, "
+                        + "tilling, sowing, curing, feeding.\n\n"))
+                .append(hint("Flat out is a job every "
+                        + TrapCrew.PACE_TICKS[TrapCrew.PACE_TICKS.length - 1] / 20 + "s."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8d. WAGES\n\n"))
                 .append(body(TrapCrew.WAGE + "e each, every five minutes, "
                         + "harvest or no harvest.\n\n"))
+                .append(body("Everything you teach them puts that up.\n\n"))
                 .append(warn("Miss a payday and they walk. No warning, no debt."))));
 
         pages.add(page(Text.empty()
-                .append(title("8d. THE SEARCH\n\n"))
+                .append(title("8e. THE SEARCH\n\n"))
                 .append(body("A raid doesn't just swing axes. They walk to "
                         + "your chests and take product.\n\n"))
                 .append(body("Only product. Seeds and gear are safe.\n\n"))

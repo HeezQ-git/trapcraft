@@ -30,6 +30,11 @@ doesn't have what you expected -- and neither logs anything useful:
     below 2e, and the daily index can push a 2e line under that on a bad day.
     That is the "it's not rentable" complaint: you farm a bundle, walk to the
     shop, and it won't take it.
+  * A crafting recipe that mints money: the shop sells the ingredients for
+    less than it buys the result back for, so a crafting table is a printer.
+    Nine wheat into a hay bale and back out again is the shape of it, and the
+    reverse recipe means BOTH directions have to be priced or the loop just
+    runs the other way round.
 
     python3 tools/check_stock.py
 """
@@ -43,18 +48,20 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STOCK = ROOT / "src/main/java/dev/heezq/trapcraft/ShopStock.java"
+MC_JARS = (pathlib.Path.home() / ".gradle/caches/fabric-loom/minecraftMaven"
+                                 "/net/minecraft/minecraft-merged/*/*.jar")
 
 # TrapMath: the shop won't buy under 2e, and INDEX_MIN * (1 - DRIFT) is the
 # cheapest a line can ever get -- a glut day with the drift against it.
 SELL_FLOOR = 2
 WORST_INDEX = 0.65 * (1 - 0.18)
+# TrapMath.SELL_RATE.
+SELL_RATE = 0.45
 
 
 def vanilla_enchantments() -> dict[str, int]:
     """id -> max_level, read from the vanilla datapack inside the client jar."""
-    jars = glob.glob(str(pathlib.Path.home() / ".gradle/caches/fabric-loom/minecraftMaven"
-                                               "/net/minecraft/minecraft-merged/*/*.jar"))
-    jars = [j for j in jars if "sources" not in j]
+    jars = [j for j in glob.glob(str(MC_JARS)) if "sources" not in j]
     if not jars:
         sys.exit("no mapped Minecraft jar in the Loom cache -- run ./gradlew build first")
     found = {}
@@ -66,6 +73,113 @@ def vanilla_enchantments() -> dict[str, int]:
     if not found:
         sys.exit(f"no enchantment data in {jars[0]} -- the path moved, fix this script")
     return found
+
+
+def vanilla_recipes() -> list[tuple[str, int, list[str]]]:
+    """(result id, result count, ingredient ids) for everything vanilla crafts.
+
+    Tags resolve to their members and the caller takes the cheapest, because
+    the cheapest ingredient is the one an exploit would actually buy.
+    """
+    jars = [j for j in glob.glob(str(MC_JARS)) if "sources" not in j]
+    if not jars:
+        sys.exit("no mapped Minecraft jar in the Loom cache -- run ./gradlew build first")
+    out = []
+    with zipfile.ZipFile(jars[0]) as jar:
+        tags = {}
+        for name in jar.namelist():
+            match = re.fullmatch(r"data/minecraft/tags/item/(.+)\.json", name)
+            if match:
+                tags["#minecraft:" + match.group(1)] = [
+                    v for v in json.loads(jar.read(name)).get("values", [])
+                    if isinstance(v, str)]
+
+        def members(ident: str) -> list[str]:
+            # One level deep. A tag of tags resolves to nothing rather than
+            # recursing, which costs coverage and never a false alarm.
+            return [m for m in tags.get(ident, [ident]) if not m.startswith("#")]
+
+        for name in jar.namelist():
+            if not re.fullmatch(r"data/minecraft/recipe/.+\.json", name):
+                continue
+            body = json.loads(jar.read(name))
+            kind = body.get("type", "")
+            if kind in ("minecraft:crafting_shaped", "minecraft:crafting_shapeless"):
+                if kind.endswith("shaped"):
+                    key = body.get("key", {})
+                    used = [c for row in body["pattern"] for c in row if c != " "]
+                    parts = [key[c] for c in used if c in key]
+                else:
+                    parts = list(body.get("ingredients", []))
+            elif kind in ("minecraft:smelting", "minecraft:smoking",
+                          "minecraft:blasting", "minecraft:campfire_cooking"):
+                parts = [body["ingredient"]]
+            else:
+                continue
+            # An ingredient is an id, a tag, or a list of either -- "any one
+            # of these" -- so every slot ends up as the list of items that
+            # could legally fill it.
+            slots = []
+            for part in parts:
+                options = part if isinstance(part, list) else [part]
+                slots.append([m for option in options if isinstance(option, str)
+                              for m in members(option)])
+            if not slots or any(not slot for slot in slots):
+                continue
+            result = body["result"]
+            out.append((result["id"], result.get("count", 1), slots))
+    return out
+
+
+def craft_loops(source: str) -> list[str]:
+    """No recipe may be worth more sold than its ingredients cost to buy.
+
+    The shop is the only place emeralds enter and leave on their own, so any
+    recipe where sell(result) beats buy(ingredients) is an infinite money
+    printer that needs no farm, no risk and no travel -- somebody stands at a
+    crafting table until the index caps out.
+
+    Checked at FLAT prices, deliberately. Drift and order flow can open a
+    window either way for a few minutes, and steering that window is the part
+    of the market players are meant to play; a permanent hole in the flat
+    price list is not.
+
+    Vanilla recipes only -- modded ones live in mod jars this can't see. It
+    still catches the whole vanilla food tree, which is where the raw crops
+    everybody farms turn into things worth selling.
+    """
+    unit = {}
+    for ident, count, base in re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source):
+        unit[ident] = int(base) / int(count)
+
+    problems = []
+    found = []
+    for result, count, ingredients in vanilla_recipes():
+        if result not in unit:
+            continue
+        # The cheapest legal way to buy each ingredient slot. A slot nobody
+        # sells is a slot the exploit can't be built from, so the whole recipe
+        # drops out.
+        cost = 0.0
+        for slot in ingredients:
+            priced = [unit[m] for m in slot if m in unit]
+            if not priced:
+                cost = None
+                break
+            cost += min(priced)
+        if cost is None:
+            continue
+        earns = unit[result] * count * SELL_RATE
+        # A tolerance, not a fudge. Every price is an integer and most of these
+        # recipes are pennies either way, so without a floor the report is
+        # forty lines of "0.1e becomes 0.1e" and nobody reads the four that
+        # matter. A loop worth under an emerald a craft is slower than mining.
+        if earns > cost + 1.0 and earns > cost * 1.15:
+            found.append((earns - cost, result, cost, earns))
+    for profit, result, cost, earns in sorted(found, reverse=True):
+        problems.append(f"crafting {result} mints {profit:.1f}e a go: "
+                        f"{cost:.1f}e of ingredients sells back for {earns:.1f}e")
+    return problems
 
 
 def slot_reel() -> list[str]:
@@ -279,6 +393,7 @@ def main() -> int:
     problems.extend(duplicate_lines(source))
     problems.extend(recipes())
     problems.extend(casino_floor())
+    problems.extend(craft_loops(source))
 
     goods = re.findall(r'add\(c, "([^"]+)", (\d+), (\d+)\);', source)
     for ident, _, base in goods:

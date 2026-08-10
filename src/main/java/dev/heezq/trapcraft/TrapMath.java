@@ -1067,6 +1067,74 @@ public final class TrapMath {
         return Math.max(2, Math.round((totalLevels * 22.0f + enchantments * 15.0f) * SCRAP_RATE));
     }
 
+    // --- the kitchen ------------------------------------------------------------
+
+    /**
+     * What one helping of food is worth flat, from what the game says it does.
+     *
+     * There are sixteen food mods in this pack and between them several hundred
+     * dishes, so food cannot be a hand-written price list -- it was, for the
+     * three mods somebody had the patience to type out, and everything else got
+     * a formula on a completely different scale. A loaf of bread was 2e and a
+     * modded loaf of bread was 8e, which is not a market, it is two markets
+     * sharing a counter.
+     *
+     * So: one curve, and the hand-written lines sit on it too. Nutrition and
+     * saturation are the game's own statement of what a food is worth, and they
+     * happen to track effort well -- a hearty stew is several ingredients and a
+     * cooking step, and it says so in its saturation.
+     *
+     * Sized against what the rest of this server earns rather than against
+     * vanilla's villager trades. A field of wheat is now an afternoon's wage
+     * instead of the four emeralds it used to be, which is the whole point:
+     * food is the one thing here that renews itself, and it was the one thing
+     * not worth carrying to the counter.
+     */
+    /** What every food is worth before anybody eats it. See {@link #foodPrice}. */
+    public static final float COOKING_HEADROOM = 3.0f;
+
+    public static int foodPrice(int nutrition, float saturation, int stackSize) {
+        // The constant is load-bearing, and it is not "a minimum price". A
+        // furnace adds no ingredient, so cooking may multiply a food's worth by
+        // at most 1/SELL_RATE before buying the raw one, smelting it and
+        // selling it back is free money -- and raw beef to cooked beef is a
+        // 3.1x jump on nutrition alone. A flat term every food carries
+        // compresses every raw-to-cooked pair under that ceiling at once,
+        // without needing to know which foods smelt into which. See
+        // FormulaTest.cookingIsNeverFreeMoney.
+        float worth = COOKING_HEADROOM + 0.4f * nutrition + 0.25f * saturation;
+        // Stack size stands in for the crafting step nutrition can't see. A
+        // thing served in a bowl or on a plate took a kitchen to make; a thing
+        // that stacks to 64 was picked up off the floor.
+        if (stackSize <= 16) {
+            worth *= 1.6f;
+        }
+        if (stackSize <= 1) {
+            worth *= 1.4f;
+        }
+        // Never under 2: sellPrice() refuses to buy back anything cheaper, and
+        // a shelf line the counter won't take is the complaint this all came
+        // from. See the sell floor in check_stock.py.
+        return Math.max(2, Math.round(worth));
+    }
+
+    /**
+     * How many of it make one lot, so every food line costs roughly the same.
+     *
+     * A shelf where one line is 2e and the next is 90e reads as broken however
+     * defensible each number is on its own. Sizing the LOT rather than the
+     * price keeps the board legible and leaves the per-item worth honest.
+     */
+    public static int foodLot(int price) {
+        if (price >= 25) {
+            return 1;
+        }
+        if (price >= 12) {
+            return 2;
+        }
+        return price >= 5 ? 4 : 8;
+    }
+
     // --- roulette ---------------------------------------------------------------
 
     /**

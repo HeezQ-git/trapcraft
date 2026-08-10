@@ -146,24 +146,55 @@ public class DryingRackBlock extends Block implements PolymerTexturedBlock {
     }
 
     private ActionResult collect(BlockState state, World world, BlockPos pos, PlayerEntity player) {
-        int dryness = state.get(DRYNESS);
-        if (dryness == 0) {
+        if (world.isClient) {
+            return state.get(DRYNESS) == 0 ? ActionResult.PASS : ActionResult.SUCCESS;
+        }
+        ItemStack out = take(state, world, pos);
+        if (out.isEmpty()) {
             return ActionResult.PASS; // still soaking, nothing to take
         }
-        if (!world.isClient) {
-            Strain strain = state.get(STRAIN);
-            Quality grade = Quality.byIndex(state.get(QUALITY) - gradePenalty(dryness));
-            // Rushing costs yield as well as grade, so patience pays twice.
-            int count = dryness >= READY_DRYNESS ? 2 : 1;
-            ItemStack out = TrapComponents.apply(
-                    new ItemStack(TrapContent.driedBud(strain), count), grade);
-            if (!player.giveItemStack(out)) {
-                player.dropItem(out, false);
-            }
-            world.setBlockState(pos, state.with(OCCUPIED, false).with(DRYNESS, 0));
-            world.playSound(null, pos, SoundEvents.ITEM_CROP_PLANT, SoundCategory.BLOCKS, 0.8F, 1.2F);
+        if (!player.giveItemStack(out)) {
+            player.dropItem(out, false);
         }
         return ActionResult.SUCCESS;
+    }
+
+    /**
+     * Pull whatever is hanging here. Empty if there is nothing worth pulling.
+     *
+     * Split out of {@link #collect} so a hired hand can work a rack without
+     * having to pretend to be a player. The grade arithmetic lives here and
+     * nowhere else, which is the point -- a crew that cured buds by its own
+     * rules would quietly be a way round the curing window.
+     */
+    public static ItemStack take(BlockState state, World world, BlockPos pos) {
+        int dryness = state.get(DRYNESS);
+        if (!state.get(OCCUPIED) || dryness == 0) {
+            return ItemStack.EMPTY;
+        }
+        Strain strain = state.get(STRAIN);
+        Quality grade = Quality.byIndex(state.get(QUALITY) - gradePenalty(dryness));
+        // Rushing costs yield as well as grade, so patience pays twice.
+        int count = dryness >= READY_DRYNESS ? 2 : 1;
+        ItemStack out = TrapComponents.apply(
+                new ItemStack(TrapContent.driedBud(strain), count), grade);
+        world.setBlockState(pos, state.with(OCCUPIED, false).with(DRYNESS, 0));
+        world.playSound(null, pos, SoundEvents.ITEM_CROP_PLANT, SoundCategory.BLOCKS, 0.8F, 1.2F);
+        return out;
+    }
+
+    /** Hang one fresh bud out of a stack. False if the rack is busy or it isn't one. */
+    public static boolean hang(BlockState state, World world, BlockPos pos, ItemStack fresh) {
+        Strain strain = TrapContent.strainOfRawBud(fresh.getItem());
+        if (strain == null || state.get(OCCUPIED)) {
+            return false;
+        }
+        world.setBlockState(pos, state.with(OCCUPIED, true).with(STRAIN, strain).with(DRYNESS, 0)
+                .with(QUALITY, TrapComponents.get(fresh).index()));
+        world.scheduleBlockTick(pos, state.getBlock(), DRY_TICKS);
+        fresh.decrement(1);
+        world.playSound(null, pos, SoundEvents.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 0.8F, 1.0F);
+        return true;
     }
 
     @Override

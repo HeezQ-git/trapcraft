@@ -1369,6 +1369,8 @@ def advancements() -> None:
 
     award("crew", "Payroll", "Take somebody on. Wages start immediately.",
           "minecraft:villager_spawn_egg", "root", frame="goal")
+    award("foreman", "Foreman", "Teach one hand everything there is to teach.",
+          "minecraft:golden_hoe", "crew", frame="challenge")
     award("raided", "They Found It", "Have a raid walk out with your product.",
           "minecraft:crossbow", "root", frame="goal")
     award("clean", "Nothing To See", "Sit through a raid without losing a gram.",

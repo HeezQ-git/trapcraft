@@ -128,6 +128,45 @@ public class MixerScreenHandler extends ScreenHandler {
         return count;
     }
 
+    /**
+     * How many jars this load makes: as many as the shortest slot holds.
+     *
+     * A batch takes one bud from every filled slot, so a slot with ten buds
+     * and a slot with three make three -- and the seven left over stay where
+     * they are rather than being quietly eaten. That last part is the whole
+     * reason this isn't just "mix, repeat": the station used to take exactly
+     * one bud per slot, and grinding a chest of buds four at a time through a
+     * menu is not a mechanic, it is a chore with a texture.
+     */
+    private int batches() {
+        int fewest = Integer.MAX_VALUE;
+        for (int i = 0; i < inputs.size(); i++) {
+            ItemStack stack = inputs.getStack(i);
+            if (!stack.isEmpty()) {
+                fewest = Math.min(fewest, stack.getCount());
+            }
+        }
+        return fewest == Integer.MAX_VALUE ? 0 : fewest;
+    }
+
+    /**
+     * Whether the slots disagree about how good this is going to be.
+     *
+     * Worth saying out loud on the button. Grading off the worst slot is
+     * correct and deliberate, but from the player's side "I put Fire in and
+     * got Swill out" reads as a bug unless something warned them first.
+     */
+    private Quality bestLoaded() {
+        int best = Quality.SWILL.index();
+        for (int i = 0; i < inputs.size(); i++) {
+            ItemStack stack = inputs.getStack(i);
+            if (!stack.isEmpty()) {
+                best = Math.max(best, TrapComponents.get(stack).index());
+            }
+        }
+        return Quality.byIndex(best);
+    }
+
     private void paint() {
         ItemStack filler = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
         filler.set(DataComponentTypes.CUSTOM_NAME, plain(" "));
@@ -142,13 +181,17 @@ public class MixerScreenHandler extends ScreenHandler {
                 plain("Mixing Station").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD));
         help.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("1.", Formatting.YELLOW).append(plain(" Put " + Blend.MIN_PARTS + " to "
-                        + Blend.MAX_PARTS + " dried buds in the four").formatted(Formatting.GRAY)),
-                line("    slots on the left.", Formatting.GRAY),
+                        + Blend.MAX_PARTS + " kinds of dried bud in the").formatted(Formatting.GRAY)),
+                line("    four slots. Whole stacks are fine.", Formatting.GRAY),
                 line("2.", Formatting.YELLOW).append(plain(" Click the jar on the right.")
                         .formatted(Formatting.GRAY)),
                 Text.empty(),
+                line("It runs the whole load at once, as many", Formatting.WHITE),
+                line("jars as the shortest slot allows.", Formatting.WHITE),
+                Text.empty(),
                 line("Repeats count. Two Kush and a Purp is", Formatting.DARK_GRAY),
                 line("not the same as one of each.", Formatting.DARK_GRAY),
+                line("Grade follows your WORST slot.", Formatting.DARK_GRAY),
                 line("Some combinations have names.", Formatting.DARK_GRAY))));
         display.setStack(HELP_SLOT, help);
 
@@ -165,19 +208,31 @@ public class MixerScreenHandler extends ScreenHandler {
             empty.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                     line(count == 0 ? "The slots are empty."
                                     : count < Blend.MIN_PARTS
-                                    ? "One bud isn't a mix. Add another."
+                                    ? "One kind of bud isn't a mix. Add another."
                                     : "Only dried buds go in here.",
                             Formatting.GRAY),
                     line(count + " of " + Blend.MAX_PARTS + " slots filled",
                             Formatting.DARK_GRAY))));
             display.setStack(RESULT_SLOT, empty);
         } else {
+            int jars = batches();
             ItemStack result = TrapContent.blendBud(blend);
+            result.setCount(Math.min(jars, result.getMaxCount()));
             List<Text> lore = new ArrayList<>(
                     result.getOrDefault(DataComponentTypes.LORE, LoreComponent.DEFAULT).lines());
             lore.add(Text.empty());
             lore.add(line("Click to mix", Formatting.YELLOW, Formatting.BOLD));
-            lore.add(line("Uses all " + count + " buds.", Formatting.DARK_GRAY));
+            lore.add(line("Makes " + jars, Formatting.WHITE)
+                    .append(plain(", using " + (jars * count) + " buds.")
+                            .formatted(Formatting.DARK_GRAY)));
+            Quality best = bestLoaded();
+            if (best.index() > blend.grade()) {
+                // The one thing about this machine that surprises people.
+                lore.add(line("Your best slot is " + best.display() + ", so "
+                        + (best.index() - blend.grade()) + " grade"
+                        + (best.index() - blend.grade() > 1 ? "s" : "")
+                        + " go to waste.", Formatting.RED));
+            }
             result.set(DataComponentTypes.LORE, new LoreComponent(lore));
             display.setStack(RESULT_SLOT, result);
         }
@@ -194,26 +249,39 @@ public class MixerScreenHandler extends ScreenHandler {
             return;
         }
         Blend blend = preview();
-        if (blend == null) {
+        int jars = batches();
+        if (blend == null || jars <= 0) {
             deny();
             return;
         }
         for (int i = 0; i < inputs.size(); i++) {
-            inputs.getStack(i).decrement(1);
+            inputs.getStack(i).decrement(jars);
         }
         if (blend.named() != null && player instanceof net.minecraft.server.network.ServerPlayerEntity who) {
             TrapAwards.grant(who, "named_blend");
         }
-        player.getInventory().offerOrDrop(TrapContent.blendBud(blend));
+        // Handed over a stack at a time rather than one offer of `jars`,
+        // because blend buds carry a Blend component and offerOrDrop respects
+        // the max count -- a run of sixty-four would otherwise silently become
+        // whatever fits in one stack.
+        int left = jars;
+        while (left > 0) {
+            ItemStack out = TrapContent.blendBud(blend);
+            int give = Math.min(left, out.getMaxCount());
+            out.setCount(give);
+            player.getInventory().offerOrDrop(out);
+            left -= give;
+        }
         celebrate();
         paint();
     }
 
     /**
-     * Shift-clicking a bud from your bag loads the next free slot.
+     * Shift-clicking buds from your bag loads the next free slot with the lot.
      *
      * Without this the only way to load the station is dragging one bud at a
-     * time, which for a four-part mix is four drags.
+     * time, which for a four-part mix is four drags -- and for a chest of buds
+     * it was four drags per jar.
      */
     @Override
     public ItemStack quickMove(PlayerEntity player, int index) {
@@ -236,9 +304,23 @@ public class MixerScreenHandler extends ScreenHandler {
         if (TrapContent.strainOfDriedBud(stack.getItem()) == null) {
             return ItemStack.EMPTY;
         }
+        // Same buds go on top of a slot already holding them, so a second
+        // shift-click tops up rather than needlessly claiming a fourth slot
+        // and turning a two-part mix into a four-part one by accident.
+        for (int i = 0; i < inputs.size(); i++) {
+            ItemStack there = inputs.getStack(i);
+            if (!there.isEmpty() && ItemStack.areItemsAndComponentsEqual(there, stack)
+                    && there.getCount() < there.getMaxCount()) {
+                int room = there.getMaxCount() - there.getCount();
+                there.increment(stack.split(Math.min(room, stack.getCount())).getCount());
+                from.markDirty();
+                paint();
+                return ItemStack.EMPTY;
+            }
+        }
         for (int i = 0; i < inputs.size(); i++) {
             if (inputs.getStack(i).isEmpty()) {
-                inputs.setStack(i, stack.split(1));
+                inputs.setStack(i, stack.split(stack.getCount()));
                 from.markDirty();
                 paint();
                 return ItemStack.EMPTY;
@@ -320,11 +402,10 @@ public class MixerScreenHandler extends ScreenHandler {
         public boolean canInsert(ItemStack stack) {
             return TrapContent.strainOfDriedBud(stack.getItem()) != null;
         }
-
-        @Override
-        public int getMaxItemCount() {
-            return 1; // one bud per slot: the mix ratio is which slots, not how many
-        }
+        // Whole stacks, deliberately. The mix RATIO is still which slots are
+        // filled and not how many buds are in them -- the counts only say how
+        // many times to run it -- so a stack here changes throughput and never
+        // the recipe.
     }
 
     private static class ReadOnlySlot extends Slot {

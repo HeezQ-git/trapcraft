@@ -3,3 +3,4 @@ build/
 run/
 *.class
 .DS_Store
+__pycache__/

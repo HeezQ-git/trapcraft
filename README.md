@@ -37,7 +37,7 @@ Four checks, all offline and all fast:
 | `python3 tools/check_models.py` | typo'd texture refs, out-of-range elements |
 | `python3 tools/check_pages.py` | guide pages that would silently truncate |
 | `python3 tools/check_shaders.py` | post-effect JSON |
-| `python3 tools/check_stock.py` | book lines that drop silently, goods too cheap to sell |
+| `python3 tools/check_stock.py` | book lines that drop silently, goods too cheap to sell, and any vanilla recipe whose result sells for more than its ingredients cost |
 
 ## The loop
 
@@ -97,6 +97,28 @@ right-clicking any villager near the drop; miss the clock and it costs rep.
 
 Reputation lives on the phone as a data component. No persistence code, it
 survives restarts for free, and losing the phone loses the standing with it.
+
+## The crew
+
+`/crew hire` takes somebody on where you are standing; `/crew` opens the board.
+A hand works a box around that spot, puts everything in the nearest chest, and
+takes a wage every five minutes whether the harvest was good or not.
+
+Everything past picking is bought: **pace** (a job every 10s down to every 1.5s),
+a **bigger patch** (12 to 26 blocks), and five jobs — farmhand, curing, sowing,
+tilling, fertilising. Every purchase also puts the wage up, so a hand you can't
+keep busy loses you money, and missing a payday means they walk with everything
+you taught them.
+
+Two things worth knowing about how it works:
+
+- They are scaled to **0.85**. `FarmlandBlock.onLandedUpon` only tramples
+  entities whose `width² × height` clears 0.512; a villager is 0.70 and a hand
+  is 0.43, so they physically cannot un-till your field. No mixin, no gamerule.
+- They are steered with the brain's `WALK_TARGET` memory, not the navigator.
+  Going round the brain is why the first one wandered off — the stroll tasks
+  cancelled it every tick. Setting the memory both moves them *and* starves the
+  strolls, which require it to be absent.
 
 ## The guide books
 

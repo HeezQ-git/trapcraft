@@ -1636,4 +1636,64 @@ class FormulaTest {
     void aggregateIgnoresEmptyFinds() {
         assertTrue(TrapMath.aggregate(List.of(Map.entry("ghost", 0))).isEmpty());
     }
+
+    // --- the kitchen ----------------------------------------------------------
+
+    /** {nutrition, saturation} for the vanilla raw/cooked pairs, as shipped. */
+    private static final float[][] RAW = {
+            {3, 1.8f}, {3, 1.8f}, {2, 1.2f}, {3, 1.8f}, {2, 0.4f}, {2, 0.4f}, {1, 0.6f},
+    };
+    private static final float[][] COOKED = {
+            {8, 12.8f}, {8, 12.8f}, {6, 7.2f}, {5, 6.0f}, {5, 6.0f}, {6, 9.6f}, {5, 6.0f},
+    };
+    private static final String[] PAIRS = {
+            "beef", "porkchop", "chicken", "rabbit", "cod", "salmon", "potato",
+    };
+
+    /**
+     * The one that stops a furnace being a printer.
+     *
+     * Smelting adds no ingredient, so if the shop prices cooked beef at more
+     * than 1/SELL_RATE of raw beef, buying raw, cooking and selling back is
+     * free money for as long as anybody can be bothered. Nutrition alone puts
+     * that ratio at over three; COOKING_HEADROOM is what pulls every pair
+     * under the line at once, and this is the check that says it still does.
+     */
+    @Test
+    void cookingIsNeverFreeMoney() {
+        for (int i = 0; i < PAIRS.length; i++) {
+            int raw = TrapMath.foodPrice((int) RAW[i][0], RAW[i][1], 64);
+            int cooked = TrapMath.foodPrice((int) COOKED[i][0], COOKED[i][1], 64);
+            assertTrue(cooked * TrapMath.SELL_RATE <= raw,
+                    PAIRS[i] + ": raw " + raw + "e cooks into " + cooked
+                            + "e, which sells back for more than it cost");
+        }
+    }
+
+    @Test
+    void aHeartierDishIsWorthMore() {
+        int bread = TrapMath.foodPrice(5, 6.0f, 64);
+        int stew = TrapMath.foodPrice(10, 12.0f, 1);
+        assertTrue(stew > bread * 2, "a bowl of stew should beat a loaf, got "
+                + bread + " -> " + stew);
+    }
+
+    /** Every food lands on a lot that costs roughly the same, so the shelf reads. */
+    @Test
+    void foodLotsKeepTheShelfLegible() {
+        for (int nutrition = 0; nutrition <= 20; nutrition++) {
+            for (int stack : new int[]{1, 16, 64}) {
+                int price = TrapMath.foodPrice(nutrition, nutrition * 1.6f, stack);
+                int lot = price * TrapMath.foodLot(price);
+                assertTrue(lot >= 16 && lot <= 60,
+                        "n=" + nutrition + " stack=" + stack + " makes a " + lot + "e lot");
+            }
+        }
+    }
+
+    /** Nothing may be priced under what the counter will buy back. */
+    @Test
+    void everyFoodIsSellable() {
+        assertTrue(TrapMath.sellPrice(TrapMath.foodPrice(0, 0, 64)) > 0);
+    }
 }
