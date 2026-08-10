@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrapCraft — Field Manual</title>
+<meta name="description" content="The complete reference for TrapCraft: growing, curing,
+refining, the market, stalls, crew, heat, the casino. Generated from the mod's source.">
+<meta name="theme-color" content="#0c0b0a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0c0b0a;
+  --ink-2: #131110;
+  --bone: #ece5d8;
+  --bone-dim: #9a9285;
+  --rule: #2a2622;
+  --acc: #4ade80;
+  --warn: #ff8c42;
+  --violet: #7a4fa8;
+  --measure: 62ch;
+  --pad: clamp(1.25rem, 4vw, 4rem);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: clamp(1rem, .45vw + .92rem, 1.14rem);
+  line-height: 1.65;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Grain. One data-URI turbulence over everything, very low opacity. */
+body::after {
+  content: '';
+  position: fixed; inset: -50%;
+  pointer-events: none; z-index: 100; opacity: .16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  animation: grain 6s steps(6) infinite;
+}
+@keyframes grain {
+  0%,100% { transform: translate(0,0) } 20% { transform: translate(-3%,2%) }
+  40% { transform: translate(2%,-3%) } 60% { transform: translate(-2%,-2%) }
+  80% { transform: translate(3%,3%) }
+}
+
+::selection { background: var(--acc); color: var(--ink); }
+a { color: inherit; }
+
+/* --- shell --------------------------------------------------------------- */
+
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr); }
+.wrap > * { min-width: 0; }
+@media (min-width: 1080px) {
+  .wrap { grid-template-columns: 16rem minmax(0, 1fr); }
+}
+
+/* --- nav ----------------------------------------------------------------- */
+
+.rail {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--rule);
+}
+.rail-in { display: flex; gap: .25rem; overflow-x: auto; padding: .6rem var(--pad);
+  scrollbar-width: none; }
+.rail-in::-webkit-scrollbar { display: none; }
+.rail a {
+  flex: 0 0 auto; text-decoration: none; white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--bone-dim);
+  padding: .4rem .7rem; border-radius: 2px; transition: color .25s, background .25s;
+}
+.rail a .n { opacity: .45; margin-right: .45rem; }
+.rail a:hover { color: var(--bone); background: #ffffff0a; }
+.rail a.on { color: var(--ink); background: var(--bone); }
+
+@media (min-width: 1080px) {
+  .rail {
+    position: sticky; top: 0; height: 100vh; border-bottom: 0;
+    border-right: 1px solid var(--rule); backdrop-filter: none;
+    background: linear-gradient(180deg, #100e0d, #0c0b0a);
+  }
+  .rail-in { flex-direction: column; gap: 0; padding: 2.5rem 0; height: 100%;
+    overflow-y: auto; }
+  .rail a { padding: .55rem 2rem; border-left: 2px solid transparent; border-radius: 0; }
+  .rail a.on { background: none; color: var(--bone); border-left-color: var(--acc); }
+  .rail a.on .n { color: var(--acc); opacity: 1; }
+  .brand { padding: 0 2rem 2rem; }
+}
+.brand { display: none; }
+@media (min-width: 1080px) { .brand { display: block; } }
+.brand b { font-family: 'Bodoni Moda', serif; font-weight: 900; font-size: 1.5rem;
+  letter-spacing: -.02em; display: block; line-height: 1; }
+.brand span { font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
+  letter-spacing: .22em; text-transform: uppercase; color: var(--bone-dim); }
+
+/* --- hero ---------------------------------------------------------------- */
+
+.hero {
+  position: relative; min-height: 88vh; display: flex; flex-direction: column;
+  justify-content: center; padding: 6rem var(--pad) 4rem; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: -30% -10% auto -10%; height: 90%;
+  background:
+    radial-gradient(45% 55% at 25% 40%, #4ade8022, transparent 70%),
+    radial-gradient(40% 50% at 75% 30%, #7a4fa826, transparent 70%),
+    radial-gradient(35% 45% at 55% 75%, #c47f3a1c, transparent 70%);
+  filter: blur(20px); animation: drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: translate3d(-3%, 0, 0) scale(1); }
+  to   { transform: translate3d(4%, 4%, 0) scale(1.12); }
+}
+.hero > * { position: relative; }
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .3em;
+  text-transform: uppercase; color: var(--acc); margin: 0 0 1.5rem;
+}
+.hero h1 {
+  font-family: 'Bodoni Moda', serif; font-weight: 900;
+  font-size: clamp(3.2rem, 13vw, 11rem); line-height: .82; letter-spacing: -.035em;
+  margin: 0; text-wrap: balance;
+}
+.hero h1 em { font-style: italic; font-weight: 400; display: block;
+  color: var(--bone-dim); }
+.hero p { max-width: 46ch; margin: 2rem 0 0; color: var(--bone-dim);
+  font-size: 1.15rem; }
+.figs { display: flex; flex-wrap: wrap; gap: 2.5rem; margin-top: 3.5rem;
+  font-family: 'IBM Plex Mono', monospace; }
+.figs div b { display: block; font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 500;
+  color: var(--bone); line-height: 1; }
+.figs div span { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--bone-dim); }
+
+/* staggered entrance */
+.hero .eyebrow, .hero h1, .hero p, .hero .figs { animation: rise .9s cubic-bezier(.2,.7,.2,1) backwards; }
+.hero h1 { animation-delay: .08s } .hero p { animation-delay: .22s }
+.hero .figs { animation-delay: .34s }
+@keyframes rise { from { opacity: 0; transform: translateY(1.6rem) } }
+
+/* --- sections ------------------------------------------------------------ */
+
+main { padding: 0 var(--pad) 8rem; }
+.sec { position: relative; padding: 5.5rem 0 1rem; border-top: 1px solid var(--rule);
+  /* The rail is sticky, so an anchor jump would land under it. */
+  scroll-margin-top: 4.2rem; }
+@media (min-width: 1080px) { .sec { scroll-margin-top: 1rem; } }
+.sec-mark {
+  font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .2em;
+  color: var(--bone-dim); margin-bottom: 1.5rem;
+}
+@media (min-width: 1400px) {
+  .sec-mark { position: absolute; left: -5.5rem; top: 5.9rem; margin: 0; }
+}
+.kicker { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--acc); margin: 0 0 .5rem; }
+.sec h2 {
+  font-family: 'Bodoni Moda', serif; font-weight: 900;
+  font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: .95; letter-spacing: -.03em;
+  margin: 0 0 2rem;
+}
+.sub { font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 1.5rem;
+  margin: 3rem 0 1rem; letter-spacing: -.01em; }
+.lede { font-size: 1.28rem; max-width: var(--measure); color: var(--bone); }
+.sec p { max-width: var(--measure); }
+.note {
+  max-width: var(--measure); border-left: 2px solid var(--acc);
+  padding: .2rem 0 .2rem 1.1rem; color: var(--bone-dim); font-style: italic;
+}
+.dim { color: var(--bone-dim); }
+.acc { color: var(--acc); }
+.warn { color: var(--warn); }
+code { font-family: 'IBM Plex Mono', monospace; font-size: .86em; color: var(--bone);
+  background: #ffffff0d; padding: .12em .4em; border-radius: 2px; }
+
+/* --- tables -------------------------------------------------------------- */
+
+.scroller { overflow-x: auto; margin: 1.75rem 0; }
+table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace;
+  font-size: .84rem; min-width: 30rem; }
+th {
+  text-align: left; font-weight: 400; font-size: .66rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--bone-dim); padding: 0 1.5rem .7rem 0;
+  border-bottom: 1px solid var(--rule); white-space: nowrap;
+}
+td { padding: .8rem 1.5rem .8rem 0; border-bottom: 1px solid #1c1917; vertical-align: top; }
+tbody tr { transition: background .2s; }
+tbody tr:hover { background: #ffffff06; }
+.frame { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--bone-dim); }
+.frame.goal { color: var(--acc); }
+.frame.challenge { color: var(--violet); }
+
+/* --- strains ------------------------------------------------------------- */
+
+.strain-grid {
+  display: grid; gap: 1px; margin: 2.5rem 0; background: var(--rule);
+  border: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+.strain { background: var(--ink-2); padding: 1.75rem; position: relative;
+  transition: background .35s; overflow: hidden; }
+.strain::before {
+  content: ''; position: absolute; inset: auto auto 0 0; width: 100%; height: 2px;
+  background: var(--tint); transform: scaleX(0); transform-origin: left;
+  transition: transform .5s cubic-bezier(.2,.7,.2,1);
+}
+.strain:hover { background: #17140f; }
+.strain:hover::before { transform: scaleX(1); }
+.strain-top { display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; }
+.swatch { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--tint);
+  box-shadow: 0 0 2.5rem -.3rem var(--tint); }
+.tag { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--bone-dim); }
+.strain h3 { font-family: 'Bodoni Moda', serif; font-size: 2rem; margin: 0 0 .4rem;
+  font-weight: 700; letter-spacing: -.02em; }
+.blurb { color: var(--bone-dim); font-size: .95rem; margin: 0 0 1.1rem; }
+.fx { list-style: none; padding: 0; margin: 0 0 1.2rem; font-family: 'IBM Plex Mono', monospace;
+  font-size: .74rem; }
+.fx li { padding: .28rem 0; border-bottom: 1px solid #ffffff0a; }
+.stat { display: flex; gap: 2rem; margin: 0; font-family: 'IBM Plex Mono', monospace; }
+.stat dt { font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--bone-dim); }
+.stat dd { margin: .2rem 0 0; font-size: 1.05rem; }
+
+/* --- cards / chain / quotes ---------------------------------------------- */
+
+.cards { display: grid; gap: 1.25rem; margin: 2.5rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.card { border: 1px solid var(--rule); padding: 1.6rem; background: var(--ink-2);
+  transition: transform .4s cubic-bezier(.2,.7,.2,1), border-color .4s; }
+.card:hover { transform: translateY(-4px); border-color: #3d3730; }
+.card h4 { font-family: 'Bodoni Moda', serif; font-size: 1.35rem; margin: 0 0 .6rem;
+  font-weight: 700; }
+.card p { margin: 0; font-size: .95rem; color: var(--bone-dim); }
+
+.chain { list-style: none; padding: 0; margin: 2.5rem 0; display: grid; gap: 1px;
+  background: var(--rule); border: 1px solid var(--rule); }
+.chain li { background: var(--ink-2); padding: 1.4rem 1.6rem; display: flex;
+  align-items: baseline; gap: 1.2rem; flex-wrap: wrap; }
+.chain .step { font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+  color: var(--acc); letter-spacing: .16em; }
+.chain strong { font-family: 'Bodoni Moda', serif; font-size: 1.3rem; font-weight: 700; }
+.chain .dim { font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
+  margin-left: auto; flex: 1 1 14rem; text-align: right; }
+@media (max-width: 620px) { .chain .dim { text-align: left; margin-left: 0; } }
+
+.pull { margin: 3rem 0; padding: 0; max-width: 52ch; }
+.pull blockquote { margin: 0; font-family: 'Bodoni Moda', serif; font-style: italic;
+  font-size: clamp(1.3rem, 3vw, 1.9rem); line-height: 1.3; letter-spacing: -.01em; }
+.pull figcaption { font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim);
+  margin-top: .9rem; }
+.pull figcaption::before { content: '— '; }
+
+/* --- crafting grids ------------------------------------------------------ */
+
+.crafts { display: grid; gap: 1.5rem; margin: 2.5rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); }
+.craft { margin: 0; text-align: center; }
+.grid3 {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+  width: 7.5rem; margin: 0 auto; padding: 3px;
+  background: var(--rule); border: 1px solid var(--rule);
+}
+.grid3 i {
+  aspect-ratio: 1; letter-spacing: -.02em; background: var(--ink); display: grid; place-items: center;
+  font-family: 'IBM Plex Mono', monospace; font-size: .6rem; font-style: normal;
+  color: #3a352f; transition: background .3s, color .3s;
+}
+.grid3 i.on { background: #1e1a16; color: var(--acc); cursor: help; }
+.craft:hover .grid3 i.on { background: #262019; color: var(--bone); }
+.craft figcaption { font-family: 'IBM Plex Mono', monospace; font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--bone-dim);
+  margin-top: .8rem; }
+.dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
+  background: var(--tint); margin-right: .55rem; vertical-align: middle;
+  box-shadow: 0 0 .9rem -.1rem var(--tint); }
+
+/* --- reveal -------------------------------------------------------------- */
+
+.reveal { opacity: 0; transform: translateY(1.4rem);
+  transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+footer { border-top: 1px solid var(--rule); padding: 3rem var(--pad) 5rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: .74rem; color: var(--bone-dim); }
+footer a { color: var(--acc); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="rail">
+    <div class="rail-in">
+      <div class="brand"><b>TrapCraft</b><span>field manual</span></div>
+      <a href="#start"><span class="n">00</span>Getting Started</a><a href="#grow"><span class="n">01</span>The Grow</a><a href="#cure"><span class="n">02</span>Curing &amp; Rolling</a><a href="#blends"><span class="n">03</span>Blends</a><a href="#high"><span class="n">04</span>The High</a><a href="#coca"><span class="n">05</span>The Coca Line</a><a href="#market"><span class="n">06</span>The Market</a><a href="#stalls"><span class="n">07</span>Stalls</a><a href="#crew"><span class="n">08</span>The Crew</a><a href="#heat"><span class="n">09</span>Heat &amp; Raids</a><a href="#street"><span class="n">10</span>The Street</a><a href="#casino"><span class="n">11</span>The House</a><a href="#commands"><span class="n">12</span>Commands</a><a href="#awards"><span class="n">13</span>Advancements</a>
+    </div>
+  </nav>
+
+  <div>
+    <header class="hero">
+      <p class="eyebrow">Server-side · Fabric 1.21.8 · no client install</p>
+      <h1>Everybody<em>eats.</em></h1>
+      <p>Grow it, cure it, roll it, refine it, price it, sell it, launder it, and
+      try not to get raided. The complete reference — generated from the mod's own
+      source, so it cannot go stale.</p>
+      <div class="figs">
+        <div><b>553</b><span>priced lines</span></div>
+        <div><b>6</b><span>strains</span></div>
+        <div><b>203</b><span>blends</span></div>
+        <div><b>26</b><span>advancements</span></div>
+      </div>
+    </header>
+
+    <main>
+<section id="start" class="sec">
+  <div class="sec-mark">§00</div>
+  <header class="sec-head">
+    <p class="kicker">first hour</p>
+    <h2>Getting Started</h2>
+  </header>
+  
+    <p class="lede">Seeds come from wandering traders — five emeralds, one strain each
+    — or from farmer villagers at journeyman. Traders also buy cured buds and joints,
+    which is enough to fund everything else.</p>
+    <ol class="chain">
+      <li><span class="step">01</span><strong>Get seeds</strong><span class="dim">trader, or a farmer villager</span></li>
+      <li><span class="step">02</span><strong>Plant on watered farmland</strong><span class="dim">light and open sky raise the grade</span></li>
+      <li><span class="step">03</span><strong>Build a drying rack</strong><span class="dim">8 sticks, 2 string</span></li>
+      <li><span class="step">04</span><strong>Roll it, or sell it cured</strong><span class="dim">+ paper</span></li>
+      <li><span class="step">05</span><strong>Read the handbooks</strong><span class="dim">/guide</span></li>
+    </ol>
+    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="string">STR</i><i></i><i class="on" title="string">STR</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i><i class="on" title="stick">STI</i></div><figcaption>Drying Rack</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="glass bottle">GB</i><i class="on" title="bowl">BOW</i><i class="on" title="glass bottle">GB</i><i class="on" title="copper ingot">CI</i><i class="on" title="iron ingot">II</i><i class="on" title="copper ingot">CI</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Mixing Station</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="wool">WOO</i><i class="on" title="wool">WOO</i><i class="on" title="wool">WOO</i><i class="on" title="logs">LOG</i><i class="on" title="emerald block">EB</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Market Stall</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="amethyst shard">AS</i><i></i><i class="on" title="amethyst shard">AS</i><i class="on" title="book">BOO</i><i class="on" title="amethyst shard">AS</i><i></i><i class="on" title="compass">COM</i><i></i></div><figcaption>The Ledger</figcaption></figure><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="copper ingot">CI</i><i></i><i class="on" title="iron nugget">IN</i><i class="on" title="amethyst shard">AS</i><i class="on" title="iron nugget">IN</i><i class="on" title="iron nugget">IN</i><i class="on" title="redstone">RED</i><i class="on" title="iron nugget">IN</i></div><figcaption>Burner Phone</figcaption></figure><figure class="craft reveal"><div class="grid3"><i class="on" title="smooth stone">SS</i><i class="on" title="smooth stone">SS</i><i class="on" title="smooth stone">SS</i><i class="on" title="logs">LOG</i><i class="on" title="iron ingot">II</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i><i class="on" title="logs">LOG</i></div><figcaption>Leaf Press</figcaption></figure></div>
+    <p class="note">Hover a square to see what goes in it. Everything here is craftable
+    — nothing in this mod is creative-only.</p>
+</section>
+<section id="grow" class="sec">
+  <div class="sec-mark">§01</div>
+  <header class="sec-head">
+    <p class="kicker">six phenotypes, four stages</p>
+    <h2>The Grow</h2>
+  </header>
+  
+    <p class="lede">Seeds go on farmland. Four stages, then right-click a full-grown
+    plant with an empty hand — you get buds, sometimes a seed, and the plant stays
+    and regrows.</p>
+    <p>Three strains are pure and grow from seed. The other three only exist by
+    <strong>cross-breeding</strong>: plant two different pure strains as neighbours
+    and a mature pair occasionally throws a hybrid seed.</p>
+    <div class="strain-grid">
+    <article class="strain reveal" style="--tint:#4a9a3c">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">pure</span>
+      </div>
+      <h3>Kush</h3>
+      <p class="blurb">Heavy body high. Slows you right down, but patches you up.</p>
+      <ul class="fx"><li>Slowness <span class="dim">90s</span></li><li>Regeneration <span class="dim">30s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>90s</dd></div>
+        <div><dt>Level</dt><dd>II</dd></div>
+      </dl>
+    </article>
+    <article class="strain reveal" style="--tint:#9ec43a">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">pure</span>
+      </div>
+      <h3>Haze</h3>
+      <p class="blurb">Light and quick. Speed, and spring in your step.</p>
+      <ul class="fx"><li>Speed <span class="dim">60s</span></li><li>Jump Boost <span class="dim">60s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>60s</dd></div>
+        <div><dt>Level</dt><dd>I</dd></div>
+      </dl>
+    </article>
+    <article class="strain reveal" style="--tint:#7a4fa8">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">pure</span>
+      </div>
+      <h3>Purp</h3>
+      <p class="blurb">See in the dark. Costs you your balance for a bit.</p>
+      <ul class="fx"><li>Night Vision <span class="dim">120s</span></li><li>Nausea <span class="dim">20s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>120s</dd></div>
+        <div><dt>Level</dt><dd>III</dd></div>
+      </dl>
+    </article>
+    <article class="strain reveal" style="--tint:#7fa86a">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">hybrid</span>
+      </div>
+      <h3>Diesel</h3>
+      <p class="blurb">Kush body, Haze legs. Somehow both at once.</p>
+      <ul class="fx"><li>Speed <span class="dim">100s</span></li><li>Regeneration <span class="dim">40s</span></li><li>Resistance <span class="dim">60s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>100s</dd></div>
+        <div><dt>Level</dt><dd>II</dd></div>
+      </dl>
+    </article>
+    <article class="strain reveal" style="--tint:#4a4a8a">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">hybrid</span>
+      </div>
+      <h3>Midnight</h3>
+      <p class="blurb">Sinks you into the floor and turns the lights on.</p>
+      <ul class="fx"><li>Night Vision <span class="dim">140s</span></li><li>Slowness <span class="dim">100s</span></li><li>Resistance <span class="dim">80s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>140s</dd></div>
+        <div><dt>Level</dt><dd>IIII</dd></div>
+      </dl>
+    </article>
+    <article class="strain reveal" style="--tint:#c47f3a">
+      <div class="strain-top">
+        <span class="swatch"></span>
+        <span class="tag">hybrid</span>
+      </div>
+      <h3>Sunset</h3>
+      <p class="blurb">Warm, weightless, and you can see in the dark.</p>
+      <ul class="fx"><li>Jump Boost <span class="dim">90s · II</span></li><li>Night Vision <span class="dim">90s</span></li><li>Slow Falling <span class="dim">30s</span></li></ul>
+      <dl class="stat">
+        <div><dt>High</dt><dd>90s</dd></div>
+        <div><dt>Level</dt><dd>II</dd></div>
+      </dl>
+    </article></div>
+    <h3 class="sub">How long</h3>
+    <div class="scroller"><table class=""><thead><tr><th>Ground</th><th>Seed to ripe</th><th>Why</th></tr></thead><tbody><tr><td>Watered farmland</td><td>~44 min</td><td><span class="dim">moisture 7 under the plant</span></td></tr><tr><td>Dry ground</td><td>~89 min</td><td><span class="dim">twice as slow, and it costs you grade</span></td></tr></tbody></table></div>
+    <p class="note">Water is worth three quality points <em>and</em> half the wait.
+    One definition of "watered" drives both, so they can never disagree.</p>
+    <h3 class="sub">Quality</h3>
+    <p>Grade is decided at harvest by the conditions the plant actually grew in:
+    hydration, light, open sky, and whether you rushed it with bone meal.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Grade</th><th>Potency</th><th>Per bud</th></tr></thead><tbody><tr><td>Swill</td><td>0.60×</td><td>1e</td></tr><tr><td>Mids</td><td>1.00×</td><td>2e</td></tr><tr><td>Loud</td><td>1.45×</td><td>4e</td></tr><tr><td>Fire</td><td>2.00×</td><td>7e</td></tr></tbody></table></div>
+</section>
+<section id="cure" class="sec">
+  <div class="sec-mark">§02</div>
+  <header class="sec-head">
+    <p class="kicker">patience, then paper</p>
+    <h2>Curing &amp; Rolling</h2>
+  </header>
+  
+    <p class="lede">Fresh buds are worth little. A drying rack turns them into
+    cured product over about 4 minutes, and the rack is a decision rather
+    than a timer.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Stage</th><th>What it means</th></tr></thead><tbody><tr><td>0</td><td><span class="dim">soaking wet — refuses to be collected</span></td></tr><tr><td>1–2</td><td><span class="dim">collectable, but a grade lost per stage short</span></td></tr><tr><td>3</td><td><span class="acc">peak — full grade, double yield</span></td></tr><tr><td>4</td><td><span class="dim">overdried, one grade lost</span></td></tr></tbody></table></div>
+    <p>Peak gets a long grace period before it spoils. You should have to forget
+    about it, not lose it for stepping away.</p>
+    <h3 class="sub">Blends</h3>
+    <p>The mixing station takes two to four kinds of dried bud and makes something
+    that is none of them. Six strains taken two to four at a time is
+    <strong>203 distinct recipes</strong>, and a handful of them have names worth
+    finding. Whole stacks go in; it runs the lot in one click.</p>
+    <p class="note">Grade follows your <em>worst</em> slot. Averaging would let one
+    Fire bud launder three Swill ones.</p>
+</section>
+<section id="blends" class="sec">
+  <div class="sec-mark">§03</div>
+  <header class="sec-head">
+    <p class="kicker">203 recipes, six with names</p>
+    <h2>Blends</h2>
+  </header>
+  
+    <p class="lede">Two to four kinds of dried bud go into the mixing station and come
+    out as something that is none of them. Effects are the union of the parts, each
+    scaled by its share — a mix that is three-quarters Kush feels mostly like Kush.</p>
+    <p>Repeats count, so two Kush and a Purp is not the same as one of each. Six
+    strains taken two to four at a time, order irrelevant, is <strong>203 distinct
+    recipes</strong>. These ones do something the arithmetic would not give you:</p>
+    <div class="scroller"><table class=""><thead><tr><th>Blend</th><th>Recipe</th><th>Potency</th><th>It also gives you</th></tr></thead><tbody><tr><td><span class="dot" style="--tint:#E8D44A"></span><strong>Trinity</strong></td><td><span class="dim">Kush + Haze + Purp</span></td><td>1.35x</td><td><span class="acc">Hero Of The Village</span></td></tr><tr><td><span class="dot" style="--tint:#2A1B4A"></span><strong>Void</strong></td><td><span class="dim">Midnight + Midnight + Purp</span></td><td>1.45x</td><td><span class="acc">Invisibility</span></td></tr><tr><td><span class="dot" style="--tint:#FFC65A"></span><strong>Daybreak</strong></td><td><span class="dim">Haze + Sunset</span></td><td>1.20x</td><td><span class="acc">Slow Falling</span></td></tr><tr><td><span class="dot" style="--tint:#B8E04A"></span><strong>Turbo</strong></td><td><span class="dim">Diesel + Diesel + Haze</span></td><td>1.30x</td><td><span class="acc">Speed</span></td></tr><tr><td><span class="dot" style="--tint:#2F3A28"></span><strong>Tar</strong></td><td><span class="dim">Kush + Kush + Midnight</span></td><td>1.40x</td><td><span class="acc">Resistance, Slowness</span></td></tr><tr><td><span class="dot" style="--tint:#D86ACF"></span><strong>Kaleidoscope</strong></td><td><span class="dim">Purp + Sunset + Haze + Diesel</span></td><td>1.60x</td><td><span class="acc">Night Vision, Jump Boost</span></td></tr></tbody></table></div>
+    <p class="note">A blend's grade follows your <em>worst</em> slot, and the station
+    says so before you click. Mixing Fire with Swill makes Swill.</p>
+</section>
+<section id="high" class="sec">
+  <div class="sec-mark">§04</div>
+  <header class="sec-head">
+    <p class="kicker">three custom effects</p>
+    <h2>The High</h2>
+  </header>
+  
+    <p class="lede">Baked and Wired are real custom status effects, not stacked vanilla
+    ones — so they carry their own icon, their own maths and their own consequences.</p>
+    <div class="cards">
+      <div class="card reveal"><h4>Baked</h4><p>Burns saturation, then hunger — the
+      munchies. Heals you slowly while you are well fed, and chips your health if you
+      smoke on an empty stomach. Duration and level come from the strain and the grade.</p></div>
+      <div class="card reveal"><h4>Wired</h4><p>The coca line's effect. Speed and
+      resistance to sit down for; the comedown is the part you plan around.</p></div>
+      <div class="card reveal"><h4>Tolerance</h4><p>Builds as you smoke and damps
+      everything that follows, up to level 4. One level wears off in
+      about 6 minutes. Chain-smoking your own stock is a losing move.</p></div>
+    </div>
+    <h3 class="sub">Ways to take it</h3>
+    <div class="scroller"><table class=""><thead><tr><th>Method</th><th>What it does</th></tr></thead><tbody><tr><td><strong>Joint</strong></td><td><span class="dim">bud + paper. The portable one, and what customers buy.</span></td></tr><tr><td><strong>Bong</strong></td><td><span class="dim">water bucket once, then a cured bud a hit. Water stays; the bowl does not.</span></td></tr><tr><td><strong>Gravity bong</strong></td><td><span class="dim">water, bud, flint and steel, then pull. The heaviest hit in the mod.</span></td></tr></tbody></table></div>
+    <div class="crafts"><figure class="craft reveal"><div class="grid3"><i></i><i class="on" title="bamboo">BAM</i><i></i><i class="on" title="glass">GLA</i><i class="on" title="bamboo">BAM</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i><i class="on" title="glass">GLA</i></div><figcaption>Bong</figcaption></figure></div>
+    <p class="note">Joints use the only vanilla animation that raises an item to the
+    mouth, so it reads as smoking on a completely unmodified client.</p>
+</section>
+<section id="coca" class="sec">
+  <div class="sec-mark">§05</div>
+  <header class="sec-head">
+    <p class="kicker">longer chain, richer end</p>
+    <h2>The Coca Line</h2>
+  </header>
+  
+    <p class="lede">A bush ripens in about 20 minutes on any ground with
+    light. The value is not in the farming — it is in what happens next.</p>
+    <ol class="chain">
+      <li><span class="step">01</span><strong>Bush</strong><span class="dim">2–4 leaves a harvest</span></li>
+      <li><span class="step">02</span><strong>Leaf press</strong><span class="dim">5 leaves → paste</span></li>
+      <li><span class="step">03</span><strong>Refiner</strong><span class="dim">paste + blaze powder</span></li>
+      <li><span class="step">04</span><strong>Powder</strong><span class="dim">purity from timing</span></li>
+    </ol>
+    <p>Purity is decided entirely by when you pull it. Too early and it is cut;
+    too late and it burns.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Purity</th><th>Potency</th><th>Per unit</th></tr></thead><tbody><tr><td>Cut</td><td>0.55×</td><td>3e</td></tr><tr><td>Street</td><td>1.00×</td><td>7e</td></tr><tr><td>Clean</td><td>1.50×</td><td>13e</td></tr><tr><td>Pure</td><td>2.10×</td><td>22e</td></tr></tbody></table></div>
+    <p class="note">Running coca and weed in the same place is
+    <strong>35% more heat</strong> than the two
+    apart. Presses and refiners count as well as the plants. Two sheds beat one shed.</p>
+</section>
+<section id="market" class="sec">
+  <div class="sec-mark">§06</div>
+  <header class="sec-head">
+    <p class="kicker">a price list that breathes</p>
+    <h2>The Market</h2>
+  </header>
+  
+    <p class="lede">11 shelves and over a thousand lines, priced by three
+    forces multiplied together — and every one of them moves for a reason you caused.</p>
+    <div class="cards">
+      <div class="card reveal"><h4>Supply</h4><p>The money in circulation, sampled
+      from what players are carrying <em>and</em> what is sat in their chests. Every
+      emerald spent leaves it; every payout enters it. A jackpot really is
+      inflationary.</p></div>
+      <div class="card reveal"><h4>Drift</h4><p>Each line walks its own path between
+      random targets, eased so it arrives gently. Come back in a minute and copper has
+      moved — in the direction it was already going. Up to ±18%.</p></div>
+      <div class="card reveal"><h4>Order flow</h4><p>Buying pushes a price up, selling
+      pushes it down, and it fades over the following minutes. Clear the shelf and the
+      last one costs more than the first.</p></div>
+    </div>
+    <p>The index is clamped between <strong>0.65×</strong> and
+    <strong>1.85×</strong> and measured against a <em>moving</em>
+    anchor, so a good week becomes the new normal instead of welding prices to the cap.</p>
+    <p class="note">The counter buys back at 45% — wide on
+    purpose. The shop is a convenience, not an income.</p>
+</section>
+<section id="stalls" class="sec">
+  <div class="sec-mark">§07</div>
+  <header class="sec-head">
+    <p class="kicker">the reason to walk across town</p>
+    <h2>Stalls</h2>
+  </header>
+  
+    <p class="lede">The stall you place is yours. Put a chest directly underneath it
+    and everything inside goes on sale to everybody else at
+    85% of the market price.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Route</th><th>Grower gets</th><th>Builder pays</th><th>Lost</th></tr></thead><tbody><tr><td>The counter</td><td>45e</td><td>100e</td><td><span class="warn">55e to nobody</span></td></tr><tr><td>A stall</td><td><span class="acc">81e</span></td><td><span class="acc">85e</span></td><td>4e pitch fee</td></tr></tbody></table></div>
+    <p>Both sides beat the counter and neither takes anything from the other — the
+    spread that used to evaporate is split between you. There is
+    <strong>no price editor</strong>: prices follow the market, so a stall is never
+    stale and the only decision left is what to stock.</p>
+    <p class="note">The market screen tells you when a neighbour has a line cheaper,
+    with their name and coordinates. <code>/stalls</code> lists the lot.</p>
+</section>
+<section id="crew" class="sec">
+  <div class="sec-mark">§08</div>
+  <header class="sec-head">
+    <p class="kicker">somebody to do the picking</p>
+    <h2>The Crew</h2>
+  </header>
+  
+    <p class="lede">120e to take somebody on, then 24e every five
+    minutes whether the harvest was good or not. 3 hands is all one
+    operation will carry.</p>
+    <p>They work <strong>daylight only</strong> — at dusk they find a bed inside the
+    patch and turn in — and they stop for a breather every dozen jobs. They will not
+    tread your farmland back into dirt, pull a rack early, or bone-meal your own crops.</p>
+    <h3 class="sub">Pace</h3>
+    <div class="scroller"><table class=""><thead><tr><th>Rung</th><th>A job every</th><th>Costs</th><th>Wage</th></tr></thead><tbody><tr><td>Plodding</td><td>10s</td><td>—</td><td>+0e</td></tr><tr><td>Steady</td><td>6s</td><td>200e</td><td>+6e</td></tr><tr><td>Brisk</td><td>4s</td><td>450e</td><td>+14e</td></tr><tr><td>Quick</td><td>2.5s</td><td>1000e</td><td>+26e</td></tr><tr><td>Flat out</td><td>1.5s</td><td>2200e</td><td>+44e</td></tr></tbody></table></div>
+    <h3 class="sub">Jobs</h3>
+    <div class="scroller"><table class=""><thead><tr><th>Job</th><th>Costs</th><th>Wage</th><th>What they do</th></tr></thead><tbody><tr><td>Picking</td><td>free</td><td>+0e</td><td><span class="dim">Your mature plants, into the nearest chest.</span></td></tr><tr><td>Curing</td><td>480e</td><td>+8e</td><td><span class="dim">Loads the racks and pulls them at peak.</span></td></tr><tr><td>Farmhand</td><td>260e</td><td>+5e</td><td><span class="dim">Wheat, carrots, anything else that ripens.</span></td></tr><tr><td>Fertilising</td><td>400e</td><td>+6e</td><td><span class="dim">Bone meal on food crops. Never on yours.</span></td></tr><tr><td>Sowing</td><td>340e</td><td>+6e</td><td><span class="dim">Plants seeds out of the chest into empty rows.</span></td></tr><tr><td>Tilling</td><td>220e</td><td>+4e</td><td><span class="dim">Turns bare ground near water into farmland.</span></td></tr></tbody></table></div>
+    <p class="note">Everything you teach them puts the wage up. A hand you cannot keep
+    busy is a hand losing you money — and if you miss a payday they walk, taking what
+    you taught them with them.</p>
+</section>
+<section id="heat" class="sec">
+  <div class="sec-mark">§09</div>
+  <header class="sec-head">
+    <p class="kicker">being seen costs something</p>
+    <h2>Heat &amp; Raids</h2>
+  </header>
+  
+    <p class="lede">A grow in the open gets noticed. Heat is measured over a
+    11-block radius: ripe plants count 3, hidden 2, growing 1, occupied
+    racks 1, presses and refiners 2.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Tier</th><th>Heat</th><th>Who turns up</th></tr></thead><tbody><tr><td>Tier 1</td><td>28+</td><td>2 pillager, 1 vindicator</td></tr><tr><td>Tier 2</td><td>60+</td><td>4 pillager, 2 vindicator</td></tr><tr><td>Tier 3</td><td>108+</td><td>5 pillager, 3 vindicator, 1 ravager</td></tr><tr><td>Tier 4</td><td>175+</td><td>6 pillager, 4 vindicator, 2 ravager</td></tr></tbody></table></div>
+    <p>Past the top tier the squad stops growing but the <strong>clock keeps
+    shortening</strong> — twice the cap is twice as often, down to a floor. Building the
+    biggest field that fits is no longer free.</p>
+    <h3 class="sub">They search</h3>
+    <p>A raid does not just swing axes. Raiders walk to your containers, open them, and
+    take product — so hiding a stash underground is worth doing, splitting it across two
+    buildings is worth doing, and standing between them and the chest is worth doing.</p>
+    <p class="note">Sealing the grow in buys time, not safety. If they cannot find a way
+    round they come through the wall. Obsidian stops them; dirt does not.</p>
+    <figure class="pull reveal"><blockquote>A win that hands over less than you put in is a loss wearing a party hat, and a machine full of those is one nobody can tell they are losing at.</blockquote><figcaption>TrapMath.java</figcaption></figure><figure class="pull reveal"><blockquote>A raid that only swings axes is a mob spawner with a story attached.</blockquote><figcaption>TrapRaid.java</figcaption></figure><figure class="pull reveal"><blockquote>The wage is the point. A crew is the first thing you own that can lose you money by existing.</blockquote><figcaption>TrapCrew.java</figcaption></figure><figure class="pull reveal"><blockquote>Company is the counterplay, which makes it a social mechanic rather than a solo debuff.</blockquote><figcaption>TrapParanoia.java</figcaption></figure><figure class="pull reveal"><blockquote>A price editor is a menu, and what this wants to be is a reason to walk across town.</blockquote><figcaption>TrapStalls.java</figcaption></figure>
+</section>
+<section id="street" class="sec">
+  <div class="sec-mark">§10</div>
+  <header class="sec-head">
+    <p class="kicker">paranoia, phones and people</p>
+    <h2>The Street</h2>
+  </header>
+  
+    <p class="lede">Everything that is not a product line.</p>
+    <div class="cards">
+      <div class="card reveal"><h4>Paranoia</h4><p>A meter that builds from heat, how
+      high you are, darkness, night and being alone — and decays in daylight, sober, or
+      <em>near another player</em>. Four tiers, from noises behind you to a motionless
+      figure at render distance. Every bit of it is a packet sent to one client; nothing
+      spawns and the world is never modified.</p></div>
+      <div class="card reveal"><h4>Contracts</h4><p>A burner phone is a job board:
+      five deliveries a day, seeded by the world day so the board is stable until
+      tomorrow. Jobs are advertised cold and the heat premium is settled at the drop —
+      you are paid for risk you actually ran. Capped at 256e.</p></div>
+      <div class="card reveal"><h4>Reputation</h4><p>Lives on the phone as a data
+      component, so it survives restarts for free and losing the phone loses the
+      standing with it. Capped at 50, because it feeds four multipliers at
+      once and three of them used to be unbounded.</p></div>
+      <div class="card reveal"><h4>Dealers</h4><p>The first thing you own that works
+      while you are not there. They take a cut, sell far better at night than at noon,
+      get in each other's way if you crowd a patch, and the cheap ones get robbed.</p></div>
+      <div class="card reveal"><h4>The Ledger</h4><p>Book, compass and two amethyst.
+      Reads every container within 32 blocks — shulker boxes included — and draws a line
+      of light to whichever chest holds what you clicked.</p></div>
+      <div class="card reveal"><h4>Stickups</h4><p>The farm raid comes for the plants.
+      This comes for <em>you</em>, at the moment you hand product over in person. It is
+      the price of dealing yourself instead of paying somebody else to.</p></div>
+    </div>
+</section>
+<section id="casino" class="sec">
+  <div class="sec-mark">§11</div>
+  <header class="sec-head">
+    <p class="kicker">seven games and a vault</p>
+    <h2>The House</h2>
+  </header>
+  
+    <p class="lede">A casino is a bankroll and a set of machines wired to it. The
+    bankroll lives in the ledger, not on the card — the card is the key, so a machine
+    can pay a winner at four in the morning while the owner is offline.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Cabinet</th><th>Return to player</th></tr></thead><tbody><tr><td>2×2</td><td>95.1%</td></tr><tr><td>3×3</td><td>96.2%</td></tr><tr><td>4×4</td><td>95.4%</td></tr><tr><td>5×5</td><td>97.1%</td></tr></tbody></table></div>
+    <p>Roulette is a <strong>single-zero wheel</strong>: 37 pockets,
+    and every bet on the table carries the same edge, so the choice is purely how you
+    want to lose it. The Climb pays 96.5% at
+    <em>every</em> rung — there is no correct place to stop, which makes it nerve rather
+    than arithmetic.</p>
+    <p class="note">A floor is a business, not a tap. Punters have to be served from
+    your own stash, machines wear out, a pit boss costs a flat wage against a
+    proportional skim, and an unattended floor earns very close to nothing.</p>
+</section>
+<section id="commands" class="sec">
+  <div class="sec-mark">§12</div>
+  <header class="sec-head">
+    <p class="kicker">everything answers only you</p>
+    <h2>Commands</h2>
+  </header>
+  
+    <p class="lede">Every command replies to the person who typed it — no op broadcast,
+    so going creative does not announce itself.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/guide</code></td><td>Five handbooks — grower, refiner, street, crew, casino</td></tr><tr><td><code>/market</code></td><td>Why everything costs what it costs</td></tr><tr><td><code>/stalls</code></td><td>Who is selling, and where</td></tr><tr><td><code>/crew</code></td><td>The crew board — hire, train, pay</td></tr><tr><td><code>/heat</code></td><td>How hot this spot is, and what it would bring</td></tr><tr><td><code>/paranoia</code></td><td>Turn the whole thing off, per player</td></tr><tr><td><code>/earnings</code></td><td>Today's takings, everybody, by job</td></tr><tr><td><code>/sethome · /home · /spawn · /back</code></td><td>Getting about</td></tr></tbody></table></div>
+</section>
+<section id="awards" class="sec">
+  <div class="sec-mark">§13</div>
+  <header class="sec-head">
+    <p class="kicker">26 of them</p>
+    <h2>Advancements</h2>
+  </header>
+  
+    <p class="lede">Real advancements, so they show in the vanilla tree with no client
+    mod.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Name</th><th>How</th><th>Kind</th></tr></thead><tbody><tr><td>Banked</td><td><span class="dim">Carry a wallet instead of twenty stacks.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Blend</td><td><span class="dim">Put two strains through the mixing station.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Broke The Bank</td><td><span class="dim">Win more off one machine than its casino had in the vault.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Nothing To See</td><td><span class="dim">Sit through a raid without losing a gram.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Payroll</td><td><span class="dim">Take somebody on. Wages start immediately.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Patience</td><td><span class="dim">Dry a bud properly instead of smoking it wet.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Edge Case</td><td><span class="dim">Land the ball in an outside slot on The Drop.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Floor</td><td><span class="dim">Get a machine of your own on the floor.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Followed Home</td><td><span class="dim">Deal in person once too often and find out who was watching.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Foreman</td><td><span class="dim">Teach one hand everything there is to teach.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Jackpot</td><td><span class="dim">Take ten times your stake off a machine.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Kingpin</td><td><span class="dim">Bring a dealer up to level five.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Licensed</td><td><span class="dim">Get your hands on a casino licence.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Liquidation</td><td><span class="dim">Clear 500 emeralds at the counter in one go.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Moved The Market</td><td><span class="dim">Push one item&#x27;s price by a fifth on your own.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>By Name</td><td><span class="dim">Make a blend somebody has already named.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Natural</td><td><span class="dim">Get dealt twenty-one on two cards.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Nerve</td><td><span class="dim">Walk away from the sixth rung of The Climb.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Network</td><td><span class="dim">Put somebody on the street selling for you.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Open For Business</td><td><span class="dim">Set up a market stall.</span></td><td><span class="frame task">task</span></td></tr><tr><td>They Found It</td><td><span class="dim">Have a raid walk out with your product.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Refined</td><td><span class="dim">Take the coca line all the way to powder.</span></td><td><span class="frame task">task</span></td></tr><tr><td>On The Rim</td><td><span class="dim">Call the edge on the coin toss and hit it.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Rolled</td><td><span class="dim">Turn a bud into something you can actually sell.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Everybody Eats</td><td><span class="dim">Get hold of some seeds and start something.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Money</td><td><span class="dim">Win something on all four machines.</span></td><td><span class="frame challenge">challenge</span></td></tr></tbody></table></div>
+</section></main>
+
+    <footer>
+      <p>Built by <code>tools/gen_wiki.py</code> from the source tree. Every number on
+      this page is read from the constant that governs it.</p>
+      <p>TrapCraft is server-side via Polymer — friends join with the vanilla client
+      they already have.</p>
+    </footer>
+  </div>
+</div>
+
+<script>
+// Reveal on scroll, and light the nav for whatever you're reading.
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) {
+    e.target.classList.add('in');
+    io.unobserve(e.target);
+  }
+}, { rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.reveal').forEach((el, i) => {
+  el.style.transitionDelay = (i % 6) * 60 + 'ms';
+  io.observe(el);
+});
+
+const links = [...document.querySelectorAll('.rail a')];
+const spy = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    links.forEach(a => a.classList.toggle('on', a.hash === '#' + e.target.id));
+  }
+}, { rootMargin: '-45% 0px -50% 0px' });
+document.querySelectorAll('.sec').forEach(s => spy.observe(s));
+</script>
+</body>
+</html>
