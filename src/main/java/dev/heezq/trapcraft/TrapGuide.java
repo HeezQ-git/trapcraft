@@ -271,22 +271,24 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("5. THE GRADE\n\n"))
-                .append(body("Then it is points, and " + HomeSurvey.topPoints()
-                        + " is the lot.\n\n"))
-                .append(body("Every two points is a grade, up to "
-                        + HomeSurvey.TOP_TIER + ".\n\n"))
-                .append(hint("The box tells you the next thing to do."))));
+                .append(body("Points, " + HomeSurvey.topPoints()
+                        + " of them. Two a grade.\n\n"))
+                .append(warn("SIZE CAPS IT. " + HomeSurvey.FLOOR_STEPS[1]
+                        + " floor for grade 2, " + HomeSurvey.FLOOR_STEPS[2]
+                        + " for 3, " + HomeSurvey.FLOOR_STEPS[3] + " for 4, "
+                        + HomeSurvey.FLOOR_STEPS[4] + " for 5.\n\n"))
+                .append(hint("Upstairs counts. Every storey."))));
 
         pages.add(page(Text.empty()
                 .append(title("6. THE POINTS\n\n"))
-                .append(body("Room: " + HomeSurvey.FLOOR_STEPS[0] + ", "
-                        + HomeSurvey.FLOOR_STEPS[1] + ", "
-                        + HomeSurvey.FLOOR_STEPS[2] + " blocks.\n"))
-                .append(body("Fittings: table, chest, furnace, stall.\n"))
+                .append(body("Built, not dug: "
+                        + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% then "
+                        + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "%.\n"))
+                .append(body("Fittings: table, chest, furnace, stall, "
+                        + "window.\n"))
                 .append(body("Character: " + HomeSurvey.DECOR_STEPS[0] + " then "
-                        + HomeSurvey.DECOR_STEPS[1] + " different blocks.\n"))
-                .append(body("Light: one per " + HomeSurvey.LIGHT_PER
-                        + " blocks.\n"))));
+                        + HomeSurvey.DECOR_STEPS[1] + " kinds of block.\n"))
+                .append(body("No dark corners.\n"))));
 
         pages.add(page(Text.empty()
                 .append(title("7. GROUND\n\n"))

@@ -319,7 +319,9 @@ def gather() -> None:
     DATA["min_floor"] = int(need(r"MIN_FLOOR = (\d+)", homes, "MIN_FLOOR"))
     DATA["floor_steps"] = ints("FLOOR_STEPS", homes)
     DATA["decor_steps"] = ints("DECOR_STEPS", homes)
-    DATA["light_per"] = int(need(r"LIGHT_PER = (\d+)", homes, "LIGHT_PER"))
+    DATA["shell_steps"] = floats("SHELL_STEPS", homes)
+    DATA["dark_at"] = int(need(r"DARK_AT = (\d+)", homes, "DARK_AT"))
+    DATA["fittings"] = int(need(r"FITTINGS = (\d+)", homes, "FITTINGS"))
     DATA["top_tier"] = int(need(r"TOP_TIER = (\d+)", homes, "TOP_TIER"))
     DATA["span"] = int(need(r"SPAN = (\d+)", homes, "SPAN"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
@@ -694,17 +696,35 @@ def build() -> str:
     to inflate the floor area does nothing.</p>
     <h3 class="sub">The five musts</h3>
     <p>Miss any of these and it is not a house at all, whatever else is in it:
-    sealed · {d['min_floor']} blocks of floor · a bed · a door onto the street · a light.</p>
+    sealed · {d['min_floor']} squares of floor · a bed · a door onto the street · a light.</p>
+    <h3 class="sub">Size is a lid, not a bonus</h3>
+    <p>This is the part worth knowing. Floor area does not earn points — it decides the
+    <strong>highest grade the place is allowed</strong>, and nothing else can lift it.
+    A cupboard with a bed, a table, a chest, a furnace and a torch is a grade one, however
+    neatly it is fitted out.</p>
+    {table(["Floor", "Highest grade allowed"], [
+        [f"{d['floor_steps'][i]}+ squares", str(i + 1)] for i in range(len(d['floor_steps']))
+    ])}
+    <p class="note">Floor means squares you could stand on, so <strong>every storey
+    counts</strong> and a cathedral ceiling counts once. Three storeys of a modest cottage
+    gets there as surely as one big hall.</p>
     <h3 class="sub">Then it is points</h3>
     {table(["Worth", "For"], [
-        ["0–3", f"floor area past {d['min_floor']}, {d['floor_steps'][0]}, "
-                f"{d['floor_steps'][1]} and {d['floor_steps'][2]} blocks"],
-        ["0–4", "one each for a crafting table, storage, a furnace and a market stall"],
-        ["0–2", f"{d['decor_steps'][0]} and {d['decor_steps'][1]} different blocks in it"],
-        ["0–1", f"lit — one lamp per {d['light_per']} blocks of floor"],
+        ["0–2", f"built, not dug — {round(d['shell_steps'][0] * 100)}% then "
+                f"{round(d['shell_steps'][1] * 100)}% of the shell made of worked material"],
+        ["0–3", f"fittings — a crafting table, storage, a furnace, a market stall and a "
+                f"window; two earns one, four earns two, all {d['fittings']} earns three"],
+        ["0–2", f"character — {d['decor_steps'][0]} then {d['decor_steps'][1]} different "
+                f"kinds of block in the place"],
+        ["0–2", f"no dark corners — under a tenth of the floor below light "
+                f"{d['dark_at']} earns one, none at all earns two"],
     ])}
-    <p>Every two points is a grade, up to <strong>{d['top_tier']}</strong>. The mailbox
-    always tells you the single next thing to do, so you never have to read the table.</p>
+    <p>Every two points is a grade, up to <strong>{d['top_tier']}</strong> — and then the
+    floor caps it. The mailbox always tells you the single next thing to do, so you never
+    have to read the table.</p>
+    <p class="note">Dirt, sand, gravel, plain stone, cobble, logs and leaves are what the
+    world hands you and count as dug. Everything you crafted, smelted, cut or dyed counts
+    as built — including anything a mod ships as decoration.</p>
     <p class="note">Two houses cannot share ground — flats side by side are fine, and so is
     one above another. A house reaches at most {d['span']} blocks from its mailbox, and it
     re-measures itself every couple of minutes, so knocking a wall through or taking the

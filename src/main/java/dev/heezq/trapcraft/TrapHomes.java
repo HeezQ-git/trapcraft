@@ -138,10 +138,26 @@ public final class TrapHomes {
      */
     public record Readout(String name, int tier, int floor, boolean sealed, boolean clash,
                           int exits, boolean bed, boolean crafting, boolean storage,
-                          boolean cooking, boolean stall, int lights, int kinds,
-                          boolean lit, boolean registered) {
-        public int amenities() {
-            return (crafting ? 1 : 0) + (storage ? 1 : 0) + (cooking ? 1 : 0) + (stall ? 1 : 0);
+                          boolean cooking, boolean stall, boolean window, int lights,
+                          int kinds, int dark, float finished, boolean registered) {
+        public int fittings() {
+            return (crafting ? 1 : 0) + (storage ? 1 : 0) + (cooking ? 1 : 0)
+                    + (stall ? 1 : 0) + (window ? 1 : 0);
+        }
+
+        public int points() {
+            return HomeSurvey.points(finished, fittings(), kinds, dark, floor);
+        }
+
+        /** What the floor allows, which is what caps everything else. */
+        public int roomFor() {
+            return HomeSurvey.sizeTier(floor);
+        }
+
+        /** True when the only thing holding the grade back is how small it is. */
+        public boolean cramped() {
+            return sealed && roomFor() < HomeSurvey.TOP_TIER
+                    && 1 + Math.min(HomeSurvey.TOP_TIER - 1, points() / 2) > roomFor();
         }
     }
 
@@ -215,19 +231,16 @@ public final class TrapHomes {
     private static Readout grade(ServerWorld world, Home self, HomeSurvey.Rooms rooms) {
         String name = self == null ? null : self.name;
         if (!rooms.sealed()) {
-            return new Readout(name, 0, 0, false, rooms.clash(),
-                    0, false, false, false, false, false, 0, 0, false, self != null);
+            return new Readout(name, 0, 0, false, rooms.clash(), 0, false, false, false,
+                    false, false, false, 0, 0, 0, 0f, self != null);
         }
         int floor = rooms.floor();
         Fittings kit = fittings(world, rooms.inside());
-        boolean lit = kit.lights * HomeSurvey.LIGHT_PER >= floor;
-        int amenities = (kit.crafting ? 1 : 0) + (kit.storage ? 1 : 0)
-                + (kit.cooking ? 1 : 0) + (kit.stall ? 1 : 0);
         int tier = HomeSurvey.tier(true, floor, kit.bed, !rooms.exits().isEmpty(),
-                amenities, kit.kinds, kit.lights);
-        return new Readout(name, tier, floor, true, false,
-                rooms.exits().size(), kit.bed, kit.crafting, kit.storage, kit.cooking,
-                kit.stall, kit.lights, kit.kinds, lit, self != null);
+                kit.finished(), kit.count(), kit.kinds, kit.dark, kit.lights);
+        return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.bed,
+                kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
+                kit.lights, kit.kinds, kit.dark, kit.finished(), self != null);
     }
 
     /**
@@ -392,8 +405,61 @@ public final class TrapHomes {
         boolean storage;
         boolean cooking;
         boolean stall;
+        boolean window;
         int lights;
         int kinds;
+        /** Floor squares sitting under {@link HomeSurvey#DARK_AT}. */
+        int dark;
+        /** Shell blocks, and how many of them somebody made rather than dug. */
+        int shell;
+        int worked;
+
+        float finished() {
+            return shell <= 0 ? 0f : (float) worked / shell;
+        }
+
+        int count() {
+            return (crafting ? 1 : 0) + (storage ? 1 : 0) + (cooking ? 1 : 0)
+                    + (stall ? 1 : 0) + (window ? 1 : 0);
+        }
+    }
+
+    /**
+     * Blocks the world hands you, as opposed to blocks somebody made.
+     *
+     * Tags first, because they are the only thing that keeps working when a
+     * mod adds its own dirt. The handful of named blocks after them are the
+     * ones vanilla leaves out of every useful tag and which are exactly what
+     * a thrown-together shelter is built of.
+     */
+    private static boolean rough(BlockState state) {
+        if (state.isIn(net.minecraft.registry.tag.BlockTags.DIRT)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.SAND)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_OVERWORLD)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_NETHER)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.LOGS)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.LEAVES)
+                || state.isIn(net.minecraft.registry.tag.BlockTags.SNOW)) {
+            return true;
+        }
+        Block block = state.getBlock();
+        return block == Blocks.COBBLESTONE || block == Blocks.MOSSY_COBBLESTONE
+                || block == Blocks.COBBLED_DEEPSLATE || block == Blocks.GRAVEL
+                || block == Blocks.CLAY || block == Blocks.PACKED_MUD
+                || block == Blocks.DIRT_PATH || block == Blocks.ICE
+                || block == Blocks.PACKED_ICE || block == Blocks.MAGMA_BLOCK;
+    }
+
+    /**
+     * Something you can see out of. A house with no windows is a cell.
+     *
+     * IMPERMEABLE is the tag every glass block in the game is in -- it is
+     * what stops water going through -- so modded glass is covered without
+     * naming any of it. Panes have no tag of their own and need the class.
+     */
+    private static boolean window(BlockState state) {
+        return state.isIn(net.minecraft.registry.tag.BlockTags.IMPERMEABLE)
+                || state.getBlock() instanceof net.minecraft.block.PaneBlock;
     }
 
     /**
@@ -411,10 +477,20 @@ public final class TrapHomes {
         Set<Long> walls = new HashSet<>();
 
         for (long at : inside) {
-            consider(world, at, kit, kinds);
+            consider(world, at, kit, kinds, false);
             int x = HomeSurvey.cellX(at);
             int y = HomeSurvey.cellY(at);
             int z = HomeSurvey.cellZ(at);
+            // A dark corner is measured where somebody would be STANDING, so
+            // only squares with a floor under them are asked, and only block
+            // light is counted -- a room lit through the window is a dark room
+            // at midnight, which is when it matters.
+            if (!inside.contains(HomeSurvey.cell(x, y - 1, z))
+                    && loadedAt(world, x, z)
+                    && world.getLightLevel(net.minecraft.world.LightType.BLOCK,
+                            new BlockPos(x, y, z)) < HomeSurvey.DARK_AT) {
+                kit.dark++;
+            }
             for (int side = 0; side < 6; side++) {
                 long next = HomeSurvey.cell(
                         x + (side == 0 ? 1 : side == 1 ? -1 : 0),
@@ -426,10 +502,14 @@ public final class TrapHomes {
             }
         }
         for (long at : walls) {
-            consider(world, at, kit, kinds);
+            consider(world, at, kit, kinds, true);
         }
         kit.kinds = kinds.size();
         return kit;
+    }
+
+    private static boolean loadedAt(ServerWorld world, int x, int z) {
+        return world.getChunkManager().isChunkLoaded(x >> 4, z >> 4);
     }
 
     /**
@@ -440,10 +520,11 @@ public final class TrapHomes {
      * a chest. A modded smoker that extends AbstractFurnaceBlock counts as a
      * kitchen; one that does not is a one-line fix when somebody notices.
      */
-    private static void consider(ServerWorld world, long at, Fittings kit, Set<Block> kinds) {
+    private static void consider(ServerWorld world, long at, Fittings kit, Set<Block> kinds,
+                                 boolean shell) {
         BlockPos pos = new BlockPos(HomeSurvey.cellX(at), HomeSurvey.cellY(at),
                 HomeSurvey.cellZ(at));
-        if (!world.getChunkManager().isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+        if (!loadedAt(world, pos.getX(), pos.getZ())) {
             return;
         }
         BlockState state = world.getBlockState(pos);
@@ -454,6 +535,18 @@ public final class TrapHomes {
         kinds.add(block);
         if (state.getLuminance() > 0) {
             kit.lights++;
+        }
+        if (shell) {
+            // Furniture counts towards the shell, and that is fine: a chest is
+            // a thing somebody made. What is being asked is "did you build
+            // this or did you dig it", and the answer averages honestly.
+            kit.shell++;
+            if (!rough(state)) {
+                kit.worked++;
+            }
+            if (window(state)) {
+                kit.window = true;
+            }
         }
         if (block instanceof BedBlock) {
             kit.bed = true;

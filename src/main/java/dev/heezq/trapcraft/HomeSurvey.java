@@ -116,13 +116,25 @@ public final class HomeSurvey {
      * @param clash  the fill ran into another house's claim
      */
     public record Rooms(Set<Long> inside, List<Long> exits, boolean sealed, boolean clash) {
-        /** Distinct columns, which is what a person means by "how big is it". */
+        /**
+         * Squares you could stand on. Every storey counts, headroom does not.
+         *
+         * Was distinct COLUMNS, which quietly said that building upwards is
+         * worth nothing: a three-storey tower on a six by six footprint
+         * measured thirty-six, the same as a bungalow, while a room with a
+         * cathedral ceiling measured the same as a crawlspace. A cell with
+         * something solid under it is a floor tile, so a staircase adds a
+         * whole storey and a high ceiling adds nothing -- which is the way
+         * round anybody would count it by eye.
+         */
         public int floor() {
-            Set<Long> columns = new HashSet<>();
+            int tiles = 0;
             for (long at : inside) {
-                columns.add((long) cellX(at) << 32 | (cellZ(at) & 0xFFFFFFFFL));
+                if (!inside.contains(cell(cellX(at), cellY(at) - 1, cellZ(at)))) {
+                    tiles++;
+                }
             }
-            return columns.size();
+            return tiles;
         }
     }
 
@@ -264,56 +276,133 @@ public final class HomeSurvey {
 
     // --- the grade ------------------------------------------------------------
 
-    /** Floor columns a house needs before anybody will call it a house. */
+    /** Floor tiles a house needs before anybody will call it a house. */
     public static final int MIN_FLOOR = 9;
-    /** Floor sizes that each earn a point. */
-    public static final int[] FLOOR_STEPS = {20, 40, 80};
-    /** Distinct decorative blocks that each earn a point. */
-    public static final int[] DECOR_STEPS = {6, 12};
-    /** Floor columns one light is expected to cover. */
-    public static final int LIGHT_PER = 16;
     public static final int TOP_TIER = 5;
+
+    /**
+     * Floor a house needs to be ALLOWED each grade. A ceiling, not a bonus.
+     *
+     * This is the change that made the grade mean something. Floor area used
+     * to be worth three points out of ten, so a three-by-four cupboard with a
+     * bed, a table, a chest, a furnace and a torch graded four out of five --
+     * and the honest reaction to that is the one it got: "I don't have to put
+     * any effort in." Fittings are a shopping list and a shopping list is not
+     * a building.
+     *
+     * Now size is a hard lid on top of everything else. A cupboard is a grade
+     * one whatever is in it, and the top grade is a build rather than a
+     * checklist: a hundred and fifty squares of floor is a proper house, or
+     * three storeys of a modest one.
+     */
+    public static final int[] FLOOR_STEPS = {9, 20, 45, 90, 150};
+
+    /** Distinct block kinds in the place that each earn a point. */
+    public static final int[] DECOR_STEPS = {12, 22};
+    /**
+     * Share of the shell that has to be worked material rather than dug up.
+     *
+     * The other half of the same complaint. Nothing used to care what a house
+     * was MADE of, so a dirt box scored exactly what a brick one did. Dirt,
+     * sand, gravel, plain stone and cobble are what the world hands you;
+     * planks, bricks, glass, wool and everything a mod ships as decoration
+     * are things somebody chose.
+     */
+    public static final float[] SHELL_STEPS = {0.60f, 0.90f};
+    /** Light level below which a square counts as a dark corner. */
+    public static final int DARK_AT = 8;
+    /** Share of the floor allowed to be dark for the first lighting point. */
+    public static final float GLOOM_ALLOWED = 0.10f;
+    /** Fittings there are to find: crafting, storage, cooking, stall, window. */
+    public static final int FITTINGS = 5;
+
+    /** The grade this much floor allows, whatever else is true. */
+    public static int sizeTier(int floor) {
+        int allowed = 0;
+        for (int step : FLOOR_STEPS) {
+            if (floor >= step) {
+                allowed++;
+            }
+        }
+        return Math.min(TOP_TIER, allowed);
+    }
+
+    /** Worked material rather than dug up, 0-2. */
+    public static int shellPoints(float finished) {
+        int points = 0;
+        for (float step : SHELL_STEPS) {
+            if (finished >= step) {
+                points++;
+            }
+        }
+        return points;
+    }
+
+    /** Crafting, storage, cooking, a stall, a window: 0-3. */
+    public static int fittingPoints(int fittings) {
+        return fittings >= FITTINGS ? 3 : fittings >= 4 ? 2 : fittings >= 2 ? 1 : 0;
+    }
+
+    /** Distinct kinds of block in the place, 0-2. */
+    public static int decorPoints(int kinds) {
+        int points = 0;
+        for (int step : DECOR_STEPS) {
+            if (kinds >= step) {
+                points++;
+            }
+        }
+        return points;
+    }
+
+    /**
+     * Dark corners, 0-2.
+     *
+     * Measured off the light actually reaching the floor rather than off a
+     * count of torches, because "one lamp per sixteen squares" is a sum and
+     * "there is a dark bit at the top of the stairs" is a house. It also
+     * gives step three its letters for free.
+     */
+    public static int lightPoints(int dark, int floor) {
+        if (dark <= 0) {
+            return 2;
+        }
+        return floor > 0 && dark <= Math.max(1, (int) (floor * GLOOM_ALLOWED)) ? 1 : 0;
+    }
+
+    /** Everything above the bare minimum, added up. */
+    public static int points(float finished, int fittings, int kinds, int dark, int floor) {
+        return shellPoints(finished) + fittingPoints(fittings)
+                + decorPoints(kinds) + lightPoints(dark, floor);
+    }
+
+    /** The most {@link #points} can come to, for the guide book. */
+    public static int topPoints() {
+        return SHELL_STEPS.length + 3 + DECOR_STEPS.length + 2;
+    }
 
     /**
      * What the place is worth, 0 for "nobody would live here".
      *
-     * The four hard requirements are the ones a person would say out loud --
-     * it has to be sealed, big enough to turn round in, have a bed, have a way
-     * in, and not be pitch dark. Everything above that is points, because
-     * everything above that is decoration in the honest sense: it makes the
-     * place nicer and none of it is the difference between a home and a hole.
+     * The five hard requirements are the ones a person would say out loud: it
+     * has to be sealed, big enough to turn round in, have a bed, have a way
+     * in, and not be pitch dark. Then it is points -- and then size puts a lid
+     * on the answer, because no amount of furniture makes a cupboard a house.
      *
-     * @param floor     distinct floor columns
-     * @param amenities how many of crafting, storage, cooking, a stall
-     * @param decor     distinct decorative block types inside
-     * @param lights    light sources inside
+     * @param floor    floor tiles, every storey counted
+     * @param finished share of the shell that is worked material, 0-1
+     * @param fittings how many of crafting, storage, cooking, stall, window
+     * @param kinds    distinct block types in the place
+     * @param dark     floor squares under light {@link #DARK_AT}
+     * @param lights   light sources, only to tell "some" from "none"
      */
     public static int tier(boolean sealed, int floor, boolean bed, boolean exit,
-                           int amenities, int decor, int lights) {
+                           float finished, int fittings, int kinds, int dark, int lights) {
         if (!sealed || floor < MIN_FLOOR || !bed || !exit || lights < 1) {
             return 0;
         }
-        int points = 0;
-        for (int step : FLOOR_STEPS) {
-            if (floor >= step) {
-                points++;
-            }
-        }
-        points += Math.max(0, Math.min(4, amenities));
-        for (int step : DECOR_STEPS) {
-            if (decor >= step) {
-                points++;
-            }
-        }
-        if (lights * LIGHT_PER >= floor) {
-            points++;
-        }
-        return 1 + Math.min(TOP_TIER - 1, points / 2);
-    }
-
-    /** The most points {@link #tier} can be handed, for the guide book. */
-    public static int topPoints() {
-        return FLOOR_STEPS.length + 4 + DECOR_STEPS.length + 1;
+        int earned = 1 + Math.min(TOP_TIER - 1,
+                points(finished, fittings, kinds, dark, floor) / 2);
+        return Math.min(earned, sizeTier(floor));
     }
 
     // --- claims ---------------------------------------------------------------

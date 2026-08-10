@@ -31,9 +31,9 @@ import java.util.List;
  * a room and be told what it is missing", and a row of icons that go from grey
  * to real as you tick them off is the difference between a game and a report.
  *
- *   [grade] . [floor][sealed][ways in] . . . [again]
- *   . [bed][craft][store][cook][stall][light][decor] .
- *   . . . . [what's next] . . . [pull it up]
+ *   [grade] . [floor][sealed][ways in][built] . . [again]
+ *   [bed][craft][store][cook][stall][window][dark][decor] .
+ *   . . . . [what's next] . . . .
  *
  * Nothing here is buyable. The only button is "look again", and the only other
  * thing you can do is take the box down -- which is the block's job, not this
@@ -47,8 +47,9 @@ public class MailboxScreenHandler extends ScreenHandler {
     private static final int FLOOR_SLOT = 2;
     private static final int SEALED_SLOT = 3;
     private static final int WAYS_SLOT = 4;
+    private static final int SHELL_SLOT = 5;
     private static final int AGAIN_SLOT = 8;
-    private static final int LIST_FROM = 10;
+    private static final int LIST_FROM = 9;
     private static final int NEXT_SLOT = 22;
 
     /** One line of the checklist: what it is, what it looks like, is it there. */
@@ -61,10 +62,11 @@ public class MailboxScreenHandler extends ScreenHandler {
             new Tick("Somewhere to put things", Items.CHEST, "A chest or a barrel."),
             new Tick("Somewhere to cook", Items.FURNACE, "A furnace, smoker or blast furnace."),
             new Tick("Somewhere to shop", Items.EMERALD, "A market stall, indoors."),
-            new Tick("Light", Items.TORCH, "One lamp per " + HomeSurvey.LIGHT_PER
-                    + " blocks of floor."),
+            new Tick("A window", Items.GLASS, "Glass or panes in the wall."),
+            new Tick("No dark corners", Items.TORCH, "Every square lit above "
+                    + HomeSurvey.DARK_AT + ", at night."),
             new Tick("Character", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " different "
-                    + "blocks, then " + HomeSurvey.DECOR_STEPS[1] + "."));
+                    + "kinds of block, then " + HomeSurvey.DECOR_STEPS[1] + "."));
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity who;
@@ -106,9 +108,13 @@ public class MailboxScreenHandler extends ScreenHandler {
 
         display.setStack(GRADE_SLOT, grade());
         display.setStack(FLOOR_SLOT, count(Items.OAK_PLANKS, "Floor",
-                reading.floor() + " blocks",
-                reading.floor() >= HomeSurvey.MIN_FLOOR
-                        ? "Big enough." : "Under " + HomeSurvey.MIN_FLOOR + ". Too small.",
+                reading.floor() + " squares",
+                reading.floor() < HomeSurvey.MIN_FLOOR
+                        ? "Under " + HomeSurvey.MIN_FLOOR + ". Too small to be a house."
+                        : "Room for grade " + reading.roomFor()
+                        + (reading.roomFor() >= HomeSurvey.TOP_TIER ? ". As big as it needs."
+                        : "; " + nextStep() + " squares would allow "
+                        + (reading.roomFor() + 1) + "."),
                 reading.floor() >= HomeSurvey.MIN_FLOOR));
         display.setStack(SEALED_SLOT, count(Items.BRICKS, "Shell",
                 reading.sealed() ? "Sealed" : reading.clash() ? "Somebody else's" : "Open",
@@ -121,10 +127,19 @@ public class MailboxScreenHandler extends ScreenHandler {
                 reading.exits() > 0 ? "Onto the street."
                         : "No door to the outside at all.",
                 reading.exits() > 0));
+        display.setStack(SHELL_SLOT, count(Items.BRICK, "Built, not dug",
+                Math.round(reading.finished() * 100) + "%",
+                reading.finished() >= HomeSurvey.SHELL_STEPS[1]
+                        ? "Properly made."
+                        : "Dirt, sand, gravel, plain stone and cobble don't count. "
+                        + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% earns a point, "
+                        + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "% earns two.",
+                reading.finished() >= HomeSurvey.SHELL_STEPS[0]));
         display.setStack(AGAIN_SLOT, again());
 
         boolean[] got = {reading.bed(), reading.crafting(), reading.storage(),
-                reading.cooking(), reading.stall(), reading.lit(),
+                reading.cooking(), reading.stall(), reading.window(),
+                reading.dark() == 0,
                 reading.kinds() >= HomeSurvey.DECOR_STEPS[0]};
         String[] detail = {
                 reading.bed() ? "There." : "Missing.",
@@ -132,9 +147,12 @@ public class MailboxScreenHandler extends ScreenHandler {
                 reading.storage() ? "There." : "Missing.",
                 reading.cooking() ? "There." : "Missing.",
                 reading.stall() ? "There." : "Missing.",
-                reading.lights() + (reading.lights() == 1 ? " lamp" : " lamps")
-                        + " for " + reading.floor() + " blocks",
-                reading.kinds() + " different blocks"};
+                reading.window() ? "There." : "Missing.",
+                reading.dark() == 0 ? "Every square lit."
+                        : reading.dark() + " dark "
+                        + (reading.dark() == 1 ? "square" : "squares")
+                        + " of " + reading.floor(),
+                reading.kinds() + " kinds of block"};
         for (int i = 0; i < LIST.size(); i++) {
             display.setStack(LIST_FROM + i, tick(LIST.get(i), got[i], detail[i]));
         }
@@ -155,6 +173,19 @@ public class MailboxScreenHandler extends ScreenHandler {
                 : line("Grade " + tier + " of " + HomeSurvey.TOP_TIER,
                 Formatting.GREEN, Formatting.BOLD));
         lore.add(line(home.ownerName() + "'s", Formatting.DARK_GRAY));
+        if (reading.sealed()) {
+            lore.add(Text.empty());
+            lore.add(line(reading.points() + " of " + HomeSurvey.topPoints()
+                    + " points, two to a grade", Formatting.GRAY));
+            // The lid, said plainly. Fittings are a shopping list; a shopping
+            // list is not a building, and this is the line that says so.
+            lore.add(reading.cramped()
+                    ? line("Too small for better. " + nextStep()
+                    + " squares of floor allows grade " + (reading.roomFor() + 1) + ".",
+                    Formatting.YELLOW)
+                    : line("Floor allows up to grade " + reading.roomFor() + ".",
+                    Formatting.DARK_GRAY));
+        }
         lore.add(Text.empty());
         lore.add(line("Surveyed from " + home.anchor().getX() + " "
                 + home.anchor().getY() + " " + home.anchor().getZ(), Formatting.DARK_GRAY));
@@ -184,6 +215,14 @@ public class MailboxScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /** The floor the next grade up wants. */
+    private int nextStep() {
+        int at = reading.roomFor();
+        return at >= HomeSurvey.FLOOR_STEPS.length
+                ? HomeSurvey.FLOOR_STEPS[HomeSurvey.FLOOR_STEPS.length - 1]
+                : HomeSurvey.FLOOR_STEPS[at];
+    }
+
     private ItemStack again() {
         ItemStack tag = new ItemStack(Items.SPYGLASS);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -208,26 +247,36 @@ public class MailboxScreenHandler extends ScreenHandler {
         String say;
         if (!reading.sealed()) {
             say = reading.clash()
-                    ? "Move over. This runs into somebody else's place."
+                    ? "Move over. This runs into a place already on the register."
                     : "Find the hole. Walls, floor and roof, no gaps.";
         } else if (reading.floor() < HomeSurvey.MIN_FLOOR) {
-            say = "Make it bigger. " + HomeSurvey.MIN_FLOOR + " blocks of floor, minimum.";
+            say = "Make it bigger. " + HomeSurvey.MIN_FLOOR + " squares of floor, minimum.";
         } else if (reading.exits() == 0) {
             say = "Put a door in it.";
         } else if (!reading.bed()) {
             say = "Put a bed in it.";
         } else if (reading.lights() == 0) {
             say = "Light it. Nobody sleeps in the dark.";
-        } else if (!reading.lit()) {
-            say = "More light. One lamp per " + HomeSurvey.LIGHT_PER + " blocks of floor.";
-        } else if (reading.amenities() < 4) {
-            say = "Fit it out -- a table, a chest, a furnace, a stall.";
+        } else if (reading.cramped()) {
+            // Size first once it is the binding constraint, because every
+            // other suggestion would be a waste of the player's evening.
+            say = "Build it BIGGER. " + nextStep() + " squares of floor -- another room, "
+                    + "or another storey -- allows grade " + (reading.roomFor() + 1) + ".";
+        } else if (reading.finished() < HomeSurvey.SHELL_STEPS[0]) {
+            say = "Stop building out of dirt. Planks, bricks, anything you made.";
+        } else if (reading.dark() > 0) {
+            say = reading.dark() + " dark " + (reading.dark() == 1 ? "square" : "squares")
+                    + " left. Walk it at night and look at the floor.";
+        } else if (reading.fittings() < HomeSurvey.FITTINGS) {
+            say = "Fit it out -- a table, a chest, a furnace, a stall, a window.";
+        } else if (reading.finished() < HomeSurvey.SHELL_STEPS[1]) {
+            say = "Finish the shell. " + Math.round(HomeSurvey.SHELL_STEPS[1] * 100)
+                    + "% worked material, you're at " + Math.round(reading.finished() * 100) + "%.";
         } else if (reading.kinds() < HomeSurvey.DECOR_STEPS[1]) {
-            say = "Decorate. " + HomeSurvey.DECOR_STEPS[1] + " different blocks, you have "
+            say = "Decorate. " + HomeSurvey.DECOR_STEPS[1] + " kinds of block, you have "
                     + reading.kinds() + ".";
-        } else if (reading.floor() < HomeSurvey.FLOOR_STEPS[HomeSurvey.FLOOR_STEPS.length - 1]) {
-            say = "More room. " + HomeSurvey.FLOOR_STEPS[HomeSurvey.FLOOR_STEPS.length - 1]
-                    + " blocks of floor is the top step.";
+        } else if (reading.roomFor() < HomeSurvey.TOP_TIER) {
+            say = "More room. " + nextStep() + " squares of floor is the last step.";
         } else {
             say = "Nothing. This is as good as a house gets.";
         }

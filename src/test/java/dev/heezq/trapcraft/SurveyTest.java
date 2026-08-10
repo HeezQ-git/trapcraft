@@ -95,7 +95,7 @@ class SurveyTest {
         assertTrue(found.sealed());
         assertFalse(found.clash());
         assertEquals(6, found.inside().size());
-        assertEquals(6, found.floor());
+        assertEquals(6, found.floor(), "one storey, six squares of floor");
     }
 
     @Test
@@ -219,31 +219,86 @@ class SurveyTest {
 
     // --- the grade ------------------------------------------------------------
 
+    /** Everything fitted, nothing dug, nothing dark. */
+    private static int graded(int floor) {
+        return HomeSurvey.tier(true, floor, true, true, 1.0f, HomeSurvey.FITTINGS, 30, 0, 8);
+    }
+
     @Test
     void aShedIsNotAHome() {
-        assertEquals(0, HomeSurvey.tier(true, 4, true, true, 4, 20, 4), "too small");
-        assertEquals(0, HomeSurvey.tier(true, 30, false, true, 4, 20, 4), "no bed");
-        assertEquals(0, HomeSurvey.tier(true, 30, true, false, 4, 20, 4), "no way in");
-        assertEquals(0, HomeSurvey.tier(true, 30, true, true, 4, 20, 0), "pitch dark");
-        assertEquals(0, HomeSurvey.tier(false, 30, true, true, 4, 20, 4), "not sealed");
+        assertEquals(0, HomeSurvey.tier(true, 4, true, true, 1f, 5, 30, 0, 8), "too small");
+        assertEquals(0, HomeSurvey.tier(true, 60, false, true, 1f, 5, 30, 0, 8), "no bed");
+        assertEquals(0, HomeSurvey.tier(true, 60, true, false, 1f, 5, 30, 0, 8), "no way in");
+        assertEquals(0, HomeSurvey.tier(true, 60, true, true, 1f, 5, 30, 0, 0), "pitch dark");
+        assertEquals(0, HomeSurvey.tier(false, 60, true, true, 1f, 5, 30, 0, 8), "not sealed");
     }
 
+    /**
+     * The complaint this was written for.
+     *
+     * A three-by-four dirt cupboard with a bed, a table, a chest, a furnace
+     * and a torch used to grade four out of five, which is another way of
+     * saying the grade was a shopping list. Size is a lid now: however
+     * perfectly it is fitted out, a cupboard is a one.
+     */
     @Test
-    void theBareMinimumIsTierOne() {
-        assertEquals(1, HomeSurvey.tier(true, HomeSurvey.MIN_FLOOR, true, true, 0, 0, 1));
+    void aCupboardIsAlwaysAOne() {
+        assertEquals(1, graded(11), "perfectly fitted, still a cupboard");
+        assertEquals(1, HomeSurvey.tier(true, 11, true, true, 0.1f, 4, 8, 3, 1),
+                "and a dirt one is no worse, because it could not be");
     }
 
+    /** Nothing but floor moves the ceiling, and it moves it one step at a time. */
     @Test
-    void everythingIsTierFive() {
-        assertEquals(HomeSurvey.TOP_TIER,
-                HomeSurvey.tier(true, 100, true, true, 4, 20, 100));
+    void sizeIsTheLid() {
+        assertEquals(1, graded(HomeSurvey.FLOOR_STEPS[0]));
+        assertEquals(2, graded(HomeSurvey.FLOOR_STEPS[1]));
+        assertEquals(3, graded(HomeSurvey.FLOOR_STEPS[2]));
+        assertEquals(4, graded(HomeSurvey.FLOOR_STEPS[3]));
+        assertEquals(HomeSurvey.TOP_TIER, graded(HomeSurvey.FLOOR_STEPS[4]));
+        assertEquals(HomeSurvey.TOP_TIER, graded(10_000), "and no further");
+    }
+
+    /** Room alone is not enough either. A big empty dirt hall is a one. */
+    @Test
+    void sizeAloneIsNotEnough() {
+        assertEquals(1, HomeSurvey.tier(true, 400, true, true, 0f, 0, 3, 200, 1));
+    }
+
+    /** What a house is made of has to matter, or dirt wins on effort. */
+    @Test
+    void dirtGradesWorseThanBrick() {
+        int dirt = HomeSurvey.tier(true, 200, true, true, 0.0f, 5, 30, 0, 8);
+        int brick = HomeSurvey.tier(true, 200, true, true, 1.0f, 5, 30, 0, 8);
+        assertTrue(brick > dirt, "brick " + brick + " should beat dirt " + dirt);
+        assertEquals(0, HomeSurvey.shellPoints(0.0f));
+        assertEquals(1, HomeSurvey.shellPoints(HomeSurvey.SHELL_STEPS[0]));
+        assertEquals(2, HomeSurvey.shellPoints(HomeSurvey.SHELL_STEPS[1]));
+    }
+
+    /** One dark corner in a big house is forgiven; a gloomy one is not. */
+    @Test
+    void darkCornersCost() {
+        assertEquals(2, HomeSurvey.lightPoints(0, 100));
+        assertEquals(1, HomeSurvey.lightPoints(10, 100));
+        assertEquals(0, HomeSurvey.lightPoints(11, 100));
+        assertEquals(1, HomeSurvey.lightPoints(1, 4), "a tiny place gets one square's grace");
+    }
+
+    /** The fittings ladder is worth climbing all of, not most of. */
+    @Test
+    void fittingsRewardTheWholeList() {
+        assertEquals(0, HomeSurvey.fittingPoints(1));
+        assertEquals(1, HomeSurvey.fittingPoints(3));
+        assertEquals(2, HomeSurvey.fittingPoints(4));
+        assertEquals(3, HomeSurvey.fittingPoints(HomeSurvey.FITTINGS));
     }
 
     @Test
     void theGradeOnlyEverClimbs() {
         int last = 0;
-        for (int floor : new int[]{9, 20, 40, 80, 200}) {
-            int now = HomeSurvey.tier(true, floor, true, true, 2, 6, floor);
+        for (int floor : new int[]{9, 20, 45, 90, 150, 400}) {
+            int now = graded(floor);
             assertTrue(now >= last, "more room should never grade worse: " + floor);
             last = now;
         }
@@ -251,9 +306,12 @@ class SurveyTest {
 
     @Test
     void topPointsAgreesWithTheLadder() {
-        // The guide book prints topPoints(); if it disagreed with what tier()
-        // can actually award, the book would be lying about a number nobody
-        // could check.
+        // The guide book prints topPoints(); if it disagreed with what the
+        // scoring can actually award, the book would be lying about a number
+        // nobody could check.
+        assertEquals(HomeSurvey.topPoints(),
+                HomeSurvey.points(1.0f, HomeSurvey.FITTINGS,
+                        HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1], 0, 100));
         assertEquals(HomeSurvey.TOP_TIER,
                 1 + Math.min(HomeSurvey.TOP_TIER - 1, HomeSurvey.topPoints() / 2));
     }
