@@ -356,6 +356,25 @@ public final class TrapGuide {
                 .append(hint("Emerald block in the middle."))));
 
         pages.add(page(Text.empty()
+                .append(title("4a. YOUR STALL\n\n"))
+                .append(body("Put a chest UNDER the one you placed. The "
+                        + "contents go on sale.\n\n"))
+                .append(body("Others pay " + Math.round(TrapMath.STALL_RATE * 100)
+                        + "%. Right-click yours for the till.\n\n"))
+                .append(hint("/stalls finds everybody else's."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4a2. WHY BOTHER\n\n"))
+                .append(body("The counter pays you "
+                        + Math.round(TrapMath.SELL_RATE * 100)
+                        + "% and charges them 100%.\n\n"))
+                .append(body("Through a stall they pay "
+                        + Math.round(TrapMath.STALL_RATE * 100) + "% and you keep "
+                        + Math.round((TrapMath.STALL_RATE
+                        - TrapMath.STALL_RATE * TrapMath.STALL_FEE) * 100) + "%.\n\n"))
+                .append(hint("You both do better. Nobody loses."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4b. PRICES\n\n"))
                 .append(body("They step every 30 seconds. Watch and you'll "
                         + "see them move.\n\n"))

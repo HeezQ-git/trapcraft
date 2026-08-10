@@ -307,6 +307,20 @@ public class ShopScreenHandler extends ScreenHandler {
                     .append(plain(heat).formatted(bought ? Formatting.RED : Formatting.AQUA))
                     .append(plain("  (settles in a few minutes)").formatted(Formatting.DARK_GRAY)));
         }
+        // Somebody in town has this spare and cheaper. The counter is the
+        // BACKSTOP -- it never runs out and it never haggles -- so the useful
+        // thing it can do is point at a neighbour who will do better, which is
+        // also the only reason anybody would walk across a city they built.
+        TrapStalls.Stall seller = TrapStalls.sellerOf(shopper.getServer(), entry);
+        if (seller != null && !seller.owner().equals(shopper.getUuid())) {
+            int there = TrapMath.stallPrice(buy);
+            lore.add(line("Cheaper at ", Formatting.DARK_GRAY)
+                    .append(plain(seller.ownerName() + "'s stall").formatted(Formatting.GOLD))
+                    .append(plain("  " + there + "e").formatted(Formatting.GREEN)));
+            lore.add(line("           " + seller.pos().getX() + " " + seller.pos().getY()
+                    + " " + seller.pos().getZ(), Formatting.DARK_GRAY));
+        }
+
         lore.add(Text.empty());
         lore.add(line("Click", Formatting.YELLOW).append(plain(" to buy one lot")
                 .formatted(Formatting.GRAY)));

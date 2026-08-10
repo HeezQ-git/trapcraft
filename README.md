@@ -98,6 +98,30 @@ right-clicking any villager near the drop; miss the clock and it costs rep.
 Reputation lives on the phone as a data component. No persistence code, it
 survives restarts for free, and losing the phone loses the standing with it.
 
+## Stalls
+
+The stall you place is **yours**. Put a chest or barrel directly underneath it
+and everything in it goes on sale to everybody else at 85% of the market price;
+right-click your own stall to take the till. `/stalls` lists who is selling
+what and where.
+
+The same block still opens the open market when it's yours or unclaimed, and
+that is deliberate — the counter is the backstop that means nobody is ever
+stuck, and every stall in town is a cheaper way to get the same thing off
+somebody who had it spare.
+
+The numbers are the whole point:
+
+| Route | Grower gets | Builder pays | Lost |
+|-------|-------------|--------------|------|
+| The counter | 45e | 100e | **55e to nobody** |
+| A stall | **81e** | **85e** | 4e pitch fee |
+
+Both sides do better than they would at the market, neither takes anything
+from the other, and the spread that used to evaporate is split between them.
+Prices follow the market automatically, so a stall is never mispriced and
+there is no price editor to fill in — the only decision is what to stock.
+
 ## The crew
 
 `/crew hire` takes somebody on where you are standing; `/crew` opens the board.

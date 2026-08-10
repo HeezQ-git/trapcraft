@@ -1105,6 +1105,49 @@ public final class TrapMath {
         return Math.max(2, Math.round((totalLevels * 22.0f + enchantments * 15.0f) * SCRAP_RATE));
     }
 
+    // --- somebody else's stall --------------------------------------------------
+
+    /**
+     * What a player's stall charges, as a share of the market's own price.
+     *
+     * The number that makes supplying each other worth doing, and it has to
+     * beat the counter from BOTH sides at once or nobody bothers. The market
+     * buys at {@link #SELL_RATE} and sells at full price, so the spread
+     * between those two is dead money -- 55% of everything, paid to nobody.
+     * A stall splits that spread between the two players instead.
+     *
+     * On a 100e line: the counter pays a grower 45e and charges a builder
+     * 100e. Through a stall the builder pays 85e and the grower keeps 81e.
+     * Both are far better off than they were, neither has taken anything from
+     * the other, and the market is still there at full price for anything
+     * nobody happens to be stocking. That is the whole design -- the open
+     * market is the backstop, and each other is the bargain.
+     */
+    public static final float STALL_RATE = 0.85f;
+
+    /**
+     * The cut that does not reach the seller.
+     *
+     * Small, and it is a SINK -- the one thing a player-to-player trade would
+     * otherwise not have. Every other transfer in this mod either creates
+     * money or destroys it and tells {@link TrapMarket#circulate} about it; a
+     * pure transfer tells it nothing, so a city trading briskly with itself
+     * would inflate the supply by exactly nothing and deflate it by exactly
+     * nothing forever. Five percent off the top keeps the stalls attached to
+     * the same economy as everything else.
+     */
+    public static final float STALL_FEE = 0.05f;
+
+    /** What a shopper hands over at somebody's stall. */
+    public static int stallPrice(int marketBuyPrice) {
+        return Math.max(1, Math.round(marketBuyPrice * STALL_RATE));
+    }
+
+    /** What the owner keeps of it. */
+    public static int stallTake(int stallPrice) {
+        return Math.max(1, stallPrice - Math.round(stallPrice * STALL_FEE));
+    }
+
     // --- growing --------------------------------------------------------------
 
     /**
