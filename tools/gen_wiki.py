@@ -569,8 +569,8 @@ def build() -> str:
     says so before you click. Mixing Fire with Swill makes Swill.</p>"""))
 
     sections.append(section("04", "high", "The High", "three custom effects", f"""
-    <p class="lede">Baked and Wired are real custom status effects, not stacked vanilla
-    ones — so they carry their own icon, their own maths and their own consequences.</p>
+    <p class="lede">Baked and Wired are effects of their own, with their own icons and their own
+    rules — not a stack of borrowed ones wearing a new name.</p>
     <div class="cards">
       <div class="card reveal"><h4>Baked</h4><p>Burns saturation, then hunger — the
       munchies. Heals you slowly while you are well fed, and chips your health if you
@@ -589,8 +589,8 @@ def build() -> str:
     ])}
     {craft_row([("bong", "Bong"), ("gravity_bong", "Gravity Bong"),
                 ("joint_kush", "Joint"), ("blend_joint", "Blend Joint")])}
-    <p class="note">Joints use the only vanilla animation that raises an item to the
-    mouth, so it reads as smoking on a completely unmodified client.</p>"""))
+    <p class="note">Hold right-click to smoke one. It plays out properly — the joint
+    goes to your mouth, and everybody nearby sees the smoke.</p>"""))
 
     sections.append(section("05", "coca", "The Coca Line", "longer chain, richer end", f"""
     <p class="lede">A bush ripens in about {coca_min} minutes on any ground with
@@ -623,9 +623,10 @@ def build() -> str:
       pushes it down, and it fades over the following minutes. Clear the shelf and the
       last one costs more than the first.</p></div>
     </div>
-    <p>The index is clamped between <strong>{d['index_min']:.2f}×</strong> and
-    <strong>{d['index_max']:.2f}×</strong> and measured against a <em>moving</em>
-    anchor, so a good week becomes the new normal instead of welding prices to the cap.</p>
+    <p>Prices never drop below <strong>{d['index_min']:.2f}×</strong> or climb past
+    <strong>{d['index_max']:.2f}×</strong> of normal — and "normal" is whatever the
+    last few hours looked like, not whatever the first day looked like. A good week
+    becomes the new normal instead of leaving everything dear forever.</p>
     <p class="note">The counter buys back at {round(d['sell_rate'] * 100)}% — wide on
     purpose. The shop is a convenience, not an income.</p>"""))
 
@@ -684,15 +685,15 @@ def build() -> str:
       <div class="card reveal"><h4>Paranoia</h4><p>A meter that builds from heat, how
       high you are, darkness, night and being alone — and decays in daylight, sober, or
       <em>near another player</em>. Four tiers, from noises behind you to a motionless
-      figure at render distance. Every bit of it is a packet sent to one client; nothing
-      spawns and the world is never modified.</p></div>
+      figure at render distance. None of it is real. Nothing is ever
+      spawned, nothing touches your build, and nobody else can see it.</p></div>
       <div class="card reveal"><h4>Contracts</h4><p>A burner phone is a job board:
-      five deliveries a day, seeded by the world day so the board is stable until
-      tomorrow. Jobs are advertised cold and the heat premium is settled at the drop —
+      the same five deliveries all day, so you can look at the board in the
+      morning and plan around it. Jobs are advertised cold and the heat premium is settled at the drop —
       you are paid for risk you actually ran. Capped at {d['payout_ceiling']}e.</p></div>
-      <div class="card reveal"><h4>Reputation</h4><p>Lives on the phone as a data
-      component, so it survives restarts for free and losing the phone loses the
-      standing with it. Capped at {d['rep_max']}, because it feeds four multipliers at
+      <div class="card reveal"><h4>Reputation</h4><p>It lives on the phone itself, so lending
+      somebody your phone lends them your name — and losing it loses the standing
+      with it. Capped at {d['rep_max']}, because it feeds four multipliers at
       once and three of them used to be unbounded.</p></div>
       <div class="card reveal"><h4>Dealers</h4><p>The first thing you own that works
       while you are not there. They take a cut, sell far better at night than at noon,
@@ -730,14 +731,14 @@ def build() -> str:
         ["<code>/sethome · /home · /spawn · /back</code>", "Getting about"],
     ]
     sections.append(section("12", "commands", "Commands", "everything answers only you", f"""
-    <p class="lede">Every command replies to the person who typed it — no op broadcast,
-    so going creative does not announce itself.</p>
+    <p class="lede">Every command answers only the person who typed it, so nothing you run gets
+    announced to everybody else.</p>
     {table(["Command", "What it does"], cmd_rows)}"""))
 
     sections.append(section("13", "awards", "Advancements",
                             f"{len(d['awards'])} of them", f"""
-    <p class="lede">Real advancements, so they show in the vanilla tree with no client
-    mod.</p>
+    <p class="lede">These are proper advancements — they turn up in your advancements screen like
+    any others, with a toast when you earn one.</p>
     {table(["Name", "How", "Kind"], award_rows)}"""))
 
     body = "".join(sections)
@@ -753,8 +754,8 @@ TEMPLATE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TrapCraft — Field Manual</title>
-<meta name="description" content="The complete reference for TrapCraft: growing, curing,
-refining, the market, stalls, crew, heat, the casino. Generated from the mod's source.">
+<meta name="description" content="TrapCraft: growing, curing, refining, the market,
+stalls, crew, heat and the casino. Everything in the game, in one place.">
 <meta name="theme-color" content="#0c0b0a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1097,7 +1098,7 @@ footer a:hover {{ text-decoration: underline; }}
 
   <div>
     <header class="hero">
-      <p class="eyebrow">Server-side · Fabric 1.21.8 · no client install</p>
+      <p class="eyebrow">Everything in the game · in one place</p>
       <h1>Everything<em>is somebody&#39;s business.</em></h1>
       <p>A market that breathes, a floor that wears out, hands on wages, and a raid
       that searches your chests. The complete reference — generated from the mod&#39;s
@@ -1113,10 +1114,11 @@ footer a:hover {{ text-decoration: underline; }}
     <main>{sections}</main>
 
     <footer>
-      <p>Built by <code>tools/gen_wiki.py</code> from the source tree. Every number on
-      this page is read from the constant that governs it.</p>
-      <p>TrapCraft is server-side via Polymer — friends join with the vanilla client
-      they already have.</p>
+      <p>Every price, timing and grade on this page comes straight out of the game,
+      so the page changes when the game does. If a number here looks wrong, it is
+      the game that moved.</p>
+      <p>There are five handbooks inside the game too — type <code>/guide</code>.
+      Same numbers, fewer words, and you can read them without leaving the farm.</p>
     </footer>
   </div>
 </div>
