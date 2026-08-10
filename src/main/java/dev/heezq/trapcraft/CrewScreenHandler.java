@@ -264,8 +264,12 @@ public class CrewScreenHandler extends ScreenHandler {
             lore.add(line("Taught.", Formatting.GREEN)
                     .append(plain("  +" + job.wage() + "e on the wage.")
                             .formatted(Formatting.DARK_GRAY)));
+            // The line that would have saved somebody asking why their roller
+            // never rolled. A job with nothing to work on looks identical to a
+            // job that is broken, and only one of them is your fault.
+            lore.add(line("Wants " + job.needs() + ".", Formatting.GRAY));
+            lore.add(line("No luck? It's usually that.", Formatting.DARK_GRAY));
             lore.add(line("Shift-click to drop it.", Formatting.YELLOW));
-            lore.add(line("Nothing comes back.", Formatting.DARK_GRAY));
         } else {
             lore.add(line(job.cost() == 0 ? "Free." : job.cost() + "e", Formatting.GOLD)
                     .append(plain(job.wage() == 0 ? ", and no wage."

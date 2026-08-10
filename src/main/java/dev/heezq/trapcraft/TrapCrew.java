@@ -262,36 +262,58 @@ public final class TrapCrew {
         // past peak loses a grade, and the ground work last because dirt can
         // wait and a ripe plant can't.
         PICK("Picking", "minecraft:wheat", 0, 0,
-                "Your mature plants, into the nearest chest."),
+                "Your mature plants, into the nearest chest.",
+                "a ripe plant in the patch"),
         CURE("Curing", "trapcraft:drying_rack", 480, 8,
-                "Loads the racks and pulls them at peak."),
+                "Loads the racks and pulls them at peak.",
+                "a rack, and fresh buds in the chest"),
         REFINE("Refining", "trapcraft:refiner", 1400, 20,
-                "Runs the refiner and pulls it at PEAK."),
+                "Runs the refiner and pulls it at PEAK.",
+                "a refiner, paste and blaze powder"),
         PRESS("Pressing", "trapcraft:leaf_press", 750, 12,
-                "Leaves into paste, batch after batch."),
+                "Leaves into paste, batch after batch.",
+                "a press and a batch of coca leaves"),
         ROLL("Rolling", "minecraft:paper", 600, 10,
-                "Cured buds and paper into joints."),
+                "Cured buds and paper into joints.",
+                "CURED buds AND paper in the chest"),
         FARM("Farmhand", "minecraft:carrot", 260, 5,
-                "Wheat, carrots, anything else that ripens."),
+                "Wheat, carrots, anything else that ripens.",
+                "a ripe food crop in the patch"),
         FEED("Fertilising", "minecraft:bone_meal", 400, 6,
-                "Bone meal on food crops. Never on yours."),
+                "Bone meal on food crops. Never on yours.",
+                "bone meal in the chest"),
         SOW("Sowing", "minecraft:wheat_seeds", 340, 6,
-                "Plants seeds out of the chest into empty rows."),
+                "Plants seeds out of the chest into empty rows.",
+                "seeds in the chest and empty farmland"),
         TILL("Tilling", "minecraft:iron_hoe", 220, 4,
-                "Turns bare ground near water into farmland.");
+                "Turns bare ground near water into farmland.",
+                "bare ground near water");
 
         private final String display;
         private final String iconId;
         private final int cost;
         private final int wage;
         private final String blurb;
+        /**
+         * What has to be there before this job can happen at all.
+         *
+         * On the enum because the answer to "why isn't my hand rolling"
+         * should be on the board next to the job, not in a wiki, and
+         * certainly not in a conversation with whoever wrote it.
+         */
+        private final String needs;
 
-        Job(String display, String iconId, int cost, int wage, String blurb) {
+        Job(String display, String iconId, int cost, int wage, String blurb, String needs) {
             this.display = display;
             this.iconId = iconId;
             this.cost = cost;
             this.wage = wage;
             this.blurb = blurb;
+            this.needs = needs;
+        }
+
+        public String needs() {
+            return needs;
         }
 
         public String display() {
@@ -389,6 +411,8 @@ public final class TrapCrew {
         int jobs;
         /** Passes since anything actually got done. Not saved -- it's a mood. */
         int idle;
+        /** What they did last, so the other job they know gets a turn. */
+        Job lastJob;
         /** Jobs done since the last breather. */
         int worked;
         /** Server tick they are back on the clock. */
@@ -1543,8 +1567,10 @@ public final class TrapCrew {
         Map<Job, BlockPos> found = new EnumMap<>(Job.class);
         int looked = 0;
         for (BlockPos pos : BlockPos.iterateOutwards(mob.getBlockPos(), reach, 5, reach)) {
-            // Top priority found, or we've looked at enough dirt for one pass.
-            if (++looked > SCAN_BUDGET || found.containsKey(Job.values()[0])) {
+            // Something for every job they know, or enough dirt for one pass.
+            // Used to stop the moment it found PICKING, which meant the second
+            // job of a picker was never even LOOKED for.
+            if (++looked > SCAN_BUDGET || found.size() >= hand.taught()) {
                 break;
             }
             if (!within(pos, hand.patch, reach)) {
@@ -1555,13 +1581,32 @@ public final class TrapCrew {
                 found.putIfAbsent(job, pos.toImmutable());
             }
         }
+        // Two jobs a head means both should get turns. Strict priority starved
+        // the lower one whenever the higher one had work: a hand taught Curing
+        // and Rolling, stood next to a busy rack, cured forever and never
+        // rolled a single joint -- which from outside is a job you paid 600e
+        // for and never once saw done.
+        //
+        // So: prefer anything OTHER than what they did last, and fall back to
+        // priority when that is all there is. Urgency still wins when it is
+        // the only thing going.
+        Job chosen = null;
         for (Job job : Job.values()) {
-            BlockPos at = found.get(job);
-            if (at != null) {
-                return at;
+            if (found.containsKey(job) && job != hand.lastJob) {
+                chosen = job;
+                break;
             }
         }
-        return null;
+        if (chosen == null) {
+            for (Job job : Job.values()) {
+                if (found.containsKey(job)) {
+                    chosen = job;
+                    break;
+                }
+            }
+        }
+        hand.lastJob = chosen;
+        return chosen == null ? null : found.get(chosen);
     }
 
     private static boolean holds(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want) {

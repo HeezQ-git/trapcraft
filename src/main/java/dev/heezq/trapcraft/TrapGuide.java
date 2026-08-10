@@ -1422,6 +1422,13 @@ public final class TrapGuide {
         }
         pages.add(page(list.append(Text.literal("\n"))
                 .append(hint("Cost, then what it adds to the wage."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7b. WHY IT'S NOT DOING IT\n\n"))
+                .append(body("Every job wants something in the chest or the "
+                        + "patch first.\n\n"))
+                .append(body("Rolling wants CURED buds and PAPER.\n\n"))
+                .append(hint("The board says what each one wants."))));
     }
 
     private static void network(List<RawFilteredPair<Text>> pages) {
