@@ -289,9 +289,17 @@ public final class TrapGuide {
                 .append(body("Right-click holding dirty money. "
                         + LaundryBlock.MIN_LOAD + " min, "
                         + LaundryBlock.MAX_LOAD + " a load.\n\n"))
-                .append(body("Half a minute. "
-                        + Math.round(TrapLaw.WASH_CUT * 100)
-                        + "% down the drain.\n\n"))
+                .append(body(LaundryBlock.washLabel(8) + " for 8. "
+                        + LaundryBlock.washLabel(LaundryBlock.MAX_LOAD)
+                        + " for a full one.\n\n"))
+                .append(hint("Up to " + Math.round(TrapLaw.WASH_CUT * 100)
+                        + "% down the drain, and you never know how much."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1i2. THE DRUM (2)\n\n"))
+                .append(body("Adding more restarts the clock. Load it all, "
+                        + "then walk away.\n\n"))
+                .append(body("Build more drums if one isn't enough.\n\n"))
                 .append(warn("Wash more than your shops took and the "
                         + "office still asks."))));
 

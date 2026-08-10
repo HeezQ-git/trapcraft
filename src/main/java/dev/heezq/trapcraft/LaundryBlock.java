@@ -52,35 +52,64 @@ import xyz.nucleoid.packettweaker.PacketContext;
 public class LaundryBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
     public static final MapCodec<LaundryBlock> CODEC = createCodec(LaundryBlock::new);
 
-    /** Emeralds in the drum. */
-    public static final int MAX_LOAD = 8;
+    /** Emeralds in the drum. Two stacks of dirty money. */
+    public static final int MAX_LOAD = 128;
     /** Under this and it will not start: you do not launder pocket change. */
     public static final int MIN_LOAD = 2;
-    /** How long a wash takes, whatever is in it. */
-    public static final int WASH_TICKS = 20 * 30;
+    /**
+     * How long each emerald takes to come out clean.
+     *
+     * Per emerald rather than per load, so a drum is a THROUGHPUT and not a
+     * free multiplier: eight used to take half a minute whatever you did, so
+     * a bigger drum would simply have been more money for the same wait.
+     * Three seconds each keeps that half-minute for a small load and makes a
+     * full one an eight-minute job you walk away from.
+     */
+    public static final int WASH_TICKS_EACH = 60;
 
     public static final IntProperty LOAD = IntProperty.of("load", 0, MAX_LOAD);
     public static final BooleanProperty DONE = BooleanProperty.of("done");
 
-    private final BlockState[] idle = new BlockState[MAX_LOAD + 1];
-    private final BlockState[] finished = new BlockState[MAX_LOAD + 1];
+    /**
+     * Three carriers for two hundred and fifty-eight states, and it matters.
+     *
+     * The first version asked Polymer for a carrier per LOAD VALUE, which was
+     * eighteen states for three pictures -- wasteful at a capacity of eight
+     * and, at a capacity of a hundred and twenty-eight, would have taken a
+     * quarter of the whole FULL_BLOCK pool to draw the same three drums.
+     * Nothing requires the mapping from server state to carrier to be one to
+     * one; it is a function, and this one has three answers.
+     */
+    private final BlockState emptyDrum;
+    private final BlockState running;
+    private final BlockState finished;
 
     public LaundryBlock(Settings settings) {
         super(settings);
         this.setDefaultState(this.stateManager.getDefaultState()
                 .with(LOAD, 0).with(DONE, false));
-        for (int load = 0; load <= MAX_LOAD; load++) {
-            // Three models between nine loads: empty, turning, and a drum with
-            // clean money sat in it. A texture per emerald would be eight
-            // pictures of the same drum.
-            String running = load == 0 ? "laundry_empty" : "laundry_running";
-            idle[load] = TrapPolymer.requestOrFallback(BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + running)),
-                    () -> Blocks.CAULDRON.getDefaultState(), running);
-            finished[load] = TrapPolymer.requestOrFallback(BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/laundry_done")),
-                    () -> Blocks.CAULDRON.getDefaultState(), "laundry_done");
-        }
+        this.emptyDrum = TrapPolymer.requestOrFallback(BlockModelType.FULL_BLOCK,
+                PolymerBlockModel.of(Identifier.of("trapcraft:block/laundry_empty")),
+                () -> Blocks.CAULDRON.getDefaultState(), "laundry_empty");
+        this.running = TrapPolymer.requestOrFallback(BlockModelType.FULL_BLOCK,
+                PolymerBlockModel.of(Identifier.of("trapcraft:block/laundry_running")),
+                () -> Blocks.CAULDRON.getDefaultState(), "laundry_running");
+        this.finished = TrapPolymer.requestOrFallback(BlockModelType.FULL_BLOCK,
+                PolymerBlockModel.of(Identifier.of("trapcraft:block/laundry_done")),
+                () -> Blocks.CAULDRON.getDefaultState(), "laundry_done");
+    }
+
+    /** Ticks a load of this size takes, and never less than a moment. */
+    public static int washTicks(int load) {
+        return Math.max(20, load * WASH_TICKS_EACH);
+    }
+
+    /** "8 minutes", "45s" -- for the drum, the book and the page. */
+    public static String washLabel(int load) {
+        int seconds = washTicks(load) / 20;
+        return seconds < 90 ? seconds + "s"
+                : seconds % 60 == 0 ? seconds / 60 + " minutes"
+                : String.format("%.1f minutes", seconds / 60.0f);
     }
 
     @Override
@@ -95,8 +124,10 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        int load = state.get(LOAD);
-        return state.get(DONE) ? finished[load] : idle[load];
+        if (state.get(DONE)) {
+            return finished;
+        }
+        return state.get(LOAD) == 0 ? emptyDrum : running;
     }
 
     @Override
@@ -127,7 +158,8 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
 
         int load = state.get(LOAD);
         who.sendMessage(load == 0
-                ? Text.literal("Empty. Put dirty money in it.").formatted(Formatting.GRAY)
+                ? Text.literal("Empty. Put dirty money in it -- up to " + MAX_LOAD + ".")
+                        .formatted(Formatting.GRAY)
                 : Text.literal(load + " in the drum, going round.")
                         .formatted(Formatting.GRAY), true);
         return ActionResult.SUCCESS;
@@ -147,7 +179,11 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
         world.setBlockState(pos, state.with(LOAD, load));
 
         if (load >= MIN_LOAD) {
-            world.scheduleBlockTick(pos, this, WASH_TICKS);
+            // Rescheduled on every top-up, from the new total. Tipping more in
+            // starts the clock again -- which is worth saying out loud, and is
+            // simpler than a part-washed load that somebody has to reason
+            // about. Load it all, then leave it.
+            world.scheduleBlockTick(pos, this, washTicks(load));
             world.playSound(null, pos, SoundEvents.BLOCK_WATER_AMBIENT,
                     SoundCategory.BLOCKS, 0.7F, 1.0F);
         }
@@ -155,7 +191,10 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
                 ? Text.literal(load + " in. It wants at least " + MIN_LOAD
                         + " before it'll run.").formatted(Formatting.GRAY)
                 : Text.literal(load + " in the drum. ").formatted(Formatting.GRAY)
-                        .append(Text.literal("Half a minute.")
+                        .append(Text.literal(washLabel(load))
+                                .formatted(Formatting.WHITE))
+                        .append(Text.literal(load < MAX_LOAD
+                                        ? "   adding more restarts it" : "   full")
                                 .formatted(Formatting.DARK_GRAY)), true);
     }
 
@@ -182,7 +221,12 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
             // -- the market has never counted it and no shop would take it --
             // so this is the moment those emeralds actually exist.
             TrapMarket.minted(clean);
-            who.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, clean));
+            int left = clean;
+            while (left > 0) {
+                int lot = Math.min(left, Items.EMERALD.getMaxCount());
+                who.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, lot));
+                left -= lot;
+            }
         }
         TrapLaw.washed(who, load, cut);
 
@@ -218,8 +262,12 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
             return;
         }
         int load = state.get(LOAD);
-        if (load > 0) {
-            Block.dropStack(world, pos, new ItemStack(TrapContent.dirtyEmerald, load));
+        // In stacks, because a drum now holds two of them and one ItemStack of
+        // a hundred and twenty-eight is over the item's own limit.
+        while (load > 0) {
+            int lot = Math.min(load, TrapContent.dirtyEmerald.getMaxCount());
+            Block.dropStack(world, pos, new ItemStack(TrapContent.dirtyEmerald, lot));
+            load -= lot;
         }
         super.onStateReplaced(state, world, pos, moved);
     }

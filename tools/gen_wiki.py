@@ -368,6 +368,7 @@ def gather() -> None:
     drum = java("LaundryBlock")
     DATA["wash_min"] = int(need(r"MIN_LOAD = (\d+)", drum, "MIN_LOAD"))
     DATA["wash_max"] = int(need(r"MAX_LOAD = (\d+)", drum, "MAX_LOAD"))
+    DATA["wash_each"] = int(need(r"WASH_TICKS_EACH = (\d+)", drum, "WASH_TICKS_EACH"))
     acts = city[city.index("public enum Act {"):]
     acts = acts[:acts.index(";")]
     DATA["acts"] = [{"name": m[1], "blurb": m[2]} for m in re.findall(
@@ -812,9 +813,15 @@ def build() -> str:
     emeralds</strong> — an item, not a balance. No shop takes them, no wage comes out of them,
     and the market does not know they exist. They are not money yet.</p>
     <p>They become money in a <strong>laundry drum</strong>: right-click it holding them,
-    {d['wash_min']} at a minimum and {d['wash_max']} to a load, wait half a minute, take out
-    clean emeralds with {round(d['wash_cut'] * 100)}% gone down the drain. That is the moment
-    those emeralds enter the money supply at all.</p>
+    {d['wash_min']} at a minimum and <strong>{d['wash_max']}</strong> to a load, then wait —
+    {d['wash_each'] / 20:g} seconds an emerald, so about
+    {d['wash_max'] * d['wash_each'] // 1200} minutes for a full drum. Take it out and you get
+    clean emeralds with <strong>up to {round(d['wash_cut'] * 100)}%</strong> gone down the
+    drain: the cut is rolled, so you never know quite how much. That is the moment those
+    emeralds enter the money supply at all.</p>
+    <p class="note">Time is per emerald rather than per load, so a drum is a throughput and not
+    a free multiplier — and adding more restarts the clock, so load it all and walk away. If one
+    is not enough, build another.</p>
     <p>Washing also clears the day's exposure — but only up to <strong>what your businesses
     could plausibly have taken</strong>. A shop that sold nothing explains nothing, however
     much its owner would like it to. A real business is the licence to launder and its size is
