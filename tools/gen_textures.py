@@ -2564,6 +2564,109 @@ xxxxxxxxxxxxxxxx
 """
 
 
+# --- dirty money and the drum -----------------------------------------------
+#
+# The emerald, but grubby: the same silhouette so it reads as money at a
+# glance, greyed and smudged so it reads as the WRONG money at a second one.
+
+DIRTY_PAL = {
+    "g": "#3f5a45",     # grubby green
+    "G": "#557a5c",     # grubby green, lit
+    "k": "#28362c",     # shadow
+    "d": "#4a4034",     # grime
+    "D": "#5f5240",     # grime, lit
+    "x": "#161c18",     # outline
+}
+
+DIRTY_EMERALD = """
+................
+.......xx.......
+......xGgx......
+.....xGggdx.....
+....xGggdDgx....
+...xGggdDdggx...
+..xGggkddkgggx..
+..xGgkdDDdkggx..
+..xGgkdDDdkggx..
+..xGggkddkgggx..
+...xgggdDdggx...
+....xggdDgkx....
+.....xggdkx.....
+......xgkx......
+.......xx.......
+................
+"""
+
+LAUNDRY_PAL = {
+    "s": "#8a8d92",     # steel
+    "S": "#aeb2b8",     # steel, lit
+    "d": "#5c5f64",     # steel, shadow
+    "b": "#2e5f8a",     # water
+    "B": "#4a8cc4",     # water, lit
+    "g": "#3f5a45",     # dirty money in the drum
+    "e": "#2fa85a",     # clean emerald
+    "E": "#5fd98a",     # clean, lit
+    "x": "#1c1e21",     # outline
+}
+
+LAUNDRY_EMPTY = """
+xxxxxxxxxxxxxxxx
+xSssssssssssssSx
+xsddddddddddddsx
+xsdSSSSSSSSSSdsx
+xsdSssssssssSdsx
+xsdSsdddddddSdsx
+xsdSsdssssssSdsx
+xsdSsdssssssSdsx
+xsdSsdssssssSdsx
+xsdSsdssssssSdsx
+xsdSsddddddsSdsx
+xsdSSSSSSSSSSdsx
+xsddddddddddddsx
+xsdSsssssssssdsx
+xSssssssssssssSx
+xxxxxxxxxxxxxxxx
+"""
+
+LAUNDRY_RUNNING = """
+xxxxxxxxxxxxxxxx
+xSssssssssssssSx
+xsddddddddddddsx
+xsdSSSSSSSSSSdsx
+xsdSbbbbbbbbSdsx
+xsdSbBbgbbBbSdsx
+xsdSbbbbgbbbSdsx
+xsdSbgbbbbgbSdsx
+xsdSbbBbbbbbSdsx
+xsdSbbbbgbBbSdsx
+xsdSbbbbbbbbSdsx
+xsdSSSSSSSSSSdsx
+xsddddddddddddsx
+xsdSsssssssssdsx
+xSssssssssssssSx
+xxxxxxxxxxxxxxxx
+"""
+
+LAUNDRY_DONE = """
+xxxxxxxxxxxxxxxx
+xSssssssssssssSx
+xsddddddddddddsx
+xsdSSSSSSSSSSdsx
+xsdSssssssssSdsx
+xsdSsseeessssdsx
+xsdSseEEEesssdsx
+xsdSseEEEesssdsx
+xsdSsseeesssSdsx
+xsdSssesesssSdsx
+xsdSssssssssSdsx
+xsdSSSSSSSSSSdsx
+xsddddddddddddsx
+xsdSsssssssssdsx
+xSssssssssssssSx
+xxxxxxxxxxxxxxxx
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2670,6 +2773,10 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(DIRTY_EMERALD, DIRTY_PAL), "item", "dirty_emerald.png")
+    write(render(LAUNDRY_EMPTY, LAUNDRY_PAL), "block", "laundry_empty.png")
+    write(render(LAUNDRY_RUNNING, LAUNDRY_PAL), "block", "laundry_running.png")
+    write(render(LAUNDRY_DONE, LAUNDRY_PAL), "block", "laundry_done.png")
     write(render(SHELF_FRONT, SHELF_PAL), "block", "market_shelf_front.png")
     write(render(SHELF_SIDE, SHELF_PAL), "block", "market_shelf_side.png")
     write(render(SHELF_TOP, SHELF_PAL), "block", "market_shelf_top.png")

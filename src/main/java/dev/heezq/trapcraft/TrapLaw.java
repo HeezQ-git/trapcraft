@@ -279,35 +279,42 @@ public final class TrapLaw {
         return limit - WASHED.getOrDefault(who.getGameProfile().getName(), 0);
     }
 
-    /** @return why it didn't happen, or null if it did */
-    public static String wash(ServerPlayerEntity who, int amount) {
-        if (!TrapCity.founded()) {
-            return "There's no city, so there's nobody to hide it from.";
-        }
+    /**
+     * Pay somebody in money the city has never heard of.
+     *
+     * NOT through {@link TrapMarket#pay}. Dirty emeralds are an item, not a
+     * balance: the market does not count them, no shop takes them, and no wage
+     * comes out of them. They enter the money supply at the drum and nowhere
+     * else, which is what makes the wash a real step rather than a formality.
+     */
+    public static void payDirty(ServerPlayerEntity who, int amount) {
         if (amount <= 0) {
-            return "How much?";
+            return;
         }
-        int room = washLimit(who);
-        if (room <= 0) {
-            return "You've no business that could explain it. Open a shop, or a floor.";
+        who.getInventory().offerOrDrop(new ItemStack(TrapContent.dirtyEmerald, amount));
+    }
+
+    /**
+     * A drum finished. Clear what it can of the day's exposure.
+     *
+     * Only up to what the owner's businesses could plausibly have taken --
+     * washing is passing money off as takings, and takings need a till that
+     * really turned over. Beyond that the money comes out clean but the office
+     * still has questions, which is the tension the whole step was for.
+     */
+    public static void washed(ServerPlayerEntity who, int gross, int cut) {
+        String name = who.getGameProfile().getName();
+        int cover = Math.max(0, washLimit(who));
+        WASHED.merge(name, Math.min(gross, cover), Integer::sum);
+        if (cut > 0) {
+            TrapCity.receive(cut, TrapCity.Duty.INCOME);
         }
-        int going = Math.min(amount, room);
-        int cut = Math.max(1, Math.round(going * WASH_CUT));
-        if (TrapMarket.wealthOf(who) < cut) {
-            return "Washing " + going + "e costs " + cut + "e and you haven't got it.";
-        }
-        TrapMarket.collect(who, cut);
-        TrapCity.receive(cut, TrapCity.Duty.INCOME);
-        WASHED.merge(who.getGameProfile().getName(), going, Integer::sum);
-        TrapLedger.record(who, TrapLedger.Source.TAX, -cut);
         save();
-        who.sendMessage(Text.literal("Through the books. ")
-                .formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal(going + "e is now takings, and it cost " + cut + "e.")
-                        .formatted(Formatting.GRAY))
-                .append(Text.literal("\n  " + Math.max(0, room - going)
-                        + "e of cover left today.").formatted(Formatting.DARK_GRAY)), false);
-        return null;
+        if (gross > cover) {
+            who.sendMessage(Text.literal("  " + (gross - cover) + "e of that has nothing "
+                    + "behind it. Open a shop, or expect a letter.")
+                    .formatted(Formatting.DARK_GRAY), false);
+        }
     }
 
     // --- the constitution -----------------------------------------------------
@@ -349,13 +356,27 @@ public final class TrapLaw {
         pages.add(page(any ? acts : acts.append(body("None. The council is quiet.\n\n"))
                 .append(hint("They pass themselves when the city needs them."))));
 
-        MutableText works = title("PUBLIC WORKS\n\n");
-        for (TrapCity.Work work : TrapCity.Work.values()) {
-            works.append(body(work.display() + (TrapCity.built(work) ? "  BUILT" : "  "
-                    + work.cost() + "e") + "\n"));
-        }
-        pages.add(page(works.append(Text.literal("\n"))
+        // One page per work. Four names and four prices crammed onto one page
+        // wrapped into an unreadable column and, worse, never said what any of
+        // them DID or where you buy them -- which is the only thing somebody
+        // reading a constitution about public works wants to know.
+        pages.add(page(title("PUBLIC WORKS\n\n")
+                .append(body("Things the purse buys for the whole town.\n\n"))
+                .append(body("Anybody may buy one, at the vault. Everybody is "
+                        + "told who did.\n\n"))
                 .append(hint("The purse holds " + TrapCity.treasury() + "e."))));
+        for (TrapCity.Work work : TrapCity.Work.values()) {
+            pages.add(page(title(work.display().toUpperCase(java.util.Locale.ROOT) + "\n\n")
+                    .append(body(work.blurb() + ".\n\n"))
+                    .append(TrapCity.built(work)
+                            ? body("BUILT. Nothing more to pay.\n\n")
+                            : body(work.cost() + "e out of the purse.\n\n"))
+                    .append(hint(TrapCity.built(work) ? "In force."
+                            : TrapCity.treasury() >= work.cost()
+                            ? "The purse could cover it today."
+                            : "The purse is " + (work.cost() - TrapCity.treasury())
+                            + "e short."))));
+        }
 
         pages.add(page(title("THE REVENUE OFFICE\n\n")
                 .append(body("It reads what came in and what you declared.\n\n"))
@@ -363,11 +384,18 @@ public final class TrapLaw {
                         + "assesses you.\n\n"))
                 .append(warn("Owe it and you are watched until you pay."))));
 
-        pages.add(page(title("THE WASH\n\n")
-                .append(body("/wash <amount>\n\n"))
-                .append(body("Runs dirty money through your own till at "
-                        + Math.round(WASH_CUT * 100) + "%.\n\n"))
-                .append(hint("Capped by what that till really turned over."))));
+        pages.add(page(title("DIRTY MONEY\n\n")
+                .append(body("The street pays in dirty emeralds.\n\n"))
+                .append(body("No shop takes them. No wage comes out of "
+                        + "them. They are not money yet.\n\n"))
+                .append(hint("They become money in a laundry drum."))));
+
+        pages.add(page(title("THE DRUM\n\n")
+                .append(body("Put them in, wait, take them out.\n\n"))
+                .append(body(Math.round(WASH_CUT * 100) + "% goes down the "
+                        + "drain.\n\n"))
+                .append(warn("Wash more than your shops could have taken and "
+                        + "the office still asks."))));
 
         return book("The Constitution", pages);
     }
@@ -396,38 +424,6 @@ public final class TrapLaw {
                                             return 0;
                                         }
                                         String no = settle(who);
-                                        if (no != null) {
-                                            who.sendMessage(Text.literal(no)
-                                                    .formatted(Formatting.GRAY), false);
-                                        }
-                                        return 1;
-                                    })));
-                    dispatcher.register(net.minecraft.server.command.CommandManager
-                            .literal("wash")
-                            .executes(context -> {
-                                ServerPlayerEntity who = context.getSource().getPlayer();
-                                if (who == null) {
-                                    return 0;
-                                }
-                                who.sendMessage(Text.literal("Cover available today: ")
-                                        .formatted(Formatting.GRAY)
-                                        .append(Text.literal(Math.max(0, washLimit(who)) + "e")
-                                                .formatted(Formatting.WHITE))
-                                        .append(Text.literal("   /wash <amount>")
-                                                .formatted(Formatting.GREEN)), false);
-                                return 1;
-                            })
-                            .then(net.minecraft.server.command.CommandManager
-                                    .argument("amount", com.mojang.brigadier.arguments
-                                            .IntegerArgumentType.integer(1))
-                                    .executes(context -> {
-                                        ServerPlayerEntity who = context.getSource().getPlayer();
-                                        if (who == null) {
-                                            return 0;
-                                        }
-                                        String no = wash(who, com.mojang.brigadier.arguments
-                                                .IntegerArgumentType.getInteger(context,
-                                                        "amount"));
                                         if (no != null) {
                                             who.sendMessage(Text.literal(no)
                                                     .formatted(Formatting.GRAY), false);

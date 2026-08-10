@@ -485,6 +485,9 @@ def lang() -> None:
         "item.trapcraft.city_vault": "City Vault",
         "block.trapcraft.market_shelf": "Market Shelf",
         "item.trapcraft.market_shelf": "Market Shelf",
+        "item.trapcraft.dirty_emerald": "Dirty Emerald",
+        "block.trapcraft.laundry": "Laundry Drum",
+        "item.trapcraft.laundry": "Laundry Drum",
         "block.trapcraft.slot_machine": "Lucky Streak",
         "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
@@ -1341,6 +1344,10 @@ def advancements() -> None:
           f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
     award("shopkeeper", "Shopkeeper", "Stand a market shelf up for the town to buy from.",
           f"{NS}:market_shelf", "open", trigger=has(f"{NS}:market_shelf"))
+    award("dirty", "Dirty Money", "Take payment nobody can bank.",
+          f"{NS}:dirty_emerald", "root", trigger=has(f"{NS}:dirty_emerald"))
+    award("clean", "Through The Books", "Wash a drum of it.",
+          f"{NS}:laundry", "dirty", frame="goal", trigger=has(f"{NS}:laundry"))
     award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
           f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
     award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
@@ -1952,6 +1959,50 @@ def mailbox_model() -> dict:
     }
 
 
+def laundry_assets() -> None:
+    """The drum, its three faces, and the money that goes in it."""
+    put(f"assets/{NS}/models/item/dirty_emerald.json", {
+        "parent": "minecraft:item/generated",
+        "textures": {"layer0": f"{NS}:item/dirty_emerald"},
+    })
+    put(f"assets/{NS}/items/dirty_emerald.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/dirty_emerald"},
+    })
+    for name in ("laundry_empty", "laundry_running", "laundry_done"):
+        put(f"assets/{NS}/models/block/{name}.json", {
+            "parent": "minecraft:block/block",
+            "textures": {
+                "all": f"{NS}:block/{name}",
+                "particle": f"{NS}:block/{name}",
+            },
+            "elements": [{
+                "from": [0, 0, 0],
+                "to": [16, 16, 16],
+                "faces": {side: {"uv": [0, 0, 16, 16], "texture": "#all"}
+                          for side in ("north", "south", "east", "west", "up", "down")},
+            }],
+        })
+    put(f"assets/{NS}/models/item/laundry.json", {"parent": f"{NS}:block/laundry_empty"})
+    put(f"assets/{NS}/items/laundry.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/laundry"},
+    })
+    put(f"data/{NS}/loot_table/blocks/laundry.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:laundry"}]}],
+    })
+    # A cauldron in an iron frame with a bucket of water. It is a washing
+    # machine; it should look like somebody built a washing machine.
+    put(f"data/{NS}/recipe/laundry.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["III", "ICI", "IWI"],
+        "key": {"I": "minecraft:iron_ingot", "C": "minecraft:cauldron",
+                "W": "minecraft:water_bucket"},
+        "result": {"id": f"{NS}:laundry", "count": 1},
+    })
+
+
 def shelf_assets() -> None:
     """A solid cube of stocked shelving, spelled out for check_models."""
     put(f"assets/{NS}/models/block/market_shelf.json", {
@@ -2156,6 +2207,7 @@ def main() -> None:
     mailbox_assets()
     vault_assets()
     shelf_assets()
+    laundry_assets()
     slot_assets()
     tags()
     worldgen()

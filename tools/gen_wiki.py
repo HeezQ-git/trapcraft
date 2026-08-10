@@ -352,6 +352,9 @@ def gather() -> None:
     DATA["looks_away"] = int(need(r"LOOKS_AWAY = (\d+)", law, "LOOKS_AWAY"))
     DATA["assessment"] = float(need(r"ASSESSMENT = ([\d.]+)f", law, "ASSESSMENT"))
     DATA["wash_cut"] = float(need(r"WASH_CUT = ([\d.]+)f", law, "WASH_CUT"))
+    drum = java("LaundryBlock")
+    DATA["wash_min"] = int(need(r"MIN_LOAD = (\d+)", drum, "MIN_LOAD"))
+    DATA["wash_max"] = int(need(r"MAX_LOAD = (\d+)", drum, "MAX_LOAD"))
     acts = city[city.index("public enum Act {"):]
     acts = acts[:acts.index(";")]
     DATA["acts"] = [{"name": m[1], "blurb": m[2]} for m in re.findall(
@@ -777,13 +780,19 @@ def build() -> str:
     what you declared, and over <strong>{d['looks_away']}e a day it cannot account for</strong>
     it assesses you for {round(d['assessment'] * 100)}% of the excess. Cannot pay? The debt
     stands and you carry heat until it is settled — <code>/law pay</code>.</p>
-    <h3 class="sub">The wash</h3>
-    <p><code>/wash &lt;amount&gt;</code> runs dirty money through your own till at a
-    {round(d['wash_cut'] * 100)}% cut and the office stops asking about it. It is
-    <strong>capped by what that till actually turned over</strong> — a shop that sold nothing
-    explains nothing, however much its owner would like it to. A real business is the licence
-    to launder and its size is the limit, which is why a market shelf and a casino floor are
-    worth owning for a reason other than what they earn.</p>
+    <h3 class="sub">Dirty money</h3>
+    <p>The street does not pay in emeralds. Customers and dealers pay in <strong>dirty
+    emeralds</strong> — an item, not a balance. No shop takes them, no wage comes out of them,
+    and the market does not know they exist. They are not money yet.</p>
+    <p>They become money in a <strong>laundry drum</strong>: right-click it holding them,
+    {d['wash_min']} at a minimum and {d['wash_max']} to a load, wait half a minute, take out
+    clean emeralds with {round(d['wash_cut'] * 100)}% gone down the drain. That is the moment
+    those emeralds enter the money supply at all.</p>
+    <p>Washing also clears the day's exposure — but only up to <strong>what your businesses
+    could plausibly have taken</strong>. A shop that sold nothing explains nothing, however
+    much its owner would like it to. A real business is the licence to launder and its size is
+    the limit, which is why a market shelf and a casino floor are worth owning for a reason
+    other than what they earn.</p>
     <h3 class="sub">Acts</h3>
     <p>The council passes laws when the city needs them and repeals them when it does not.
     Reactive, never random — a rule that arrives for no reason is weather, and nobody plays
@@ -983,7 +992,6 @@ def build() -> str:
         ["<code>/stalls</code>", "Who is selling, and where"],
         ["<code>/city</code>", "The purse, the current duties, and what each has raised"],
         ["<code>/law</code>", "The constitution, written the moment you ask"],
-        ["<code>/wash</code>", "Run takings through your own till, at a cut"],
         ["<code>/homes</code>", "Every house on the register, and its grade"],
         ["<code>/shops</code>", "Every market shelf, and how many townspeople there are"],
         ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],

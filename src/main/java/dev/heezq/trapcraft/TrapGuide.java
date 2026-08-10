@@ -278,12 +278,22 @@ public final class TrapGuide {
                 .append(warn("Owe it and you're watched. /law pay"))));
 
         pages.add(page(Text.empty()
-                .append(title("1h. THE WASH\n\n"))
-                .append(body("/wash <amount>\n\n"))
-                .append(body("Dirty money through your own till, "
-                        + Math.round(TrapLaw.WASH_CUT * 100) + "% cut.\n\n"))
-                .append(hint("Capped by what that till really took. No "
-                        + "shop, no cover."))));
+                .append(title("1h. DIRTY MONEY\n\n"))
+                .append(body("The street pays in dirty emeralds.\n\n"))
+                .append(body("No shop takes them. They aren't money "
+                        + "yet.\n\n"))
+                .append(hint("Craft a laundry drum."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1i. THE DRUM\n\n"))
+                .append(body("Right-click holding dirty money. "
+                        + LaundryBlock.MIN_LOAD + " min, "
+                        + LaundryBlock.MAX_LOAD + " a load.\n\n"))
+                .append(body("Half a minute. "
+                        + Math.round(TrapLaw.WASH_CUT * 100)
+                        + "% down the drain.\n\n"))
+                .append(warn("Wash more than your shops took and the "
+                        + "office still asks."))));
 
         pages.add(page(Text.empty()
                 .append(title("1e. THE SHOPS\n\n"))

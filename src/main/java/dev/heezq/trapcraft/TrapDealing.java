@@ -508,7 +508,7 @@ public final class TrapDealing {
         Text sold = held.getName();
 
         held.decrement(units);
-        TrapMarket.pay(seller, paid);
+        TrapLaw.payDirty(seller, paid);
         TrapLedger.record(seller, craving.powder()
                 ? TrapLedger.Source.COCA : TrapLedger.Source.WEED, paid);
 

@@ -220,7 +220,7 @@ public class DealerScreenHandler extends ScreenHandler {
         }
         int paid = dealer.earnings;
         dealer.earnings = 0;
-        TrapMarket.pay(boss, paid);
+        TrapLaw.payDirty(boss, paid);
         // A dealer shifts whatever you handed them, and the books do not
         // split it back out -- it is street money either way.
         TrapLedger.record(boss, TrapLedger.Source.WEED, paid);

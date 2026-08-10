@@ -283,7 +283,7 @@ public final class TrapDealers {
             boss.getInventory().offerOrDrop(stack.copy());
         }
         if (dealer.earnings > 0) {
-            TrapMarket.pay(boss, dealer.earnings);
+            TrapLaw.payDirty(boss, dealer.earnings);
         }
         sendHome(boss.getServer(), dealer);
         BOOK.remove(dealer);

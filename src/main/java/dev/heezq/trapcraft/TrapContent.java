@@ -82,6 +82,9 @@ public final class TrapContent {
     public static Item cityVaultItem;
     public static Block marketShelf;
     public static Item marketShelfItem;
+    public static Item dirtyEmerald;
+    public static Block laundry;
+    public static Item laundryItem;
     public static Block slotMachine;
     public static Item slotMachineItem;
     public static Block roulette;
@@ -398,6 +401,17 @@ public final class TrapContent {
         marketShelfItem = registerItem("market_shelf",
                 (settings, model) -> new RackItem(marketShelf, settings, model));
 
+        // Deliberately not fireproof and deliberately stackable: it is money,
+        // it is meant to be awkward to hold, and burning a pocketful of it in
+        // a lava pool is a story about laundering rather than a bug report.
+        dirtyEmerald = registerItem("dirty_emerald", TrapItem::new);
+
+        laundry = registerBlock("laundry", LaundryBlock::new,
+                AbstractBlock.Settings.create().strength(3.0F).requiresTool()
+                        .sounds(BlockSoundGroup.METAL).nonOpaque());
+        laundryItem = registerItem("laundry",
+                (settings, model) -> new RackItem(laundry, settings, model));
+
         slotMachine = registerBlock("slot_machine", SlotMachineBlock::new,
                 AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL).nonOpaque());
         slotMachineItem = registerItem("slot_machine",
@@ -531,6 +545,8 @@ public final class TrapContent {
                     entries.add(mailboxItem);
                     entries.add(cityVaultItem);
                     entries.add(marketShelfItem);
+                    entries.add(laundryItem);
+                    entries.add(dirtyEmerald);
                     entries.add(slotMachineItem);
                     entries.add(rouletteItem);
                     entries.add(plinkoItem);
