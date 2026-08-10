@@ -232,18 +232,26 @@ public final class TrapGuide {
     private static void cityBook(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("1. THE MAILBOX\n\n"))
-                .append(body("Put one INSIDE the room and right-click "
+                .append(body("Stand one inside the room ONCE and right-click "
                         + "it.\n\n"))
-                .append(body("It walks the walls and tells you what you "
-                        + "built.\n\n"))
-                .append(hint("Right-click again for the full survey."))));
+                .append(body("It walks the walls, grades the place, and puts "
+                        + "it on the register.\n\n"))
+                .append(hint("Then it belongs outside. See the next page."))));
 
         pages.add(page(Text.empty()
                 .append(title("2. MOVING IT\n\n"))
-                .append(body("Break it and the address goes on the item.\n\n"))
-                .append(body("Put it back up anywhere -- by the door, out on "
-                        + "the street.\n\n"))
+                .append(body("Sneak + right-click, empty-handed.\n\n"))
+                .append(body("It comes off the wall with the address on "
+                        + "it. Nail it up outside.\n\n"))
                 .append(hint("The house stays where it was measured."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2b. IF IT GETS LOST\n\n"))
+                .append(body("Blank box, back inside: it takes the job "
+                        + "again.\n\n"))
+                .append(body("Blank box outside: it serves your nearest "
+                        + "house with no post.\n\n"))
+                .append(hint("/homes demolish drops the one you stand in."))));
 
         pages.add(page(Text.empty()
                 .append(title("3. WHAT COUNTS\n\n"))

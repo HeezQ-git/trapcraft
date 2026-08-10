@@ -674,12 +674,17 @@ def build() -> str:
     with their name and coordinates. <code>/stalls</code> lists the lot.</p>"""))
 
     sections.append(section("08", "homes", "Housing", "a room the city can see", f"""
-    <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room and
-    right-click it. It walks the walls and tells you what you have built — and once
-    it passes, that room is an address.</p>
-    <p>Break the box afterwards and the address travels on the item, so you can put it
-    back up by the door or out on the street. The survey stays pinned to the spot it was
-    first taken from; the box is just where the post goes.</p>
+    <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room once and
+    right-click it. It walks the walls and tells you what you have built — and once it
+    passes, that room is an address.</p>
+    <p>Then the box belongs <strong>outside</strong>. <strong>Sneak + right-click
+    empty-handed</strong> and it comes into your hand carrying the address, so you can
+    nail it up by the door or out on the street. Mining it works too. The survey stays
+    pinned to the spot it was first taken from; the box is only where the post goes.</p>
+    <p class="note">A box that has lost its address is not a problem: put a blank one
+    back inside the house and it takes the job again, or stand one outside and it serves
+    your nearest house that has no post. <code>/homes demolish</code> takes the house
+    you are standing in off the register.</p>
     <h3 class="sub">Sealed means sealed</h3>
     <p><strong>Doors count as walls</strong>, which is what makes a bedroom with the door
     shut still part of your house: every door on the edge gets probed on its own, and one
@@ -801,6 +806,7 @@ def build() -> str:
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
         ["<code>/homes</code>", "Every house on the register, and its grade"],
+        ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],
         ["<code>/crew</code>", "The crew board — hire, train, pay"],
         ["<code>/heat</code>", "How hot this spot is, and what it would bring"],
         ["<code>/paranoia</code>", "Turn the whole thing off, per player"],

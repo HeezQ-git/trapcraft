@@ -239,10 +239,20 @@ public final class TrapHomes {
         if (atMailbox(world, pos) != null) {
             return "That box already belongs to a house.";
         }
-        HomeSurvey.Rooms rooms = HomeSurvey.survey(new Ground(world, null),
-                pos.getX(), pos.getY(), pos.getZ());
+        Ground ground = new Ground(world, null);
+        HomeSurvey.Rooms rooms = HomeSurvey.survey(ground, pos.getX(), pos.getY(), pos.getZ());
         if (rooms.clash()) {
-            return "This runs into somebody else's place. Two houses can't share ground.";
+            // Name it, and say whose. "Somebody else's place" was the message
+            // whatever it ran into -- including the player's OWN house, which
+            // is the one case where it is flatly untrue and the one case that
+            // actually happens.
+            Home into = ground.clashed;
+            return into == null
+                    ? "This runs into a place that's already on the register."
+                    : "This runs into " + into.name
+                    + (into.owner.equals(owner.getUuid()) ? " -- your own."
+                    : ", " + into.ownerName + "'s.")
+                    + " Two houses can't share ground.";
         }
         if (!rooms.sealed()) {
             return "This isn't sealed. Walls, a floor, a ceiling, and a door -- "
@@ -486,6 +496,8 @@ public final class TrapHomes {
         private final ServerWorld world;
         private final String dimension;
         private final UUID self;
+        /** Whoever the fill ran into, so the refusal can name them. */
+        Home clashed;
 
         Ground(ServerWorld world, Home self) {
             this.world = world;
@@ -534,6 +546,7 @@ public final class TrapHomes {
         public boolean taken(int x, int y, int z) {
             for (Home home : HOMES) {
                 if (!home.id.equals(self) && home.holds(dimension, x, y, z)) {
+                    clashed = home;
                     return true;
                 }
             }
@@ -543,16 +556,77 @@ public final class TrapHomes {
 
     // --- moving and losing the box --------------------------------------------
 
-    /** A mailbox went down at this spot carrying a house's details. */
+    /**
+     * A mailbox went down at this spot carrying a house's details.
+     *
+     * Anybody else pointing at the same spot lets go of it first. Two houses
+     * whose post arrives at one box is a state the readout cannot show and
+     * nobody could untangle, and it is reachable by ordinary play: break a
+     * box, build a second house, put ITS box in the old hole.
+     */
     public static void reattach(Home home, BlockPos pos) {
-        home.mailbox = pos.toImmutable();
+        BlockPos at = pos.toImmutable();
+        for (Home other : HOMES) {
+            if (other != home && at.equals(other.mailbox)
+                    && other.dimension.equals(home.dimension)) {
+                other.mailbox = null;
+            }
+        }
+        home.mailbox = at;
         save();
     }
 
-    /** A mailbox came up. The house keeps everything except its postbox. */
-    public static void detach(Home home) {
-        home.mailbox = null;
+    /**
+     * Which of this player's houses is missing its post, nearest first.
+     *
+     * The recovery path for a box that lost its stamp -- and the reason a
+     * blank one can be nailed up outside a house you already own and simply
+     * work. A house whose mailbox position still has a mailbox standing on it
+     * is not spare; anything else is.
+     */
+    public static Home spareOf(ServerPlayerEntity owner, ServerWorld world, BlockPos near,
+                               int range) {
+        String dimension = world.getRegistryKey().getValue().toString();
+        Home best = null;
+        double closest = (double) range * range;
+        for (Home home : HOMES) {
+            if (!home.owner.equals(owner.getUuid()) || !home.dimension.equals(dimension)) {
+                continue;
+            }
+            double away = home.anchor.getSquaredDistance(near);
+            if (away > closest) {
+                continue;
+            }
+            // Distance FIRST. Reading the block would drag the chunk of a
+            // house on the other side of the map into memory to answer a
+            // question about one twenty blocks away.
+            if (home.mailbox != null && !home.mailbox.equals(near)
+                    && world.getChunkManager().isChunkLoaded(
+                            home.mailbox.getX() >> 4, home.mailbox.getZ() >> 4)
+                    && world.getBlockState(home.mailbox).isOf(TrapContent.mailbox)) {
+                continue;   // that one still has its box
+            }
+            closest = away;
+            best = home;
+        }
+        return best;
+    }
+
+    /** A house nobody is going to live in. Only its owner may say so. */
+    public static String demolish(ServerPlayerEntity who, ServerWorld world, BlockPos where) {
+        Home home = covering(world, where);
+        if (home == null) {
+            return "You're not stood in a house.";
+        }
+        if (!home.owner.equals(who.getUuid()) && !who.hasPermissionLevel(2)) {
+            return "That's " + home.ownerName + "'s. Not yours to knock down.";
+        }
+        HOMES.remove(home);
         save();
+        who.sendMessage(Text.literal("Off the register. ").formatted(Formatting.YELLOW)
+                .append(Text.literal(home.name + " is just a room again.")
+                        .formatted(Formatting.GRAY)), false);
+        return null;
     }
 
     /** Give up an address for good. */
@@ -587,7 +661,26 @@ public final class TrapHomes {
                                     }
                                     directory(who);
                                     return 1;
-                                })));
+                                })
+                                // The escape hatch. A survey that grabbed the
+                                // wrong room used to be permanent, because the
+                                // only thing that could refuse the next one was
+                                // the claim it had already made.
+                                .then(net.minecraft.server.command.CommandManager
+                                        .literal("demolish")
+                                        .executes(context -> {
+                                            ServerPlayerEntity who = context.getSource().getPlayer();
+                                            if (who == null) {
+                                                return 0;
+                                            }
+                                            String no = demolish(who, who.getWorld(),
+                                                    who.getBlockPos());
+                                            if (no != null) {
+                                                who.sendMessage(Text.literal(no)
+                                                        .formatted(Formatting.GRAY), false);
+                                            }
+                                            return 1;
+                                        }))));
     }
 
     private static void directory(ServerPlayerEntity who) {
