@@ -58,16 +58,33 @@ public class CocaCropBlock extends CropBlock implements PolymerTexturedBlock {
     }
 
     /**
-     * Same four-stage problem as cannabis: half the stages of wheat means a
-     * plain crop tick moves it twice as far. Gated to match, so the two
-     * product lines take comparable time to bring in.
+     * Grows on its own clock, not vanilla's.
+     *
+     * This used to gate {@code super.randomTick}, which is vanilla crop growth
+     * -- and vanilla scales growth by moisture read off {@code Blocks.FARMLAND}
+     * and nothing else. A bush on plain dirt, which {@link #canPlantOnTop}
+     * explicitly allows, scored the floor value of 1.0 and needed 26 rolls a
+     * stage; gated by four on top of that, it was around two hours per stage
+     * and six to twelve from seed to ripe. Nobody ever saw the last stage, and
+     * they were right not to wait for it.
+     *
+     * Cannabis survives the same formula because Quality pays three points for
+     * moisture 7, so it gets planted on wet farmland by people chasing grades.
+     * Coca has no grade -- the whole line's value is in the press and the
+     * refiner -- so the substrate was a trap with no tell. Flat rate, light
+     * still required, and {@link TrapMath#COCA_GROWTH_ROLLS} is the one number
+     * that governs it.
      */
-    private static final int GROWTH_PATIENCE = 4;
-
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (random.nextInt(GROWTH_PATIENCE) == 0) {
-            super.randomTick(state, world, pos, random);
+        // The one vanilla rule kept: a plant still needs light, so a cellar
+        // farm still doesn't work and still says so by simply not growing.
+        if (world.getBaseLightLevel(pos, 0) < 9) {
+            return;
+        }
+        int age = getAge(state);
+        if (age < getMaxAge() && random.nextInt(TrapMath.COCA_GROWTH_ROLLS) == 0) {
+            world.setBlockState(pos, withAge(age + 1), Block.NOTIFY_LISTENERS);
         }
     }
 

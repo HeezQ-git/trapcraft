@@ -1067,6 +1067,41 @@ public final class TrapMath {
         return Math.max(2, Math.round((totalLevels * 22.0f + enchantments * 15.0f) * SCRAP_RATE));
     }
 
+    // --- growing --------------------------------------------------------------
+
+    /**
+     * How long one crop stage takes, in minutes, for a plant that waits for
+     * this many random ticks.
+     *
+     * A block gets a random tick with probability randomTickSpeed/4096 each
+     * game tick, so on the default 3 that is one every 68 seconds. Here so the
+     * guide book and the tests read the same arithmetic the crop does, rather
+     * than three places all guessing.
+     */
+    public static float stageMinutes(int rolls, int randomTickSpeed) {
+        return rolls * (4096.0f / randomTickSpeed) / 20.0f / 60.0f;
+    }
+
+    /**
+     * Random ticks a coca bush waits before moving up a stage.
+     *
+     * A FLAT number, which is the whole fix. Coca used to grow through
+     * vanilla's crop tick, and vanilla scales growth by moisture -- counting
+     * only {@code Blocks.FARMLAND}, at 3.0 for wet, 1.0 for dry and nothing
+     * at all for dirt or for any of the forty food mods' own farmland. That
+     * put a bush on dirt at (int)(25/1)+1 = 26 rolls, times the old gate of
+     * four, or about two hours a stage: six to twelve hours from seed to ripe,
+     * which is indistinguishable from broken and is exactly what it was
+     * reported as.
+     *
+     * Cannabis lives with the same formula and is fine, because Quality pays
+     * three points for moisture 7 and so everybody plants it on wet farmland.
+     * Coca has no grade at all -- its value is in the press and the refiner --
+     * so nothing ever told anyone the substrate mattered. Rather than invent a
+     * reason to care, the bush now simply ignores it.
+     */
+    public static final int COCA_GROWTH_ROLLS = 13;
+
     // --- the kitchen ------------------------------------------------------------
 
     /**

@@ -859,8 +859,10 @@ public final class TrapGuide {
     private static void coca(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("9. COCA\n\n"))
-                .append(body("A longer chain, worth far more.\n\n"))
                 .append(body("Bush -> leaves -> press -> refiner -> powder.\n\n"))
+                .append(body("~" + Math.round(TrapMath.stageMinutes(
+                        TrapMath.COCA_GROWTH_ROLLS, 3) * 3) + " min to ripen. "
+                        + "Any dirt, but it needs light.\n\n"))
                 .append(hint("Seeds: warm structures, or a trader."))));
 
         pages.add(page(Text.empty()

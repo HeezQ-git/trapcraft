@@ -1637,6 +1637,30 @@ class FormulaTest {
         assertTrue(TrapMath.aggregate(List.of(Map.entry("ghost", 0))).isEmpty());
     }
 
+    // --- growing --------------------------------------------------------------
+
+    /**
+     * A coca bush has to finish inside one session.
+     *
+     * The bug this guards was not a wrong formula, it was a right formula
+     * nobody had costed: vanilla's moisture scaling put a bush on dirt at two
+     * hours a stage, so the last stage was never reached by anybody. A number
+     * that says "about a quarter of an hour" is only worth having if something
+     * checks it still means that.
+     */
+    @Test
+    void aCocaBushRipensInsideAnEvening() {
+        float stage = TrapMath.stageMinutes(TrapMath.COCA_GROWTH_ROLLS, 3);
+        assertTrue(stage > 8 && stage < 25, "a stage takes " + stage + " minutes");
+        assertTrue(stage * 3 < 60, "seed to ripe takes " + stage * 3 + " minutes");
+    }
+
+    @Test
+    void aSlowerTickingServerGrowsThingsSlower() {
+        assertTrue(TrapMath.stageMinutes(TrapMath.COCA_GROWTH_ROLLS, 1)
+                > TrapMath.stageMinutes(TrapMath.COCA_GROWTH_ROLLS, 3));
+    }
+
     // --- the kitchen ----------------------------------------------------------
 
     /** {nutrition, saturation} for the vanilla raw/cooked pairs, as shipped. */
