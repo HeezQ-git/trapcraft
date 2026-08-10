@@ -342,8 +342,18 @@ public final class HomeSurvey {
     public static final float[] SHELL_STEPS = {0.60f, 0.90f};
     /** Light level below which a square counts as a dark corner. */
     public static final int DARK_AT = 8;
-    /** Share of the floor allowed to be dark for the first lighting point. */
-    public static final float GLOOM_ALLOWED = 0.10f;
+    /**
+     * Share of the floor allowed to be dark, for two points and for one.
+     *
+     * Was "none at all" for the second point, which sounds reasonable and is
+     * not: light falls off a level a block, so a ceiling torch lands about ten
+     * on the floor directly under it and less between torches. Demanding a
+     * perfectly even floor meant tearing up somebody's decoration to bury
+     * lamps in it, which is the opposite of what a grade for decoration is
+     * supposed to encourage.
+     */
+    public static final float GLOOM_GOOD = 0.05f;
+    public static final float GLOOM_ALLOWED = 0.20f;
     /** Fittings there are to find: crafting, storage, cooking, stall, window. */
     public static final int FITTINGS = 5;
 
@@ -397,7 +407,13 @@ public final class HomeSurvey {
         if (dark <= 0) {
             return 2;
         }
-        return floor > 0 && dark <= Math.max(1, (int) (floor * GLOOM_ALLOWED)) ? 1 : 0;
+        if (floor <= 0) {
+            return 0;
+        }
+        if (dark <= Math.max(1, (int) (floor * GLOOM_GOOD))) {
+            return 2;
+        }
+        return dark <= Math.max(2, (int) (floor * GLOOM_ALLOWED)) ? 1 : 0;
     }
 
     /** Everything above the bare minimum, added up. */

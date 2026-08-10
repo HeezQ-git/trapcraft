@@ -847,8 +847,8 @@ def build() -> str:
                 f"window; two earns one, four earns two, all {d['fittings']} earns three"],
         ["0–2", f"character — {d['decor_steps'][0]} then {d['decor_steps'][1]} different "
                 f"kinds of block in the place"],
-        ["0–2", f"no dark corners — under a tenth of the floor below light "
-                f"{d['dark_at']} earns one, none at all earns two"],
+        ["0–2", f"lighting — measured at head height, brighter than {d['dark_at']}; "
+                f"a fifth of the floor dim earns one, a twentieth earns two"],
     ])}
     <p>Every two points is a grade, up to <strong>{d['top_tier']}</strong> — and then the
     floor caps it. The mailbox always tells you the single next thing to do, so you never
@@ -995,6 +995,7 @@ def build() -> str:
         ["<code>/homes</code>", "Every house on the register, and its grade"],
         ["<code>/shops</code>", "Every market shelf, and how many townspeople there are"],
         ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],
+        ["<code>/homes evict</code>", "Clear a tenant standing about with no house behind them"],
         ["<code>/crew</code>", "The crew board — hire, train, pay"],
         ["<code>/heat</code>", "How hot this spot is, and what it would bring"],
         ["<code>/paranoia</code>", "Turn the whole thing off, per player"],

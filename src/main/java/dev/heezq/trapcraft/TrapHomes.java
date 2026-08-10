@@ -68,6 +68,15 @@ public final class TrapHomes {
 
     /** Ticks between one house being looked at again. */
     private static final int SURVEY_TICKS = 240;
+    /**
+     * Marks a tenant's body, so one that outlived its house can be found.
+     *
+     * A villager is a persistent entity and the register is a text file; the
+     * two can disagree, and when they do it is always the same way round --
+     * the house goes and the person stays, standing in a field forever with
+     * somebody's name over their head.
+     */
+    public static final String TENANT_TAG = "trapcraft_tenant";
     /** Letters kept on a mailbox. Nobody reads the fifth. */
     private static final int LETTERS_KEPT = 3;
     /** Names the city hands out. Nobody is "Tenant".*/
@@ -491,6 +500,13 @@ public final class TrapHomes {
      * itself never gets slower.
      */
     private static void rounds(MinecraftServer server) {
+        // Orphans first, and near PLAYERS rather than near houses. The case
+        // that needs this most is the LAST house being demolished, at which
+        // point there are no houses left to sweep near and the tenant would
+        // stand in the field forever.
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            sweep(player.getWorld(), player.getBlockPos());
+        }
         if (HOMES.isEmpty()) {
             return;
         }
@@ -593,12 +609,7 @@ public final class TrapHomes {
     private static void moveOut(MinecraftServer server, ServerWorld world, Home home,
                                 String why) {
         String who = home.tenant;
-        if (home.body != null && world.getEntity(home.body) != null) {
-            world.getEntity(home.body).discard();
-        }
-        home.tenant = null;
-        home.body = null;
-        home.mood = 0;
+        evict(world, home);
         home.write(who + " has gone. They " + why + ".");
         save();
         ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
@@ -652,6 +663,7 @@ public final class TrapHomes {
         body.setPersistent();
         body.setCustomName(Text.literal(home.tenant).formatted(Formatting.AQUA));
         body.setCustomNameVisible(true);
+        body.addCommandTag(TENANT_TAG);
         // NITWIT for the same reason the crew are: a professionless villager
         // takes a job from any workstation it wanders past and starts trading,
         // which would undercut the shop its landlord built downstairs.
@@ -773,15 +785,25 @@ public final class TrapHomes {
             int x = HomeSurvey.cellX(at);
             int y = HomeSurvey.cellY(at);
             int z = HomeSurvey.cellZ(at);
-            // A dark corner is measured where somebody would be STANDING, so
-            // only squares with a floor under them are asked, and only block
-            // light is counted -- a room lit through the window is a dark room
-            // at midnight, which is when it matters.
-            if (!inside.contains(HomeSurvey.cell(x, y - 1, z))
-                    && loadedAt(world, x, z)
-                    && world.getLightLevel(net.minecraft.world.LightType.BLOCK,
-                            new BlockPos(x, y, z)) < HomeSurvey.DARK_AT) {
-                kit.dark++;
+            // A dark corner is measured where somebody would be STANDING, and
+            // at HEAD height rather than at their feet. Light falls off a level
+            // a block, so a ceiling torch reads brightest at the top of the
+            // room and dimmest on the floor -- measuring at the boots called
+            // a well-lit room dark and sent people burying lamps in their own
+            // decoration. The brighter of the two squares is the honest answer
+            // to "can you see in here".
+            //
+            // Block light only: a room lit through the window is a dark room at
+            // midnight, which is when it matters.
+            if (!inside.contains(HomeSurvey.cell(x, y - 1, z)) && loadedAt(world, x, z)) {
+                int lit = Math.max(
+                        world.getLightLevel(net.minecraft.world.LightType.BLOCK,
+                                new BlockPos(x, y, z)),
+                        world.getLightLevel(net.minecraft.world.LightType.BLOCK,
+                                new BlockPos(x, y + 1, z)));
+                if (lit < HomeSurvey.DARK_AT) {
+                    kit.dark++;
+                }
             }
             for (int side = 0; side < 6; side++) {
                 long next = HomeSurvey.cell(
@@ -1006,10 +1028,14 @@ public final class TrapHomes {
         if (!home.owner.equals(who.getUuid()) && !who.hasPermissionLevel(2)) {
             return "That's " + home.ownerName + "'s. Not yours to knock down.";
         }
+        String tenant = home.tenant;
+        evict(world, home);
         HOMES.remove(home);
         save();
         who.sendMessage(Text.literal("Off the register. ").formatted(Formatting.YELLOW)
-                .append(Text.literal(home.name + " is just a room again.")
+                .append(Text.literal(home.name + " is just a room again."
+                                + (tenant == null ? ""
+                                : " " + tenant + " has been put out."))
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -1018,6 +1044,80 @@ public final class TrapHomes {
     public static void demolish(Home home) {
         HOMES.remove(home);
         save();
+    }
+
+    /**
+     * Clear the nearest villager that looks like one of ours and is not.
+     *
+     * Every tenant spawned from now on carries a tag and gets swept without
+     * anybody asking. This is for the ones that came before it -- and it is a
+     * command rather than a sweep because "villager with a name that is not on
+     * my books" also describes a villager somebody named themselves, and
+     * killing one of those uninvited is worse than leaving a stray.
+     */
+    private static String stray(ServerPlayerEntity who) {
+        ServerWorld world = who.getWorld();
+        java.util.Set<UUID> living = new HashSet<>();
+        for (Home home : HOMES) {
+            if (home.body != null) {
+                living.add(home.body);
+            }
+        }
+        net.minecraft.entity.passive.VillagerEntity nearest = null;
+        double closest = 8 * 8;
+        for (var villager : world.getEntitiesByClass(
+                net.minecraft.entity.passive.VillagerEntity.class,
+                new net.minecraft.util.math.Box(who.getBlockPos()).expand(8),
+                found -> found.getCustomName() != null
+                        && !living.contains(found.getUuid())
+                        && !TrapCrew.isHand(found.getUuid()))) {
+            double away = villager.squaredDistanceTo(who);
+            if (away <= closest) {
+                closest = away;
+                nearest = villager;
+            }
+        }
+        if (nearest == null) {
+            return "Nobody here who shouldn't be. Stand next to them.";
+        }
+        String name = nearest.getCustomName().getString();
+        nearest.discard();
+        return name + " has been put out. Their house wasn't on the register.";
+    }
+
+    /** Put the tenant out and take their body with them. */
+    private static void evict(ServerWorld world, Home home) {
+        if (home.body != null && world.getEntity(home.body) != null) {
+            world.getEntity(home.body).discard();
+        }
+        home.body = null;
+        home.tenant = null;
+        home.mood = 0;
+    }
+
+    /**
+     * Anybody standing about with our name on them and no house behind them.
+     *
+     * The backstop for every way a house can leave the register that nobody
+     * thought of: a command, a file edited by hand, a version of this mod that
+     * no longer has the same ideas. Runs on the same round-robin as the
+     * survey, in loaded chunks only, and costs one entity sweep of one chunk.
+     */
+    private static void sweep(ServerWorld world, BlockPos near) {
+        java.util.Set<UUID> living = new HashSet<>();
+        for (Home home : HOMES) {
+            if (home.body != null) {
+                living.add(home.body);
+            }
+        }
+        net.minecraft.util.math.Box around = new net.minecraft.util.math.Box(near).expand(24);
+        for (net.minecraft.entity.passive.VillagerEntity villager
+                : world.getEntitiesByClass(net.minecraft.entity.passive.VillagerEntity.class,
+                        around, found -> found.getCommandTags().contains(TENANT_TAG))) {
+            if (!living.contains(villager.getUuid())) {
+                villager.discard();
+            }
+        }
     }
 
     public static void touch() {
@@ -1051,6 +1151,21 @@ public final class TrapHomes {
                                 // wrong room used to be permanent, because the
                                 // only thing that could refuse the next one was
                                 // the claim it had already made.
+                                // For the strays that predate the tag. Named
+                                // and nearest only, so it cannot take somebody's
+                                // crew or a villager they named themselves from
+                                // the other side of the room.
+                                .then(net.minecraft.server.command.CommandManager
+                                        .literal("evict")
+                                        .executes(context -> {
+                                            ServerPlayerEntity who = context.getSource().getPlayer();
+                                            if (who == null) {
+                                                return 0;
+                                            }
+                                            who.sendMessage(Text.literal(stray(who))
+                                                    .formatted(Formatting.GRAY), false);
+                                            return 1;
+                                        }))
                                 .then(net.minecraft.server.command.CommandManager
                                         .literal("demolish")
                                         .executes(context -> {

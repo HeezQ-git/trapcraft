@@ -276,13 +276,22 @@ class SurveyTest {
         assertEquals(2, HomeSurvey.shellPoints(HomeSurvey.SHELL_STEPS[1]));
     }
 
-    /** One dark corner in a big house is forgiven; a gloomy one is not. */
+    /**
+     * A few dim patches are forgiven; a gloomy room is not.
+     *
+     * "None at all" for the top mark sounds reasonable and is not. Light falls
+     * off a level a block, so a ceiling torch reads about ten on the floor
+     * under it and less between torches -- demanding a perfectly even floor
+     * meant tearing up somebody's decoration to bury lamps in it, which is the
+     * opposite of what a grade for decoration should encourage.
+     */
     @Test
     void darkCornersCost() {
-        assertEquals(2, HomeSurvey.lightPoints(0, 100));
-        assertEquals(1, HomeSurvey.lightPoints(10, 100));
-        assertEquals(0, HomeSurvey.lightPoints(11, 100));
-        assertEquals(1, HomeSurvey.lightPoints(1, 4), "a tiny place gets one square's grace");
+        assertEquals(2, HomeSurvey.lightPoints(0, 100), "a perfect room");
+        assertEquals(2, HomeSurvey.lightPoints(5, 100), "a few dim patches still full marks");
+        assertEquals(1, HomeSurvey.lightPoints(15, 100), "patchy but liveable");
+        assertEquals(0, HomeSurvey.lightPoints(40, 100), "gloomy");
+        assertEquals(1, HomeSurvey.lightPoints(2, 4), "a tiny place gets a couple of squares");
     }
 
     /** The fittings ladder is worth climbing all of, not most of. */

@@ -65,8 +65,8 @@ public class MailboxScreenHandler extends ScreenHandler {
             new Tick("Somewhere to cook", Items.FURNACE, "A furnace, smoker or blast furnace."),
             new Tick("Somewhere to shop", Items.EMERALD, "A market stall, indoors."),
             new Tick("A window", Items.GLASS, "Glass or panes in the wall."),
-            new Tick("No dark corners", Items.TORCH, "Every square lit above "
-                    + HomeSurvey.DARK_AT + ", at night."),
+            new Tick("Lighting", Items.TORCH, "Head height, brighter than "
+                    + HomeSurvey.DARK_AT + ", at night. Ceiling torches count."),
             new Tick("Character", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " different "
                     + "kinds of block, then " + HomeSurvey.DECOR_STEPS[1] + "."));
 
@@ -146,7 +146,7 @@ public class MailboxScreenHandler extends ScreenHandler {
 
         boolean[] got = {reading.bed(), reading.crafting(), reading.storage(),
                 reading.cooking(), reading.stall(), reading.window(),
-                reading.dark() == 0,
+                HomeSurvey.lightPoints(reading.dark(), reading.floor()) > 0,
                 reading.kinds() >= HomeSurvey.DECOR_STEPS[0]};
         String[] detail = {
                 reading.bed() ? "There." : "Missing.",
@@ -156,9 +156,9 @@ public class MailboxScreenHandler extends ScreenHandler {
                 reading.stall() ? "There." : "Missing.",
                 reading.window() ? "There." : "Missing.",
                 reading.dark() == 0 ? "Every square lit."
-                        : reading.dark() + " dark "
-                        + (reading.dark() == 1 ? "square" : "squares")
-                        + " of " + reading.floor(),
+                        : reading.dark() + " dim of " + reading.floor()
+                        + (HomeSurvey.lightPoints(reading.dark(), reading.floor()) > 0
+                        ? "  -- good enough" : "  -- too many"),
                 reading.kinds() + " kinds of block"};
         for (int i = 0; i < LIST.size(); i++) {
             display.setStack(LIST_FROM + i, tick(LIST.get(i), got[i], detail[i]));
@@ -353,9 +353,9 @@ public class MailboxScreenHandler extends ScreenHandler {
                     + "or another storey -- allows grade " + (reading.roomFor() + 1) + ".";
         } else if (reading.finished() < HomeSurvey.SHELL_STEPS[0]) {
             say = "Stop building out of dirt. Planks, bricks, anything you made.";
-        } else if (reading.dark() > 0) {
-            say = reading.dark() + " dark " + (reading.dark() == 1 ? "square" : "squares")
-                    + " left. Walk it at night and look at the floor.";
+        } else if (HomeSurvey.lightPoints(reading.dark(), reading.floor()) < 2) {
+            say = reading.dark() + " dim " + (reading.dark() == 1 ? "square" : "squares")
+                    + " of " + reading.floor() + ". A lamp in the darkest corner will do it.";
         } else if (reading.fittings() < HomeSurvey.FITTINGS) {
             say = "Fit it out -- a table, a chest, a furnace, a stall, a window.";
         } else if (reading.finished() < HomeSurvey.SHELL_STEPS[1]) {

@@ -546,6 +546,16 @@ public final class TrapCrew {
         }
     }
 
+    /** Is this villager on somebody's payroll? Asked before anybody evicts one. */
+    public static boolean isHand(UUID id) {
+        for (Hand hand : CREW) {
+            if (hand.mob.equals(id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** How many hands this player is carrying. */
     public static int sizeOf(ServerPlayerEntity boss) {
         return (int) CREW.stream().filter(hand -> hand.boss.equals(boss.getUuid())).count();
