@@ -80,15 +80,15 @@ public class ContractScreenHandler extends ScreenHandler {
             // Named in the strain's own colour, so the five jobs are told
             // apart at a glance instead of being five identical gold lines.
             paper.set(DataComponentTypes.CUSTOM_NAME,
-                    plain(job.strainValue().display() + "  x" + job.quantity())
-                            .withColor(job.strainValue().colour()));
+                    plain(job.productName() + "  x" + job.quantity())
+                            .withColor(job.productColour()));
             paper.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                     rule(),
                     field("Wants", job.formValue().label,
                             job.formValue() == Contract.Form.EITHER
                                     ? Formatting.WHITE : Formatting.YELLOW),
-                    field("Grade", job.gradeValue().display() + " or better",
-                            job.gradeValue().colour()),
+                    field("Grade", job.gradeName() + " or better",
+                            job.gradeColour()),
                     field("Distance", distance + " blocks", Formatting.WHITE),
                     field("Deadline", String.format("%d:%02d", seconds / 60, seconds % 60),
                             seconds <= 300 ? Formatting.RED : Formatting.WHITE),

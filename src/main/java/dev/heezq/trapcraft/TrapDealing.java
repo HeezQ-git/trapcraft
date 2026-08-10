@@ -796,12 +796,20 @@ public final class TrapDealing {
             return form != Contract.Form.BUDS;
         }
 
-        /** Short enough for a nameplate. */
+        /**
+         * Short enough for a nameplate.
+         *
+         * POWDER is unreachable here -- a punter who wants powder is built by
+         * forPowder(), which carries it as its own flag and leaves the form on
+         * EITHER. It is answered anyway rather than left off, because the
+         * alternative is a switch that throws on a value the enum has.
+         */
         String formWord() {
             return switch (form) {
                 case BUDS -> "bud";
                 case JOINTS -> "joints";
                 case EITHER -> "any";
+                case POWDER -> "powder";
             };
         }
 

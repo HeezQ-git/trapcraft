@@ -23,11 +23,17 @@ public record Contract(int strain, int minGrade, int quantity,
      * existed decodes cleanly and still means exactly what it meant when they
      * accepted it. A required field would have failed to parse and quietly
      * taken the job -- and the phone -- with it.
+     *
+     * POWDER is appended for the same reason, and appending is the whole
+     * discipline here: these are stored as their ordinal on an item in
+     * somebody's pocket, so inserting a value anywhere but the end would
+     * rewrite every live job on the server into a different one.
      */
     public enum Form {
         BUDS("Cured buds only"),
         JOINTS("Rolled joints only"),
-        EITHER("Buds or joints");
+        EITHER("Buds or joints"),
+        POWDER("Refined powder only");
 
         public final String label;
 
@@ -52,12 +58,19 @@ public record Contract(int strain, int minGrade, int quantity,
         return Form.values()[Math.floorMod(form, Form.values().length)];
     }
 
+    // Named rather than negated. "Anything that isn't JOINTS" was true for
+    // every form there was when it was written, and the day a fourth one
+    // arrived it quietly meant a powder job would also accept buds.
     public boolean takesBuds() {
-        return formValue() != Form.JOINTS;
+        return formValue() == Form.BUDS || formValue() == Form.EITHER;
     }
 
     public boolean takesJoints() {
-        return formValue() != Form.BUDS;
+        return formValue() == Form.JOINTS || formValue() == Form.EITHER;
+    }
+
+    public boolean takesPowder() {
+        return formValue() == Form.POWDER;
     }
 
     public Strain strainValue() {
@@ -67,6 +80,47 @@ public record Contract(int strain, int minGrade, int quantity,
     public Quality gradeValue() {
         return Quality.byIndex(minGrade);
     }
+
+    /**
+     * The same minGrade, read as purity.
+     *
+     * Quality and Purity are both four rungs, which is the whole reason a
+     * powder job can ride on the existing field: "at least LOUD" and "at
+     * least CLEAN" are the same number. A second field would have meant a
+     * codec change, and a codec change means every job on every phone stops
+     * parsing -- which costs people work they had already done.
+     */
+    public Purity purityValue() {
+        return Purity.values()[Math.floorMod(minGrade, Purity.values().length)];
+    }
+
+    /**
+     * What to call this job, and what colour to say it in.
+     *
+     * A powder job has no strain -- there is one coca line, not six -- so the
+     * strain field on it is meaningless and nothing may print it. Everything
+     * that used to reach for strainValue() asks here instead, which is what
+     * stops a cocaine job being advertised as Purple Haze.
+     */
+    public String productName() {
+        return takesPowder() ? "Powder" : strainValue().display();
+    }
+
+    public int productColour() {
+        return takesPowder() ? POWDER_WHITE : strainValue().colour();
+    }
+
+    /** The floor grade, on whichever of the two scales this job is measured in. */
+    public String gradeName() {
+        return takesPowder() ? purityValue().display() : gradeValue().display();
+    }
+
+    public net.minecraft.util.Formatting gradeColour() {
+        return takesPowder() ? purityValue().colour() : gradeValue().colour();
+    }
+
+    /** Powder is the one product with no strain colour of its own. */
+    private static final int POWDER_WHITE = 0xF2F6FF;
 
     /** Y is deliberately absent: villages are found on the surface anyway. */
     public BlockPos destination() {

@@ -138,6 +138,20 @@ public final class TrapContracts {
                 case 1 -> Contract.Form.JOINTS.ordinal();
                 default -> Contract.Form.EITHER.ordinal();
             };
+            // Coca work, once somebody has a name worth ringing about it.
+            //
+            // Held back behind rep because a powder job is three machines deep
+            // -- grow, press, refine -- and a board slot somebody cannot fill
+            // is worse than one less job: it is a job that reads as broken.
+            // By POWDER_REP they have run enough deliveries to have the line.
+            //
+            // Rolled per slot, so about one job in four is coca and three
+            // boards in four have at least one. Not a guaranteed slot: a day
+            // with none is a day the phone is all weed, which is the point of
+            // a sideline. This is a phone with one, not a second phone.
+            if (rep >= POWDER_REP && random.nextInt(4) == 0) {
+                form = Contract.Form.POWDER.ordinal();
+            }
 
             // Priced COLD, and the heat bonus is worked out when you hand it
             // over instead. It used to read the heat you happened to be
@@ -151,6 +165,13 @@ public final class TrapContracts {
             // supposed to be stable until tomorrow was quoting a different
             // number every time your heat moved.
             int payout = TrapMath.payout(distance, quantity, grade, 0, rep);
+            // Powder is worth about three times bud rung for rung -- 3/7/13/22
+            // against 1/2/4/7 -- so a job asking for eight of it is asking for
+            // three times the goods and has to pay like it. Read off the two
+            // enums rather than picked, so retuning either one moves this.
+            if (form == Contract.Form.POWDER.ordinal()) {
+                payout = Math.round(payout * powderRate(grade));
+            }
             int seconds = BASE_SECONDS + distance / 100 * SECONDS_PER_100;
 
             jobs.add(new Contract(strain.ordinal(), grade, quantity,
@@ -159,6 +180,16 @@ public final class TrapContracts {
                     payout, 2 + grade, form));
         }
         return jobs;
+    }
+
+    /** Rep before the phone starts ringing about coca at all. */
+    private static final int POWDER_REP = 10;
+
+    /** What powder is worth against bud at the same rung, from the enums. */
+    private static float powderRate(int grade) {
+        int rung = Math.max(0, Math.min(grade, Purity.values().length - 1));
+        return Purity.values()[rung].emeralds()
+                / (float) Math.max(1, Quality.byIndex(rung).emeralds());
     }
 
     private record Destination(long day, BlockPos anchor) {
@@ -240,7 +271,7 @@ public final class TrapContracts {
                 .formatted(Formatting.GOLD), false);
         // The compass points at it, but a waypoint survives you putting the
         // compass down and shows on the world map as well.
-        TrapWaypoints.offer(player, "Drop  " + contract.strainValue().display(),
+        TrapWaypoints.offer(player, "Drop  " + contract.productName(),
                 contract.destination().withY(player.getBlockPos().getY()), TrapWaypoints.GOLD);
     }
 
@@ -265,8 +296,8 @@ public final class TrapContracts {
 
         int left = contract.secondsLeft(now);
         player.sendMessage(Text.literal(String.format("%s x%d %s  ·  %s+  ·  %d:%02d",
-                                contract.strainValue().display(), contract.quantity(),
-                                shortForm(contract), contract.gradeValue().display(),
+                                contract.productName(), contract.quantity(),
+                                shortForm(contract), contract.gradeName(),
                                 left / 60, left % 60))
                 .formatted(left <= 30 ? Formatting.RED : Formatting.GRAY), true);
     }
@@ -277,6 +308,7 @@ public final class TrapContracts {
             case BUDS -> "bud";
             case JOINTS -> "joint";
             case EITHER -> "any";
+            case POWDER -> "powder";
         };
     }
 
@@ -384,7 +416,7 @@ public final class TrapContracts {
                                 net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
         contact.setCustomName(Text.literal("Buyer  ·  " + contract.quantity() + "x "
-                        + contract.strainValue().display())
+                        + contract.productName())
                 .formatted(Formatting.GOLD, Formatting.BOLD));
         contact.setCustomNameVisible(true);
         contact.setGlowing(true);
@@ -439,11 +471,11 @@ public final class TrapContracts {
         int carrying = countGoods(player, contract);
         player.sendMessage(Text.literal(contract.quantity() + "x ")
                         .formatted(Formatting.WHITE)
-                        .append(Text.literal(contract.strainValue().display())
-                                .withColor(contract.strainValue().colour()))
+                        .append(Text.literal(contract.productName())
+                                .withColor(contract.productColour()))
                         .append(Text.literal(", " + contract.formValue().label.toLowerCase(
                                         java.util.Locale.ROOT) + ", "
-                                        + contract.gradeValue().display() + " or better. "
+                                        + contract.gradeName() + " or better. "
                                         + "You've got " + carrying + ".")
                                 .formatted(Formatting.GRAY)),
                 false);
@@ -546,10 +578,21 @@ public final class TrapContracts {
      * tax or a bonus here.
      */
     private static boolean settles(ItemStack stack, Contract contract) {
-        if (stack.isEmpty() || TrapComponents.get(stack).index() < contract.minGrade()) {
+        if (stack.isEmpty()) {
             return false;
         }
         var item = stack.getItem();
+        // Powder is graded on its own component. Asking TrapComponents.get for
+        // the quality of a stack that has never had one reads as the bottom
+        // rung, so a powder job checked the bud way would refuse Pure powder
+        // for not being Fire enough -- and refuse it silently, at the drop.
+        if (contract.takesPowder()) {
+            return item == TrapContent.cocaPowder
+                    && TrapComponents.getPurity(stack).ordinal() >= contract.minGrade();
+        }
+        if (TrapComponents.get(stack).index() < contract.minGrade()) {
+            return false;
+        }
         if (contract.takesBuds() && item == TrapContent.driedBud(contract.strainValue())) {
             return true;
         }
