@@ -886,8 +886,11 @@ a {{ color: inherit; }}
   font-size: clamp(2.6rem, 10vw, 8.5rem); line-height: .95; letter-spacing: -.01em;
   margin: 0; text-wrap: balance;
 }}
-.hero h1 em {{ font-style: normal; font-weight: 400; display: block;
-  color: var(--bone-dim); }}
+.hero h1 em {{
+  font-style: normal; font-weight: 400; display: block; color: var(--bone-dim);
+  /* A whole clause at display size would wrap into a wall. */
+  font-size: .42em; line-height: 1.15; margin-top: .35em; text-wrap: balance;
+}}
 .hero p {{ max-width: 46ch; margin: 2rem 0 0; color: var(--bone-dim);
   font-size: 1.15rem; }}
 .figs {{ display: flex; flex-wrap: wrap; gap: 2.5rem; margin-top: 3.5rem;
@@ -1095,10 +1098,10 @@ footer a:hover {{ text-decoration: underline; }}
   <div>
     <header class="hero">
       <p class="eyebrow">Server-side · Fabric 1.21.8 · no client install</p>
-      <h1>Everybody<em>eats.</em></h1>
-      <p>Grow it, cure it, roll it, refine it, price it, sell it, launder it, and
-      try not to get raided. The complete reference — generated from the mod's own
-      source, so it cannot go stale.</p>
+      <h1>Everything<em>is somebody&#39;s business.</em></h1>
+      <p>A market that breathes, a floor that wears out, hands on wages, and a raid
+      that searches your chests. The complete reference — generated from the mod&#39;s
+      own source, so it cannot go stale.</p>
       <div class="figs">
         <div><b>{lines}</b><span>priced lines</span></div>
         <div><b>{strains}</b><span>strains</span></div>
