@@ -115,7 +115,8 @@ public final class HomeSurvey {
      * @param sealed false if the fill leaked; everything else is then noise
      * @param clash  the fill ran into another house's claim
      */
-    public record Rooms(Set<Long> inside, List<Long> exits, boolean sealed, boolean clash) {
+    public record Rooms(Set<Long> inside, List<Long> exits, boolean sealed, boolean clash,
+                        long escape, boolean buried) {
         /**
          * Squares you could stand on. Every storey counts, headroom does not.
          *
@@ -138,10 +139,20 @@ public final class HomeSurvey {
         }
     }
 
-    private static final Rooms LEAKED =
-            new Rooms(Set.of(), List.of(), false, false);
     private static final Rooms CLASHED =
-            new Rooms(Set.of(), List.of(), false, true);
+            new Rooms(Set.of(), List.of(), false, true, 0L, false);
+
+    /**
+     * It leaked, and WHERE it leaked.
+     *
+     * "Find the hole" is not advice, it is a shrug -- the one thing somebody
+     * staring at a failed survey needs is a direction. The escape is the
+     * furthest square the fill got to, which is by definition on the far side
+     * of whatever gap it went through.
+     */
+    private static Rooms leaked(long escape) {
+        return new Rooms(Set.of(), List.of(), false, false, escape, false);
+    }
 
     /** What one fill did: closed on itself, ran out of room, or hit a claim. */
     private static final int CLOSED = 0;
@@ -160,7 +171,10 @@ public final class HomeSurvey {
         // Somebody bricked over the spot the house was measured from. There is
         // no room here any more, whatever is on the other side of the bricks.
         if (!space.open(ax, ay, az)) {
-            return LEAKED;
+            // Not a hole. Somebody built over the spot this was measured from,
+            // which is a completely different problem and used to be reported
+            // as the same one.
+            return new Rooms(Set.of(), List.of(), false, false, cell(ax, ay, az), true);
         }
 
         Set<Long> visited = new HashSet<>();
@@ -170,7 +184,7 @@ public final class HomeSurvey {
         int first = fill(space, cell(ax, ay, az), ax, ay, az, ROOM_CAP,
                 visited, inside, doors, null);
         if (first != CLOSED) {
-            return first == CLASH ? CLASHED : LEAKED;
+            return first == CLASH ? CLASHED : leaked(furthest(inside, ax, ay, az));
         }
 
         List<Long> exits = new ArrayList<>();
@@ -210,7 +224,24 @@ public final class HomeSurvey {
             queue.addAll(beyond);
         }
 
-        return new Rooms(inside, exits, true, false);
+        return new Rooms(inside, exits, true, false, 0L, false);
+    }
+
+    /** The square the fill got furthest from home. Through the hole, if there is one. */
+    private static long furthest(Set<Long> cells, int ax, int ay, int az) {
+        long best = cell(ax, ay, az);
+        long away = -1;
+        for (long at : cells) {
+            long dx = cellX(at) - ax;
+            long dy = cellY(at) - ay;
+            long dz = cellZ(at) - az;
+            long distance = dx * dx + dy * dy + dz * dz;
+            if (distance > away) {
+                away = distance;
+                best = at;
+            }
+        }
+        return best;
     }
 
     /**

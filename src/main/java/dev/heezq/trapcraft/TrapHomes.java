@@ -82,8 +82,16 @@ public final class TrapHomes {
         final UUID owner;
         String ownerName;
         final String dimension;
-        /** Where it was measured from. Never moves. */
-        final BlockPos anchor;
+        /**
+         * Where it was last successfully measured from.
+         *
+         * Used to be final, on the theory that a fixed anchor is what lets the
+         * mailbox be carried outside. It does -- but it also meant that a
+         * house REBUILT somewhere else went on being measured at the old spot
+         * forever, and reported the new building as full of holes. It moves
+         * now, but only ever to a place that actually surveys.
+         */
+        BlockPos anchor;
         /** Where the post goes. May be anywhere, or nowhere. */
         BlockPos mailbox;
         int[] box = {0, 0, 0, 0, 0, 0};
@@ -182,7 +190,8 @@ public final class TrapHomes {
     public record Readout(String name, int tier, int floor, boolean sealed, boolean clash,
                           int exits, boolean bed, boolean crafting, boolean storage,
                           boolean cooking, boolean stall, boolean window, int lights,
-                          int kinds, int dark, float finished, boolean registered) {
+                          int kinds, int dark, float finished, boolean registered,
+                          BlockPos measuredFrom, BlockPos leak, boolean buried) {
         public int fittings() {
             return (crafting ? 1 : 0) + (storage ? 1 : 0) + (cooking ? 1 : 0)
                     + (stall ? 1 : 0) + (window ? 1 : 0);
@@ -318,7 +327,11 @@ public final class TrapHomes {
         String name = self == null ? null : self.name;
         if (!rooms.sealed()) {
             return new Readout(name, 0, 0, false, rooms.clash(), 0, false, false, false,
-                    false, false, false, 0, 0, 0, 0f, self != null);
+                    false, false, false, 0, 0, 0, 0f, self != null,
+                    self == null ? null : self.anchor,
+                    new BlockPos(HomeSurvey.cellX(rooms.escape()),
+                            HomeSurvey.cellY(rooms.escape()),
+                            HomeSurvey.cellZ(rooms.escape())), rooms.buried());
         }
         int floor = rooms.floor();
         Fittings kit = fittings(world, rooms.inside());
@@ -332,7 +345,8 @@ public final class TrapHomes {
         }
         return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.bed,
                 kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
-                kit.lights, kit.kinds, kit.dark, kit.finished(), self != null);
+                kit.lights, kit.kinds, kit.dark, kit.finished(), self != null,
+                self == null ? null : self.anchor, null, false);
     }
 
     /**
@@ -427,10 +441,30 @@ public final class TrapHomes {
         save();
     }
 
-    /** Re-measure a house that is already on the books. */
+    /**
+     * Re-measure a house that is already on the books.
+     *
+     * If the old spot no longer surveys but the MAILBOX is standing somewhere
+     * that does, the house moves its anchor there. That is the self-heal for
+     * the case that actually happens: somebody knocks the first room about,
+     * builds a proper house, and puts the box down in it -- at which point the
+     * old anchor is thirteen blocks away in a building that no longer exists
+     * and every survey since has been measuring the wrong place and reporting
+     * it as holes.
+     */
     public static Readout measure(ServerWorld world, Home home) {
         HomeSurvey.Rooms rooms = HomeSurvey.survey(new Ground(world, home),
                 home.anchor.getX(), home.anchor.getY(), home.anchor.getZ());
+        if (!rooms.sealed() && !rooms.clash() && home.mailbox != null
+                && !home.mailbox.equals(home.anchor)) {
+            HomeSurvey.Rooms fromBox = HomeSurvey.survey(new Ground(world, home),
+                    home.mailbox.getX(), home.mailbox.getY(), home.mailbox.getZ());
+            if (fromBox.sealed()) {
+                home.anchor = home.mailbox;
+                rooms = fromBox;
+                save();
+            }
+        }
         Readout now = grade(world, home, rooms);
         int was = home.tier;
         home.tier = now.tier();

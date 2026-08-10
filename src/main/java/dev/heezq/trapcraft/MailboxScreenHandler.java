@@ -119,10 +119,15 @@ public class MailboxScreenHandler extends ScreenHandler {
                         + (reading.roomFor() + 1) + "."),
                 reading.floor() >= HomeSurvey.MIN_FLOOR));
         display.setStack(SEALED_SLOT, count(Items.BRICKS, "Shell",
-                reading.sealed() ? "Sealed" : reading.clash() ? "Somebody else's" : "Open",
+                reading.sealed() ? "Sealed" : reading.clash() ? "Somebody else's"
+                        : reading.buried() ? "Bricked in" : "Open",
                 reading.sealed() ? "Walls, floor and a roof, all present."
                         : reading.clash() ? "It runs into another house."
-                        : "There's a hole in it somewhere.",
+                        : reading.buried()
+                        ? "The spot it's measured from is solid now. Stand the "
+                        + "box in the room and it will re-measure from there."
+                        : "It leaks. Measured from " + where(reading.measuredFrom())
+                        + ", got as far as " + where(reading.leak()) + ".",
                 reading.sealed()));
         display.setStack(WAYS_SLOT, count(Items.OAK_DOOR, "Ways in",
                 reading.exits() + (reading.exits() == 1 ? " door" : " doors"),
@@ -194,7 +199,9 @@ public class MailboxScreenHandler extends ScreenHandler {
         lore.add(line("Surveyed from " + home.anchor().getX() + " "
                 + home.anchor().getY() + " " + home.anchor().getZ(), Formatting.DARK_GRAY));
         lore.add(line("That spot is the house. This box", Formatting.DARK_GRAY));
-        lore.add(line("can go anywhere you like.", Formatting.DARK_GRAY));
+        lore.add(line("can go anywhere you like -- and if you", Formatting.DARK_GRAY));
+        lore.add(line("rebuild, stand it inside and it", Formatting.DARK_GRAY));
+        lore.add(line("re-measures from there.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -284,6 +291,11 @@ public class MailboxScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    private static String where(net.minecraft.util.math.BlockPos pos) {
+        return pos == null ? "nowhere"
+                : pos.getX() + " " + pos.getY() + " " + pos.getZ();
+    }
+
     /** The floor the next grade up wants. */
     private int nextStep() {
         int at = reading.roomFor();
@@ -317,7 +329,15 @@ public class MailboxScreenHandler extends ScreenHandler {
         if (!reading.sealed()) {
             say = reading.clash()
                     ? "Move over. This runs into a place already on the register."
-                    : "Find the hole. Walls, floor and roof, no gaps.";
+                    : reading.buried()
+                    ? "It's measured from " + where(reading.measuredFrom())
+                    + ", and that's solid now. Stand this box inside the room."
+                    // "Find the hole" on its own is a shrug. The leak point is
+                    // on the far side of whatever gap the fill went through, so
+                    // it is a direction rather than a chore.
+                    : "It leaks. Measured from " + where(reading.measuredFrom())
+                    + " and got out to " + where(reading.leak())
+                    + " -- the gap is between those two.";
         } else if (reading.floor() < HomeSurvey.MIN_FLOOR) {
             say = "Make it bigger. " + HomeSurvey.MIN_FLOOR + " squares of floor, minimum.";
         } else if (reading.exits() == 0) {
