@@ -1224,18 +1224,35 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("8. WAGES\n\n"))
-                .append(body(TrapCrew.WAGE + "e each, every five minutes, "
-                        + "harvest or no harvest.\n\n"))
-                .append(body("Every rung and job puts that up.\n\n"))
-                .append(warn("Miss a payday and they walk, and take what you "
-                        + "taught them with them."))));
+                .append(body(TrapCrew.WAGE + "e each, every five minutes THEY "
+                        + "WORK.\n\n"))
+                .append(body("The clock stops at dusk and when you log off. "
+                        + "Nights are free.\n\n"))
+                .append(hint("Every rung and job puts the packet up."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8b. IF YOU CAN'T PAY\n\n"))
+                .append(body("You get a notice, not a walkout.\n\n"))
+                .append(body(TrapCrew.GRACE_PACKETS + " paydays on nothing -- about two "
+                        + "days -- then they go.\n\n"))
+                .append(hint("Pay one packet and the arrears are written off."))));
 
         pages.add(page(Text.empty()
                 .append(title("9. HOURS\n\n"))
                 .append(body("Daylight only.\n\n"))
                 .append(body("At dusk they find a bed in the patch and turn "
                         + "in. Build them one.\n\n"))
-                .append(hint("They take breathers, too."))));
+                .append(hint("Breathers are a share of the shift, so a quick "
+                        + "hand rests as briefly as it works."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9e. CREWS ON FILE\n\n"))
+                .append(body("/crew save <name>\n"))
+                .append(body("/crew plans\n"))
+                .append(body("/crew load <name>\n\n"))
+                .append(body("Puts them back on the same patches, trained, "
+                        + "for what it cost the first time.\n\n"))
+                .append(hint("A walkout files itself."))));
 
         pages.add(page(Text.empty()
                 .append(title("9b. WHAT THEY WON'T DO\n\n"))

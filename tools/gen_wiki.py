@@ -312,6 +312,9 @@ def gather() -> None:
     DATA["reach"] = ints("REACH_BLOCKS", crew)
     DATA["reach_cost"] = ints("REACH_COST", crew)
     DATA["hire"] = int(need(r"HIRE_COST = (\d+)", crew, "HIRE_COST"))
+    DATA["jobs_per_shift"] = int(need(r"JOBS_PER_SHIFT = (\d+)", crew, "JOBS_PER_SHIFT"))
+    DATA["grace"] = int(need(r"GRACE_PACKETS = (\d+)", crew, "GRACE_PACKETS"))
+    DATA["break_share"] = float(need(r"CREW_BREAK_SHARE = ([\d.]+)f", math, "CREW_BREAK_SHARE"))
 
     DATA["min_floor"] = int(need(r"MIN_FLOOR = (\d+)", homes, "MIN_FLOOR"))
     DATA["floor_steps"] = ints("FLOOR_STEPS", homes)
@@ -464,7 +467,20 @@ def build() -> str:
                     for q in d["quality"]]
     purity_rows = [[esc(p["name"]), f'{p["potency"]:.2f}×', f'{p["emeralds"]}e']
                    for p in d["purity"]]
-    pace_rows = [[esc(d["pace_name"][i]), f'{d["pace_ticks"][i] / 20:g}s',
+    # The breather is a SHARE of the shift, so the honest seconds-per-job is
+    # the pass interval plus its slice of rest. Printing the raw interval is
+    # what made a paid-up hand feel like a fraud; see TrapMath.CREW_BREAK_SHARE.
+    def job_seconds(ticks: int) -> float:
+        shift = ticks * d["jobs_per_shift"]
+        return (shift + max(20, round(shift * d["break_share"]))) / (d["jobs_per_shift"] * 20)
+
+    def job_label(ticks: int) -> str:
+        # Formatted exactly as TrapCrew.paceLabel does, so the page, the board
+        # and the handbook never disagree by a rounding.
+        seconds = job_seconds(ticks)
+        return f"{seconds:g}s" if seconds == int(seconds) else f"{seconds:.1f}s"
+
+    pace_rows = [[esc(d["pace_name"][i]), job_label(d["pace_ticks"][i]),
                   f'{d["pace_cost"][i]}e' if i else "—",
                   f'+{d["pace_wage"][i]}e']
                  for i in range(len(d["pace_ticks"]))]
@@ -693,18 +709,34 @@ def build() -> str:
 
     sections.append(section("09", "crew", "The Crew", "somebody to do the picking", f"""
     <p class="lede">{d['hire']}e to take somebody on, then {d['wage']}e every five
-    minutes whether the harvest was good or not. {d['max_hands']} hands is all one
-    operation will carry.</p>
+    minutes <strong>they are working</strong>, harvest or no harvest. {d['max_hands']}
+    hands is all one operation will carry.</p>
     <p>They work <strong>daylight only</strong> — at dusk they find a bed inside the
-    patch and turn in — and they stop for a breather every dozen jobs. They will not
-    tread your farmland back into dirt, pull a rack early, or bone-meal your own crops.</p>
+    patch and turn in — and the clock stops with them, so nights cost nothing. They
+    stop for a breather every {d['jobs_per_shift']} jobs, and the breather is a share
+    of the shift rather than a flat minute, so a quick hand rests as briefly as it
+    works. They will not tread your farmland back into dirt, pull a rack early, or
+    bone-meal your own crops.</p>
+    <p>The patch stays awake wherever you are, as long as you are logged in — you do
+    not have to stand over anybody. If one wanders off or something eats it, the
+    <strong>whip</strong> on the crew board drags it back, and puts a trained
+    replacement down if the body is gone.</p>
     <h3 class="sub">Pace</h3>
     {table(["Rung", "A job every", "Costs", "Wage"], pace_rows)}
     <h3 class="sub">Jobs</h3>
     {table(["Job", "Costs", "Wage", "What they do"], job_rows)}
+    <p>The times above are what you would measure with a stopwatch, breather included
+    — not the raw pass rate.</p>
+    <h3 class="sub">Crews on file</h3>
+    <p><code>/crew save &lt;name&gt;</code> writes down who works where and everything
+    they know; <code>/crew load &lt;name&gt;</code> buys the lot back onto the same
+    patches for what it cost the first time. <code>/crew plans</code> lists them. If a
+    crew ever walks over wages it files itself under <code>walkout</code> on the way
+    out, so nothing is ever really lost — only paid for twice.</p>
     <p class="note">Everything you teach them puts the wage up. A hand you cannot keep
-    busy is a hand losing you money — and if you miss a payday they walk, taking what
-    you taught them with them.</p>"""))
+    busy is a hand losing you money. Miss a payday and you get a notice rather than a
+    walkout: {d['grace']} paydays on nothing, about two days, and paying one packet
+    writes the arrears off.</p>"""))
 
     sections.append(section("10", "heat", "Heat & Raids", "being seen costs something", f"""
     <p class="lede">A grow in the open gets noticed. Heat is measured over a

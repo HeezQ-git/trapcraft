@@ -1852,4 +1852,56 @@ class FormulaTest {
     void everyFoodIsSellable() {
         assertTrue(TrapMath.sellPrice(TrapMath.foodPrice(0, 0, 64)) > 0);
     }
+
+    // --- the crew's clock -----------------------------------------------------
+    //
+    // Intervals are written out here rather than read off TrapCrew.PACE_TICKS,
+    // and that is not laziness: TrapCrew touches Minecraft in a static field,
+    // so naming it from a plain JUnit run fails to initialise the class. The
+    // properties below hold for EVERY interval, which is the stronger claim
+    // anyway -- a new rung cannot break them.
+
+    private static final int SHIFT = 12;
+
+    /**
+     * The bug this was written for: a flat breather made every rung of the
+     * pace ladder deliver a smaller share of what it advertised than the rung
+     * below it. Buying speed bought a worse duty cycle -- the top rung, at
+     * 2200e, worked 29% of its shift while the free one worked 73%.
+     */
+    @Test
+    void everyPaceKeepsTheSameDutyCycle() {
+        float first = -1;
+        for (int interval = 20; interval <= 400; interval += 10) {
+            float work = interval * SHIFT;
+            float duty = work / (work + TrapMath.crewBreak(interval, SHIFT));
+            if (first < 0) {
+                first = duty;
+            }
+            assertEquals(first, duty, 0.02f,
+                    "interval " + interval + " works " + duty + " of its shift");
+        }
+    }
+
+    /** Faster is faster, and the figure the board prints is the one you'd time. */
+    @Test
+    void theLadderGetsFaster() {
+        float last = Float.MAX_VALUE;
+        for (int interval : new int[]{200, 120, 80, 50, 30}) {
+            float seconds = TrapMath.crewJobSeconds(interval, SHIFT);
+            assertTrue(seconds < last, "interval " + interval + " is not quicker");
+            assertTrue(seconds > interval / 20.0f,
+                    "the honest figure has to be SLOWER than the raw pass rate");
+            last = seconds;
+        }
+    }
+
+    /** The breather never rounds away to nothing, however quick they get. */
+    @Test
+    void thereIsAlwaysABreather() {
+        for (int interval = 1; interval <= 40; interval++) {
+            assertTrue(TrapMath.crewBreak(interval, SHIFT) >= 20,
+                    "interval " + interval + " gets no breather at all");
+        }
+    }
 }

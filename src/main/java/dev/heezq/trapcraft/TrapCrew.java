@@ -99,10 +99,41 @@ import java.util.UUID;
  * and a server sat empty should not be ticking five fields.
  */
 public final class TrapCrew {
-    /** Ticks between wage packets. Five minutes. */
+    /**
+     * Ticks ON THE CLOCK between wage packets. Five minutes of WORKING.
+     *
+     * Not five minutes of wall clock, which is what it used to be and is half
+     * of why a hand felt like it never earned its keep. They work daylight
+     * only, so a wall-clock packet charged full price for a shift that was
+     * half night: over a Minecraft day you paid four packets for two packets
+     * of work and the game never said so anywhere.
+     *
+     * Now the clock only turns while somebody is actually on the patch and
+     * awake, so a wage packet always buys the same amount of work. Nights are
+     * free, which reads as a feature rather than as the arithmetic apology it
+     * actually is.
+     */
     private static final int WAGE_TICKS = 20 * 60 * 5;
-    /** What one untrained hand costs per packet. */
-    public static final int WAGE = 24;
+    /** How often the clock is looked at. Once a second is plenty. */
+    private static final int CLOCK_TICKS = 20;
+    /**
+     * What one untrained hand costs per packet.
+     *
+     * Went up with the clock change, not instead of it. A packet now covers
+     * twice the work it used to, so leaving the number alone would have
+     * halved the cost of the whole crew by accident.
+     */
+    public static final int WAGE = 40;
+    /**
+     * Paydays a hand will work for nothing before walking.
+     *
+     * They used to leave the instant a packet bounced, taking everything you
+     * had taught them, off a single bad minute. Four packets is about two
+     * days' work, and every one of them says so out loud -- which turns a
+     * disaster into a deadline. Nothing is owed retroactively; the arrears
+     * clear the moment one packet goes through.
+     */
+    public static final int GRACE_PACKETS = 4;
     /** What it costs to take somebody on. */
     public static final int HIRE_COST = 120;
     /**
@@ -184,16 +215,20 @@ public final class TrapCrew {
     }
 
     /**
-     * Jobs in a stretch before they stop for a minute, and how long for.
+     * Jobs in a stretch before they stop for a breather.
      *
      * A hand that works every ten seconds without pause, all night, is not
      * somebody you hired -- it is a hopper with a face, and the whole point of
      * the crew being people is that people are worse than hoppers in
      * interesting ways. A shift and a breather is the cheapest way to say so
      * that does not turn into a stamina bar nobody asked for.
+     *
+     * How LONG the breather is comes from {@link TrapMath#crewBreak}, which is
+     * a share of the shift rather than the flat forty-five seconds it used to
+     * be. See that constant for why the flat number was a bug and not a
+     * balance choice.
      */
-    private static final int JOBS_PER_SHIFT = 12;
-    private static final int BREAK_TICKS = 20 * 45;
+    public static final int JOBS_PER_SHIFT = 12;
 
     /**
      * Whether they work nights.
@@ -291,17 +326,25 @@ public final class TrapCrew {
      * should be readable off what they are rather than off their history.
      */
     /**
-     * How often a hand acts, said out loud.
+     * How often a job REALLY gets done at this rung, breather and all.
      *
-     * Exists because {@code ticks / 20} is integer division and the top rung
-     * is thirty ticks, so both the board and the handbook were flatly telling
-     * people "a job every 1s" for something that takes one and a half. A book
-     * that rounds a number it quotes is a book that has started lying, which
-     * is the one thing this mod's guide is not allowed to do.
+     * Exists twice over. First because {@code ticks / 20} is integer division
+     * and the top rung is thirty ticks, so the board and the handbook were
+     * flatly saying "a job every 1s" for something that takes one and a half.
+     * Then because even the corrected figure was the raw PASS interval, which
+     * ignored the breather -- and the breather used to be a flat forty-five
+     * seconds, so the top rung advertised 1.5s and delivered 5.25s.
+     *
+     * One number now, and it is the one you would measure with a stopwatch.
+     * A book that quotes a figure it does not deliver is a book that has
+     * started lying, which is the one thing this mod's guide is not allowed
+     * to do.
      */
     public static String paceLabel(int level) {
         int ticks = PACE_TICKS[Math.max(0, Math.min(level, PACE_TICKS.length - 1))];
-        return ticks % 20 == 0 ? ticks / 20 + "s" : String.format("%.1fs", ticks / 20.0f);
+        float seconds = TrapMath.crewJobSeconds(ticks, JOBS_PER_SHIFT);
+        return seconds == Math.rint(seconds)
+                ? (int) seconds + "s" : String.format("%.1fs", seconds);
     }
 
     public static final int[] PACE_TICKS = {200, 120, 80, 50, 30};
@@ -309,7 +352,10 @@ public final class TrapCrew {
     // than something you buy on the way past, which is what "each tier should
     // cost more" has to mean once the tiers actually matter.
     public static final int[] PACE_COST = {0, 200, 450, 1000, 2200};
-    public static final int[] PACE_WAGE = {0, 6, 14, 26, 44};
+    // Raised to follow the work. With the breather now a share of the shift, a
+    // flat-out hand does nearly three times the jobs an hour it used to, and a
+    // wage that had not moved would have made the top rung free money.
+    public static final int[] PACE_WAGE = {0, 10, 26, 52, 96};
     public static final String[] PACE_NAME = {"Plodding", "Steady", "Brisk", "Quick", "Flat out"};
 
     public static final int[] REACH_BLOCKS = {12, 16, 20, 26};
@@ -338,6 +384,21 @@ public final class TrapCrew {
         int worked;
         /** Server tick they are back on the clock. */
         int restUntil;
+        /**
+         * Ticks of actual working time since the last wage packet.
+         *
+         * The clock only turns while their boss is logged in, the sun is up
+         * and there is a body on the patch, so a packet always buys the same
+         * amount of work whatever else is going on.
+         */
+        int onClock;
+        /** Packets in a row that bounced. See GRACE_PACKETS. */
+        int missed;
+        /** What has gone unpaid, for the notice. */
+        int owed;
+        /** Jobs done and emeralds taken, ever. The board divides them. */
+        int done;
+        int paid;
         /** Bed they have been using, so they go back to the same one. */
         BlockPos bed;
         /**
@@ -424,8 +485,8 @@ public final class TrapCrew {
                     work(server, hand);
                 }
             }
-            if (tick % WAGE_TICKS == 0) {
-                payday(server);
+            if (tick % CLOCK_TICKS == 0) {
+                clock(server);
             }
         });
     }
@@ -468,9 +529,35 @@ public final class TrapCrew {
     // Hand is mutable state this class owns and handing one out would mean two
     // places that can put a crew member in an impossible condition.
 
-    /** One row of the crew screen. */
+    /**
+     * One row of the crew screen.
+     *
+     * {@code done} and {@code paid} are here so the board can print what a job
+     * has actually cost rather than what the wage table implies. That single
+     * division is the answer to "I don't think they're working their wage":
+     * it is either a number you are happy with or it is not, and either way
+     * nobody has to guess.
+     */
     public record Card(int index, int pace, int reach, int reachBlocks, int wage,
-                       String tempo, boolean present, List<Job> taught) {
+                       String tempo, boolean present, List<Job> taught,
+                       int done, int paid, int missed, int owed) {
+        /** Emeralds per job so far, or -1 before they have done anything. */
+        public float perJob() {
+            return done <= 0 ? -1 : (float) paid / done;
+        }
+
+        /**
+         * What a job would cost if they never had to walk to one.
+         *
+         * The board prints both, and the gap between them is the honest
+         * answer to "why is my hand slower than the tin says": the pace rung
+         * is how often they ACT, and an act that is spent walking to the far
+         * corner of a big patch is still an act. A hand costing three times
+         * par is a hand with a layout problem, not a wage problem.
+         */
+        public float parJob() {
+            return wage * TrapMath.crewJobSeconds(PACE_TICKS[pace], JOBS_PER_SHIFT) / 300f;
+        }
     }
 
     public static List<Card> cardsFor(ServerPlayerEntity boss) {
@@ -487,7 +574,8 @@ public final class TrapCrew {
                 }
             }
             out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
-                    paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught));
+                    paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught,
+                    hand.done, hand.paid, hand.missed, hand.owed));
         }
         return out;
     }
@@ -543,6 +631,7 @@ public final class TrapCrew {
         // that skipped circulate() would be a hole in the money supply the
         // index could never see.
         TrapMarket.take(boss, cost);
+        TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
         if (job != null) {
             hand.teach(job);
         } else if (pace) {
@@ -733,6 +822,10 @@ public final class TrapCrew {
             return "Nobody's about.";
         }
         TrapMarket.take(boss, HIRE_COST);
+        // Capital, not wages, but the same line: the ledger's job is to answer
+        // "what has this crew cost me", and a hire fee missing from it made
+        // that question unanswerable from the one file built to answer it.
+        TrapLedger.record(boss, TrapLedger.Source.CREW, -HIRE_COST);
 
         Hand hand = new Hand(boss.getUuid(), mob.getUuid(),
                 world.getRegistryKey().getValue().toString(), patch);
@@ -751,6 +844,237 @@ public final class TrapCrew {
                 .append(Text.literal("  to teach them. Picking is free.")
                         .formatted(Formatting.DARK_GRAY)),
                 false);
+        return null;
+    }
+
+    // --- plans ----------------------------------------------------------------
+
+    /** The plan a walkout writes itself into. */
+    public static final String WALKOUT = "walkout";
+
+    /**
+     * One hand as a shopping list: where it stood and everything it knew.
+     *
+     * The patch is saved with it, which is most of the value. A plan that
+     * only remembered the training would put five strangers at your feet and
+     * leave you to walk each of them back to a field; this one puts them
+     * where they were.
+     */
+    public record PlanHand(String dimension, BlockPos patch, int pace, int reach, int jobs) {
+        public int cost() {
+            int total = HIRE_COST;
+            for (int rung = 1; rung <= pace; rung++) {
+                total += PACE_COST[rung];
+            }
+            for (int rung = 1; rung <= reach; rung++) {
+                total += REACH_COST[rung];
+            }
+            for (Job job : Job.values()) {
+                if ((jobs & (1 << job.ordinal())) != 0) {
+                    total += job.cost();
+                }
+            }
+            return total;
+        }
+    }
+
+    /** A whole crew, named. */
+    public record Plan(UUID owner, String name, List<PlanHand> hands) {
+        public int cost() {
+            return hands.stream().mapToInt(PlanHand::cost).sum();
+        }
+
+        public int wage() {
+            int total = 0;
+            for (PlanHand hand : hands) {
+                total += WAGE + PACE_WAGE[hand.pace()] + REACH_WAGE[hand.reach()];
+                for (Job job : Job.values()) {
+                    if ((hand.jobs() & (1 << job.ordinal())) != 0) {
+                        total += job.wage();
+                    }
+                }
+            }
+            return total;
+        }
+    }
+
+    private static final List<Plan> PLANS = new ArrayList<>();
+    private static Path planFile;
+
+    public static List<Plan> plansOf(ServerPlayerEntity boss) {
+        return PLANS.stream().filter(plan -> plan.owner().equals(boss.getUuid())).toList();
+    }
+
+    private static Plan planOf(UUID owner, String name) {
+        for (Plan plan : PLANS) {
+            if (plan.owner().equals(owner) && plan.name().equalsIgnoreCase(name)) {
+                return plan;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Write the crew down under a name.
+     *
+     * @param onlyIfBigger used by the walkout snapshot. Hands leave one at a
+     *                     time, so a plain overwrite would replace the whole
+     *                     crew with whatever was left after the fourth one
+     *                     went -- and the thing worth keeping is the crew as
+     *                     it stood before any of them did.
+     */
+    private static Plan keepPlan(UUID owner, String name, boolean onlyIfBigger) {
+        List<PlanHand> hands = new ArrayList<>();
+        for (Hand hand : CREW) {
+            if (hand.boss.equals(owner)) {
+                hands.add(new PlanHand(hand.dimension, hand.patch, hand.pace, hand.reach,
+                        hand.jobs));
+            }
+        }
+        if (hands.isEmpty()) {
+            return null;
+        }
+        Plan already = planOf(owner, name);
+        if (already != null) {
+            if (onlyIfBigger && already.hands().size() >= hands.size()) {
+                return already;
+            }
+            PLANS.remove(already);
+        }
+        Plan plan = new Plan(owner, name, hands);
+        PLANS.add(plan);
+        savePlans();
+        return plan;
+    }
+
+    /** @return why it didn't happen, or null if it did */
+    public static String save(ServerPlayerEntity boss, String name) {
+        String wanted = name.trim();
+        if (wanted.isEmpty() || wanted.contains("\t")) {
+            return "Give it a name.";
+        }
+        if (sizeOf(boss) == 0) {
+            return "You haven't got anybody to write down.";
+        }
+        Plan plan = keepPlan(boss.getUuid(), wanted, false);
+        boss.sendMessage(Text.literal("Written down as ").formatted(Formatting.GREEN)
+                .append(Text.literal(plan.name()).formatted(Formatting.WHITE, Formatting.BOLD))
+                .append(Text.literal("  " + plan.hands().size()
+                        + (plan.hands().size() == 1 ? " hand, " : " hands, ")
+                        + plan.cost() + "e to put back.").formatted(Formatting.GRAY)), false);
+        return null;
+    }
+
+    public static String forget(ServerPlayerEntity boss, String name) {
+        Plan plan = planOf(boss.getUuid(), name.trim());
+        if (plan == null) {
+            return "No plan by that name.";
+        }
+        PLANS.remove(plan);
+        savePlans();
+        boss.sendMessage(Text.literal("Torn up.").formatted(Formatting.GRAY), false);
+        return null;
+    }
+
+    /**
+     * Hire the whole plan back, at what it cost to build the first time.
+     *
+     * All or nothing on the money: half a crew for half the price would make
+     * a plan a way to buy hands one at a time at a discount, and the point of
+     * the list is recovery, not a shop.
+     */
+    public static String load(ServerPlayerEntity boss, String name) {
+        Plan plan = planOf(boss.getUuid(), name.trim());
+        if (plan == null) {
+            return "No plan by that name. /crew plans lists them.";
+        }
+        int room = MAX_HANDS - sizeOf(boss);
+        if (plan.hands().size() > room) {
+            return "You've room for " + room + " more, and that plan is "
+                    + plan.hands().size() + ".";
+        }
+        int cost = plan.cost();
+        if (TrapMarket.wealthOf(boss) < cost) {
+            return "Putting that crew back costs " + cost + "e.";
+        }
+        MinecraftServer server = boss.getServer();
+        for (PlanHand wanted : plan.hands()) {
+            if (worldNamed(server, wanted.dimension()) == null) {
+                return "Part of that crew worked a world that isn't here any more.";
+            }
+        }
+
+        TrapMarket.take(boss, cost);
+        TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
+        int put = 0;
+        for (PlanHand wanted : plan.hands()) {
+            ServerWorld world = worldNamed(server, wanted.dimension());
+            // The patch has to be awake before anybody can be stood on it.
+            world.getChunkManager().addTicket(TICKET, new ChunkPos(wanted.patch()),
+                    ticketRadius(REACH_BLOCKS[wanted.reach()]));
+            world.getChunk(wanted.patch().getX() >> 4, wanted.patch().getZ() >> 4);
+            VillagerEntity mob = put(world, wanted.patch(), boss.getYaw());
+            if (mob == null) {
+                continue;
+            }
+            Hand hand = new Hand(boss.getUuid(), mob.getUuid(), wanted.dimension(),
+                    wanted.patch());
+            hand.pace = clamp(wanted.pace(), PACE_TICKS.length);
+            hand.reach = clamp(wanted.reach(), REACH_BLOCKS.length);
+            hand.jobs = trim(wanted.jobs());
+            equip(mob, hand);
+            CREW.add(hand);
+            put++;
+            world.playSound(null, wanted.patch(), SoundEvents.ENTITY_VILLAGER_YES,
+                    SoundCategory.NEUTRAL, 0.9F, 1.1F);
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, wanted.patch().getX() + 0.5,
+                    wanted.patch().getY() + 1.2, wanted.patch().getZ() + 0.5,
+                    14, 0.4, 0.4, 0.4, 0.02);
+        }
+        save();
+        boss.sendMessage(Text.literal("Back on. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal(put + (put == 1 ? " hand" : " hands") + " on their old "
+                        + "patches, trained. Payroll is now "
+                        + payrollOf(boss) + "e.").formatted(Formatting.GRAY)), false);
+        return null;
+    }
+
+    private static void listPlans(ServerPlayerEntity boss) {
+        List<Plan> mine = plansOf(boss);
+        if (mine.isEmpty()) {
+            boss.sendMessage(Text.literal("Nothing written down. ").formatted(Formatting.GRAY)
+                    .append(Text.literal("/crew save <name>").formatted(Formatting.GREEN))
+                    .append(Text.literal(" keeps the crew you've got.")
+                            .formatted(Formatting.DARK_GRAY)), false);
+            return;
+        }
+        boss.sendMessage(Text.literal("Crews on file").formatted(Formatting.GOLD, Formatting.BOLD),
+                false);
+        for (Plan plan : mine) {
+            boss.sendMessage(Text.literal("  " + plan.name())
+                    .formatted(Formatting.WHITE, Formatting.BOLD)
+                    .styled(style -> style.withClickEvent(
+                            new net.minecraft.text.ClickEvent.SuggestCommand(
+                                    "/crew load " + plan.name())))
+                    .append(Text.literal("  " + plan.hands().size()
+                            + (plan.hands().size() == 1 ? " hand" : " hands"))
+                            .formatted(Formatting.GRAY))
+                    .append(Text.literal("  " + plan.cost() + "e to put back")
+                            .formatted(Formatting.GOLD))
+                    .append(Text.literal("  then " + plan.wage() + "e a packet")
+                            .formatted(Formatting.DARK_GRAY)), false);
+        }
+    }
+
+    private static ServerWorld worldNamed(MinecraftServer server, String dimension) {
+        if (server == null) {
+            return null;
+        }
+        for (ServerWorld world : server.getWorlds()) {
+            if (world.getRegistryKey().getValue().toString().equals(dimension)) {
+                return world;
+            }
+        }
         return null;
     }
 
@@ -829,7 +1153,43 @@ public final class TrapCrew {
                                             }
                                             say(boss, fire(boss, -1));
                                             return 1;
-                                        }))));
+                                        }))
+                                .then(net.minecraft.server.command.CommandManager.literal("plans")
+                                        .executes(context -> {
+                                            ServerPlayerEntity boss = context.getSource().getPlayer();
+                                            if (boss == null) {
+                                                return 0;
+                                            }
+                                            listPlans(boss);
+                                            return 1;
+                                        }))
+                                .then(named("save", TrapCrew::save))
+                                .then(named("load", TrapCrew::load))
+                                .then(named("forget", TrapCrew::forget))));
+    }
+
+    /**
+     * {@code /crew <word> <name...>}, three times over.
+     *
+     * greedyString rather than a single word, because "the big farm" is a
+     * better name for a crew than "bigfarm" and there is no reason a list
+     * nobody but its owner reads should be forced to look like a filename.
+     */
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<
+            net.minecraft.server.command.ServerCommandSource> named(
+            String word, java.util.function.BiFunction<ServerPlayerEntity, String, String> what) {
+        return net.minecraft.server.command.CommandManager.literal(word)
+                .then(net.minecraft.server.command.CommandManager.argument("name",
+                                com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                        .executes(context -> {
+                            ServerPlayerEntity boss = context.getSource().getPlayer();
+                            if (boss == null) {
+                                return 0;
+                            }
+                            say(boss, what.apply(boss, com.mojang.brigadier.arguments
+                                    .StringArgumentType.getString(context, "name")));
+                            return 1;
+                        }));
     }
 
     private static void say(ServerPlayerEntity boss, String no) {
@@ -926,9 +1286,12 @@ public final class TrapCrew {
         }
         hand.idle = 0;
         doWork(world, mob, hand, job, box);
+        hand.done++;
         if (++hand.worked >= JOBS_PER_SHIFT) {
             hand.worked = 0;
-            hand.restUntil = server.getTicks() + BREAK_TICKS;
+            // A share of the shift, not a flat minute. See TrapMath.
+            hand.restUntil = server.getTicks()
+                    + TrapMath.crewBreak(hand.interval(), JOBS_PER_SHIFT);
             world.spawnParticles(ParticleTypes.SPLASH, mob.getX(), mob.getEyeY(), mob.getZ(),
                     5, 0.2, 0.1, 0.2, 0.01);
         }
@@ -1440,43 +1803,115 @@ public final class TrapCrew {
      * you taught them walks with them, which is what stops a trained hand being
      * a one-off purchase you can stop feeding.
      */
-    private static void payday(MinecraftServer server) {
+    private static void clock(MinecraftServer server) {
         List<Hand> quit = new ArrayList<>();
+        boolean changed = false;
+
         for (Hand hand : CREW) {
             ServerPlayerEntity boss = server.getPlayerManager().getPlayer(hand.boss);
             if (boss == null) {
-                continue;   // nobody home; wages wait until they log in
+                continue;   // nobody home; the clock is stopped, so are they
+            }
+            ServerWorld world = worldOf(server, hand);
+            if (world == null || !onTheClock(world)) {
+                continue;   // night. They are asleep and they are not charging for it
             }
             if (find(server, hand) == null) {
-                // Dead, or in a chunk nobody is loading. Either way they did no
-                // work this shift, so they don't get paid for it -- and a hand
-                // a zombie got was otherwise charging wages forever with
-                // nothing to show and no way to notice.
+                // Dead. They did no work, so they take no wage -- and a hand a
+                // zombie got was otherwise charging forever with nothing to
+                // show and no way to notice. The whip puts one back.
                 continue;
             }
-            int wage = hand.wage();
-            if (TrapMarket.wealthOf(boss) < wage) {
+            hand.onClock += CLOCK_TICKS;
+            if (hand.onClock < WAGE_TICKS) {
+                continue;
+            }
+            hand.onClock -= WAGE_TICKS;
+            changed = true;
+            if (!pay(boss, hand)) {
                 quit.add(hand);
-                boss.sendMessage(Text.literal("You couldn't make wages. ")
-                        .formatted(Formatting.RED)
-                        .append(Text.literal("They walked, and took what you taught them.")
-                                .formatted(Formatting.GRAY)), false);
-                continue;
             }
+        }
+
+        for (Hand hand : quit) {
+            walkOut(server, hand);
+        }
+        if (changed || !quit.isEmpty()) {
+            save();
+        }
+    }
+
+    /**
+     * One packet. False means they have run out of patience.
+     *
+     * Nothing is owed retroactively when the arrears clear, and that is a
+     * choice rather than an oversight: back-pay would mean a player who dug
+     * themselves out of a hole gets hit for four packets at once the moment
+     * they can finally afford one, which is the same disaster arriving late.
+     */
+    private static boolean pay(ServerPlayerEntity boss, Hand hand) {
+        int wage = hand.wage();
+        if (TrapMarket.wealthOf(boss) >= wage) {
             TrapMarket.take(boss, wage);
             TrapLedger.record(boss, TrapLedger.Source.CREW, -wage);
+            hand.paid += wage;
+            if (hand.missed > 0) {
+                boss.sendMessage(Text.literal("Square with the crew again. ")
+                        .formatted(Formatting.GREEN)
+                        .append(Text.literal("The " + hand.owed + "e you missed is written off.")
+                                .formatted(Formatting.GRAY)), false);
+                hand.missed = 0;
+                hand.owed = 0;
+            }
             boss.sendMessage(Text.literal("Wages: ").formatted(Formatting.DARK_GRAY)
                     .append(Text.literal("-" + wage + "e").formatted(Formatting.RED)), true);
+            return true;
         }
-        for (Hand hand : quit) {
-            VillagerEntity mob = find(server, hand);
-            if (mob != null) {
-                mob.discard();
-            }
-            CREW.remove(hand);
+
+        hand.missed++;
+        hand.owed += wage;
+        int left = GRACE_PACKETS - hand.missed;
+        if (left <= 0) {
+            return false;
         }
-        if (!quit.isEmpty()) {
-            save();
+        boss.sendMessage(Text.literal("WAGES DUE  ").formatted(Formatting.RED, Formatting.BOLD)
+                .append(Text.literal(hand.owed + "e").formatted(Formatting.WHITE))
+                .append(Text.literal("  -- they'll work " + left
+                        + (left == 1 ? " more payday" : " more paydays")
+                        + " on nothing, then walk.").formatted(Formatting.GRAY)), false);
+        return true;
+    }
+
+    /**
+     * They have gone, and the plan they were part of is written down first.
+     *
+     * The snapshot is the point. Losing a maxed crew used to mean losing
+     * everything you had spent on it with nothing to show but a chat line;
+     * now the shape of it is on a list under {@link #WALKOUT} and buying it
+     * back is one command and the money.
+     */
+    private static void walkOut(MinecraftServer server, Hand hand) {
+        ServerPlayerEntity boss = server.getPlayerManager().getPlayer(hand.boss);
+        keepPlan(hand.boss, WALKOUT, true);
+        VillagerEntity mob = find(server, hand);
+        if (mob != null) {
+            mob.getWorld().playSound(null, mob.getBlockPos(), SoundEvents.ENTITY_VILLAGER_NO,
+                    SoundCategory.NEUTRAL, 1.0F, 0.7F);
+            mob.discard();
+        }
+        CREW.remove(hand);
+        if (boss != null) {
+            boss.sendMessage(Text.literal("They've walked. ")
+                    .formatted(Formatting.RED, Formatting.BOLD)
+                    .append(Text.literal("Everything they knew is written down under \"")
+                            .formatted(Formatting.GRAY))
+                    .append(Text.literal(WALKOUT).formatted(Formatting.WHITE))
+                    .append(Text.literal("\" -- ").formatted(Formatting.GRAY))
+                    .append(Text.literal("/crew load " + WALKOUT).formatted(Formatting.GREEN)
+                            .styled(style -> style.withClickEvent(
+                                    new net.minecraft.text.ClickEvent.SuggestCommand(
+                                            "/crew load " + WALKOUT))))
+                    .append(Text.literal(" buys them back.").formatted(Formatting.GRAY)), false);
         }
     }
 
@@ -1532,10 +1967,88 @@ public final class TrapCrew {
                     hand.reach = clamp(Integer.parseInt(parts[7]), REACH_BLOCKS.length);
                     hand.jobs = trim(Integer.parseInt(parts[8]));
                 }
+                // The books. Optional for the same reason the training was:
+                // a file written before anybody counted has nothing to say
+                // about it, and a hand with no history is exactly right.
+                if (parts.length >= 14) {
+                    hand.done = Integer.parseInt(parts[9]);
+                    hand.paid = Integer.parseInt(parts[10]);
+                    hand.onClock = Integer.parseInt(parts[11]);
+                    hand.missed = Integer.parseInt(parts[12]);
+                    hand.owed = Integer.parseInt(parts[13]);
+                }
                 CREW.add(hand);
             }
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't read the crew list: {}", failure.toString());
+        }
+        loadPlans(server);
+    }
+
+    // --- the plan file --------------------------------------------------------
+    //
+    // Tab-separated rather than whitespace-split like everything else here,
+    // because a crew called "the big farm" is a better name than "bigfarm" and
+    // the only thing standing between the two is which character splits the
+    // line.
+
+    private static void loadPlans(MinecraftServer server) {
+        planFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-crewplans.txt");
+        PLANS.clear();
+        try {
+            if (!Files.exists(planFile)) {
+                return;
+            }
+            for (String line : Files.readAllLines(planFile)) {
+                String[] parts = line.split("\t", 3);
+                if (parts.length < 3) {
+                    continue;
+                }
+                List<PlanHand> hands = new ArrayList<>();
+                for (String one : parts[2].split(";")) {
+                    String[] bit = one.trim().split(",");
+                    if (bit.length < 7) {
+                        continue;
+                    }
+                    hands.add(new PlanHand(bit[0], new BlockPos(Integer.parseInt(bit[1]),
+                            Integer.parseInt(bit[2]), Integer.parseInt(bit[3])),
+                            clamp(Integer.parseInt(bit[4]), PACE_TICKS.length),
+                            clamp(Integer.parseInt(bit[5]), REACH_BLOCKS.length),
+                            trim(Integer.parseInt(bit[6]))));
+                }
+                if (!hands.isEmpty()) {
+                    PLANS.add(new Plan(UUID.fromString(parts[0]), parts[1], hands));
+                }
+            }
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't read the crew plans: {}", failure.toString());
+        }
+    }
+
+    private static void savePlans() {
+        if (planFile == null) {
+            return;
+        }
+        try {
+            StringBuilder out = new StringBuilder();
+            for (Plan plan : PLANS) {
+                out.append(plan.owner()).append('\t').append(plan.name()).append('\t');
+                for (int i = 0; i < plan.hands().size(); i++) {
+                    PlanHand hand = plan.hands().get(i);
+                    out.append(i == 0 ? "" : ";")
+                            .append(hand.dimension()).append(',')
+                            .append(hand.patch().getX()).append(',')
+                            .append(hand.patch().getY()).append(',')
+                            .append(hand.patch().getZ()).append(',')
+                            .append(hand.pace()).append(',')
+                            .append(hand.reach()).append(',')
+                            .append(hand.jobs());
+                }
+                out.append('\n');
+            }
+            Files.writeString(planFile, out.toString());
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't save the crew plans: {}", failure.toString());
         }
     }
 
@@ -1578,7 +2091,12 @@ public final class TrapCrew {
                         .append(hand.patch.getZ()).append(' ')
                         .append(hand.pace).append(' ')
                         .append(hand.reach).append(' ')
-                        .append(hand.jobs).append('\n');
+                        .append(hand.jobs).append(' ')
+                        .append(hand.done).append(' ')
+                        .append(hand.paid).append(' ')
+                        .append(hand.onClock).append(' ')
+                        .append(hand.missed).append(' ')
+                        .append(hand.owed).append('\n');
             }
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {

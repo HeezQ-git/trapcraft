@@ -2103,7 +2103,43 @@ public final class TrapMath {
      * work faster rather than get robbed more.
      */
     public static float dealerRobChance(int level) {
-        return 0.003f / Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+        return 0.00225f / Math.max(1, Math.min(DEALER_MAX_LEVEL, level));
+    }
+
+    // --- the crew's clock -------------------------------------------------------
+
+    /**
+     * How much of a shift is the breather.
+     *
+     * A SHARE, not a fixed number of ticks, and the difference is the whole
+     * bug. The breather used to be forty-five seconds flat however fast the
+     * hand worked, so buying pace bought a worse and worse duty cycle: a
+     * plodding hand worked 73% of its shift and a flat-out one worked 29% of
+     * its shift. The board advertised "a job every 1.5 seconds" and delivered
+     * one every 5.25 -- three and a half times slower -- and the top rung, the
+     * one that costs 2200e, was punished hardest for being bought.
+     *
+     * A quarter of the work done means every rung has the same duty cycle, so
+     * the ladder now buys exactly the speed it says it does.
+     */
+    public static final float CREW_BREAK_SHARE = 0.25f;
+
+    /** Ticks a hand stands about for after a shift at this pace. */
+    public static int crewBreak(int interval, int jobsPerShift) {
+        return Math.max(20, Math.round(interval * jobsPerShift * CREW_BREAK_SHARE));
+    }
+
+    /**
+     * Seconds a job REALLY takes, breather included.
+     *
+     * The only number the board and the handbook are allowed to print. The
+     * raw pass interval is a truth about the tick loop and a lie to the
+     * player, which is what made a hand feel like it stopped working before
+     * it had earned its wage.
+     */
+    public static float crewJobSeconds(int interval, int jobsPerShift) {
+        return (interval * jobsPerShift + crewBreak(interval, jobsPerShift))
+                / (jobsPerShift * 20.0f);
     }
 
     // --- the coin toss ----------------------------------------------------------

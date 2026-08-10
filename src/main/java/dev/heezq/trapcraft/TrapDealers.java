@@ -44,14 +44,20 @@ import java.util.UUID;
 public final class TrapDealers {
     /** Ticks between selling rounds. Five minutes. */
     /**
-     * Two minutes, not five.
+     * Ninety seconds. Was two minutes, was five before that.
      *
-     * The clock is half the reason a dealer felt like nothing was happening:
-     * at five minutes a level one sold one item every ten minutes, so most of
-     * a session went by with the earnings line unchanged. Trade you cannot
-     * see moving is trade nobody believes in.
+     * The clock is most of what a dealer FEELS like: at five minutes a level
+     * one sold one item every ten minutes, so most of a session went by with
+     * the earnings line unchanged, and trade you cannot see moving is trade
+     * nobody believes in. Two minutes fixed the worst of it; ninety seconds
+     * shifts a third more product an hour and, more to the point, puts a sale
+     * on the board often enough to look like a business.
+     *
+     * Robbery is per round, so {@link TrapMath#dealerRobChance} came down by
+     * the same fraction. Shortening the clock has to make them work faster,
+     * not get caught more.
      */
-    private static final int ROUND_TICKS = 20 * 60 * 2;
+    private static final int ROUND_TICKS = 20 * 90;
     /** How long a called dealer waits around before going back to work. */
     private static final int VISIT_TICKS = 20 * 90;
     /** The most anybody can have on the books. */

@@ -35,7 +35,7 @@ import java.util.List;
  *
  *   [hand][hand][hand][hand][hand] . [book] . [hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][whip] . [wages] . . . [fire]
+ *   [job][job][whip] . [wages] . [plans] . [fire]
  *
  * The selected hand is the one everything on the bottom two rows applies to,
  * which is why the top row is heads you click rather than a list you read.
@@ -55,6 +55,7 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int REACH_SLOT = 10;
     private static final int JOBS_FROM = 11;
     private static final int WHIP_SLOT = 20;
+    private static final int PLANS_SLOT = 24;
     private static final int WAGES_SLOT = 22;
     private static final int FIRE_SLOT = 26;
 
@@ -132,6 +133,7 @@ public class CrewScreenHandler extends ScreenHandler {
                 display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(i)));
             }
             display.setStack(WHIP_SLOT, whipTag(card));
+            display.setStack(PLANS_SLOT, plansTag());
             display.setStack(WAGES_SLOT, wages());
             display.setStack(FIRE_SLOT, fireTag(selected));
         }
@@ -157,7 +159,29 @@ public class CrewScreenHandler extends ScreenHandler {
                 Formatting.GRAY));
         lore.add(line("Wages  ", Formatting.DARK_GRAY)
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
-                .append(plain(" every five minutes").formatted(Formatting.DARK_GRAY)));
+                .append(plain(" every five minutes ON THE CLOCK")
+                        .formatted(Formatting.DARK_GRAY)));
+        lore.add(line("Nights are free. They're asleep.", Formatting.DARK_GRAY));
+        // The books, which exist because "are they earning their keep" was a
+        // question three people had and nobody could answer.
+        if (card.done() > 0) {
+            lore.add(line("Done " + card.done() + " jobs for " + card.paid() + "e  ",
+                    Formatting.DARK_GRAY)
+                    .append(plain(String.format("%.1fe a job", card.perJob()))
+                            .formatted(Formatting.WHITE))
+                    .append(plain(String.format("  (best %.1fe)", card.parJob()))
+                            .formatted(Formatting.DARK_GRAY)));
+            if (card.perJob() > card.parJob() * 1.6f) {
+                lore.add(line("Most of that is walking. Tighter patch,",
+                        Formatting.YELLOW));
+                lore.add(line("or a chest closer to the work.", Formatting.YELLOW));
+            }
+        }
+        if (card.missed() > 0) {
+            lore.add(line("OWED " + card.owed() + "e -- "
+                    + (TrapCrew.GRACE_PACKETS - card.missed())
+                    + " paydays before they walk", Formatting.RED, Formatting.BOLD));
+        }
         lore.add(Text.empty());
         StringBuilder knows = new StringBuilder();
         for (TrapCrew.Job job : card.taught()) {
@@ -277,8 +301,9 @@ public class CrewScreenHandler extends ScreenHandler {
                 line("elsewhere, as long as you're", Formatting.GRAY),
                 line("logged in. Log off and so do they.", Formatting.GRAY),
                 Text.empty(),
-                line("Miss a wage packet and they walk,", Formatting.DARK_GRAY),
-                line("taking everything you taught them.", Formatting.DARK_GRAY))));
+                line("Miss a wage packet and you get a", Formatting.DARK_GRAY),
+                line("notice. Miss " + TrapCrew.GRACE_PACKETS + " and they walk --", Formatting.DARK_GRAY),
+                line("but the crew is saved on the way out.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -327,6 +352,35 @@ public class CrewScreenHandler extends ScreenHandler {
         lore.add(Text.empty());
         lore.add(line("Free. Click as often as you like.", Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
+    /**
+     * Where the saved crews live, and why they are commands and not buttons.
+     *
+     * A plan has a NAME, and a chest screen has no way to type one. Rather
+     * than invent a naming scheme nobody asked for -- "Crew 3" -- the naming
+     * stays in chat and this slot is the sign that says so.
+     */
+    private ItemStack plansTag() {
+        int saved = TrapCrew.plansOf(boss).size();
+        ItemStack tag = new ItemStack(saved > 0 ? Items.WRITTEN_BOOK : Items.WRITABLE_BOOK);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Crews on file").formatted(Formatting.AQUA, Formatting.BOLD)
+                        .append(plain(saved == 0 ? "" : "  " + saved)
+                                .formatted(Formatting.WHITE)));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Write down who works where and what", Formatting.GRAY),
+                line("they know, then buy the lot back later.", Formatting.GRAY),
+                Text.empty(),
+                line("/crew save <name>", Formatting.GREEN),
+                line("/crew plans", Formatting.GREEN),
+                line("/crew load <name>", Formatting.GREEN),
+                line("/crew forget <name>", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("If they ever walk over wages, the crew", Formatting.DARK_GRAY),
+                line("is filed under \"" + TrapCrew.WALKOUT + "\" on its way out.",
+                        Formatting.DARK_GRAY))));
         return tag;
     }
 
