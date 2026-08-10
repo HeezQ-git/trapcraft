@@ -146,8 +146,11 @@ public class NetworkScreenHandler extends ScreenHandler {
                 ? line("Top of the ladder.", Formatting.GOLD)
                 : line(dealer.toNextLevel() + " more sales", Formatting.DARK_GRAY)
                 .append(plain(" to L" + (dealer.level + 1)).formatted(Formatting.WHITE)));
+        // Your rep is in this number, because it is in the real one. Quoting
+        // the rate a nobody would get would make the screen wrong for exactly
+        // the people who worked hardest on it.
         lore.add(line("Shifts about " + Math.round(
-                        TrapMath.dealerRate(dealer.level, mine.size(), 0) * 30)
+                        TrapMath.dealerRate(dealer.level, mine.size(), 0, rep()) * 30)
                 + " an hour at this level.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(here

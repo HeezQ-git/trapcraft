@@ -2103,11 +2103,20 @@ public final class TrapMath {
      * first. Without it the only strategy is "hire the maximum", which is not
      * a strategy.
      *
+     * Reputation is the boss's, and it multiplies on the same curve the
+     * contract board pays on -- up to 1.75x at REP_MAX. It is the same
+     * reputation, so it should be worth the same: a dealer working for
+     * somebody people have heard of is sent customers rather than having to
+     * talk every one of them into it. Rep already made them LEARN faster,
+     * which is a promise that pays off in an hour; this is the half that
+     * pays off in the next round.
+     *
      * @param level    theirs, 1..MAX
      * @param crowd    how many dealers this player has out, including this one
      * @param heatTier 0..3, how much attention the operation is drawing
+     * @param rep      the boss's standing, 0..REP_MAX
      */
-    public static float dealerRate(int level, int crowd, int heatTier) {
+    public static float dealerRate(int level, int crowd, int heatTier, int rep) {
         // Was 0.25 + 0.25*level, which gave a level one half an item per
         // five-minute round: six an hour, for a dealer who cost 180e. You
         // could watch one for twenty minutes and see two sales, and two sales
@@ -2117,7 +2126,8 @@ public final class TrapMath {
         // Heat doesn't stop trade, it makes people careful about being seen
         // buying. A raid is the punishment; this is the drag.
         float caution = 1.0f - 0.12f * Math.max(0, Math.min(3, heatTier));
-        return skill * saturation * caution;
+        float name = 1.0f + standing(rep) * REP_STEP;
+        return skill * saturation * caution * name;
     }
 
     /**

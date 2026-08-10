@@ -422,8 +422,11 @@ public final class TrapDealers {
                 }
             }
             int heat = boss == null ? 0 : TrapHeat.carryingHeat(boss);
+            // Offline is worth nothing here, the same way heat is: a boss who
+            // isn't in the world isn't a name being said in it either.
+            int rep = boss == null ? 0 : TrapContracts.repOf(TrapContracts.findPhone(boss));
 
-            float rate = TrapMath.dealerRate(dealer.level, crowd, heat);
+            float rate = TrapMath.dealerRate(dealer.level, crowd, heat, rep);
             int wanted = TrapMath.dealerSold(rate, hour, random.nextFloat());
             if (wanted > 0) {
                 changed |= sell(dealer, wanted, boss);

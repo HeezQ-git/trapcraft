@@ -1384,7 +1384,7 @@ class FormulaTest {
     @Test
     void betterDealersAreBetterButCostlier() {
         for (int level = 2; level <= TrapMath.DEALER_MAX_LEVEL; level++) {
-            assertTrue(TrapMath.dealerRate(level, 1, 0) > TrapMath.dealerRate(level - 1, 1, 0),
+            assertTrue(TrapMath.dealerRate(level, 1, 0, 0) > TrapMath.dealerRate(level - 1, 1, 0, 0),
                     "level " + level + " should shift more");
             assertTrue(TrapMath.dealerSlots(level) > TrapMath.dealerSlots(level - 1),
                     "level " + level + " should carry more");
@@ -1403,8 +1403,8 @@ class FormulaTest {
         // throughput more than covers it -- otherwise the expensive ones are a
         // trap and the whole progression is fake.
         for (int level = 2; level <= TrapMath.DEALER_MAX_LEVEL; level++) {
-            float better = TrapMath.dealerRate(level, 1, 0) * (1 - TrapMath.dealerCut(level));
-            float worse = TrapMath.dealerRate(level - 1, 1, 0)
+            float better = TrapMath.dealerRate(level, 1, 0, 0) * (1 - TrapMath.dealerCut(level));
+            float worse = TrapMath.dealerRate(level - 1, 1, 0, 0)
                     * (1 - TrapMath.dealerCut(level - 1));
             assertTrue(better > worse,
                     "a level " + level + " nets you " + better + " against " + worse);
@@ -1438,8 +1438,8 @@ class FormulaTest {
 
     @Test
     void crowdingThePatchHasDiminishingReturns() {
-        float alone = TrapMath.dealerRate(3, 1, 0);
-        float four = TrapMath.dealerRate(3, 4, 0) * 4;
+        float alone = TrapMath.dealerRate(3, 1, 0, 0);
+        float four = TrapMath.dealerRate(3, 4, 0, 0) * 4;
         assertTrue(four > alone, "four should still beat one in total");
         assertTrue(four < alone * 2.5f,
                 "but four must not be four times as good, got " + four / alone + "x");
@@ -1447,8 +1447,22 @@ class FormulaTest {
 
     @Test
     void heatSlowsTradeWithoutStoppingIt() {
-        assertTrue(TrapMath.dealerRate(3, 1, 3) < TrapMath.dealerRate(3, 1, 0));
-        assertTrue(TrapMath.dealerRate(3, 1, 3) > 0.0f, "heat must never freeze the street");
+        assertTrue(TrapMath.dealerRate(3, 1, 3, 0) < TrapMath.dealerRate(3, 1, 0, 0));
+        assertTrue(TrapMath.dealerRate(3, 1, 3, 0) > 0.0f, "heat must never freeze the street");
+    }
+
+    @Test
+    void aNameShiftsProductFaster() {
+        float nobody = TrapMath.dealerRate(3, 1, 0, 0);
+        float known = TrapMath.dealerRate(3, 1, 0, TrapMath.REP_MAX);
+        assertTrue(known > nobody, "rep should speed selling, not just levelling");
+        // Same ceiling the contract board pays on, and capped there: rep past
+        // REP_MAX must buy nothing, or a long-running player's dealers drift
+        // away from every number the network screen quotes.
+        assertEquals(1.0f + TrapMath.REP_MAX * TrapMath.REP_STEP, known / nobody, 0.001f,
+                "the rep multiplier should be the board's curve, not its own");
+        assertEquals(known, TrapMath.dealerRate(3, 1, 0, TrapMath.REP_MAX * 3), 0.0001f,
+                "rep over the cap must not keep paying");
     }
 
     @Test
