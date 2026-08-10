@@ -219,9 +219,18 @@ class SurveyTest {
 
     // --- the grade ------------------------------------------------------------
 
-    /** Everything fitted, nothing dug, nothing dark. */
+    /**
+     * Everything fitted, nothing dug, nothing dark -- so only floor decides.
+     *
+     * Decor reads the TOP step rather than a number. It was a hardcoded 30,
+     * which was full marks when there were two decor steps and two thirds of
+     * them once there were four -- so this quietly stopped being a maxed-out
+     * house and started capping at grade six, and "size is the lid" was
+     * measuring the points ceiling instead.
+     */
     private static int graded(int floor) {
-        return HomeSurvey.tier(true, floor, true, true, 1.0f, HomeSurvey.FITTINGS, 30, 0, 8);
+        return HomeSurvey.tier(true, floor, true, true, 1.0f, HomeSurvey.FITTINGS,
+                HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1], 0, 8);
     }
 
     @Test
@@ -251,11 +260,10 @@ class SurveyTest {
     /** Nothing but floor moves the ceiling, and it moves it one step at a time. */
     @Test
     void sizeIsTheLid() {
-        assertEquals(1, graded(HomeSurvey.FLOOR_STEPS[0]));
-        assertEquals(2, graded(HomeSurvey.FLOOR_STEPS[1]));
-        assertEquals(3, graded(HomeSurvey.FLOOR_STEPS[2]));
-        assertEquals(4, graded(HomeSurvey.FLOOR_STEPS[3]));
-        assertEquals(HomeSurvey.TOP_TIER, graded(HomeSurvey.FLOOR_STEPS[4]));
+        for (int step = 0; step < HomeSurvey.FLOOR_STEPS.length; step++) {
+            assertEquals(step + 1, graded(HomeSurvey.FLOOR_STEPS[step]),
+                    HomeSurvey.FLOOR_STEPS[step] + " squares should allow grade " + (step + 1));
+        }
         assertEquals(HomeSurvey.TOP_TIER, graded(10_000), "and no further");
     }
 
@@ -268,8 +276,11 @@ class SurveyTest {
     /** What a house is made of has to matter, or dirt wins on effort. */
     @Test
     void dirtGradesWorseThanBrick() {
-        int dirt = HomeSurvey.tier(true, 200, true, true, 0.0f, 5, 30, 0, 8);
-        int brick = HomeSurvey.tier(true, 200, true, true, 1.0f, 5, 30, 0, 8);
+        // Floor big enough that SIZE is not the lid, or both houses stop at
+        // the grade their footprint allows and the material never shows.
+        int room = HomeSurvey.FLOOR_STEPS[HomeSurvey.FLOOR_STEPS.length - 1];
+        int dirt = HomeSurvey.tier(true, room, true, true, 0.0f, 5, 30, 0, 8);
+        int brick = HomeSurvey.tier(true, room, true, true, 1.0f, 5, 30, 0, 8);
         assertTrue(brick > dirt, "brick " + brick + " should beat dirt " + dirt);
         assertEquals(0, HomeSurvey.shellPoints(0.0f));
         assertEquals(1, HomeSurvey.shellPoints(HomeSurvey.SHELL_STEPS[0]));
@@ -321,8 +332,11 @@ class SurveyTest {
         assertEquals(HomeSurvey.topPoints(),
                 HomeSurvey.points(1.0f, HomeSurvey.FITTINGS,
                         HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1], 0, 100));
-        assertEquals(HomeSurvey.TOP_TIER,
-                1 + Math.min(HomeSurvey.TOP_TIER - 1, HomeSurvey.topPoints() / 2));
+        // Full marks has to come out at the top grade. This mirrors the sum
+        // in tier(), and mirroring it is the point: if points stop reaching
+        // the ceiling, the last grades quietly become unearnable.
+        assertEquals(HomeSurvey.TOP_TIER, 1 + Math.min(HomeSurvey.TOP_TIER - 1,
+                HomeSurvey.topPoints() * (HomeSurvey.TOP_TIER - 1) / HomeSurvey.topPoints()));
     }
 
     // --- somebody lives there -------------------------------------------------
@@ -331,7 +345,7 @@ class SurveyTest {
     void betterHousesPayMore() {
         int last = -1;
         for (int tier = 0; tier <= HomeSurvey.TOP_TIER; tier++) {
-            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX);
+            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1);
             assertTrue(rent > last, "grade " + tier + " pays " + rent);
             last = rent;
         }
@@ -339,11 +353,52 @@ class SurveyTest {
 
     @Test
     void anUnhappyTenantPaysLess() {
-        int happy = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX);
-        int fed = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX / 2);
+        int happy = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX, 1);
+        int fed = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX / 2, 1);
         assertTrue(fed < happy, fed + " should be under " + happy);
-        assertEquals(0, HomeSurvey.rentDue(3, 0), "nobody pays on the way out");
-        assertEquals(0, HomeSurvey.rentDue(0, HomeSurvey.MOOD_MAX), "nor for a condemned room");
+        assertEquals(0, HomeSurvey.rentDue(3, 0, 1), "nobody pays on the way out");
+        assertEquals(0, HomeSurvey.rentDue(0, HomeSurvey.MOOD_MAX, 1), "nor for a condemned room");
+    }
+
+    @Test
+    void aFamilyPaysMoreThanALodger() {
+        // The rebalance in one assertion: a grade five with one bed is a
+        // fraction of what it used to pay, and the way back to the old number
+        // is four people in it rather than one.
+        int lodger = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 1);
+        int family = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 4);
+        assertEquals(lodger * 4, family, "rent is per head");
+        assertTrue(lodger < 100, "one bed in one house should not be a wage, got " + lodger);
+    }
+
+    @Test
+    void aHouseholdNeedsBedsAndFloorAndAGrade() {
+        // Beds alone are a dormitory, floor alone is a hall, and a hovel is
+        // neither however many of each it has. The lowest of the three wins.
+        assertEquals(4, HomeSurvey.household(4, 200, 5), "four beds, room, and a grade");
+        assertEquals(2, HomeSurvey.household(2, 200, 5), "two beds is two people");
+        assertEquals(3, HomeSurvey.household(9, 90, 5),
+                "ninety squares holds three at " + HomeSurvey.FLOOR_PER_HEAD + " each");
+        assertEquals(2, HomeSurvey.household(9, 900, 2), "a grade two is not a mansion");
+        assertEquals(1, HomeSurvey.household(9, 9, 1), "somebody lives in a hovel");
+        assertEquals(0, HomeSurvey.household(0, 900, 5), "no bed, nobody");
+        assertEquals(0, HomeSurvey.household(4, 900, 0), "condemned holds nobody");
+    }
+
+    @Test
+    void theTopGradesAreReachable() {
+        // Raising TOP_TIER without spreading the points across it would have
+        // added three grades nobody could ever earn -- a ladder with the last
+        // rungs sawn off. A perfect house has to come out at the top.
+        assertEquals(HomeSurvey.TOP_TIER,
+                HomeSurvey.tier(true, HomeSurvey.FLOOR_STEPS[HomeSurvey.TOP_TIER - 1],
+                        true, true, 1.0f, HomeSurvey.FITTINGS,
+                        HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1], 0, 4),
+                "a perfect house should reach grade " + HomeSurvey.TOP_TIER);
+        // And the floor steps have to keep up with the grades, or size stops
+        // being the lid it was made to be.
+        assertEquals(HomeSurvey.TOP_TIER, HomeSurvey.FLOOR_STEPS.length,
+                "one floor step per grade");
     }
 
     /** The tension the whole design was built around. */
@@ -358,7 +413,7 @@ class SurveyTest {
         int smallest = HomeSurvey.moodTarget(5, 0, 0);
         assertTrue(smallest > 0 && smallest < HomeSurvey.MOOD_MAX / 2,
                 "a grow next door should more than halve it, got " + smallest);
-        assertTrue(HomeSurvey.rentDue(5, smallest) < HomeSurvey.RENT[5] / 2);
+        assertTrue(HomeSurvey.rentDue(5, smallest, 1) < HomeSurvey.RENT[5] / 2);
 
         // Anything bigger and they go.
         for (int tier = 1; tier <= 3; tier++) {

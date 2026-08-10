@@ -113,6 +113,14 @@ public final class TrapHomes {
         String name;
         /** Who lives here, or null. The body is decoration; this is the person. */
         String tenant;
+        /**
+         * How many people live here, recomputed by every survey.
+         *
+         * Stored rather than worked out at rent time, for the same reason the
+         * grade is: charging rent would otherwise mean walking the walls of
+         * every house on the server once a day.
+         */
+        int heads = 1;
         UUID body;
         int mood;
         /** Rent waiting to be picked up out of the mailbox. */
@@ -207,10 +215,20 @@ public final class TrapHomes {
      * condition the survey never produced.
      */
     public record Readout(String name, int tier, int floor, boolean sealed, boolean clash,
-                          int exits, boolean bed, boolean crafting, boolean storage,
+                          int exits, int beds, boolean crafting, boolean storage,
                           boolean cooking, boolean stall, boolean window, int lights,
                           int kinds, int dark, float finished, boolean registered,
                           BlockPos measuredFrom, BlockPos leak, boolean buried) {
+        /** One bed is the hard requirement; the rest decide the household. */
+        public boolean bed() {
+            return beds > 0;
+        }
+
+        /** People this place holds, which is what the rent is charged per. */
+        public int household() {
+            return HomeSurvey.household(beds, floor, tier);
+        }
+
         public int fittings() {
             return (crafting ? 1 : 0) + (storage ? 1 : 0) + (cooking ? 1 : 0)
                     + (stall ? 1 : 0) + (window ? 1 : 0);
@@ -294,17 +312,18 @@ public final class TrapHomes {
     /**
      * How many people the city holds, near enough.
      *
-     * The sum of the grades, which is a stand-in for the tenants step three
-     * will actually put in these houses -- a grade five holds more people than
-     * a grade one, and a condemned room holds nobody. It is the number the
-     * shops read to decide how much custom walks through the door, so building
-     * housing already pays before anybody has moved in.
+     * The households added up. It was the sum of the GRADES, back when a
+     * house held one tenant however many beds were in it -- a stand-in that
+     * stopped being needed the day beds started counting. A four-bed house is
+     * four people through the shop door, which is what it should always have
+     * been. It is the number the shops read to decide how much custom walks
+     * in, so housing pays twice: rent, and everybody it brings past a till.
      */
     public static int population() {
         int people = 0;
         for (Home home : HOMES) {
             if (home.tenant != null) {
-                people += home.tier;
+                people += home.heads;
             }
         }
         return people;
@@ -381,7 +400,7 @@ public final class TrapHomes {
     private static Readout grade(ServerWorld world, Home self, HomeSurvey.Rooms rooms) {
         String name = self == null ? null : self.name;
         if (!rooms.sealed()) {
-            return new Readout(name, 0, 0, false, rooms.clash(), 0, false, false, false,
+            return new Readout(name, 0, 0, false, rooms.clash(), 0, 0, false, false,
                     false, false, false, 0, 0, 0, 0f, self != null,
                     self == null ? null : self.anchor,
                     new BlockPos(HomeSurvey.cellX(rooms.escape()),
@@ -390,7 +409,7 @@ public final class TrapHomes {
         }
         int floor = rooms.floor();
         Fittings kit = fittings(world, rooms.inside());
-        int tier = HomeSurvey.tier(true, floor, kit.bed, !rooms.exits().isEmpty(),
+        int tier = HomeSurvey.tier(true, floor, kit.beds > 0, !rooms.exits().isEmpty(),
                 kit.finished(), kit.count(), kit.kinds, kit.dark, kit.lights);
         // Paved Roads. A house on a proper street is worth more than the same
         // house in a field, which is the only thing in this mod that rewards
@@ -398,7 +417,7 @@ public final class TrapHomes {
         if (tier > 0 && self != null && TrapCity.paved(self.dimension, self.anchor)) {
             tier = Math.min(HomeSurvey.TOP_TIER, tier + 1);
         }
-        return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.bed,
+        return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.beds,
                 kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
                 kit.lights, kit.kinds, kit.dark, kit.finished(), self != null,
                 self == null ? null : self.anchor, null, false);
@@ -468,6 +487,7 @@ public final class TrapHomes {
         Readout now = grade(world, home, rooms);
         home.tier = now.tier();
         home.floor = now.floor();
+        home.heads = now.household();
         save();
         return null;
     }
@@ -524,6 +544,7 @@ public final class TrapHomes {
         int was = home.tier;
         home.tier = now.tier();
         home.floor = now.floor();
+        home.heads = now.household();
         if (now.sealed()) {
             // Only when the survey succeeded. A house that failed keeps the
             // box it had, so a wall knocked through for one pass does not hand
@@ -612,7 +633,7 @@ public final class TrapHomes {
         home.craving = world.getRandom().nextFloat() < CRAVING_ODDS
                 ? roll(world.getRandom(), home.mood) : null;
 
-        int rent = HomeSurvey.rentDue(home.tier, home.mood);
+        int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads);
         if (rent > 0) {
             TrapCity.Duty duty = TrapCity.Duty.RENT;
             int owed = TrapCity.dutyOn(rent, duty);
@@ -780,8 +801,11 @@ public final class TrapHomes {
         if (owner != null) {
             owner.sendMessage(Text.literal("Somebody's moved into " + home.name + ". ")
                     .formatted(Formatting.GREEN, Formatting.BOLD)
-                    .append(Text.literal(home.tenant + " pays "
+                    .append(Text.literal((home.heads > 1
+                            ? home.tenant + " and " + (home.heads - 1) + " more pay "
+                            : home.tenant + " pays ")
                             + HomeSurvey.RENT[Math.min(home.tier, HomeSurvey.RENT.length - 1)]
+                            * home.heads
                             + "e a day into the mailbox, less if they're unhappy.")
                             .formatted(Formatting.GRAY)), false);
         }
@@ -886,7 +910,7 @@ public final class TrapHomes {
     // --- what is in the room --------------------------------------------------
 
     private static final class Fittings {
-        boolean bed;
+        int beds;
         boolean crafting;
         boolean storage;
         boolean cooking;
@@ -1059,8 +1083,11 @@ public final class TrapHomes {
                 kit.window = true;
             }
         }
-        if (block instanceof BedBlock) {
-            kit.bed = true;
+        // The HEAD half only. A bed is two blocks and counting both would
+        // put a family of four in a two-bed cottage.
+        if (block instanceof BedBlock
+                && state.get(BedBlock.PART) == net.minecraft.block.enums.BedPart.HEAD) {
+            kit.beds++;
         }
         // Same reasoning as the window, applied to the rest of the list before
         // somebody has to report it: a hundred and thirty-six mods ship
@@ -1428,7 +1455,7 @@ public final class TrapHomes {
                 // greedy tail and always has been. A file written by step two
                 // has 19 fields and loads as an empty house, which is exactly
                 // what those houses were.
-                String[] parts = line.trim().split("\\s+", 24);
+                String[] parts = line.trim().split("\\s+", 25);
                 if (parts.length < 19) {
                     continue;
                 }
@@ -1449,7 +1476,12 @@ public final class TrapHomes {
                     home.mood = Integer.parseInt(parts[20]);
                     home.till = Integer.parseInt(parts[21]);
                     home.lastRent = Long.parseLong(parts[22]);
-                    home.name = parts[23];
+                    // A file written before houses held families has the name
+                    // where the household is now. One tenant is the right
+                    // reading of it, and the next survey corrects it anyway.
+                    boolean withHeads = parts.length >= 25;
+                    home.heads = withHeads ? Integer.parseInt(parts[23]) : 1;
+                    home.name = withHeads ? parts[24] : parts[23];
                 } else {
                     // A step-two line, whose name is the greedy tail of a
                     // NINETEEN-field split. Read at 24 it stops being greedy,
@@ -1489,7 +1521,8 @@ public final class TrapHomes {
                         .append(' ').append(home.body == null ? "-" : home.body)
                         .append(' ').append(home.mood)
                         .append(' ').append(home.till)
-                        .append(' ').append(home.lastRent);
+                        .append(' ').append(home.lastRent)
+                        .append(' ').append(home.heads);
                 out.append(' ').append(home.name.replace('\n', ' ')).append('\n');
             }
             Files.writeString(saveFile, out.toString());

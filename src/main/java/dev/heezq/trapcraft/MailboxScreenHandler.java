@@ -259,11 +259,22 @@ public class MailboxScreenHandler extends ScreenHandler {
                             : "Very happy here.",
                     mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED : Formatting.GRAY));
             lore.add(Text.empty());
+            int heads = reading.household();
+            int full = HomeSurvey.RENT[Math.min(reading.tier(),
+                    HomeSurvey.RENT.length - 1)] * heads;
             lore.add(line("Pays  ", Formatting.DARK_GRAY)
-                    .append(plain(HomeSurvey.rentDue(reading.tier(), mood) + "e a day")
+                    .append(plain(HomeSurvey.rentDue(reading.tier(), mood, heads) + "e a day")
                             .formatted(Formatting.GREEN))
-                    .append(plain("  of " + HomeSurvey.RENT[Math.min(reading.tier(),
-                            HomeSurvey.RENT.length - 1)] + "e").formatted(Formatting.DARK_GRAY)));
+                    .append(plain("  of " + full + "e").formatted(Formatting.DARK_GRAY)));
+            // Rent is per person now, so the number on this screen is
+            // meaningless without saying how many people are behind it --
+            // and "put another bed in" is the most useful thing it can say.
+            lore.add(line(heads == 1 ? "One tenant. Another bed and the floor"
+                            : heads + " living here, " + HomeSurvey.RENT[Math.min(reading.tier(),
+                                    HomeSurvey.RENT.length - 1)] + "e each.",
+                    Formatting.DARK_GRAY));
+            lore.add(line(heads == 1 ? "for them is another rent."
+                            : "More beds and more room, more rent.", Formatting.DARK_GRAY));
             lore.add(line("An unhappy tenant pays less before", Formatting.DARK_GRAY));
             lore.add(line("they pay nothing at all.", Formatting.DARK_GRAY));
             lore.add(Text.empty());

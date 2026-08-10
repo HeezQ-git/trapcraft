@@ -309,7 +309,17 @@ public final class HomeSurvey {
 
     /** Floor tiles a house needs before anybody will call it a house. */
     public static final int MIN_FLOOR = 9;
-    public static final int TOP_TIER = 5;
+    /**
+     * Grades. Was five, and five was not enough room at the top.
+     *
+     * A hundred and fifty squares with a bed and a shopping list of fittings
+     * hit the ceiling, and after that there was nothing left to build for --
+     * so the best house anybody would ever make was the one they made in an
+     * afternoon. Six, seven and eight are mansion country: they need floor
+     * nobody puts down by accident, and enough different blocks in the place
+     * that decorating is the work rather than an afterthought.
+     */
+    public static final int TOP_TIER = 8;
 
     /**
      * Floor a house needs to be ALLOWED each grade. A ceiling, not a bonus.
@@ -326,10 +336,17 @@ public final class HomeSurvey {
      * checklist: a hundred and fifty squares of floor is a proper house, or
      * three storeys of a modest one.
      */
-    public static final int[] FLOOR_STEPS = {9, 20, 45, 90, 150};
+    public static final int[] FLOOR_STEPS = {9, 20, 45, 90, 150, 240, 380, 560};
 
-    /** Distinct block kinds in the place that each earn a point. */
-    public static final int[] DECOR_STEPS = {12, 22};
+    /**
+     * Distinct block kinds in the place that each earn a point.
+     *
+     * Two steps became four when the ceiling moved. Twenty-two kinds is a
+     * decorated room; fifty-five is somebody who went shopping for the job,
+     * which is the point of the top grades and the reason the market now
+     * sells two and a half thousand modded lines.
+     */
+    public static final int[] DECOR_STEPS = {12, 22, 36, 55};
     /**
      * Share of the shell that has to be worked material rather than dug up.
      *
@@ -339,7 +356,7 @@ public final class HomeSurvey {
      * planks, bricks, glass, wool and everything a mod ships as decoration
      * are things somebody chose.
      */
-    public static final float[] SHELL_STEPS = {0.60f, 0.90f};
+    public static final float[] SHELL_STEPS = {0.60f, 0.90f, 0.98f};
     /** Light level below which a square counts as a dark corner. */
     public static final int DARK_AT = 8;
     /**
@@ -447,22 +464,54 @@ public final class HomeSurvey {
         if (!sealed || floor < MIN_FLOOR || !bed || !exit || lights < 1) {
             return 0;
         }
+        // Spread across whatever the ceiling is rather than divided by two.
+        // The old /2 topped out at grade five because points top out at nine,
+        // so raising TOP_TIER on its own would have added three grades nobody
+        // could reach -- a ladder with the last rungs sawn off.
         int earned = 1 + Math.min(TOP_TIER - 1,
-                points(finished, fittings, kinds, dark, floor) / 2);
+                points(finished, fittings, kinds, dark, floor) * (TOP_TIER - 1) / topPoints());
         return Math.min(earned, sizeTier(floor));
     }
 
     // --- somebody lives there -------------------------------------------------
 
     /**
-     * What a tenant pays a day, by grade.
+     * What ONE TENANT pays a day, by grade.
      *
-     * Anchored so a grade five pays for about one flat-out crew hand. Passive
-     * income ought to be a supplement somebody is pleased with rather than a
-     * reason to stop farming, and a house that out-earned the field it stands
-     * next to would quietly end the growing half of the mod.
+     * Per head, which is the whole rebalance. A grade five used to pay 280 a
+     * day for one bed in one room, which is a fat contract every two days for
+     * work you did once -- and the honest reaction to that was the one it got:
+     * you stop farming and build a house. It pays 62 now.
+     *
+     * You get back to 280 by housing four people, and housing four people
+     * means four beds and the floor to put them in. The money is the same at
+     * the top; what changed is that it is now paid for a building rather than
+     * for a room, and the way to earn more is to build more.
      */
-    public static final int[] RENT = {0, 24, 60, 120, 190, 280};
+    public static final int[] RENT = {0, 6, 14, 26, 42, 62, 86, 112, 140};
+
+    /**
+     * Floor each resident past the first needs.
+     *
+     * Beds alone would make a dormitory: eight bunks in a grade one and the
+     * rent of a mansion. Space is the thing that cannot be crafted in a
+     * stack, so space is what gates the household.
+     */
+    public static final int FLOOR_PER_HEAD = 30;
+
+    /**
+     * How many people actually live here.
+     *
+     * Three things have to agree -- beds to sleep in, floor to stand on, and
+     * a house good enough that a family would put up with it. The lowest of
+     * the three wins, and one is the floor: somebody lives in a hovel.
+     */
+    public static int household(int beds, int floor, int tier) {
+        if (tier <= 0 || beds <= 0) {
+            return 0;
+        }
+        return Math.max(1, Math.min(Math.min(beds, tier), floor / FLOOR_PER_HEAD));
+    }
 
     /** Mood runs 0 to 100 and moves at most this much a day. */
     public static final int MOOD_MAX = 100;
@@ -525,11 +574,12 @@ public final class HomeSurvey {
      * which is the difference between a system that warns you and a system
      * that surprises you.
      */
-    public static int rentDue(int tier, int mood) {
-        if (tier <= 0 || tier >= RENT.length || mood <= 0) {
+    public static int rentDue(int tier, int mood, int heads) {
+        if (tier <= 0 || tier >= RENT.length || mood <= 0 || heads <= 0) {
             return 0;
         }
-        return Math.max(1, Math.round(RENT[tier] * Math.min(MOOD_MAX, mood) / (float) MOOD_MAX));
+        return Math.max(1, Math.round(RENT[tier] * heads
+                * Math.min(MOOD_MAX, mood) / (float) MOOD_MAX));
     }
 
     // --- claims ---------------------------------------------------------------

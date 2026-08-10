@@ -8,16 +8,23 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.state.StateManager;
+import net.minecraft.state.property.EnumProperty;
+import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.BlockMirror;
+import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
 
@@ -30,21 +37,78 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * room inside a few minutes.
  *
  * A table on legs, so TRANSPARENT_BLOCK; check_models.py enforces that.
+ *
+ * It has a FRONT -- a panelled counter face with a foot rail, and a back bar
+ * of bottles standing behind it -- so it has to be placed facing somewhere.
+ * Polymer can rotate a carrier the same way a vanilla blockstate does, but
+ * each angle is its own carrier state, so a directional block costs four from
+ * the pool instead of one. Worth it here: an unturnable counter means every
+ * bar on the server faces north and half of them have their bottles in the
+ * wall.
  */
 public class BarBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
-    private final BlockState carrier;
+    /** Which way the customer stands. The model is built facing north. */
+    public static final EnumProperty<Direction> FACING = Properties.HORIZONTAL_FACING;
+
+    /** Indexed by {@link Direction#getHorizontalQuarterTurns()}. */
+    private final BlockState[] carriers = new BlockState[4];
 
     public BarBlock(Settings settings) {
         super(settings);
-        this.carrier = TrapPolymer.requestOrFallback(
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/casino_bar")),
-                () -> Blocks.DARK_OAK_PLANKS.getDefaultState(), "casino_bar");
+        for (Direction facing : Direction.Type.HORIZONTAL) {
+            carriers[facing.getHorizontalQuarterTurns()] = TrapPolymer.requestOrFallback(
+                    BlockModelType.TRANSPARENT_BLOCK,
+                    PolymerBlockModel.of(Identifier.of("trapcraft:block/casino_bar"),
+                            0, spin(facing)),
+                    () -> Blocks.DARK_OAK_PLANKS.getDefaultState(),
+                    "casino_bar facing " + facing.asString());
+        }
+        setDefaultState(getDefaultState().with(FACING, Direction.NORTH));
+    }
+
+    /**
+     * Degrees to turn the model so its front points `facing`.
+     *
+     * The same table vanilla writes into a furnace blockstate, and for the
+     * same reason: the model is drawn once, facing north, and the other three
+     * sides are that one model spun.
+     */
+    private static int spin(Direction facing) {
+        return switch (facing) {
+            case EAST -> 90;
+            case SOUTH -> 180;
+            case WEST -> 270;
+            default -> 0;
+        };
+    }
+
+    @Override
+    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public BlockState getPlacementState(ItemPlacementContext context) {
+        // Opposite, like a furnace: the face you decorated points at the
+        // person who placed it, not away from them.
+        return getDefaultState().with(FACING,
+                context.getHorizontalPlayerFacing().getOpposite());
+    }
+
+    /** So /clone, structure blocks and the debug stick turn it honestly. */
+    @Override
+    protected BlockState rotate(BlockState state, BlockRotation rotation) {
+        return state.with(FACING, rotation.rotate(state.get(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, BlockMirror mirror) {
+        return state.rotate(mirror.getRotation(state.get(FACING)));
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return carrier;
+        return carriers[state.get(FACING).getHorizontalQuarterTurns()];
     }
 
     @Override
