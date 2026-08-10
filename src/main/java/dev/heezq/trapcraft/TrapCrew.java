@@ -241,9 +241,20 @@ public final class TrapCrew {
      * consequence rather than a flavour note -- nobody is picking your field
      * while the pillagers are in it.
      */
-    private static boolean onTheClock(ServerWorld world) {
-        return world.isDay();
+    private static boolean onTheClock(ServerWorld world, Hand hand) {
+        return hand.nights || world.isDay();
     }
+
+    /**
+     * What a hand costs once you have asked them to do nights.
+     *
+     * A premium ON TOP of the doubling that comes for free with the hours:
+     * the wage clock only turns while somebody is working, so putting a hand
+     * on nights already charges you twice as many packets an hour. The extra
+     * quarter is what it costs to ask, and it is the whole reason this is a
+     * decision rather than a switch everybody flips once and forgets.
+     */
+    public static final float NIGHT_RATE = 1.25f;
 
     // --- what a hand can be taught -------------------------------------------
 
@@ -413,6 +424,8 @@ public final class TrapCrew {
         int idle;
         /** What they did last, so the other job they know gets a turn. */
         Job lastJob;
+        /** Working nights. Costs more and never stops. */
+        boolean nights;
         /** Jobs done since the last breather. */
         int worked;
         /** Server tick they are back on the clock. */
@@ -486,7 +499,7 @@ public final class TrapCrew {
                     total += job.wage();
                 }
             }
-            return total;
+            return nights ? Math.round(total * NIGHT_RATE) : total;
         }
 
         /** Top of both ladders and both slots filled. */
@@ -586,7 +599,7 @@ public final class TrapCrew {
                        String tempo, boolean present, List<Job> taught,
                        int done, int paid, int missed, int owed,
                        String dimension, int x, int y, int z,
-                       String chest, List<Job> starved) {
+                       String chest, List<Job> starved, boolean nights) {
         /** Where they work, short enough for a tooltip. */
         public String spot() {
             return x + " " + y + " " + z;
@@ -643,7 +656,7 @@ public final class TrapCrew {
                     hand.patch.getX(), hand.patch.getY(), hand.patch.getZ(),
                     box == null || hand.box == null ? null
                             : hand.box.getX() + " " + hand.box.getY() + " " + hand.box.getZ(),
-                    starved));
+                    starved, hand.nights));
         }
         return out;
     }
@@ -1227,6 +1240,41 @@ public final class TrapCrew {
         return null;
     }
 
+    /**
+     * Put a hand on nights, or take them off.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String nights(ServerPlayerEntity boss, int index) {
+        if (index < 0 || index >= CREW.size()) {
+            return "They're not on the books any more.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "That's not your hand.";
+        }
+        hand.nights = !hand.nights;
+        // Straight back on or off the clock: a hand asleep in a bed when you
+        // put them on nights should get up, not finish the night first.
+        hand.restUntil = 0;
+        hand.worked = 0;
+        save();
+        VillagerEntity mob = find(boss.getServer(), hand);
+        if (mob != null && hand.nights && mob.isSleeping()) {
+            mob.wakeUp();
+        }
+        boss.sendMessage(hand.nights
+                ? Text.literal("On nights. ").formatted(Formatting.GOLD, Formatting.BOLD)
+                        .append(Text.literal("They work through the dark and the wage "
+                                + "clock never stops. " + hand.wage() + "e a packet now.")
+                                .formatted(Formatting.GRAY))
+                : Text.literal("Days only. ").formatted(Formatting.GREEN)
+                        .append(Text.literal("Back to " + hand.wage()
+                                + "e, and nights are free again.").formatted(Formatting.GRAY)),
+                false);
+        return null;
+    }
+
     /** Let somebody go. */
     public static String fire(ServerPlayerEntity boss, int index) {
         for (int i = CREW.size() - 1; i >= 0; i--) {
@@ -1377,7 +1425,7 @@ public final class TrapCrew {
         ServerWorld world = (ServerWorld) mob.getWorld();
         equip(mob, hand);
 
-        if (!onTheClock(world)) {
+        if (!onTheClock(world, hand)) {
             knockOff(world, mob, hand);
             return;
         }
@@ -1527,7 +1575,7 @@ public final class TrapCrew {
         for (Hand hand : CREW) {
             up.putIfAbsent(hand.boss, 0);
             ServerWorld world = worldOf(server, hand);
-            if (world != null && onTheClock(world)) {
+            if (world != null && onTheClock(world, hand)) {
                 up.merge(hand.boss, 1, Integer::sum);
             }
         }
@@ -2080,7 +2128,7 @@ public final class TrapCrew {
                 continue;   // nobody home; the clock is stopped, so are they
             }
             ServerWorld world = worldOf(server, hand);
-            if (world == null || !onTheClock(world)) {
+            if (world == null || !onTheClock(world, hand)) {
                 continue;   // night. They are asleep and they are not charging for it
             }
             if (find(server, hand) == null) {
@@ -2244,6 +2292,9 @@ public final class TrapCrew {
                     hand.missed = Integer.parseInt(parts[12]);
                     hand.owed = Integer.parseInt(parts[13]);
                 }
+                if (parts.length >= 15) {
+                    hand.nights = "1".equals(parts[14]);
+                }
                 CREW.add(hand);
             }
         } catch (Exception failure) {
@@ -2363,7 +2414,8 @@ public final class TrapCrew {
                         .append(hand.paid).append(' ')
                         .append(hand.onClock).append(' ')
                         .append(hand.missed).append(' ')
-                        .append(hand.owed).append('\n');
+                        .append(hand.owed).append(' ')
+                        .append(hand.nights ? 1 : 0).append('\n');
             }
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {

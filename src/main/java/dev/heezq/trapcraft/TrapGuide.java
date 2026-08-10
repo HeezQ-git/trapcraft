@@ -1394,11 +1394,19 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("9. HOURS\n\n"))
-                .append(body("Daylight only.\n\n"))
+                .append(body("Daylight only, unless you say otherwise.\n\n"))
                 .append(body("At dusk they find a bed in the patch and turn "
                         + "in. Build them one.\n\n"))
-                .append(hint("Breathers are a share of the shift, so a quick "
-                        + "hand rests as briefly as it works."))));
+                .append(hint("The clock stops with them, so the dark costs "
+                        + "nothing."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9a. NIGHTS\n\n"))
+                .append(body("Put one on nights and they never stop.\n\n"))
+                .append(body("+" + Math.round((TrapCrew.NIGHT_RATE - 1) * 100)
+                        + "% on the wage, and the clock runs all night "
+                        + "too.\n\n"))
+                .append(hint("Twice the work, a bit over twice the money."))));
 
         pages.add(page(Text.empty()
                 .append(title("9e. CREWS ON FILE\n\n"))

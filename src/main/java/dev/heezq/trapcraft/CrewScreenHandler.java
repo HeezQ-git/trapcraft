@@ -35,7 +35,7 @@ import java.util.List;
  *
  *   [hand][hand][hand][hand][hand] . [book] . [hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][whip][move][wages] . [plans] . [fire]
+ *   [job][job][whip][move][wages][nights][plans] . [fire]
  *
  * The selected hand is the one everything on the bottom two rows applies to,
  * which is why the top row is heads you click rather than a list you read.
@@ -56,6 +56,7 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int JOBS_FROM = 11;
     private static final int WHIP_SLOT = 20;
     private static final int MOVE_SLOT = 21;
+    private static final int NIGHTS_SLOT = 23;
     private static final int PLANS_SLOT = 24;
     private static final int WAGES_SLOT = 22;
     private static final int FIRE_SLOT = 26;
@@ -135,6 +136,7 @@ public class CrewScreenHandler extends ScreenHandler {
             }
             display.setStack(WHIP_SLOT, whipTag(card));
             display.setStack(MOVE_SLOT, moveTag(card));
+            display.setStack(NIGHTS_SLOT, nightsTag(card));
             display.setStack(PLANS_SLOT, plansTag());
             display.setStack(WAGES_SLOT, wages());
             display.setStack(FIRE_SLOT, fireTag(selected));
@@ -172,7 +174,9 @@ public class CrewScreenHandler extends ScreenHandler {
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
                 .append(plain(" every five minutes ON THE CLOCK")
                         .formatted(Formatting.DARK_GRAY)));
-        lore.add(line("Nights are free. They're asleep.", Formatting.DARK_GRAY));
+        lore.add(card.nights()
+                ? line("ON NIGHTS. The clock never stops.", Formatting.GOLD)
+                : line("Nights are free. They're asleep.", Formatting.DARK_GRAY));
         // The books, which exist because "are they earning their keep" was a
         // question three people had and nobody could answer.
         if (card.done() > 0) {
@@ -440,6 +444,40 @@ public class CrewScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /**
+     * Round the clock, for a price.
+     *
+     * The premium is only a quarter, and that is not the real cost: the wage
+     * clock turns while they work, so a hand on nights already charges twice
+     * as many packets an hour. What the quarter buys is the ASKING, and it is
+     * what stops this being a switch everybody flips once and forgets.
+     */
+    private ItemStack nightsTag(TrapCrew.Card card) {
+        boolean on = card.nights();
+        ItemStack tag = new ItemStack(on ? Items.CLOCK : Items.RED_BED);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(on ? "On nights" : "Days only")
+                        .formatted(on ? Formatting.GOLD : Formatting.WHITE, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line(on ? "They work through the dark and never" : "At dusk they find a bed",
+                Formatting.GRAY));
+        lore.add(line(on ? "go to bed." : "in the patch and turn in.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(line("Wage  ", Formatting.DARK_GRAY)
+                .append(plain(card.wage() + "e").formatted(Formatting.RED))
+                .append(plain(on ? "  (+" + Math.round((TrapCrew.NIGHT_RATE - 1) * 100)
+                        + "% for nights)" : "").formatted(Formatting.DARK_GRAY)));
+        lore.add(line(on ? "And the clock runs all night, so you"
+                : "The clock stops at dusk, so the dark", Formatting.DARK_GRAY));
+        lore.add(line(on ? "pay about twice as many packets."
+                : "costs you nothing at all.", Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        lore.add(line(on ? "Click for days only." : "Click to put them on nights.",
+                Formatting.YELLOW));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack wages() {
         int payroll = TrapCrew.payrollOf(boss);
         ItemStack tag = new ItemStack(Items.CLOCK);
@@ -501,6 +539,10 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         if (index == MOVE_SLOT) {
             answer(TrapCrew.move(boss, card.index(), boss.getBlockPos()));
+            return;
+        }
+        if (index == NIGHTS_SLOT) {
+            answer(TrapCrew.nights(boss, card.index()));
             return;
         }
         if (index >= JOBS_FROM && index < JOBS_FROM + TEACHABLE.size()) {

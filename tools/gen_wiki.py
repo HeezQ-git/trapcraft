@@ -331,6 +331,7 @@ def gather() -> None:
     DATA["reach"] = ints("REACH_BLOCKS", crew)
     DATA["reach_cost"] = ints("REACH_COST", crew)
     DATA["hire"] = int(need(r"HIRE_COST = (\d+)", crew, "HIRE_COST"))
+    DATA["night_rate"] = float(need(r"NIGHT_RATE = ([\d.]+)f", crew, "NIGHT_RATE"))
     DATA["jobs_per_shift"] = int(need(r"JOBS_PER_SHIFT = (\d+)", crew, "JOBS_PER_SHIFT"))
     DATA["grace"] = int(need(r"GRACE_PACKETS = (\d+)", crew, "GRACE_PACKETS"))
     DATA["break_share"] = float(need(r"CREW_BREAK_SHARE = ([\d.]+)f", math, "CREW_BREAK_SHARE"))
@@ -929,8 +930,11 @@ def build() -> str:
     <p class="lede">{d['hire']}e to take somebody on, then {d['wage']}e every five
     minutes <strong>they are working</strong>, harvest or no harvest. {d['max_hands']}
     hands is all one operation will carry.</p>
-    <p>They work <strong>daylight only</strong> — at dusk they find a bed inside the
-    patch and turn in — and the clock stops with them, so nights cost nothing. They
+    <p>They work <strong>daylight only</strong> by default — at dusk they find a bed inside
+    the patch and turn in — and the clock stops with them, so nights cost nothing. Put one
+    <strong>on nights</strong> from the board and they never stop: +{round((d['night_rate'] - 1) * 100)}%
+    on the wage <em>and</em> a clock that runs all night, so about twice the packets an hour
+    for about twice the work. They
     stop for a breather every {d['jobs_per_shift']} jobs, and the breather is a share
     of the shift rather than a flat minute, so a quick hand rests as briefly as it
     works. They will not tread your farmland back into dirt, pull a rack early, or
