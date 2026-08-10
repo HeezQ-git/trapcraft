@@ -49,6 +49,6 @@ public class TrapCraft implements ModInitializer {
         PolymerResourcePackUtils.addModAssets(MOD_ID);
         PolymerResourcePackUtils.markAsRequired();
 
-        LOGGER.info("TrapCraft loaded: everybody eats");
+        LOGGER.info("TrapCraft loaded: everything is somebody's business");
     }
 }
