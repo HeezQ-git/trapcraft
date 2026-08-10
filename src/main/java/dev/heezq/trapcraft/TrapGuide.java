@@ -61,7 +61,9 @@ public final class TrapGuide {
                         .then(CommandManager.literal("crew")
                                 .executes(context -> give(context.getSource(), createCrew())))
                         .then(CommandManager.literal("casino")
-                                .executes(context -> give(context.getSource(), createCasino())))));
+                                .executes(context -> give(context.getSource(), createCasino())))
+                        .then(CommandManager.literal("city")
+                                .executes(context -> give(context.getSource(), createCity())))));
         registerWiki();
     }
 
@@ -117,6 +119,7 @@ public final class TrapGuide {
                 .append(pick("street", "paranoia, the ledger, contracts"))
                 .append(pick("crew", "hiring hands, and what they cost"))
                 .append(pick("casino", "running a floor"))
+                .append(pick("city", "houses, and what makes one"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -201,6 +204,102 @@ public final class TrapGuide {
                 .append(hint("Growing: /guide grower"))));
         crewBook(pages);
         return book("The Crew", pages);
+    }
+
+    /**
+     * The sixth book: the city half.
+     *
+     * Every number in it is read off {@link HomeSurvey}, which is the only
+     * way a checklist stays honest: the grade is worked out in one place and
+     * printed in three -- this book, the mailbox screen and the wiki -- and
+     * two of those are guaranteed to drift the day somebody tunes the fourth.
+     */
+    public static ItemStack createCity() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("THE CITY"))
+                .append(Text.literal("\nlandlord's handbook\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("A room somebody could live in is worth "
+                        + "something. This is how the city decides how "
+                        + "much.\n\n"))
+                .append(hint("Start: craft a mailbox."))));
+        cityBook(pages);
+        return book("The City", pages);
+    }
+
+    /** Every page below reads its numbers off {@link HomeSurvey}. */
+    private static void cityBook(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. THE MAILBOX\n\n"))
+                .append(body("Put one INSIDE the room and right-click "
+                        + "it.\n\n"))
+                .append(body("It walks the walls and tells you what you "
+                        + "built.\n\n"))
+                .append(hint("Right-click again for the full survey."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. MOVING IT\n\n"))
+                .append(body("Break it and the address goes on the item.\n\n"))
+                .append(body("Put it back up anywhere -- by the door, out on "
+                        + "the street.\n\n"))
+                .append(hint("The house stays where it was measured."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. WHAT COUNTS\n\n"))
+                .append(body("Sealed. Walls, floor, roof, no gaps.\n\n"))
+                .append(body("Doors are walls -- a shut bedroom door still "
+                        + "counts as your room.\n\n"))
+                .append(hint("A door onto the street is the way in."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. THE FIVE MUSTS\n\n"))
+                .append(body("Sealed.\n"))
+                .append(body(HomeSurvey.MIN_FLOOR + " blocks of floor.\n"))
+                .append(body("A bed.\n"))
+                .append(body("A door out.\n"))
+                .append(body("A light.\n\n"))
+                .append(warn("Miss one and it is not a house."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. THE GRADE\n\n"))
+                .append(body("Then it is points, and " + HomeSurvey.topPoints()
+                        + " is the lot.\n\n"))
+                .append(body("Every two points is a grade, up to "
+                        + HomeSurvey.TOP_TIER + ".\n\n"))
+                .append(hint("The box tells you the next thing to do."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. THE POINTS\n\n"))
+                .append(body("Room: " + HomeSurvey.FLOOR_STEPS[0] + ", "
+                        + HomeSurvey.FLOOR_STEPS[1] + ", "
+                        + HomeSurvey.FLOOR_STEPS[2] + " blocks.\n"))
+                .append(body("Fittings: table, chest, furnace, stall.\n"))
+                .append(body("Character: " + HomeSurvey.DECOR_STEPS[0] + " then "
+                        + HomeSurvey.DECOR_STEPS[1] + " different blocks.\n"))
+                .append(body("Light: one per " + HomeSurvey.LIGHT_PER
+                        + " blocks.\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("7. GROUND\n\n"))
+                .append(body("Two houses can't share it.\n\n"))
+                .append(body("Flats side by side are fine. So is one above "
+                        + "another.\n\n"))
+                .append(hint("Up to " + HomeSurvey.SPAN + " blocks from the box."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8. IT KEEPS LOOKING\n\n"))
+                .append(body("Every couple of minutes it measures again.\n\n"))
+                .append(body("Knock a wall through or take the bed and the "
+                        + "grade drops.\n\n"))
+                .append(hint("/homes lists everybody's."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. WHAT IT IS FOR\n\n"))
+                .append(body("Nothing yet. Tenants come next, and they pay "
+                        + "rent into the box.\n\n"))
+                .append(body("Better grade, better tenant.\n\n"))
+                .append(hint("Build something worth renting."))));
     }
 
     /**

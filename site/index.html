@@ -343,7 +343,7 @@ footer a:hover { text-decoration: underline; }
   <nav class="rail">
     <div class="rail-in">
       <div class="brand"><b>TrapCraft</b><span>field manual</span></div>
-      <a href="#start"><span class="n">00</span>Getting Started</a><a href="#grow"><span class="n">01</span>The Grow</a><a href="#cure"><span class="n">02</span>Curing &amp; Rolling</a><a href="#blends"><span class="n">03</span>Blends</a><a href="#high"><span class="n">04</span>The High</a><a href="#coca"><span class="n">05</span>The Coca Line</a><a href="#market"><span class="n">06</span>The Market</a><a href="#stalls"><span class="n">07</span>Stalls</a><a href="#crew"><span class="n">08</span>The Crew</a><a href="#heat"><span class="n">09</span>Heat &amp; Raids</a><a href="#street"><span class="n">10</span>The Street</a><a href="#casino"><span class="n">11</span>The House</a><a href="#commands"><span class="n">12</span>Commands</a><a href="#awards"><span class="n">13</span>Advancements</a>
+      <a href="#start"><span class="n">00</span>Getting Started</a><a href="#grow"><span class="n">01</span>The Grow</a><a href="#cure"><span class="n">02</span>Curing &amp; Rolling</a><a href="#blends"><span class="n">03</span>Blends</a><a href="#high"><span class="n">04</span>The High</a><a href="#coca"><span class="n">05</span>The Coca Line</a><a href="#market"><span class="n">06</span>The Market</a><a href="#stalls"><span class="n">07</span>Stalls</a><a href="#homes"><span class="n">08</span>Housing</a><a href="#crew"><span class="n">09</span>The Crew</a><a href="#heat"><span class="n">10</span>Heat &amp; Raids</a><a href="#street"><span class="n">11</span>The Street</a><a href="#casino"><span class="n">12</span>The House</a><a href="#commands"><span class="n">13</span>Commands</a><a href="#awards"><span class="n">14</span>Advancements</a>
     </div>
   </nav>
 
@@ -358,7 +358,7 @@ footer a:hover { text-decoration: underline; }
         <div><b>553</b><span>priced lines</span></div>
         <div><b>6</b><span>strains</span></div>
         <div><b>203</b><span>blends</span></div>
-        <div><b>26</b><span>advancements</span></div>
+        <div><b>27</b><span>advancements</span></div>
       </div>
     </header>
 
@@ -616,8 +616,42 @@ footer a:hover { text-decoration: underline; }
     <p class="note">The market screen tells you when a neighbour has a line cheaper,
     with their name and coordinates. <code>/stalls</code> lists the lot.</p>
 </section>
-<section id="crew" class="sec">
+<section id="homes" class="sec">
   <div class="sec-mark">§08</div>
+  <header class="sec-head">
+    <p class="kicker">a room the city can see</p>
+    <h2>Housing</h2>
+  </header>
+  
+    <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room and
+    right-click it. It walks the walls and tells you what you have built — and once
+    it passes, that room is an address.</p>
+    <p>Break the box afterwards and the address travels on the item, so you can put it
+    back up by the door or out on the street. The survey stays pinned to the spot it was
+    first taken from; the box is just where the post goes.</p>
+    <h3 class="sub">Sealed means sealed</h3>
+    <p><strong>Doors count as walls</strong>, which is what makes a bedroom with the door
+    shut still part of your house: every door on the edge gets probed on its own, and one
+    that opens onto something small is another room, while one that opens onto the world
+    is your front door. Stairs and ladders make upstairs work with no extra thought.</p>
+    <p class="note">A sealed void with no way in is not a house, so walling off a cavern
+    to inflate the floor area does nothing.</p>
+    <h3 class="sub">The five musts</h3>
+    <p>Miss any of these and it is not a house at all, whatever else is in it:
+    sealed · 9 blocks of floor · a bed · a door onto the street · a light.</p>
+    <h3 class="sub">Then it is points</h3>
+    <div class="scroller"><table class=""><thead><tr><th>Worth</th><th>For</th></tr></thead><tbody><tr><td>0–3</td><td>floor area past 9, 20, 40 and 80 blocks</td></tr><tr><td>0–4</td><td>one each for a crafting table, storage, a furnace and a market stall</td></tr><tr><td>0–2</td><td>6 and 12 different blocks in it</td></tr><tr><td>0–1</td><td>lit — one lamp per 16 blocks of floor</td></tr></tbody></table></div>
+    <p>Every two points is a grade, up to <strong>5</strong>. The mailbox
+    always tells you the single next thing to do, so you never have to read the table.</p>
+    <p class="note">Two houses cannot share ground — flats side by side are fine, and so is
+    one above another. A house reaches at most 48 blocks from its mailbox, and it
+    re-measures itself every couple of minutes, so knocking a wall through or taking the
+    bed out shows up on its own. <code>/homes</code> lists everybody's.</p>
+    <p class="note">Nothing rents yet. Tenants are next, and they will pay into the
+    box.</p>
+</section>
+<section id="crew" class="sec">
+  <div class="sec-mark">§09</div>
   <header class="sec-head">
     <p class="kicker">somebody to do the picking</p>
     <h2>The Crew</h2>
@@ -638,7 +672,7 @@ footer a:hover { text-decoration: underline; }
     you taught them with them.</p>
 </section>
 <section id="heat" class="sec">
-  <div class="sec-mark">§09</div>
+  <div class="sec-mark">§10</div>
   <header class="sec-head">
     <p class="kicker">being seen costs something</p>
     <h2>Heat &amp; Raids</h2>
@@ -660,7 +694,7 @@ footer a:hover { text-decoration: underline; }
     <figure class="pull reveal"><blockquote>A win that hands over less than you put in is a loss wearing a party hat, and a machine full of those is one nobody can tell they are losing at.</blockquote><figcaption>TrapMath.java</figcaption></figure><figure class="pull reveal"><blockquote>A raid that only swings axes is a mob spawner with a story attached.</blockquote><figcaption>TrapRaid.java</figcaption></figure><figure class="pull reveal"><blockquote>The wage is the point. A crew is the first thing you own that can lose you money by existing.</blockquote><figcaption>TrapCrew.java</figcaption></figure><figure class="pull reveal"><blockquote>Company is the counterplay, which makes it a social mechanic rather than a solo debuff.</blockquote><figcaption>TrapParanoia.java</figcaption></figure><figure class="pull reveal"><blockquote>A price editor is a menu, and what this wants to be is a reason to walk across town.</blockquote><figcaption>TrapStalls.java</figcaption></figure>
 </section>
 <section id="street" class="sec">
-  <div class="sec-mark">§10</div>
+  <div class="sec-mark">§11</div>
   <header class="sec-head">
     <p class="kicker">paranoia, phones and people</p>
     <h2>The Street</h2>
@@ -693,7 +727,7 @@ footer a:hover { text-decoration: underline; }
     </div>
 </section>
 <section id="casino" class="sec">
-  <div class="sec-mark">§11</div>
+  <div class="sec-mark">§12</div>
   <header class="sec-head">
     <p class="kicker">seven games and a vault</p>
     <h2>The House</h2>
@@ -713,7 +747,7 @@ footer a:hover { text-decoration: underline; }
     proportional skim, and an unattended floor earns very close to nothing.</p>
 </section>
 <section id="commands" class="sec">
-  <div class="sec-mark">§12</div>
+  <div class="sec-mark">§13</div>
   <header class="sec-head">
     <p class="kicker">everything answers only you</p>
     <h2>Commands</h2>
@@ -721,18 +755,18 @@ footer a:hover { text-decoration: underline; }
   
     <p class="lede">Every command answers only the person who typed it, so nothing you run gets
     announced to everybody else.</p>
-    <div class="scroller"><table class=""><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/wiki</code></td><td>This page, as a clickable link in chat</td></tr><tr><td><code>/guide</code></td><td>Five handbooks — grower, refiner, street, crew, casino</td></tr><tr><td><code>/market</code></td><td>Why everything costs what it costs</td></tr><tr><td><code>/stalls</code></td><td>Who is selling, and where</td></tr><tr><td><code>/crew</code></td><td>The crew board — hire, train, pay</td></tr><tr><td><code>/heat</code></td><td>How hot this spot is, and what it would bring</td></tr><tr><td><code>/paranoia</code></td><td>Turn the whole thing off, per player</td></tr><tr><td><code>/earnings</code></td><td>Today's takings, everybody, by job</td></tr><tr><td><code>/sethome · /home · /spawn · /back</code></td><td>Getting about</td></tr></tbody></table></div>
+    <div class="scroller"><table class=""><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/wiki</code></td><td>This page, as a clickable link in chat</td></tr><tr><td><code>/guide</code></td><td>Six handbooks — grower, refiner, street, crew, casino, city</td></tr><tr><td><code>/market</code></td><td>Why everything costs what it costs</td></tr><tr><td><code>/stalls</code></td><td>Who is selling, and where</td></tr><tr><td><code>/homes</code></td><td>Every house on the register, and its grade</td></tr><tr><td><code>/crew</code></td><td>The crew board — hire, train, pay</td></tr><tr><td><code>/heat</code></td><td>How hot this spot is, and what it would bring</td></tr><tr><td><code>/paranoia</code></td><td>Turn the whole thing off, per player</td></tr><tr><td><code>/earnings</code></td><td>Today's takings, everybody, by job</td></tr><tr><td><code>/sethome · /home · /spawn · /back</code></td><td>Getting about</td></tr></tbody></table></div>
 </section>
 <section id="awards" class="sec">
-  <div class="sec-mark">§13</div>
+  <div class="sec-mark">§14</div>
   <header class="sec-head">
-    <p class="kicker">26 of them</p>
+    <p class="kicker">27 of them</p>
     <h2>Advancements</h2>
   </header>
   
     <p class="lede">These are proper advancements — they turn up in your advancements screen like
     any others, with a toast when you earn one.</p>
-    <div class="scroller"><table class=""><thead><tr><th>Name</th><th>How</th><th>Kind</th></tr></thead><tbody><tr><td>Banked</td><td><span class="dim">Carry a wallet instead of twenty stacks.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Blend</td><td><span class="dim">Put two strains through the mixing station.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Broke The Bank</td><td><span class="dim">Win more off one machine than its casino had in the vault.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Nothing To See</td><td><span class="dim">Sit through a raid without losing a gram.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Payroll</td><td><span class="dim">Take somebody on. Wages start immediately.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Patience</td><td><span class="dim">Dry a bud properly instead of smoking it wet.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Edge Case</td><td><span class="dim">Land the ball in an outside slot on The Drop.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Floor</td><td><span class="dim">Get a machine of your own on the floor.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Followed Home</td><td><span class="dim">Deal in person once too often and find out who was watching.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Foreman</td><td><span class="dim">Teach one hand everything there is to teach.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Jackpot</td><td><span class="dim">Take ten times your stake off a machine.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Kingpin</td><td><span class="dim">Bring a dealer up to level five.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Licensed</td><td><span class="dim">Get your hands on a casino licence.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Liquidation</td><td><span class="dim">Clear 500 emeralds at the counter in one go.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Moved The Market</td><td><span class="dim">Push one item&#x27;s price by a fifth on your own.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>By Name</td><td><span class="dim">Make a blend somebody has already named.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Natural</td><td><span class="dim">Get dealt twenty-one on two cards.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Nerve</td><td><span class="dim">Walk away from the sixth rung of The Climb.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Network</td><td><span class="dim">Put somebody on the street selling for you.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Open For Business</td><td><span class="dim">Set up a market stall.</span></td><td><span class="frame task">task</span></td></tr><tr><td>They Found It</td><td><span class="dim">Have a raid walk out with your product.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Refined</td><td><span class="dim">Take the coca line all the way to powder.</span></td><td><span class="frame task">task</span></td></tr><tr><td>On The Rim</td><td><span class="dim">Call the edge on the coin toss and hit it.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Rolled</td><td><span class="dim">Turn a bud into something you can actually sell.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Everybody Eats</td><td><span class="dim">Get hold of some seeds and start something.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Money</td><td><span class="dim">Win something on all four machines.</span></td><td><span class="frame challenge">challenge</span></td></tr></tbody></table></div>
+    <div class="scroller"><table class=""><thead><tr><th>Name</th><th>How</th><th>Kind</th></tr></thead><tbody><tr><td>An Address</td><td><span class="dim">Put a mailbox on a room somebody could live in.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Banked</td><td><span class="dim">Carry a wallet instead of twenty stacks.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Blend</td><td><span class="dim">Put two strains through the mixing station.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Broke The Bank</td><td><span class="dim">Win more off one machine than its casino had in the vault.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Nothing To See</td><td><span class="dim">Sit through a raid without losing a gram.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Payroll</td><td><span class="dim">Take somebody on. Wages start immediately.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Patience</td><td><span class="dim">Dry a bud properly instead of smoking it wet.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Edge Case</td><td><span class="dim">Land the ball in an outside slot on The Drop.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Floor</td><td><span class="dim">Get a machine of your own on the floor.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Followed Home</td><td><span class="dim">Deal in person once too often and find out who was watching.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Foreman</td><td><span class="dim">Teach one hand everything there is to teach.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Jackpot</td><td><span class="dim">Take ten times your stake off a machine.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Kingpin</td><td><span class="dim">Bring a dealer up to level five.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Licensed</td><td><span class="dim">Get your hands on a casino licence.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Liquidation</td><td><span class="dim">Clear 500 emeralds at the counter in one go.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Moved The Market</td><td><span class="dim">Push one item&#x27;s price by a fifth on your own.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>By Name</td><td><span class="dim">Make a blend somebody has already named.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Natural</td><td><span class="dim">Get dealt twenty-one on two cards.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Nerve</td><td><span class="dim">Walk away from the sixth rung of The Climb.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Network</td><td><span class="dim">Put somebody on the street selling for you.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Open For Business</td><td><span class="dim">Set up a market stall.</span></td><td><span class="frame task">task</span></td></tr><tr><td>They Found It</td><td><span class="dim">Have a raid walk out with your product.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Refined</td><td><span class="dim">Take the coca line all the way to powder.</span></td><td><span class="frame task">task</span></td></tr><tr><td>On The Rim</td><td><span class="dim">Call the edge on the coin toss and hit it.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Rolled</td><td><span class="dim">Turn a bud into something you can actually sell.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Everybody Eats</td><td><span class="dim">Get hold of some seeds and start something.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Money</td><td><span class="dim">Win something on all four machines.</span></td><td><span class="frame challenge">challenge</span></td></tr></tbody></table></div>
 </section></main>
 
     <footer>

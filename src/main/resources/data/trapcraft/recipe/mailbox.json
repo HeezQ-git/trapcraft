@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "IPI",
+    " S ",
+    " S "
+  ],
+  "key": {
+    "I": "minecraft:iron_nugget",
+    "P": "minecraft:paper",
+    "S": "#minecraft:planks"
+  },
+  "result": {
+    "id": "trapcraft:mailbox",
+    "count": 1
+  }
+}

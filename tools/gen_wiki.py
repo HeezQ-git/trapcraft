@@ -275,6 +275,7 @@ def gather() -> None:
     crew = java("TrapCrew")
     heat = java("TrapHeat")
     rack = java("DryingRackBlock")
+    homes = java("HomeSurvey")
     press = java("LeafPressBlock")
 
     DATA["strains"] = strains()
@@ -311,6 +312,13 @@ def gather() -> None:
     DATA["reach"] = ints("REACH_BLOCKS", crew)
     DATA["reach_cost"] = ints("REACH_COST", crew)
     DATA["hire"] = int(need(r"HIRE_COST = (\d+)", crew, "HIRE_COST"))
+
+    DATA["min_floor"] = int(need(r"MIN_FLOOR = (\d+)", homes, "MIN_FLOOR"))
+    DATA["floor_steps"] = ints("FLOOR_STEPS", homes)
+    DATA["decor_steps"] = ints("DECOR_STEPS", homes)
+    DATA["light_per"] = int(need(r"LIGHT_PER = (\d+)", homes, "LIGHT_PER"))
+    DATA["top_tier"] = int(need(r"TOP_TIER = (\d+)", homes, "TOP_TIER"))
+    DATA["span"] = int(need(r"SPAN = (\d+)", homes, "SPAN"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -488,10 +496,11 @@ def build() -> str:
         ("01", "grow", "The Grow"), ("02", "cure", "Curing & Rolling"),
         ("03", "blends", "Blends"), ("04", "high", "The High"),
         ("05", "coca", "The Coca Line"), ("06", "market", "The Market"),
-        ("07", "stalls", "Stalls"), ("08", "crew", "The Crew"),
-        ("09", "heat", "Heat & Raids"), ("10", "street", "The Street"),
-        ("11", "casino", "The House"), ("12", "commands", "Commands"),
-        ("13", "awards", "Advancements"),
+        ("07", "stalls", "Stalls"), ("08", "homes", "Housing"),
+        ("09", "crew", "The Crew"),
+        ("10", "heat", "Heat & Raids"), ("11", "street", "The Street"),
+        ("12", "casino", "The House"), ("13", "commands", "Commands"),
+        ("14", "awards", "Advancements"),
     ]
     nav = "".join(
         f'<a href="#{slug}"><span class="n">{num}</span>{esc(title)}</a>'
@@ -648,7 +657,41 @@ def build() -> str:
     <p class="note">The market screen tells you when a neighbour has a line cheaper,
     with their name and coordinates. <code>/stalls</code> lists the lot.</p>"""))
 
-    sections.append(section("08", "crew", "The Crew", "somebody to do the picking", f"""
+    sections.append(section("08", "homes", "Housing", "a room the city can see", f"""
+    <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room and
+    right-click it. It walks the walls and tells you what you have built — and once
+    it passes, that room is an address.</p>
+    <p>Break the box afterwards and the address travels on the item, so you can put it
+    back up by the door or out on the street. The survey stays pinned to the spot it was
+    first taken from; the box is just where the post goes.</p>
+    <h3 class="sub">Sealed means sealed</h3>
+    <p><strong>Doors count as walls</strong>, which is what makes a bedroom with the door
+    shut still part of your house: every door on the edge gets probed on its own, and one
+    that opens onto something small is another room, while one that opens onto the world
+    is your front door. Stairs and ladders make upstairs work with no extra thought.</p>
+    <p class="note">A sealed void with no way in is not a house, so walling off a cavern
+    to inflate the floor area does nothing.</p>
+    <h3 class="sub">The five musts</h3>
+    <p>Miss any of these and it is not a house at all, whatever else is in it:
+    sealed · {d['min_floor']} blocks of floor · a bed · a door onto the street · a light.</p>
+    <h3 class="sub">Then it is points</h3>
+    {table(["Worth", "For"], [
+        ["0–3", f"floor area past {d['min_floor']}, {d['floor_steps'][0]}, "
+                f"{d['floor_steps'][1]} and {d['floor_steps'][2]} blocks"],
+        ["0–4", "one each for a crafting table, storage, a furnace and a market stall"],
+        ["0–2", f"{d['decor_steps'][0]} and {d['decor_steps'][1]} different blocks in it"],
+        ["0–1", f"lit — one lamp per {d['light_per']} blocks of floor"],
+    ])}
+    <p>Every two points is a grade, up to <strong>{d['top_tier']}</strong>. The mailbox
+    always tells you the single next thing to do, so you never have to read the table.</p>
+    <p class="note">Two houses cannot share ground — flats side by side are fine, and so is
+    one above another. A house reaches at most {d['span']} blocks from its mailbox, and it
+    re-measures itself every couple of minutes, so knocking a wall through or taking the
+    bed out shows up on its own. <code>/homes</code> lists everybody's.</p>
+    <p class="note">Nothing rents yet. Tenants are next, and they will pay into the
+    box.</p>"""))
+
+    sections.append(section("09", "crew", "The Crew", "somebody to do the picking", f"""
     <p class="lede">{d['hire']}e to take somebody on, then {d['wage']}e every five
     minutes whether the harvest was good or not. {d['max_hands']} hands is all one
     operation will carry.</p>
@@ -663,7 +706,7 @@ def build() -> str:
     busy is a hand losing you money — and if you miss a payday they walk, taking what
     you taught them with them.</p>"""))
 
-    sections.append(section("09", "heat", "Heat & Raids", "being seen costs something", f"""
+    sections.append(section("10", "heat", "Heat & Raids", "being seen costs something", f"""
     <p class="lede">A grow in the open gets noticed. Heat is measured over a
     {d['heat_radius']}-block radius: ripe plants count 3, hidden 2, growing 1, occupied
     racks 1, presses and refiners 2.</p>
@@ -679,7 +722,7 @@ def build() -> str:
     round they come through the wall. Obsidian stops them; dirt does not.</p>
     {quotes}"""))
 
-    sections.append(section("10", "street", "The Street", "paranoia, phones and people", f"""
+    sections.append(section("11", "street", "The Street", "paranoia, phones and people", f"""
     <p class="lede">Everything that is not a product line.</p>
     <div class="cards">
       <div class="card reveal"><h4>Paranoia</h4><p>A meter that builds from heat, how
@@ -706,7 +749,7 @@ def build() -> str:
       the price of dealing yourself instead of paying somebody else to.</p></div>
     </div>"""))
 
-    sections.append(section("11", "casino", "The House", "seven games and a vault", f"""
+    sections.append(section("12", "casino", "The House", "seven games and a vault", f"""
     <p class="lede">A casino is a bankroll and a set of machines wired to it. The
     bankroll lives in the ledger, not on the card — the card is the key, so a machine
     can pay a winner at four in the morning while the owner is offline.</p>
@@ -722,21 +765,22 @@ def build() -> str:
 
     cmd_rows = [
         ["<code>/wiki</code>", "This page, as a clickable link in chat"],
-        ["<code>/guide</code>", "Five handbooks — grower, refiner, street, crew, casino"],
+        ["<code>/guide</code>", "Six handbooks — grower, refiner, street, crew, casino, city"],
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
+        ["<code>/homes</code>", "Every house on the register, and its grade"],
         ["<code>/crew</code>", "The crew board — hire, train, pay"],
         ["<code>/heat</code>", "How hot this spot is, and what it would bring"],
         ["<code>/paranoia</code>", "Turn the whole thing off, per player"],
         ["<code>/earnings</code>", "Today's takings, everybody, by job"],
         ["<code>/sethome · /home · /spawn · /back</code>", "Getting about"],
     ]
-    sections.append(section("12", "commands", "Commands", "everything answers only you", f"""
+    sections.append(section("13", "commands", "Commands", "everything answers only you", f"""
     <p class="lede">Every command answers only the person who typed it, so nothing you run gets
     announced to everybody else.</p>
     {table(["Command", "What it does"], cmd_rows)}"""))
 
-    sections.append(section("13", "awards", "Advancements",
+    sections.append(section("14", "awards", "Advancements",
                             f"{len(d['awards'])} of them", f"""
     <p class="lede">These are proper advancements — they turn up in your advancements screen like
     any others, with a toast when you earn one.</p>

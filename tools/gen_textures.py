@@ -2332,6 +2332,84 @@ TOLERANCE_ICON = """
 """
 
 
+# --- the mailbox ------------------------------------------------------------
+#
+# Post box green with a brass slot and a red flag, because those three colours
+# together are "post" everywhere on earth and nothing else in this mod is any
+# of them. It has to be readable as street furniture at thirty blocks.
+
+MAILBOX_PAL = {
+    "g": "#1d4a33",     # box, body
+    "G": "#2a6a49",     # box, lit
+    "k": "#122e20",     # box, shadow
+    "m": "#b08a2a",     # brass
+    "M": "#e0bb56",     # brass, lit
+    "r": "#a12626",     # flag
+    "R": "#cf3b3b",     # flag, lit
+    "w": "#6b4a2a",     # post
+    "W": "#8a6238",     # post, lit
+    "d": "#3d2916",     # post, shadow
+    "x": "#0d0d0d",     # outline
+}
+
+MAILBOX_BOX = """
+xxxxxxxxxxxxxxxx
+xGGGGGGGGGGGGGGx
+xGggggggggggggGx
+xGggggggggggggGx
+xGgggmmmmmmggggx
+xGgggmMMMMmggggx
+xGgggmmmmmmggggx
+xGggggggggggggGx
+xGgggggggggggggx
+xGggggkkkkgggggx
+xGgggggggggggggx
+xkgggggggggggggx
+xkkkkkkkkkkkkkkx
+xxxxxxxxxxxxxxxx
+................
+................
+"""
+
+MAILBOX_POST = """
+xxxxxxxxxxxxxxxx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xWwwddwwWwwddwwx
+xxxxxxxxxxxxxxxx
+"""
+
+MAILBOX_FLAG = """
+xxxxxxxxxxxxxxxx
+xRRRRRRRRRRRRRRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xRrrrrrrrrrrrrRx
+xmmmmmmmmmmmmmmx
+xxxxxxxxxxxxxxxx
+................
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2438,6 +2516,9 @@ def main() -> None:
     write(render(TONIC_GLASS, TONIC_PAL), "item", "tonic_glass.png")
     write(render(TONIC_LIQUID, TONIC_PAL), "item", "tonic_liquid.png")
     write(render(TONIC_CORK, TONIC_PAL), "item", "tonic_cork.png")
+    write(render(MAILBOX_BOX, MAILBOX_PAL), "block", "mailbox_box.png")
+    write(render(MAILBOX_POST, MAILBOX_PAL), "block", "mailbox_post.png")
+    write(render(MAILBOX_FLAG, MAILBOX_PAL), "block", "mailbox_flag.png")
     write(render(TOSS_TOP, TABLE_PAL), "block", "toss_top.png")
     write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
     write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")

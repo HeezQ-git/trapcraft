@@ -479,6 +479,8 @@ def lang() -> None:
         "item.trapcraft.burner_phone": "Burner Phone",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
+        "block.trapcraft.mailbox": "Mailbox",
+        "item.trapcraft.mailbox": "Mailbox",
         "block.trapcraft.slot_machine": "Lucky Streak",
         "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
@@ -1329,6 +1331,8 @@ def advancements() -> None:
 
     award("open", "Open For Business", "Set up a market stall.",
           f"{NS}:market_stall", "root", trigger=has(f"{NS}:market_stall"))
+    award("address", "An Address", "Put a mailbox on a room somebody could live in.",
+          f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
     award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
           f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
     award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
@@ -1915,6 +1919,54 @@ def stall_assets() -> None:
     })
 
 
+def mailbox_model() -> dict:
+    """A post box on a post, with the flag up.
+
+    Deliberately narrow. It has to read as street furniture from across a
+    square rather than as another machine, and it is the one block in this mod
+    that is SUPPOSED to be daylight round the edges -- which is why it draws a
+    TRANSPARENT_BLOCK state instead of the free FULL_BLOCK pool.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "post": f"{NS}:block/mailbox_post",
+            "box": f"{NS}:block/mailbox_box",
+            "flag": f"{NS}:block/mailbox_flag",
+            "particle": f"{NS}:block/mailbox_post",
+        },
+        "elements": [
+            box([7, 0, 7], [9, 9, 9], "post"),                          # the post
+            box([4, 9, 5], [12, 15, 11], "box", up="box", down="post"), # the box
+            box([11.5, 10, 7.5], [12.5, 15.5, 8.5], "flag"),            # the flag, up
+        ],
+    }
+
+
+def mailbox_assets() -> None:
+    put(f"assets/{NS}/models/block/mailbox.json", mailbox_model())
+    put(f"assets/{NS}/models/item/mailbox.json", {"parent": f"{NS}:block/mailbox"})
+    put(f"assets/{NS}/items/mailbox.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/mailbox"},
+    })
+    put(f"data/{NS}/loot_table/blocks/mailbox.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:mailbox"}]}],
+    })
+    # Iron for the box, a plank for the post, and paper because the whole
+    # point of it is what somebody puts through the slot.
+    put(f"data/{NS}/recipe/mailbox.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["IPI", " S ", " S "],
+        "key": {"I": "minecraft:iron_nugget", "P": "minecraft:paper",
+                "S": "#minecraft:planks"},
+        "result": {"id": f"{NS}:mailbox", "count": 1},
+    })
+
+
 def tags() -> None:
     """Make the hammer enchantable.
 
@@ -1996,6 +2048,7 @@ def main() -> None:
     advancements()
     phone_assets()
     stall_assets()
+    mailbox_assets()
     slot_assets()
     tags()
     worldgen()

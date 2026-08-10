@@ -76,6 +76,8 @@ public final class TrapContent {
     public static Item burnerPhone;
     public static Block marketStall;
     public static Item marketStallItem;
+    public static Block mailbox;
+    public static Item mailboxItem;
     public static Block slotMachine;
     public static Item slotMachineItem;
     public static Block roulette;
@@ -375,6 +377,12 @@ public final class TrapContent {
         marketStallItem = registerItem("market_stall",
                 (settings, model) -> new RackItem(marketStall, settings, model));
 
+        mailbox = registerBlock("mailbox", MailboxBlock::new,
+                AbstractBlock.Settings.create().strength(1.5F)
+                        .sounds(BlockSoundGroup.WOOD).nonOpaque());
+        mailboxItem = registerItem("mailbox",
+                (settings, model) -> new MailboxItem(mailbox, settings, model));
+
         slotMachine = registerBlock("slot_machine", SlotMachineBlock::new,
                 AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL).nonOpaque());
         slotMachineItem = registerItem("slot_machine",
@@ -505,6 +513,7 @@ public final class TrapContent {
                     entries.add(wallet());
                     entries.add(burnerPhone);
                     entries.add(marketStallItem);
+                    entries.add(mailboxItem);
                     entries.add(slotMachineItem);
                     entries.add(rouletteItem);
                     entries.add(plinkoItem);

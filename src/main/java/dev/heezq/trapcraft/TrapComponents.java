@@ -30,6 +30,8 @@ public final class TrapComponents {
     public static ComponentType<Integer> balance;
     /** Which casino an owner's card is the key to, as a UUID string. */
     public static ComponentType<String> casino;
+    /** Which house a mailbox is the post for, as a UUID string. */
+    public static ComponentType<String> home;
 
     public static Blend getBlend(ItemStack stack) {
         return stack.get(blend);
@@ -76,6 +78,11 @@ public final class TrapComponents {
                         .codec(Codec.STRING)
                         .packetCodec(PacketCodecs.STRING)
                         .build());
+        home = Registry.register(Registries.DATA_COMPONENT_TYPE, TrapCraft.id("home"),
+                ComponentType.<String>builder()
+                        .codec(Codec.STRING)
+                        .packetCodec(PacketCodecs.STRING)
+                        .build());
 
         // DATA_COMPONENT_TYPE is a SYNCED registry: every entry registered here
         // is sent to the client during login, and a client that doesn't know
@@ -90,7 +97,7 @@ public final class TrapComponents {
         // working because the packwiz pack happened to ship the same jar to
         // everyone, which is luck rather than design.
         PolymerComponent.registerDataComponent(blend, contract, rep, quality, purity, balance,
-                casino);
+                casino, home);
     }
 
     public static Purity getPurity(ItemStack stack) {
