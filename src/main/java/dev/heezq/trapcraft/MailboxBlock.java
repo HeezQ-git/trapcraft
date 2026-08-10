@@ -219,12 +219,22 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
 
         TrapHomes.Home spare = TrapHomes.spareOf(who, ground, pos, LOOKS_FOR);
         if (spare != null) {
+            // Read before reattach, which is what moves it.
+            BlockPos old = spare.mailbox();
+            boolean moved = old != null && !old.equals(pos)
+                    && ground.getBlockState(old).isOf(TrapContent.mailbox);
             TrapHomes.reattach(spare, pos);
             good(ground, pos);
             who.sendMessage(Text.literal("Post for ").formatted(Formatting.GREEN)
                     .append(Text.literal(spare.name())
                             .formatted(Formatting.GOLD, Formatting.BOLD))
-                    .append(Text.literal(" arrives here now.").formatted(Formatting.GRAY)), false);
+                    .append(Text.literal(" arrives here now.").formatted(Formatting.GRAY))
+                    // Say where it used to go. The old box is still on the
+                    // wall and still looks like the post, and a player who
+                    // isn't told will keep checking the empty one.
+                    .append(moved ? Text.literal("\n  The one at " + old.getX() + " "
+                            + old.getY() + " " + old.getZ() + " is just a box now.")
+                            .formatted(Formatting.DARK_GRAY) : Text.empty()), false);
             return spare;
         }
         refuse(who, ground, pos, no);

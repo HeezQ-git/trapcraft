@@ -194,6 +194,11 @@ public final class TrapHomes {
             return anchor;
         }
 
+        /** Where the post goes, or null if this house has lost its box. */
+        public BlockPos mailbox() {
+            return mailbox;
+        }
+
         public String dimension() {
             return dimension;
         }
@@ -1227,29 +1232,43 @@ public final class TrapHomes {
     public static Home spareOf(ServerPlayerEntity owner, ServerWorld world, BlockPos near,
                                int range) {
         String dimension = world.getRegistryKey().getValue().toString();
-        Home best = null;
-        double closest = (double) range * range;
+        Home spare = null;
+        Home served = null;
+        double toSpare = (double) range * range;
+        double toServed = (double) range * range;
         for (Home home : HOMES) {
             if (!home.owner.equals(owner.getUuid()) || !home.dimension.equals(dimension)) {
                 continue;
             }
             double away = home.anchor.getSquaredDistance(near);
-            if (away > closest) {
-                continue;
-            }
             // Distance FIRST. Reading the block would drag the chunk of a
             // house on the other side of the map into memory to answer a
             // question about one twenty blocks away.
-            if (home.mailbox != null && !home.mailbox.equals(near)
+            if (away > Math.max(toSpare, toServed)) {
+                continue;
+            }
+            boolean hasBox = home.mailbox != null && !home.mailbox.equals(near)
                     && world.getChunkManager().isChunkLoaded(
                             home.mailbox.getX() >> 4, home.mailbox.getZ() >> 4)
-                    && world.getBlockState(home.mailbox).isOf(TrapContent.mailbox)) {
-                continue;   // that one still has its box
+                    && world.getBlockState(home.mailbox).isOf(TrapContent.mailbox);
+            if (hasBox) {
+                if (away < toServed) {
+                    toServed = away;
+                    served = home;
+                }
+            } else if (away < toSpare) {
+                toSpare = away;
+                spare = home;
             }
-            closest = away;
-            best = home;
         }
-        return best;
+        // A house with no post wins, and a house that already has one is the
+        // fallback rather than a refusal. Nailing a second box to the outside
+        // wall of your own house is the commonest thing anybody does with one
+        // -- the book even tells them to -- and it used to be answered with
+        // "this isn't sealed", which is a survey error about the street they
+        // were stood on and reads as "your house is broken". The post simply
+        // moves to the new box; reattach lets the old one go.
+        return spare != null ? spare : served;
     }
 
     /** A house nobody is going to live in. Only its owner may say so. */
