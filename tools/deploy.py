@@ -77,7 +77,7 @@ def main() -> None:
 
 
 CHECKS = ["check_models.py", "check_pages.py", "check_stock.py",
-          "check_shaders.py", "trip_check.py", "check_wiki.py"]
+          "check_modded.py", "check_shaders.py", "trip_check.py", "check_wiki.py"]
 
 
 def gate() -> None:

@@ -106,9 +106,21 @@ public final class ShopStock {
             "minecraft:netherrack", Formatting.DARK_RED, "Everything from down there");
     public static final Category RARE = new Category("rare", "The Good Stuff",
             "minecraft:nether_star", Formatting.DARK_PURPLE, "If you can afford it");
+    public static final Category FURNITURE = new Category("furniture", "Furniture",
+            "mcwfurnitures:oak_chair", Formatting.GOLD, "Chairs, tables, cupboards");
+    /**
+     * Roofs, windows, rails and trim -- Macaw's building mods.
+     *
+     * Their own shelf rather than the building one, which is a deviation from
+     * "one more tab" and worth the deviation: they are fifteen hundred lines
+     * between them, and tipped into Building they would bury the stone under
+     * thirty pages of window frames.
+     */
+    public static final Category FITTINGS = new Category("fittings", "Roofs & Fittings",
+            "mcwroofs:oak_planks_upper_lower_roof", Formatting.YELLOW, "Roofs, windows, rails");
 
     public static final List<Category> CATEGORIES =
-            List.of(BUILDING, WOOD, DECOR, GARDEN, FARMING, FOOD,
+            List.of(BUILDING, FITTINGS, WOOD, DECOR, FURNITURE, GARDEN, FARMING, FOOD,
                     MATERIALS, NETHER, UTILITY, ENCHANTS, RARE);
 
     /**
@@ -217,6 +229,9 @@ public final class ShopStock {
         int listed = STOCK.size();
         stockTheKitchen();
         stockTheGarden();
+        // Last, so it can see everything the other two claimed and not list a
+        // modded flower twice at two different prices.
+        stockTheMods();
         TrapCraft.LOGGER.info(
                 "market: {} lines stocked ({} listed, {} found in the registry), {} skipped",
                 STOCK.size(), listed, STOCK.size() - listed, missing);
@@ -281,6 +296,83 @@ public final class ShopStock {
 
     /** What eight of anybody's seeds cost. Cheap: they come out of grass. */
     private static final int SEED_LOT = 12;
+
+    /** One mod's whole catalogue, on one shelf, at one price. */
+    private record Sweep(Category shelf, int count, int price) {
+    }
+
+    /**
+     * Modded furniture, fittings and decoration, straight off the registry.
+     *
+     * Two and a half thousand items across eleven mods. The same argument as
+     * the kitchen and the garden: listing those by hand is a file nobody can
+     * maintain that goes stale on the next mod update, and every id typed
+     * wrong vanishes silently as "mod not present".
+     *
+     * ONE PRICE PER MOD, and the number is measured rather than picked. Every
+     * recipe in each of these jars was costed against this catalogue, and the
+     * price here is about one and a half times the CHEAPEST thing that mod can
+     * make. That matters more than it looks: the counter pays 45%, so a line
+     * priced under 2.2x its own ingredients can never be worth crafting to
+     * sell, whatever the recipe is. check_stock.py reads vanilla recipes only
+     * -- these live in mod jars it cannot see -- so the margin is the guard,
+     * and the measurements are in tools/ if the pack ever changes under it.
+     *
+     * Flat pricing has exactly one hole and Macaw's Windows falls in it: six
+     * mosaic blocks make sixteen panes, and a pane priced like a block would
+     * pay 20% a craft. Panes are priced as the third of a block they are.
+     */
+    private static final Map<String, Sweep> SWEEPS = Map.ofEntries(
+            // Furniture. Cheapest Macaw's piece is 0.33e of wood.
+            Map.entry("mcwfurnitures", new Sweep(FURNITURE, 8, 4)),
+            Map.entry("storagedelight", new Sweep(FURNITURE, 4, 4)),
+            Map.entry("cratedelight", new Sweep(FURNITURE, 1, 13)),
+            Map.entry("comforts", new Sweep(FURNITURE, 2, 4)),
+            // Fittings. Built out of stairs and slabs, and priced like them.
+            Map.entry("mcwroofs", new Sweep(FITTINGS, 32, 4)),
+            Map.entry("mcwwindows", new Sweep(FITTINGS, 64, 4)),
+            Map.entry("mcwfences", new Sweep(FITTINGS, 64, 6)),
+            Map.entry("mcwstairs", new Sweep(FITTINGS, 64, 3)),
+            Map.entry("mcwbridges", new Sweep(FITTINGS, 32, 4)),
+            // Trim, and the blocks that are nine of something in a coat.
+            Map.entry("beautify", new Sweep(DECOR, 16, 3)),
+            Map.entry("stackedblocks", new Sweep(MATERIALS, 1, 8)));
+
+    /** Panes, wherever they come from. Three to the block they are cut from. */
+    private static final Sweep PANES = new Sweep(FITTINGS, 64, 3);
+
+    private static void stockTheMods() {
+        // Everything already on a shelf, however it got there: these mods add
+        // flowers and food too, and the garden and kitchen sweeps have run by
+        // now. Listing a thing twice is not an error the game reports -- it is
+        // two prices for one item and a shelf that disagrees with itself.
+        java.util.Set<String> already = new java.util.HashSet<>();
+        for (Entry entry : STOCK) {
+            already.add(entry.id());
+        }
+
+        Map<String, Integer> perMod = new LinkedHashMap<>();
+        for (Item item : Registries.ITEM) {
+            String id = Registries.ITEM.getId(item).toString();
+            String mod = id.substring(0, id.indexOf(':'));
+            Sweep sweep = SWEEPS.get(mod);
+            if (sweep == null || already.contains(id) || DECLARED.containsKey(id)
+                    || NEVER_STOCK.contains(id) || CURRENCY.contains(id)) {
+                continue;
+            }
+            if (id.endsWith("_pane")) {
+                sweep = new Sweep(sweep.shelf(), PANES.count(), PANES.price());
+            }
+            STOCK.add(new Entry(sweep.shelf(), item, id, sweep.count(), sweep.price(),
+                    new ItemStack(item, sweep.count()), item.getName().getString()));
+            perMod.merge(mod, 1, Integer::sum);
+        }
+        // Per mod, because "0 furniture" and "the sweep never ran" look the
+        // same from in game, and a mod that renames its namespace would go
+        // quiet rather than loud.
+        TrapCraft.LOGGER.info("market: swept {} modded lines {}",
+                perMod.values().stream().mapToInt(Integer::intValue).sum(), perMod);
+    }
 
     /**
      * Put every flower, sapling and leaf in the game on the garden shelf.
