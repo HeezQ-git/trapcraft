@@ -144,6 +144,52 @@ public class RefinerBlock extends Block implements PolymerTexturedBlock {
         return ActionResult.SUCCESS;
     }
 
+    /** Start a run from a paste stack and a reagent out of the same chest. */
+    public static boolean load(BlockState state, World world, BlockPos pos,
+                               ItemStack paste, net.minecraft.inventory.Inventory box) {
+        if (state.get(RUNNING) || !paste.isOf(TrapContent.cocaPaste)) {
+            return false;
+        }
+        int reagent = -1;
+        for (int slot = 0; slot < box.size(); slot++) {
+            if (box.getStack(slot).isOf(Items.BLAZE_POWDER)) {
+                reagent = slot;
+                break;
+            }
+        }
+        if (reagent < 0) {
+            return false;
+        }
+        box.getStack(reagent).decrement(1);
+        paste.decrement(1);
+        box.markDirty();
+        world.setBlockState(pos, state.with(RUNNING, true).with(PROGRESS, 0));
+        world.scheduleBlockTick(pos, state.getBlock(), STEP_TICKS);
+        world.playSound(null, pos, SoundEvents.BLOCK_FIRE_AMBIENT, SoundCategory.BLOCKS, 0.9F, 1.2F);
+        return true;
+    }
+
+    /**
+     * Pull the run. Empty if nothing has formed yet.
+     *
+     * The crew only ever calls this at {@link #PEAK} -- see the note on the
+     * refining job. Timing the pull is the whole skill of the coca line, and
+     * a hand that could do it is the most expensive thing you can teach one.
+     */
+    public static ItemStack take(BlockState state, World world, BlockPos pos) {
+        int progress = state.get(PROGRESS);
+        if (!state.get(RUNNING) || progress == 0) {
+            return ItemStack.EMPTY;
+        }
+        Purity purity = purityFor(progress);
+        ItemStack out = TrapComponents.applyPurity(
+                new ItemStack(TrapContent.cocaPowder, progress >= PEAK ? 2 : 1), purity);
+        world.setBlockState(pos, state.with(RUNNING, false).with(PROGRESS, 0));
+        world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW,
+                SoundCategory.BLOCKS, 0.9F, 1.0F);
+        return out;
+    }
+
     @Override
     protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!state.get(RUNNING) || state.get(PROGRESS) >= BURNT) {

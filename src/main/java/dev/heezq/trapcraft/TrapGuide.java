@@ -1018,8 +1018,9 @@ public final class TrapGuide {
                 .append(title("1. HIRING\n\n"))
                 .append(body("Stand where you want the work done:\n\n"))
                 .append(body("/crew hire  -  " + TrapCrew.HIRE_COST + "e\n\n"))
-                .append(body("That spot is their patch. They never leave it.\n\n"))
-                .append(hint(TrapCrew.MAX_HANDS + " hands is the most you can carry."))));
+                .append(body("That spot is their patch. They arrive knowing "
+                        + "nothing.\n\n"))
+                .append(hint("Up to " + TrapCrew.MAX_HANDS + " on the books."))));
 
         pages.add(page(Text.empty()
                 .append(title("2. THE CHEST\n\n"))
@@ -1090,11 +1091,11 @@ public final class TrapGuide {
     /** The five you can teach, priced off the enum so the board can't disagree. */
     private static void jobs(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("6. WHAT THEY DO\n\n"))
-                .append(body(TrapCrew.Job.PICK.display() + " comes free: your "
-                        + "ripe plants, into the chest.\n\n"))
-                .append(body("The rest is taught, one hand at a time.\n\n"))
-                .append(hint("A job costs once, then every packet after."))));
+                .append(title("6. TWO JOBS EACH\n\n"))
+                .append(body("Nobody holds more than " + TrapCrew.SLOTS + ".\n\n"))
+                .append(body("Want a third thing done? Hire a third person. "
+                        + "Up to " + TrapCrew.MAX_HANDS + ".\n\n"))
+                .append(hint("Picking is free. Shift-click to drop a job."))));
 
         MutableText list = Text.empty().append(title("7. THE JOBS\n\n"));
         for (TrapCrew.Job job : TrapCrew.Job.values()) {

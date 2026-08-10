@@ -48,13 +48,20 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int HIRE_SLOT = 8;
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
-    private static final int JOBS_FROM = 12;
+    private static final int JOBS_FROM = 11;
     private static final int WAGES_SLOT = 22;
     private static final int FIRE_SLOT = 26;
 
-    /** Everything but Picking, which comes with the hire and isn't for sale. */
+    /**
+     * Every job, Picking included.
+     *
+     * Picking is free but no longer automatic: it takes one of the two slots
+     * like anything else, so it has to be a thing you choose. A hand who does
+     * not pick is a perfectly good hand -- a presser and refiner never touches
+     * a plant.
+     */
     private static final List<TrapCrew.Job> TEACHABLE =
-            java.util.Arrays.stream(TrapCrew.Job.values()).filter(job -> !job.free()).toList();
+            List.of(TrapCrew.Job.values());
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity boss;
@@ -139,7 +146,9 @@ public class CrewScreenHandler extends ScreenHandler {
         for (TrapCrew.Job job : card.taught()) {
             knows.append(knows.isEmpty() ? "" : ", ").append(job.display());
         }
-        lore.add(line("Knows: " + knows, Formatting.WHITE));
+        lore.add(line("Knows " + card.taught().size() + " of " + TrapCrew.SLOTS
+                + (knows.isEmpty() ? " -- nothing yet" : ": " + knows),
+                card.taught().isEmpty() ? Formatting.RED : Formatting.WHITE));
         lore.add(Text.empty());
         // "Present" is worth a line of its own: an unloaded or dead hand does
         // no work and takes no wages, and from the outside that is
@@ -197,7 +206,8 @@ public class CrewScreenHandler extends ScreenHandler {
 
     private ItemStack jobTag(TrapCrew.Card card, TrapCrew.Job job) {
         boolean known = card.taught().contains(job);
-        boolean can = !known && TrapMarket.wealthOf(boss) >= job.cost();
+        boolean full = card.taught().size() >= TrapCrew.SLOTS;
+        boolean can = !known && !full && TrapMarket.wealthOf(boss) >= job.cost();
         ItemStack tag = new ItemStack(known ? icon(job) : can ? icon(job) : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain(job.display()).formatted(known ? Formatting.GREEN
@@ -209,11 +219,15 @@ public class CrewScreenHandler extends ScreenHandler {
             lore.add(line("Taught.", Formatting.GREEN)
                     .append(plain("  +" + job.wage() + "e on the wage.")
                             .formatted(Formatting.DARK_GRAY)));
+            lore.add(line("Shift-click to drop it.", Formatting.YELLOW));
+            lore.add(line("Nothing comes back.", Formatting.DARK_GRAY));
         } else {
-            lore.add(line(job.cost() + "e", Formatting.GOLD)
-                    .append(plain(", then +" + job.wage() + "e every packet.")
+            lore.add(line(job.cost() == 0 ? "Free." : job.cost() + "e", Formatting.GOLD)
+                    .append(plain(job.wage() == 0 ? ", and no wage."
+                                    : ", then +" + job.wage() + "e every packet.")
                             .formatted(Formatting.DARK_GRAY)));
-            lore.add(line(can ? "Click to teach them." : "You can't cover it.",
+            lore.add(line(full ? "Both slots are taken. Drop one first."
+                            : can ? "Click to teach them." : "You can't cover it.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -235,10 +249,10 @@ public class CrewScreenHandler extends ScreenHandler {
                 line("around that spot and put everything", Formatting.GRAY),
                 line("in the nearest chest to it.", Formatting.GRAY),
                 Text.empty(),
-                line("Teaching them costs money up front", Formatting.WHITE),
-                line("AND puts the wage up. A hand you", Formatting.WHITE),
-                line("can't keep busy is a hand losing", Formatting.WHITE),
-                line("you money.", Formatting.WHITE),
+                line("TWO JOBS EACH. Want a third thing", Formatting.WHITE),
+                line("done? Hire a third person.", Formatting.WHITE),
+                line("Teaching costs up front AND puts", Formatting.WHITE),
+                line("the wage up for good.", Formatting.WHITE),
                 Text.empty(),
                 line("Miss a wage packet and they walk,", Formatting.DARK_GRAY),
                 line("taking everything you taught them.", Formatting.DARK_GRAY))));
@@ -321,7 +335,10 @@ public class CrewScreenHandler extends ScreenHandler {
             return;
         }
         if (index >= JOBS_FROM && index < JOBS_FROM + TEACHABLE.size()) {
-            answer(TrapCrew.buy(boss, card.index(), TEACHABLE.get(index - JOBS_FROM), false));
+            TrapCrew.Job job = TEACHABLE.get(index - JOBS_FROM);
+            answer(card.taught().contains(job) && type == SlotActionType.QUICK_MOVE
+                    ? TrapCrew.forget(boss, card.index(), job)
+                    : TrapCrew.buy(boss, card.index(), job, false));
             return;
         }
         if (index == FIRE_SLOT) {

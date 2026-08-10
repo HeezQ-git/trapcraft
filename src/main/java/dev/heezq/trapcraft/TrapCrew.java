@@ -85,8 +85,22 @@ public final class TrapCrew {
     public static final int WAGE = 24;
     /** What it costs to take somebody on. */
     public static final int HIRE_COST = 120;
-    /** Three is all one operation will carry. */
-    public static final int MAX_HANDS = 3;
+    /**
+     * How many jobs one person will hold, and how many people you may have.
+     *
+     * TWO. Somebody who picks, dries, rolls, presses, refines, sows, tills and
+     * fertilises is not a worker, it is a factory with a face -- and once one
+     * hand could do everything, the only decision left was whether to buy the
+     * whole list. A pair of jobs each makes every hire a question about what
+     * this particular person is FOR, and wanting a third thing done means
+     * wanting a third person on the books.
+     *
+     * The cap on people went up to match. Nine jobs against five hands is ten
+     * slots for nine jobs, so a full operation is reachable -- but it is five
+     * wages, and the wage is what stops that being free.
+     */
+    public static final int SLOTS = 2;
+    public static final int MAX_HANDS = 5;
     /** How close a hand has to be to a job to do it. */
     private static final int ARM = 4;
     /** Passes of getting nowhere before we accept they can't path there. */
@@ -151,6 +165,12 @@ public final class TrapCrew {
                 "Your mature plants, into the nearest chest."),
         CURE("Curing", "trapcraft:drying_rack", 480, 8,
                 "Loads the racks and pulls them at peak."),
+        REFINE("Refining", "trapcraft:refiner", 1400, 20,
+                "Runs the refiner and pulls it at PEAK."),
+        PRESS("Pressing", "trapcraft:leaf_press", 750, 12,
+                "Leaves into paste, batch after batch."),
+        ROLL("Rolling", "minecraft:paper", 600, 10,
+                "Cured buds and paper into joints."),
         FARM("Farmhand", "minecraft:carrot", 260, 5,
                 "Wheat, carrots, anything else that ripens."),
         FEED("Fertilising", "minecraft:bone_meal", 400, 6,
@@ -245,8 +265,8 @@ public final class TrapCrew {
         final BlockPos patch;
         int pace;
         int reach;
-        /** Bit per {@link Job} ordinal. PICK is always set. */
-        int jobs = 1 << Job.PICK.ordinal();
+        /** Bit per {@link Job} ordinal. Blank on hire -- see SLOTS. */
+        int jobs;
         /** Passes since anything actually got done. Not saved -- it's a mood. */
         int idle;
         /** Jobs done since the last breather. */
@@ -280,6 +300,18 @@ public final class TrapCrew {
             jobs |= 1 << job.ordinal();
         }
 
+        void forget(Job job) {
+            jobs &= ~(1 << job.ordinal());
+        }
+
+        int taught() {
+            return Integer.bitCount(jobs);
+        }
+
+        boolean full() {
+            return taught() >= SLOTS;
+        }
+
         int interval() {
             return PACE_TICKS[pace];
         }
@@ -291,23 +323,17 @@ public final class TrapCrew {
         int wage() {
             int total = WAGE + PACE_WAGE[pace] + REACH_WAGE[reach];
             for (Job job : Job.values()) {
-                if (!job.free() && can(job)) {
+                if (can(job)) {
                     total += job.wage();
                 }
             }
             return total;
         }
 
+        /** Top of both ladders and both slots filled. */
         boolean maxed() {
-            if (pace < PACE_TICKS.length - 1 || reach < REACH_BLOCKS.length - 1) {
-                return false;
-            }
-            for (Job job : Job.values()) {
-                if (!can(job)) {
-                    return false;
-                }
-            }
-            return true;
+            return pace >= PACE_TICKS.length - 1
+                    && reach >= REACH_BLOCKS.length - 1 && full();
         }
     }
 
@@ -402,6 +428,9 @@ public final class TrapCrew {
             if (hand.can(job)) {
                 return "They already know that one.";
             }
+            if (hand.full()) {
+                return "Two jobs is all one person will hold. Drop one, or hire somebody.";
+            }
             cost = job.cost();
             bought = job.display();
         } else if (pace) {
@@ -453,6 +482,34 @@ public final class TrapCrew {
         return null;
     }
 
+    /**
+     * Drop a job to free the slot. Nothing comes back.
+     *
+     * Has to exist, because with only two slots a misclick would otherwise be
+     * permanent and the board would be a minefield. No refund, for the same
+     * reason firing gives none: what you paid bought the teaching, and the
+     * teaching happened.
+     */
+    public static String forget(ServerPlayerEntity boss, int index, Job job) {
+        if (index < 0 || index >= CREW.size()) {
+            return "They're not on the books any more.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "That's not your hand.";
+        }
+        if (!hand.can(job)) {
+            return "They never knew that one.";
+        }
+        hand.forget(job);
+        save();
+        boss.sendMessage(Text.literal("They've forgotten ").formatted(Formatting.GRAY)
+                .append(Text.literal(job.display()).formatted(Formatting.WHITE))
+                .append(Text.literal(". Wages now " + hand.wage() + "e.")
+                        .formatted(Formatting.GRAY)), false);
+        return null;
+    }
+
     // --- hiring and firing ----------------------------------------------------
 
     /**
@@ -499,11 +556,12 @@ public final class TrapCrew {
                 SoundCategory.NEUTRAL, 0.9F, 1.1F);
         TrapAwards.grant(boss, "crew");
         boss.sendMessage(Text.literal("Hired. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal("They'll work " + hand.reachBlocks()
-                        + " blocks around here for " + hand.wage()
-                        + "e every five minutes.").formatted(Formatting.GRAY))
+                .append(Text.literal("They know nothing yet. Two jobs is all "
+                        + "anybody will hold, so pick carefully.")
+                        .formatted(Formatting.GRAY))
                 .append(Text.literal("\n  /crew").formatted(Formatting.GREEN))
-                .append(Text.literal("  to teach them something").formatted(Formatting.DARK_GRAY)),
+                .append(Text.literal("  to teach them. Picking is free.")
+                        .formatted(Formatting.DARK_GRAY)),
                 false);
         return null;
     }
@@ -757,7 +815,10 @@ public final class TrapCrew {
         // that walks to a plant it has no bone meal for does nothing for a
         // whole pass and looks exactly like a hand that is broken.
         Supplies stock = new Supplies(holds(box, Items.BONE_MEAL), holdsSeed(box),
-                holdsRawBud(box));
+                holdsRawBud(box),
+                counts(box, TrapContent.cocaLeaves) >= LeafPressBlock.LEAVES_PER_BATCH,
+                holds(box, TrapContent.cocaPaste) && holds(box, Items.BLAZE_POWDER),
+                rollable(box) != null);
 
         Map<Job, BlockPos> found = new EnumMap<>(Job.class);
         int looked = 0;
@@ -808,6 +869,33 @@ public final class TrapCrew {
         return false;
     }
 
+    private static int counts(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want) {
+        if (box == null) {
+            return 0;
+        }
+        int found = 0;
+        for (int slot = 0; slot < box.size(); slot++) {
+            if (box.getStack(slot).isOf(want)) {
+                found += box.getStack(slot).getCount();
+            }
+        }
+        return found;
+    }
+
+    /** A cured bud in the chest that there is also paper for, or null. */
+    private static ItemStack rollable(net.minecraft.inventory.Inventory box) {
+        if (box == null || !holds(box, Items.PAPER)) {
+            return null;
+        }
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (TrapContent.strainOfDriedBud(stack.getItem()) != null) {
+                return stack;
+            }
+        }
+        return null;
+    }
+
     private static boolean holdsRawBud(net.minecraft.inventory.Inventory box) {
         if (box == null) {
             return false;
@@ -821,7 +909,8 @@ public final class TrapCrew {
     }
 
     /** What the chest can back up this pass. */
-    private record Supplies(boolean boneMeal, boolean seeds, boolean rawBuds) {
+    private record Supplies(boolean boneMeal, boolean seeds, boolean rawBuds,
+                            boolean leaves, boolean paste, boolean rolling) {
     }
 
     /** Inside the box the hand was hired to work. */
@@ -836,6 +925,10 @@ public final class TrapCrew {
         BlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
 
+        if (hand.can(Job.ROLL) && stock.rolling()
+                && world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory) {
+            return Job.ROLL;
+        }
         if (block instanceof DryingRackBlock && hand.can(Job.CURE)) {
             // Ready to come off, or empty with something to hang on it.
             // Anything mid-cure is left strictly alone -- pulling early costs
@@ -845,6 +938,20 @@ public final class TrapCrew {
                         ? Job.CURE : null;
             }
             return stock.rawBuds() ? Job.CURE : null;
+        }
+        if (block instanceof LeafPressBlock && hand.can(Job.PRESS)) {
+            return state.get(LeafPressBlock.LOADED)
+                    ? (state.get(LeafPressBlock.PROGRESS) >= LeafPressBlock.DONE ? Job.PRESS : null)
+                    : (stock.leaves() ? Job.PRESS : null);
+        }
+        if (block instanceof RefinerBlock && hand.can(Job.REFINE)) {
+            // Loaded runs are only ever pulled AT PEAK. That is the whole of
+            // what fourteen hundred emeralds buys: a player has to stand there
+            // and time it, and a hand who can do that reliably is worth more
+            // than one who can dig.
+            return state.get(RefinerBlock.RUNNING)
+                    ? (state.get(RefinerBlock.PROGRESS) == RefinerBlock.PEAK ? Job.REFINE : null)
+                    : (stock.paste() ? Job.REFINE : null);
         }
         if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock) {
             return block instanceof CropBlock crop && crop.isMature(state) ? Job.PICK : null;
@@ -900,6 +1007,34 @@ public final class TrapCrew {
             rack(world, hand, box, at, state);
             return;
         }
+        if (block instanceof LeafPressBlock) {
+            ItemStack paste = LeafPressBlock.take(state, world, at);
+            if (!paste.isEmpty()) {
+                stow(world, box, at, List.of(paste));
+                cheer(world, at, SoundEvents.BLOCK_WET_GRASS_BREAK, 0.9F);
+            } else if (box != null) {
+                feed(box, TrapContent.cocaLeaves,
+                        leaves -> LeafPressBlock.load(state, world, at, leaves));
+            }
+            return;
+        }
+        if (block instanceof RefinerBlock) {
+            ItemStack powder = RefinerBlock.take(state, world, at);
+            if (!powder.isEmpty()) {
+                stow(world, box, at, List.of(powder));
+                cheer(world, at, SoundEvents.BLOCK_BREWING_STAND_BREW, 1.0F);
+            } else if (box != null) {
+                final net.minecraft.inventory.Inventory chest = box;
+                feed(box, TrapContent.cocaPaste,
+                        paste -> RefinerBlock.load(state, world, at, paste, chest));
+            }
+            return;
+        }
+        if (box != null && world.getBlockEntity(at) instanceof net.minecraft.inventory.Inventory
+                && hand.can(Job.ROLL)) {
+            roll(world, box, at);
+            return;
+        }
         if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock) {
             // Through the block's own harvest, not getDroppedStacks: breaking
             // one of these runs the loot table and returns a SEED. The buds
@@ -941,6 +1076,49 @@ public final class TrapCrew {
             world.setBlockState(at, Blocks.FARMLAND.getDefaultState());
             cheer(world, at, SoundEvents.ITEM_HOE_TILL, 1.0F);
         }
+    }
+
+    /** Hand a machine the first matching stack out of the chest. */
+    private static void feed(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want,
+                             java.util.function.Predicate<ItemStack> machine) {
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (stack.isOf(want) && machine.test(stack)) {
+                box.markDirty();
+                return;
+            }
+        }
+    }
+
+    /**
+     * One cured bud and one sheet of paper become one joint.
+     *
+     * The grade rides across, because the joint is the same product in a
+     * different shape -- a hand that quietly turned Fire into Mids by rolling
+     * it would be a way of losing money by delegating.
+     */
+    private static void roll(ServerWorld world, net.minecraft.inventory.Inventory box, BlockPos at) {
+        ItemStack bud = null;
+        ItemStack paper = null;
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (bud == null && TrapContent.strainOfDriedBud(stack.getItem()) != null) {
+                bud = stack;
+            } else if (paper == null && stack.isOf(Items.PAPER)) {
+                paper = stack;
+            }
+        }
+        if (bud == null || paper == null) {
+            return;
+        }
+        Strain strain = TrapContent.strainOfDriedBud(bud.getItem());
+        ItemStack joint = TrapComponents.apply(
+                new ItemStack(TrapContent.joint(strain), 1), TrapComponents.get(bud));
+        bud.decrement(1);
+        paper.decrement(1);
+        box.markDirty();
+        stow(world, box, at, List.of(joint));
+        cheer(world, at, SoundEvents.ITEM_CROP_PLANT, 1.4F);
     }
 
     /** Pull a finished rack into the chest, or hang a fresh bud on an empty one. */
@@ -1159,7 +1337,7 @@ public final class TrapCrew {
                 if (parts.length >= 9) {
                     hand.pace = clamp(Integer.parseInt(parts[6]), PACE_TICKS.length);
                     hand.reach = clamp(Integer.parseInt(parts[7]), REACH_BLOCKS.length);
-                    hand.jobs = Integer.parseInt(parts[8]) | (1 << Job.PICK.ordinal());
+                    hand.jobs = trim(Integer.parseInt(parts[8]));
                 }
                 CREW.add(hand);
             }
@@ -1170,6 +1348,27 @@ public final class TrapCrew {
 
     private static int clamp(int value, int rungs) {
         return Math.max(0, Math.min(value, rungs - 1));
+    }
+
+    /**
+     * Cut a saved hand down to the two jobs it is now allowed.
+     *
+     * Hands hired before the cap existed could hold all of them. Keeping the
+     * FIRST two by declaration order is arbitrary but stable and, since the
+     * enum is ordered by priority, it keeps whichever of their jobs mattered
+     * most -- and it means a reload never produces a hand the board could not
+     * have built.
+     */
+    private static int trim(int saved) {
+        int kept = 0;
+        int held = 0;
+        for (Job job : Job.values()) {
+            if ((saved & (1 << job.ordinal())) != 0 && held < SLOTS) {
+                kept |= 1 << job.ordinal();
+                held++;
+            }
+        }
+        return kept;
     }
 
     private static void save() {

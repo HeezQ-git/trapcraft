@@ -131,6 +131,36 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
         return ActionResult.SUCCESS;
     }
 
+    /**
+     * Load a batch out of a stack. False if it is the wrong thing or short.
+     *
+     * Split out for the crew, exactly like the drying rack's. A hand pressing
+     * leaves has to go through the same door a player does, or the two would
+     * drift and one of them would quietly start producing paste from four
+     * leaves.
+     */
+    public static boolean load(BlockState state, World world, BlockPos pos, ItemStack leaves) {
+        if (state.get(LOADED) || !leaves.isOf(TrapContent.cocaLeaves)
+                || leaves.getCount() < LEAVES_PER_BATCH) {
+            return false;
+        }
+        leaves.decrement(LEAVES_PER_BATCH);
+        world.setBlockState(pos, state.with(LOADED, true).with(PROGRESS, 0));
+        world.scheduleBlockTick(pos, state.getBlock(), STEP_TICKS);
+        world.playSound(null, pos, SoundEvents.BLOCK_BAMBOO_BREAK, SoundCategory.BLOCKS, 0.8F, 0.7F);
+        return true;
+    }
+
+    /** The paste, if it is pressed. Empty otherwise. */
+    public static ItemStack take(BlockState state, World world, BlockPos pos) {
+        if (!state.get(LOADED) || state.get(PROGRESS) < DONE) {
+            return ItemStack.EMPTY;
+        }
+        world.setBlockState(pos, state.with(LOADED, false).with(PROGRESS, 0));
+        world.playSound(null, pos, SoundEvents.BLOCK_WET_GRASS_BREAK, SoundCategory.BLOCKS, 0.9F, 0.8F);
+        return new ItemStack(TrapContent.cocaPaste, 1);
+    }
+
     @Override
     protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (!state.get(LOADED) || state.get(PROGRESS) >= DONE) {
