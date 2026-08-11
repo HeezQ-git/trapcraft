@@ -958,6 +958,22 @@ public final class TrapHomes {
                 world.getEntitiesByClass(net.minecraft.entity.passive.VillagerEntity.class, box,
                         found -> found.isAlive() && found.getCommandTags().contains(tag));
 
+        // A body that gets turned stops being a VillagerEntity and becomes a
+        // ZombieVillagerEntity, keeping its name and every tag. The census only
+        // ever counted the living, so a turned resident was replaced by a fresh
+        // one -- which had the same night ahead of it. Ninety-eight zombies
+        // stood round one village before anybody worked out what they were.
+        //
+        // They are discarded rather than counted. Bodies are decoration and the
+        // REGISTER is the person; letting a zombie hold a place would leave the
+        // house looking dead for good, and counting one toward the household
+        // would just be a slower version of the same crowd.
+        for (var turned : world.getEntitiesByClass(
+                net.minecraft.entity.mob.ZombieVillagerEntity.class, box,
+                found -> found.getCommandTags().contains(tag))) {
+            turned.discard();
+        }
+
         // Fewer beds than there were, or a grade that slipped: the household
         // shrinks. Discarded from the end so the head of it is the last to go.
         for (int extra = living.size() - 1; extra >= home.heads; extra--) {
