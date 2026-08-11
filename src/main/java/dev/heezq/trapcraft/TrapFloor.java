@@ -652,8 +652,11 @@ public final class TrapFloor {
         punter.getNavigation().startMovingTo(
                 stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 0.5);
         claim(world, pos, punter.getUuid(), false);
-        TrapCraft.LOGGER.info("punter in at {} {} {}, {}e a go",
-                pos.getX(), pos.getY(), pos.getZ(), stake);
+        // Says WHICH kind, because "the locals never come in" and "the pull is
+        // too low" look identical from the floor and want opposite fixes.
+        TrapCraft.LOGGER.info("punter in at {} {} {}, {}e a go, {}",
+                pos.getX(), pos.getY(), pos.getZ(), stake,
+                local ? "a resident" : "a stranger");
     }
 
     // --- and plays ------------------------------------------------------------
@@ -687,7 +690,12 @@ public final class TrapFloor {
                             punter.stand.getY(), punter.stand.getZ() + 0.5, 0.5);
                     continue;
                 }
-                body.refreshPositionAndAngles(punter.stand, 0.0F, 0.0F);
+                // Re-checked, not trusted: the spot was clear when they were
+                // sent in, and the owner has had a minute to build a wall
+                // across it since. They play from where they stand instead.
+                if (TrapSpawn.safe(world, punter.stand)) {
+                    body.refreshPositionAndAngles(punter.stand, 0.0F, 0.0F);
+                }
             }
             // A villager Brain re-picks its own destination every tick and
             // will happily wander off mid-session, so once they are at the
@@ -809,14 +817,47 @@ public final class TrapFloor {
      * Theirs is the body the register knows about, so it must be given back
      * rather than binned when the evening ends -- see {@link #leave}.
      */
+    /**
+     * How far a casino will pull somebody who lives locally.
+     *
+     * Was forty blocks, which is a street. A town is not a street: houses go
+     * up where there is room, and the casino goes up where the owner wanted
+     * it, and the two are rarely within shouting distance. At forty the floor
+     * filled with strangers while the people paying rent two hundred blocks
+     * away never once walked in.
+     *
+     * A hundred and twenty-eight because past that the question answers
+     * itself -- a villager in an unloaded chunk cannot be found by any search,
+     * so this is already "anybody in the loaded world" and raising it further
+     * buys nothing but a bigger box to walk. Which is also why it is cheap:
+     * the volume is large, the entity index is not, and this runs when a
+     * punter arrives rather than every tick.
+     */
+    private static final int RESIDENT_RANGE = 128;
+
+    /**
+     * The nearest tenant who is not already at a machine, or nobody.
+     *
+     * Nearest rather than first-found, which is what the entity list happened
+     * to hand back. With one house that is the same answer; with a village it
+     * is the difference between the pub filling up from next door and filling
+     * up from whichever chunk loaded first.
+     */
     private static VillagerEntity resident(ServerWorld world, BlockPos machine) {
+        VillagerEntity nearest = null;
+        double closest = Double.MAX_VALUE;
         for (VillagerEntity villager : world.getEntitiesByClass(VillagerEntity.class,
-                new net.minecraft.util.math.Box(machine).expand(40),
+                new net.minecraft.util.math.Box(machine).expand(RESIDENT_RANGE),
                 found -> found.getCommandTags().contains(TrapHomes.TENANT_TAG)
                         && !found.getCommandTags().contains(PUNTER_TAG))) {
-            return villager;
+            double away = villager.squaredDistanceTo(
+                    machine.getX() + 0.5, machine.getY() + 0.5, machine.getZ() + 0.5);
+            if (away < closest) {
+                closest = away;
+                nearest = villager;
+            }
         }
-        return null;
+        return nearest;
     }
 
     private static void leave(ServerWorld world, VillagerEntity body, Punter punter) {
@@ -855,8 +896,9 @@ public final class TrapFloor {
                     pos.getZ() + (int) Math.round(Math.sin(angle) * away));
             for (int drop = 0; drop <= 2; drop++) {
                 BlockPos at = spot.down(drop);
-                if (world.getBlockState(at).isAir() && world.getBlockState(at.up()).isAir()
-                        && !world.getBlockState(at.down()).isAir()) {
+                // "Not air below" counted a lava lake as a floor, which is a
+                // casino that sets its customers on fire at the door.
+                if (TrapSpawn.safe(world, at)) {
                     return at;
                 }
             }
@@ -884,9 +926,7 @@ public final class TrapFloor {
         for (int[] offset : offsets) {
             for (int drop = 0; drop <= 1; drop++) {
                 BlockPos spot = pos.add(offset[0], -drop, offset[1]);
-                if (world.getBlockState(spot).isAir()
-                        && world.getBlockState(spot.up()).isAir()
-                        && world.getBlockState(spot.down()).isSolidBlock(world, spot.down())) {
+                if (TrapSpawn.safe(world, spot)) {
                     return spot;
                 }
             }

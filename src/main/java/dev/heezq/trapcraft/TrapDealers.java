@@ -307,12 +307,19 @@ public final class TrapDealers {
             dealer.mob = null;
         }
         ServerWorld world = boss.getWorld();
+        // A random offset from where the boss happens to be stood is a wall,
+        // a ravine or a lava lake often enough to matter, and this one arrives
+        // with your stock in his pockets. Roll for somewhere to put him, then
+        // let TrapSpawn find the nearest square that is actually a floor.
+        BlockPos spot = TrapSpawn.near(world, boss.getBlockPos().add(
+                world.getRandom().nextInt(7) - 3, 0, world.getRandom().nextInt(7) - 3));
+        if (spot == null) {
+            return "Nowhere here for them to stand.";
+        }
         VillagerEntity body = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
         if (body == null) {
             return "Couldn't reach them.";
         }
-        BlockPos spot = boss.getBlockPos().add(
-                world.getRandom().nextInt(7) - 3, 0, world.getRandom().nextInt(7) - 3);
         body.refreshPositionAndAngles(spot, boss.getYaw(), 0.0F);
         body.setPersistent();
         // Standing still and unkillable while they're here. A dealer who

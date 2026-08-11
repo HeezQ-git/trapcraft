@@ -554,14 +554,16 @@ public final class TrapShops {
             BlockPos at = new BlockPos(shelf.getX() + dx, shelf.getY(), shelf.getZ() + dz);
             for (int dy = 2; dy >= -3; dy--) {
                 BlockPos spot = at.up(dy);
-                if (world.getBlockState(spot).isAir()
-                        && world.getBlockState(spot.up()).isAir()
-                        && !world.getBlockState(spot.down()).isAir()) {
+                if (TrapSpawn.safe(world, spot)) {
                     return spot;
                 }
             }
         }
-        return shelf.up();
+        // The old fallback was shelf.up() flat, which is the inside of the
+        // shop's own ceiling as often as it is a floor. One last look around
+        // the counter, and if there is nowhere at all, nobody comes -- a shop
+        // with no room to stand in gets no trade, which is fair and visible.
+        return TrapSpawn.near(world, shelf.up());
     }
 
     private static void shepherd(MinecraftServer server, int now) {
@@ -582,7 +584,14 @@ public final class TrapShops {
                 continue;
             }
             if (now - trip.bornAt() > PATIENCE) {
-                shopper.refreshPositionAndAngles(counter.up(), shopper.getYaw(), 0.0F);
+                // Out of patience: put them at the counter rather than let
+                // them mill about outside forever. Not literally on top of it
+                // -- counter.up() is a wall or a lit fireplace often enough --
+                // so the nearest square somebody can stand on instead.
+                BlockPos stand = TrapSpawn.near(shopper.getWorld(), counter.up());
+                if (stand != null) {
+                    shopper.refreshPositionAndAngles(stand, shopper.getYaw(), 0.0F);
+                }
                 continue;
             }
             if (now % 20 == 0) {

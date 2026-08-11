@@ -397,8 +397,15 @@ public final class TrapContracts {
 
     private static VillagerEntity placeContact(ServerWorld world, ServerPlayerEntity player,
                                                BlockPos drop, Contract contract) {
-        BlockPos spot = world.getTopPosition(
-                net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, drop);
+        // The heightmap is happy to call the surface of a lava lake the top of
+        // the world, and a drop point in a cave puts the buyer on the roof.
+        // Wider than the usual search because this one is a job you cannot
+        // finish without him -- worth walking a little further to find ground.
+        BlockPos spot = TrapSpawn.near(world, world.getTopPosition(
+                net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, drop), 6);
+        if (spot == null) {
+            return null;
+        }
         VillagerEntity contact = net.minecraft.entity.EntityType.VILLAGER.create(
                 world, net.minecraft.entity.SpawnReason.EVENT);
         if (contact == null) {

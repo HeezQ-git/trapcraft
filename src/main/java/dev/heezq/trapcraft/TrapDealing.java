@@ -319,8 +319,14 @@ public final class TrapDealing {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            BlockPos spot = new BlockPos(x, world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z), z);
-            if (world.getBlockState(spot).isAir() && world.getBlockState(spot.up()).isAir()) {
+            // MOTION_BLOCKING, not WORLD_SURFACE. WORLD_SURFACE counts any
+            // non-air block, so on grass it hands back the square above the
+            // grass -- one block up in the air, with a floor made of a plant.
+            // The old two-blocks-of-air check could not tell the difference,
+            // and had nothing to say about a lava lake either.
+            BlockPos spot = new BlockPos(x,
+                    world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z), z);
+            if (TrapSpawn.safe(world, spot)) {
                 return spot;
             }
         }

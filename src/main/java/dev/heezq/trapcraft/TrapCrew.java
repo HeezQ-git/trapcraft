@@ -779,13 +779,22 @@ public final class TrapCrew {
      * A replacement that forgot to be a NITWIT would quietly take up a
      * profession and start trading, months after anybody remembers why every
      * line of this mattered.
+     *
+     * @return null if there is nowhere on that patch to stand -- every caller
+     *         already has a "couldn't put anybody down there" to say, which is
+     *         a better outcome than a hand suffocating in the wall the boss
+     *         set their patch against.
      */
     private static VillagerEntity put(ServerWorld world, BlockPos patch, float yaw) {
+        BlockPos stand = TrapSpawn.near(world, patch.up());
+        if (stand == null) {
+            return null;
+        }
         VillagerEntity mob = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
         if (mob == null) {
             return null;
         }
-        mob.refreshPositionAndAngles(patch.up(), yaw, 0.0F);
+        mob.refreshPositionAndAngles(stand, yaw, 0.0F);
         mob.setPersistent();
         mob.setAiDisabled(false);
         mob.setCustomName(Text.literal("Hand").formatted(Formatting.YELLOW));
@@ -800,6 +809,27 @@ public final class TrapCrew {
                         .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
         world.spawnEntity(mob);
         return mob;
+    }
+
+    /**
+     * Put a live hand back on a square, unless that square would kill them.
+     *
+     * Four places haul a hand about -- the whip, moving the patch, dragging a
+     * stray home, unsticking one from behind a fence -- and all four used
+     * X.up() flat, which teleports into whatever happens to be there. Leaving
+     * them where they are is always the better failure: a hand stood in the
+     * wrong field is one you can see and whip again.
+     *
+     * @return whether they moved
+     */
+    private static boolean haul(ServerWorld world, VillagerEntity mob, BlockPos to) {
+        BlockPos stand = TrapSpawn.near(world, to.up());
+        if (stand == null) {
+            return false;
+        }
+        mob.refreshPositionAndAngles(stand, mob.getYaw(), 0.0F);
+        mob.getNavigation().stop();
+        return true;
     }
 
     /**
@@ -857,8 +887,9 @@ public final class TrapCrew {
             save();
         }
 
-        mob.refreshPositionAndAngles(hand.patch.up(), mob.getYaw(), 0.0F);
-        mob.getNavigation().stop();
+        if (!haul(world, mob, hand.patch)) {
+            return "There's nothing to stand on at that patch. Move it somewhere with a floor.";
+        }
         if (mob.isSleeping()) {
             mob.wakeUp();
         }
@@ -941,9 +972,7 @@ public final class TrapCrew {
         world.getChunkManager().addTicket(TICKET, new ChunkPos(spot),
                 ticketRadius(hand.reachBlocks()));
         if (mob != null) {
-            if (moved) {
-                mob.refreshPositionAndAngles(spot.up(), mob.getYaw(), 0.0F);
-                mob.getNavigation().stop();
+            if (moved && haul(world, mob, spot)) {
                 if (mob.isSleeping()) {
                     mob.wakeUp();
                 }
@@ -1446,10 +1475,10 @@ public final class TrapCrew {
         if (strayed > reach + 12) {
             // Far enough that walking back is its own five-minute errand, and
             // usually means they got pushed, boated or shut out by a door.
-            mob.refreshPositionAndAngles(hand.patch.up(), mob.getYaw(), 0.0F);
-            mob.getNavigation().stop();
-            world.spawnParticles(ParticleTypes.POOF, hand.patch.getX() + 0.5,
-                    hand.patch.getY() + 1.0, hand.patch.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.01);
+            if (haul(world, mob, hand.patch)) {
+                world.spawnParticles(ParticleTypes.POOF, hand.patch.getX() + 0.5,
+                        hand.patch.getY() + 1.0, hand.patch.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.01);
+            }
             return;
         }
         if (strayed > reach) {
@@ -1476,8 +1505,7 @@ public final class TrapCrew {
                 // drop between them and it. Rather than stall on that square
                 // forever, put them next to it and let them get on.
                 hand.idle = 0;
-                mob.refreshPositionAndAngles(job.up(), mob.getYaw(), 0.0F);
-                mob.getNavigation().stop();
+                haul(world, mob, job);
             }
             return;
         }

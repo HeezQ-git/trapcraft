@@ -919,13 +919,21 @@ public final class TrapHomes {
     private static final int BODY_RANGE = 24;
 
     private static void body(ServerWorld world, Home home, String tag, int index) {
+        // The anchor is a block the survey picked, not a doorstep: it is as
+        // likely to be under the stairs or inside the chimney as on a floor.
+        // No spot means no tenant this pass, and the next pass tries again --
+        // better than a household quietly suffocating in its own walls.
+        BlockPos stand = TrapSpawn.near(world, home.anchor.up());
+        if (stand == null) {
+            return;
+        }
         net.minecraft.entity.passive.VillagerEntity body =
                 net.minecraft.entity.EntityType.VILLAGER.create(
                         world, net.minecraft.entity.SpawnReason.EVENT);
         if (body == null) {
             return;
         }
-        body.refreshPositionAndAngles(home.anchor.up(), world.getRandom().nextFloat() * 360f, 0f);
+        body.refreshPositionAndAngles(stand, world.getRandom().nextFloat() * 360f, 0f);
         body.setPersistent();
         // The first one is the tenant the letters and the rent are about. The
         // rest are the family, and they need their own names or the house is

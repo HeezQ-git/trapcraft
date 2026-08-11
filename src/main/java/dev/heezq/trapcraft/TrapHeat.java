@@ -538,7 +538,12 @@ public final class TrapHeat {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            int surface = world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z);
+            // MOTION_BLOCKING, not WORLD_SURFACE: the latter counts grass and
+            // flowers, so on any meadow it points a block into the air with a
+            // plant for a floor -- which standable() now correctly refuses,
+            // and a raid that finds nowhere to stand is a raid that never
+            // arrives.
+            int surface = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
             BlockPos spot = new BlockPos(x, surface, z);
             if (standable(world, spot)) {
                 return spot;
@@ -552,8 +557,7 @@ public final class TrapHeat {
             if (Math.abs(surface - pos.getY()) > 10) {
                 for (int y = pos.getY() + 2; y >= pos.getY() - 6; y--) {
                     BlockPos under = new BlockPos(x, y, z);
-                    if (standable(world, under)
-                            && world.getBlockState(under.down()).isSolidBlock(world, under.down())) {
+                    if (standable(world, under)) {
                         return under;
                     }
                 }
@@ -563,14 +567,14 @@ public final class TrapHeat {
     }
 
     /**
-     * Three clear blocks.
+     * Three clear blocks, and a floor under them.
      *
      * A ravager is two high and the squads include one, and half-burying it
-     * would be worse than skipping it.
+     * would be worse than skipping it. The floor is the newer half: three
+     * blocks of air is also what the top of a lava lake looks like, and a
+     * heightmap will hand you one of those without comment.
      */
     private static boolean standable(ServerWorld world, BlockPos spot) {
-        return world.getBlockState(spot).isAir()
-                && world.getBlockState(spot.up()).isAir()
-                && world.getBlockState(spot.up(2)).isAir();
+        return TrapSpawn.safe(world, spot, 3);
     }
 }
