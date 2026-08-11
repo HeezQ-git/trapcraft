@@ -469,6 +469,60 @@ def casino_floor() -> list[str]:
     return problems
 
 
+def city_board() -> list[str]:
+    """The vault screen's layout, checked before a player checks it for us.
+
+    CityScreenHandler asserts its own layout in a static initialiser, which is
+    the right instinct and fires at the worst possible moment: class loading
+    happens the first time somebody RIGHT-CLICKS THE VAULT, so the assertion
+    takes the server down mid-session rather than failing a build.
+
+    That is exactly what adding three public works did on 2026-08-11 -- four
+    icons for seven works, `IllegalStateException: city board: 7 works won't
+    fit`, and a crash loop every time anybody touched the vault. Nothing in
+    the build or the checkers loads that class, so nothing caught it.
+
+    Adding a Duty or a Work is a one-line change in a different file, which is
+    what makes this worth checking from the outside.
+    """
+    src = ROOT / "src/main/java/dev/heezq/trapcraft"
+    board = (src / "CityScreenHandler.java").read_text()
+    city = (src / "TrapCity.java").read_text()
+
+    def const(name):
+        found = re.search(rf"int {name} = (\d+);", board)
+        return int(found.group(1)) if found else None
+
+    def icons(name):
+        found = re.search(rf"Item\[\] {name} = \{{(.*?)\}};", board, re.S)
+        return len([x for x in found.group(1).split(",") if x.strip()]) if found else None
+
+    def entries(name):
+        block = city[city.index(f"public enum {name} {{"):]
+        return len(re.findall(r"^\s{8}[A-Z_]+\(", block[:block.index(";")], re.M))
+
+    size, rates, ledger = const("SIZE"), const("RATES_FROM"), const("LEDGER_SLOT")
+    works_at, about, takes = const("WORKS_FROM"), const("ABOUT_SLOT"), const("TAKE_FROM")
+    if None in (size, rates, ledger, works_at, about, takes):
+        return ["city board: the slot constants moved, fix check_stock"]
+
+    duties, works = entries("Duty"), entries("Work")
+    problems = []
+    if icons("ICONS") != duties:
+        problems.append(f"city board: {duties} duties but {icons('ICONS')} icons")
+    if rates + duties > ledger:
+        problems.append(f"city board: {duties} duties run over the ledger slot")
+    if icons("WORK_ICONS") != works:
+        problems.append(f"city board: {works} works but {icons('WORK_ICONS')} icons")
+    if works_at + works > size:
+        problems.append(f"city board: {works} works run off the end of the screen")
+    if works_at <= about < works_at + works:
+        problems.append(f"city board: {works} works draw over the blurb at {about}")
+    if works_at <= takes + 3 and takes < works_at + works:
+        problems.append(f"city board: {works} works draw over the withdraw buttons")
+    return problems
+
+
 def half_a_chest() -> list[str]:
     """Position lookups that would see one half of a double chest.
 
@@ -536,6 +590,7 @@ def main() -> int:
     problems.extend(casino_floor())
     problems.extend(craft_loops(goods))
     problems.extend(half_a_chest())
+    problems.extend(city_board())
 
     for ident, _, base in goods:
         if round(base * WORST_INDEX) < SELL_FLOOR:

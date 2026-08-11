@@ -33,8 +33,8 @@ import java.util.List;
  * announcement is the whole of the accountability, and it is enough.
  *
  *   [purse] . [essentials][materials][luxury][income][gaming][rent][ledger]
- *   . . [take 64][take 256][take 1024][take all] . [works..]
- *   . . . . [what it is for] . . . .
+ *   . . [take 64][take 256][take 1024][take all] . . .
+ *   [works..] . [what it is for]
  */
 public class CityScreenHandler extends ScreenHandler {
     private static final int SIZE = 27;
@@ -43,15 +43,16 @@ public class CityScreenHandler extends ScreenHandler {
     private static final int RATES_FROM = 2;
     private static final int LEDGER_SLOT = 8;
     private static final int TAKE_FROM = 11;
-    private static final int ABOUT_SLOT = 22;
-    private static final int WORKS_FROM = 16;
+    private static final int ABOUT_SLOT = 26;
+    private static final int WORKS_FROM = 18;
 
     /** What each withdraw button is worth. Null means everything. */
     private static final Integer[] TAKES = {64, 256, 1024, null};
 
     /** One per public work, in declaration order. */
     private static final Item[] WORK_ICONS = {
-            Items.CROSSBOW, Items.STONE_BRICKS, Items.LANTERN, Items.GOLD_INGOT};
+            Items.CROSSBOW, Items.STONE_BRICKS, Items.LANTERN, Items.GOLD_INGOT,
+            Items.GLISTERING_MELON_SLICE, Items.MINECART, Items.BOOK};
 
     private static final Item[] ICONS = {
             Items.BREAD, Items.BRICKS, Items.AMETHYST_SHARD, Items.PAPER,
@@ -67,7 +68,12 @@ public class CityScreenHandler extends ScreenHandler {
                     + TrapCity.Duty.values().length + " duties won't fit");
         }
         if (WORK_ICONS.length != TrapCity.Work.values().length
-                || WORKS_FROM + WORK_ICONS.length > SIZE) {
+                || WORKS_FROM + WORK_ICONS.length > SIZE
+                // ...and must not run over the blurb. Seven works reached slot
+                // 22, which was ABOUT_SLOT, so the last one would have drawn
+                // over it and clicking the blurb would have bought a school.
+                || (ABOUT_SLOT >= WORKS_FROM
+                        && ABOUT_SLOT < WORKS_FROM + WORK_ICONS.length)) {
             throw new IllegalStateException("city board: "
                     + TrapCity.Work.values().length + " works won't fit");
         }
