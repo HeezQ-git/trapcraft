@@ -636,7 +636,10 @@ public final class TrapFloor {
         // difference between a floor and a faucet: a dry bar means one go and
         // out, and that is most of the trade gone.
         int served = TrapHouse.serve(house);
-        punter.setCustomName(Text.literal("Punter  ·  " + stake + "e a go")
+        // Somebody out of the town, not a label. They are the same people who
+        // pay your rent, and "Punter" over every head read as spawned scenery.
+        String who = TrapHomes.someoneFromTown(random);
+        punter.setCustomName(Text.literal(who + "  ·  " + stake + "e")
                 .formatted(served == 2 ? Formatting.LIGHT_PURPLE
                         : served == 1 ? Formatting.WHITE : Formatting.DARK_GRAY));
         punter.setCustomNameVisible(true);
@@ -664,7 +667,7 @@ public final class TrapFloor {
         // the vault just quietly leaks.
         if (!house.pitBoss && random.nextFloat() < TrapMath.CHEAT_CHANCE) {
             session.cheat = true;
-            punter.setCustomName(Text.literal("Punter  ·  " + stake + "e a go")
+            punter.setCustomName(Text.literal(who + "  ·  " + stake + "e")
                     .formatted(Formatting.WHITE));
         }
         punter.getNavigation().startMovingTo(

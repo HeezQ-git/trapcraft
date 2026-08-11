@@ -336,6 +336,42 @@ public final class TrapHomes {
      * been. It is the number the shops read to decide how much custom walks
      * in, so housing pays twice: rent, and everybody it brings past a till.
      */
+    /**
+     * A name for somebody out of the town: a real tenant's, if there is one.
+     *
+     * Punters and shoppers were labelled "Punter" and "Townsperson", from back
+     * when they arrived from nowhere in particular. They come out of your
+     * houses now -- the same people who pay your rent -- and a room of
+     * identical labels reads as spawned scenery rather than as the town
+     * turning up.
+     *
+     * Falls back to the name pool when nobody is housed, because the
+     * alternative is an unnamed villager and there is nothing better to say.
+     */
+    /**
+     * The same name every time for the same seed.
+     *
+     * For somebody who STAYS -- a shopkeeper stood at a till gets respawned
+     * whenever their chunk comes back, and rolling a fresh name each time
+     * would mean the person behind your counter was a different person every
+     * morning.
+     */
+    public static String nameFor(int seed) {
+        return NAMES[Math.floorMod(seed, NAMES.length)];
+    }
+
+    public static String someoneFromTown(net.minecraft.util.math.random.Random random) {
+        List<String> living = new ArrayList<>();
+        for (Home home : HOMES) {
+            if (home.tenant != null) {
+                living.add(home.tenant);
+            }
+        }
+        return living.isEmpty()
+                ? NAMES[random.nextInt(NAMES.length)]
+                : living.get(random.nextInt(living.size()));
+    }
+
     public static int population() {
         int people = 0;
         for (Home home : HOMES) {

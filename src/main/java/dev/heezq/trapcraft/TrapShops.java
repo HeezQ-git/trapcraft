@@ -480,7 +480,10 @@ public final class TrapShops {
             return;
         }
         keeper.refreshPositionAndAngles(spot, world.getRandom().nextFloat() * 360f, 0f);
-        keeper.setCustomName(Text.literal(shop.name + "'s keeper").formatted(Formatting.AQUA));
+        // Stable per till, so the person behind your counter is the same
+        // person after every reload rather than a new hire every morning.
+        keeper.setCustomName(Text.literal(TrapHomes.nameFor(shop.pos.hashCode())
+                + "  ·  " + shop.name).formatted(Formatting.AQUA));
         keeper.setCustomNameVisible(true);
         keeper.addCommandTag(KEEPER_TAG);
         keeper.setAiDisabled(true);
@@ -866,8 +869,11 @@ public final class TrapShops {
             return false;
         }
         shopper.refreshPositionAndAngles(door, random.nextFloat() * 360.0F, 0.0F);
-        shopper.setCustomName(Text.literal(kind == Trip.WORK ? "Townsperson  ·  on shift"
-                : "Townsperson").formatted(Formatting.AQUA));
+        // Somebody out of the housing register, not a label. What they spend
+        // gets added to the name when they actually spend it -- see buy().
+        String who = TrapHomes.someoneFromTown(random);
+        shopper.setCustomName(Text.literal(kind == Trip.WORK ? who + "  ·  on shift" : who)
+                .formatted(Formatting.AQUA));
         shopper.setCustomNameVisible(true);
         shopper.addCommandTag(TAG);
         shopper.setDespawnDelay(20 * 60 * 3);
@@ -997,6 +1003,14 @@ public final class TrapShops {
         shop.sold++;
         shop.turnover += line.price();
         TrapCity.receive(duty, line.duty());
+
+        // What they spent, over their head, for the eight seconds they hang
+        // about before leaving. A shopper you watched walk in is worth more as
+        // "Maud  ·  12e" than as one more anonymous villager at a shelf.
+        String named = shopper.getCustomName() == null ? "Somebody"
+                : shopper.getCustomName().getString();
+        shopper.setCustomName(Text.literal(named + "  ·  " + (line.price() + duty) + "e")
+                .formatted(Formatting.GREEN));
 
         world.playSound(null, shelf.pos, SoundEvents.ENTITY_VILLAGER_TRADE,
                 SoundCategory.NEUTRAL, 0.8F, 1.0F);
