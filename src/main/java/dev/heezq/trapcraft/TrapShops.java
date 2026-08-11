@@ -163,7 +163,18 @@ public final class TrapShops {
                        TrapCity.Duty duty) {
     }
 
-    private record Shopper(BlockPos shelf, String dimension, int bornAt) {
+    /**
+     * What this one came out for.
+     *
+     * A town where every person you ever see is walking at a till is a town
+     * that exists to shop. Work trips cost nothing -- payday is aggregate and
+     * already ran, off the housing register, whether or not a single chunk was
+     * loaded -- so these are a SAMPLE of the economy rather than the economy
+     * itself. Nothing depends on one of them arriving.
+     */
+    private enum Trip { SHOP, WORK }
+
+    private record Shopper(BlockPos target, String dimension, int bornAt, Trip trip) {
     }
 
     private static final List<Shop> SHOPS = new ArrayList<>();
@@ -573,7 +584,7 @@ public final class TrapShops {
     // --- the trip out ---------------------------------------------------------
 
     private static void maybeVisit(MinecraftServer server) {
-        if (!TrapCity.founded() || SHOPS.isEmpty() || SHOPPERS.size() >= MAX_SHOPPERS) {
+        if (!TrapCity.founded() || SHOPPERS.size() >= MAX_SHOPPERS) {
             return;
         }
         int people = TrapHomes.population();
@@ -589,6 +600,14 @@ public final class TrapShops {
                 * (TrapCity.built(TrapCity.Work.LAMPS) ? TrapCity.LAMPS_TRADE : 1f)
                 * TrapMath.townDemand(TrapPayroll.purse(), people);
         if (random.nextFloat() > Math.min(0.95f, pull)) {
+            return;
+        }
+
+        // Roughly one in three is on their way to work rather than to a
+        // counter. Nothing is bought and nothing is paid -- payday already
+        // happened off the housing register -- but a town where everybody you
+        // ever see is queuing at a till is a town that exists to shop.
+        if (random.nextInt(3) == 0 && commute(server, random)) {
             return;
         }
 
@@ -609,35 +628,92 @@ public final class TrapShops {
             }
         }
         if (open.isEmpty()) {
+            // Nothing to buy anywhere. They still have jobs.
+            commute(server, random);
             return;
         }
         Shop shop = open.get(random.nextInt(open.size()));
         List<Shelf> counters = shelvesOf(shop);
-        arrive(server, shop, counters.get(random.nextInt(counters.size())), random);
+        arrive(server, shop.dimension, counters.get(random.nextInt(counters.size())).pos,
+                Trip.SHOP, random);
     }
 
-    private static void arrive(MinecraftServer server, Shop shop, Shelf shelf, Random random) {
-        ServerWorld world = worldOf(server, shop.dimension);
-        if (world == null) {
-            return;
+    /**
+     * Somebody sets off for work.
+     *
+     * A town's jobs ARE whatever players built -- the tills, the stalls, the
+     * casino floors and the vault. No new block, no point-of-interest to
+     * register, and a village with none of those simply has nobody commuting,
+     * which is the honest answer rather than a bug.
+     *
+     * @return true if anybody actually set off
+     */
+    private static boolean commute(MinecraftServer server, Random random) {
+        List<Shopper> sites = new ArrayList<>();
+        for (Shop shop : SHOPS) {
+            sites.add(new Shopper(shop.pos, shop.dimension, 0, Trip.WORK));
         }
-        BlockPos door = doorstep(world, shelf.pos, random);
+        for (TrapStalls.Stall stall : TrapStalls.all()) {
+            sites.add(new Shopper(stall.pos(), stall.dimension(), 0, Trip.WORK));
+        }
+        for (String wire : TrapHouse.wires().keySet()) {
+            BlockPos pos = TrapHouse.posOf(wire);
+            String where = dimensionOf(wire);
+            if (pos != null && where != null) {
+                sites.add(new Shopper(pos, where, 0, Trip.WORK));
+            }
+        }
+        if (TrapCity.founded()) {
+            sites.add(new Shopper(TrapCity.vaultAt(), TrapCity.vaultWorld(), 0, Trip.WORK));
+        }
+        if (sites.isEmpty()) {
+            return false;
+        }
+        Shopper site = sites.get(random.nextInt(sites.size()));
+        ServerWorld world = worldOf(server, site.dimension());
+        if (world == null || !loaded(world, site.target())) {
+            return false;
+        }
+        return arrive(server, site.dimension(), site.target(), Trip.WORK, random);
+    }
+
+    /**
+     * The dimension half of a casino wire key.
+     *
+     * Same shape as {@link TrapHouse#posOf}, which takes the other three
+     * fields: "dimension x y z", four parts, and a dimension id never contains
+     * a space. Null rather than a guess if it is not one.
+     */
+    private static String dimensionOf(String wire) {
+        String[] parts = wire.split(" ");
+        return parts.length == 4 ? parts[0] : null;
+    }
+
+    private static boolean arrive(MinecraftServer server, String dimension, BlockPos target,
+                                  Trip kind, Random random) {
+        ServerWorld world = worldOf(server, dimension);
+        if (world == null) {
+            return false;
+        }
+        BlockPos door = doorstep(world, target, random);
         if (door == null) {
-            return;
+            return false;
         }
         WanderingTraderEntity shopper = EntityType.WANDERING_TRADER.create(world,
                 SpawnReason.EVENT);
         if (shopper == null) {
-            return;
+            return false;
         }
         shopper.refreshPositionAndAngles(door, random.nextFloat() * 360.0F, 0.0F);
-        shopper.setCustomName(Text.literal("Townsperson").formatted(Formatting.AQUA));
+        shopper.setCustomName(Text.literal(kind == Trip.WORK ? "Townsperson  ·  on shift"
+                : "Townsperson").formatted(Formatting.AQUA));
         shopper.setCustomNameVisible(true);
         shopper.addCommandTag(TAG);
         shopper.setDespawnDelay(20 * 60 * 3);
         world.spawnEntity(shopper);
         SHOPPERS.put(shopper.getUuid(),
-                new Shopper(shelf.pos, shop.dimension, server.getTicks()));
+                new Shopper(target, dimension, server.getTicks(), kind));
+        return true;
     }
 
     private static BlockPos doorstep(ServerWorld world, BlockPos shelf, Random random) {
@@ -671,11 +747,15 @@ public final class TrapShops {
                 continue;
             }
             Shopper trip = row.getValue();
-            BlockPos counter = trip.shelf();
+            BlockPos counter = trip.target();
             double away = shopper.getBlockPos().getSquaredDistance(counter);
 
             if (away <= COUNTER * COUNTER) {
-                buy(server, shopper, trip);
+                if (trip.trip() == Trip.WORK) {
+                    clockOn(server, shopper, counter);
+                } else {
+                    buy(server, shopper, trip);
+                }
                 done.add(row.getKey());
                 continue;
             }
@@ -710,10 +790,27 @@ public final class TrapShops {
         gone.forEach(LEAVING::remove);
     }
 
+    /**
+     * They got to work. That is the entire event.
+     *
+     * No money moves here and none should: the wage was paid at payday off the
+     * housing register, and paying again on arrival would mean a town that
+     * earns more when somebody happens to be stood in the chunk watching.
+     */
+    private static void clockOn(MinecraftServer server, WanderingTraderEntity shopper,
+                                BlockPos site) {
+        ServerWorld world = (ServerWorld) shopper.getWorld();
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, site.getX() + 0.5,
+                site.getY() + 1.3, site.getZ() + 0.5, 6, 0.4, 0.3, 0.4, 0.01);
+        world.playSound(null, site, SoundEvents.ENTITY_VILLAGER_WORK_MASON,
+                SoundCategory.NEUTRAL, 0.5F, 1.0F);
+        leave(server, shopper);
+    }
+
     private static void buy(MinecraftServer server, WanderingTraderEntity shopper,
                             Shopper trip) {
         ServerWorld world = (ServerWorld) shopper.getWorld();
-        Shelf shelf = at(world, trip.shelf());
+        Shelf shelf = at(world, trip.target());
         Shop shop = shelf == null ? null : ownerOf(shelf);
         if (shop == null) {
             leave(server, shopper);
