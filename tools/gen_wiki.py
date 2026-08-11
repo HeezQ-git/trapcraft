@@ -393,6 +393,11 @@ def gather() -> None:
     DATA["markups"] = ints("MARKUP", shops)
     DATA["rent"] = ints("RENT", homes)
     DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
+    DATA["wage_multiple"] = int(need(r"WAGE_MULTIPLE = (\d+)", homes, "WAGE_MULTIPLE"))
+    DATA["floor_per_head"] = int(need(r"FLOOR_PER_HEAD = (\d+)", homes, "FLOOR_PER_HEAD"))
+    DATA["comfortable"] = int(need(r"COMFORTABLE = (\d+)", math, "COMFORTABLE"))
+    DATA["income_rate"] = int(need(
+        r'INCOME\("Income", "[^"]*",\s*(\d+)', city, "the income duty's opening rate"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -901,13 +906,45 @@ def build() -> str:
     one above another. A house reaches at most {d['span']} blocks from its mailbox, and it
     re-measures itself every couple of minutes, so knocking a wall through or taking the
     bed out shows up on its own. <code>/homes</code> lists everybody's.</p>
-    <h3 class="sub">Somebody moves in</h3>
-    <p>Any grade above nothing attracts a tenant within a day. They pay into the mailbox
-    every day and opening it takes the rent — there is no second thing to click.</p>
-    {table(["Grade", "Rent a day"], [[str(i), f"{d['rent'][i]}e"]
-                                     for i in range(1, len(d['rent']))])}
-    <p>Anchored so a grade-five house pays for about one flat-out crew hand. Passive income
-    should be a supplement you are pleased with, not a reason to stop farming.</p>
+    <h3 class="sub">How many live there</h3>
+    <p>A house is not one person. Three things have to agree and <strong>the lowest of them
+    wins</strong>: beds to sleep in, {d['floor_per_head']} squares of floor per head, and a
+    grade good enough that a family would put up with it. One person always fits — somebody
+    lives in a hovel — but a fourth bed in a grade-two cupboard houses nobody extra.</p>
+    <p class="note">This is the number the rest of the city reads. Every shopper who walks
+    into a till, every punter on a casino floor and every emerald of income tax is counted
+    per <em>head</em>, not per house. A four-bed home is four people through your door.</p>
+
+    <h3 class="sub">Payday</h3>
+    <p>Residents go out to work, and <strong>this is the only place money enters the town</strong>.
+    Once a day each household is paid by grade. Income tax comes off the top at the city's
+    Income rate — {d['income_rate']}% to start — and goes straight to the vault. What is left
+    lands in the <strong>town purse</strong>.</p>
+    <p>Rent is then paid <em>out of that purse</em>, into your mailbox, the same day. So the
+    wage is deliberately anchored to the rent table: <strong>{d['wage_multiple']}× the rent</strong>
+    at every grade, which guarantees a resident always clears their own landlord and leaves
+    something over to spend.</p>
+    {table(["Grade", "Earns a day", "Rent to you", "Left to spend"],
+           [[str(i), f"{d['rent'][i] * d['wage_multiple']}e", f"{d['rent'][i]}e",
+             f"{d['rent'][i] * (d['wage_multiple'] - 1)}e"]
+            for i in range(1, len(d['rent']))])}
+    <p class="note">You collect rent by opening the mailbox — there is no second thing to
+    click. A tenant who somehow cannot make rent pays <em>none</em> of it rather than part;
+    the mood slide below is what eventually moves them out.</p>
+
+    <h3 class="sub">The town purse — why any of this matters to you</h3>
+    <p>The leftover is not bookkeeping. It is the money your shops and casinos are paid with,
+    and <strong>the town cannot spend what it has not earned</strong>. An empty purse means a
+    town that stays in: fewer shoppers at your shelves, fewer punters at your machines.</p>
+    <p>How hard they shop is measured <em>per head</em> — about {d['comfortable']}e a head in
+    the purse is a comfortably-off town shopping at its normal rate, and it climbs from there
+    to a ceiling. Twenty people sharing a purse are comfortable where two hundred sharing the
+    same purse are not.</p>
+    <p>Which closes the loop the whole city is built on:</p>
+    <p class="note"><strong>better houses → better-paid residents → more custom through your
+    till → more duty in the vault → public works → a better city.</strong> Build well and you
+    are paid three times over: the rent, the income tax that funds the works, and the spending
+    power of the people living in it. <code>/city</code> prints the purse alongside the books.</p>
     <h3 class="sub">Mood, and the letters</h3>
     <p>Tenants hold a mood out of 100. Dark corners and a falling grade wear it down, and
     <strong>an unhappy tenant pays less before they pay nothing</strong> — so a slide shows up
@@ -924,7 +961,13 @@ def build() -> str:
     live pays a little over.</p>
     <p>They gamble, too. A resident living near a wired machine walks in and plays it rather
     than a stranger appearing from nowhere — the same person who pays your rent, going home
-    afterwards. Which is an argument for building the casino where people actually live.</p>
+    afterwards. Which is an argument for building the casino where people actually live. Their
+    stake comes out of the same purse their wages went into, and what they win goes back to it.</p>
+    <p>And they go to work. About one townsperson in three that you see is walking to a job
+    rather than to a counter — a shop till, a stall, a casino floor, the vault. A town's jobs
+    are whatever has actually been built, so a village of houses and nothing else has nobody
+    commuting. It is scenery: the wage was already paid from the housing register, whether or
+    not anyone was stood there watching.</p>
     <h3 class="sub">Not next door</h3>
     <p>A grow within scanning distance of somebody's front room empties it. A small one leaves
     them miserable and paying two fifths; anything bigger and they go. <strong>The plantation
@@ -1048,7 +1091,9 @@ def build() -> str:
 
     cmd_rows = [
         ["<code>/wiki</code>", "This page, as a clickable link in chat"],
-        ["<code>/guide</code>", "Six handbooks — grower, refiner, street, crew, casino, city"],
+        ["<code>/guide</code>",
+         "Seven handbooks — grower, refiner, street, crew, casino, city, housing"],
+        ["<code>/guide housing</code>", "Houses, grades, and where a resident's money comes from"],
         ["<code>/market</code>", "Why everything costs what it costs"],
         ["<code>/stalls</code>", "Who is selling, and where"],
         ["<code>/city</code>", "The purse, the current duties, and what each has raised"],

@@ -10,6 +10,9 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * The quality grade rides on the itemstack as a data component, so it survives
  * being dropped, stored in a chest, and -- crucially -- crafted, as long as the
@@ -119,6 +122,65 @@ public final class TrapComponents {
     public static Quality get(ItemStack stack) {
         Integer index = stack.get(quality);
         return index == null ? Quality.MIDS : Quality.byIndex(index);
+    }
+
+    /**
+     * How a stack's grade goes into the flat text saves.
+     *
+     * Asks the stack what grade it actually carries rather than assuming
+     * quality -- see {@link GradeTag} for what that assumption cost.
+     */
+    public static GradeTag gradeTag(ItemStack stack) {
+        Blend mix = getBlend(stack);
+        if (mix != null) {
+            return new GradeTag(GradeTag.BLEND, mix.grade(),
+                    mix.parts().stream().map(Strain::asString).toList());
+        }
+        Integer refined = stack.get(purity);
+        if (refined != null) {
+            return new GradeTag(GradeTag.PURITY, refined, List.of());
+        }
+        Integer grown = stack.get(quality);
+        return grown == null ? GradeTag.NONE
+                : new GradeTag(GradeTag.QUALITY, grown, List.of());
+    }
+
+    /** Puts back exactly what {@link #gradeTag} wrote. */
+    public static ItemStack applyGradeTag(ItemStack stack, String tag) {
+        GradeTag grade = GradeTag.parse(tag);
+        switch (grade.kind()) {
+            case GradeTag.BLEND -> {
+                List<Strain> parts = new ArrayList<>();
+                for (String name : grade.parts()) {
+                    for (Strain strain : Strain.values()) {
+                        if (strain.asString().equals(name)) {
+                            parts.add(strain);
+                        }
+                    }
+                }
+                if (parts.size() < Blend.MIN_PARTS) {
+                    return stack;
+                }
+                // Rebuilt through the factory rather than by setting the
+                // component: the name, colour and lore all derive from the mix
+                // and would otherwise come back as a bare item.
+                Blend mix = new Blend(parts, grade.index());
+                ItemStack out = stack.getItem() == TrapContent.blendJointItem
+                        ? TrapContent.blendJoint(mix)
+                        : TrapContent.blendBud(mix);
+                out.setCount(stack.getCount());
+                return out;
+            }
+            case GradeTag.PURITY -> {
+                return applyPurity(stack, Purity.byIndex(grade.index()));
+            }
+            case GradeTag.QUALITY -> {
+                return apply(stack, Quality.byIndex(grade.index()));
+            }
+            default -> {
+                return stack;
+            }
+        }
     }
 
     /** Sets the grade and renames the stack so you can read it in a chest. */

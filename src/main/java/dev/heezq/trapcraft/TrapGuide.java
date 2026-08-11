@@ -63,7 +63,10 @@ public final class TrapGuide {
                         .then(CommandManager.literal("casino")
                                 .executes(context -> give(context.getSource(), createCasino())))
                         .then(CommandManager.literal("city")
-                                .executes(context -> give(context.getSource(), createCity())))));
+                                .executes(context -> give(context.getSource(), createCity())))
+                        .then(CommandManager.literal("housing")
+                                .executes(context -> give(context.getSource(),
+                                        createHousing())))));
         registerWiki();
     }
 
@@ -119,7 +122,8 @@ public final class TrapGuide {
                 .append(pick("street", "paranoia, the ledger, contracts"))
                 .append(pick("crew", "hiring hands, and what they cost"))
                 .append(pick("casino", "running a floor"))
-                .append(pick("city", "houses, and what makes one"))
+                .append(pick("city", "the purse, the duties, the shops"))
+                .append(pick("housing", "houses, grades, and who pays you"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -207,23 +211,22 @@ public final class TrapGuide {
     }
 
     /**
-     * The sixth book: the city half.
+     * The sixth book: the public half.
      *
-     * Every number in it is read off {@link HomeSurvey}, which is the only
-     * way a checklist stays honest: the grade is worked out in one place and
-     * printed in three -- this book, the mailbox screen and the wiki -- and
-     * two of those are guaranteed to drift the day somebody tunes the fourth.
+     * The vault, what it charges, what it buys, and the shops that pay into
+     * it. The houses moved to {@link #createHousing} when this reached
+     * thirty-three pages -- they are a different job, done by the same person,
+     * and one book covering both was one nobody read to the end of.
      */
     public static ItemStack createCity() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         pages.add(page(Text.empty()
                 .append(title("THE CITY"))
-                .append(Text.literal("\nlandlord's handbook\n\n")
+                .append(Text.literal("\nthe public purse\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("A room somebody could live in is worth "
-                        + "something. This is how the city decides how "
-                        + "much.\n\n"))
-                .append(hint("Start: craft a mailbox."))));
+                .append(body("What the city charges, what it buys with it, "
+                        + "and the counters it taxes.\n\n"))
+                .append(hint("Houses: /guide housing"))));
         cityBook(pages);
         return book("The City", pages);
     }
@@ -334,7 +337,44 @@ public final class TrapGuide {
                 .append(warn("No houses, no shoppers. No vault, no city."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. THE MAILBOX\n\n"))
+                .append(title("1f2. AND WHO PAYS\n\n"))
+                .append(body("Residents work, and their wages are the only "
+                        + "money the town has.\n\n"))
+                .append(body("Taxed on the way in. Spent in your shops.\n\n"))
+                .append(hint("The whole of it: /guide housing"))));
+    }
+
+    /**
+     * The seventh book: the half of the city that people live in.
+     *
+     * Split out of the landlord's handbook once that reached thirty-three
+     * pages, which is well past the length this mod's own comment calls
+     * readable. The city half is now the purse, the duties and the shops; this
+     * is the houses, the people in them, and where their money comes from.
+     *
+     * Every number is read off {@link HomeSurvey} for the reason the rest of
+     * the book is: the grade is worked out in one place and printed in three,
+     * and the prose version of this table listed grades two to five and
+     * stopped, so three of them went undocumented the day they were added.
+     */
+    public static ItemStack createHousing() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("HOUSING"))
+                .append(Text.literal("\nthe register\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("A room somebody could live in is worth "
+                        + "something. Here is what it is worth, and why the "
+                        + "rest of the city cares.\n\n"))
+                .append(hint("The purse and the duties: /guide city"))));
+        housingBook(pages);
+        return book("Housing", pages);
+    }
+
+    /** Every page below reads its numbers off {@link HomeSurvey}. */
+    private static void housingBook(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. THE MAILBOX\n\n"))
                 .append(body("Stand one inside the room ONCE and right-click "
                         + "it.\n\n"))
                 .append(body("It walks the walls, grades the place, and puts "
@@ -342,14 +382,14 @@ public final class TrapGuide {
                 .append(hint("Then it belongs outside. See the next page."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. MOVING IT\n\n"))
+                .append(title("2. MOVING IT\n\n"))
                 .append(body("Sneak + right-click, empty-handed.\n\n"))
                 .append(body("It comes off the wall with the address on "
                         + "it. Nail it up outside.\n\n"))
                 .append(hint("The house stays where it was measured."))));
 
         pages.add(page(Text.empty()
-                .append(title("3b. IF IT GETS LOST\n\n"))
+                .append(title("2b. IF IT GETS LOST\n\n"))
                 .append(body("Blank box, back inside: it takes the job "
                         + "again.\n\n"))
                 .append(body("Blank box outside: it serves your nearest "
@@ -357,14 +397,14 @@ public final class TrapGuide {
                 .append(hint("/homes demolish drops the one you stand in."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. WHAT COUNTS\n\n"))
+                .append(title("3. WHAT COUNTS\n\n"))
                 .append(body("Sealed. Walls, floor, roof, no gaps.\n\n"))
                 .append(body("Doors are walls -- a shut bedroom door still "
                         + "counts as your room.\n\n"))
                 .append(hint("A door onto the street is the way in."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. THE FIVE MUSTS\n\n"))
+                .append(title("4. THE FIVE MUSTS\n\n"))
                 .append(body("Sealed.\n"))
                 .append(body(HomeSurvey.MIN_FLOOR + " blocks of floor.\n"))
                 .append(body("A bed.\n"))
@@ -373,17 +413,27 @@ public final class TrapGuide {
                 .append(warn("Miss one and it is not a house."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. THE GRADE\n\n"))
-                .append(body("Points, " + HomeSurvey.topPoints()
-                        + " of them. Two a grade.\n\n"))
-                .append(warn("SIZE CAPS IT. " + HomeSurvey.FLOOR_STEPS[1]
-                        + " floor for grade 2, " + HomeSurvey.FLOOR_STEPS[2]
-                        + " for 3, " + HomeSurvey.FLOOR_STEPS[3] + " for 4, "
-                        + HomeSurvey.FLOOR_STEPS[4] + " for 5.\n\n"))
+                .append(title("5. THE GRADE\n\n"))
+                .append(body("Points, " + HomeSurvey.topPoints() + " of them. Two a "
+                        + "grade, up to " + HomeSurvey.TOP_TIER + ".\n\n"))
+                .append(warn("SIZE CAPS IT. Floor picks the best grade allowed. "
+                        + "Nothing else lifts it.\n\n"))
                 .append(hint("Upstairs counts. Every storey."))));
 
+        // Off the array rather than spelled out. The prose version listed
+        // grades two to five and stopped, so the three grades added later
+        // were undocumented in the one book that exists to document them.
+        MutableText lid = Text.empty()
+                .append(title("5b. THE LID\n\n"))
+                .append(body("floor   grade\n"));
+        for (int step = 0; step < HomeSurvey.FLOOR_STEPS.length; step++) {
+            lid.append(body(HomeSurvey.FLOOR_STEPS[step] + "+" + "   "
+                    + (step + 1) + "\n"));
+        }
+        pages.add(page(lid));
+
         pages.add(page(Text.empty()
-                .append(title("7. THE POINTS\n\n"))
+                .append(title("6. THE POINTS\n\n"))
                 .append(body("Built, not dug: "
                         + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% then "
                         + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "%.\n"))
@@ -394,18 +444,25 @@ public final class TrapGuide {
                 .append(body("No dark corners.\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("8. GROUND\n\n"))
+                .append(title("7. GROUND\n\n"))
                 .append(body("Two houses can't share it.\n\n"))
                 .append(body("Flats side by side are fine. So is one above "
                         + "another.\n\n"))
                 .append(hint("Up to " + HomeSurvey.SPAN + " blocks from the box."))));
 
         pages.add(page(Text.empty()
-                .append(title("9. IT KEEPS LOOKING\n\n"))
+                .append(title("8. IT KEEPS LOOKING\n\n"))
                 .append(body("Every couple of minutes it measures again.\n\n"))
                 .append(body("Knock a wall through or take the bed and the "
                         + "grade drops.\n\n"))
                 .append(hint("/homes lists everybody's."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. HOW MANY LIVE THERE\n\n"))
+                .append(body("Beds, floor and grade. The lowest wins.\n\n"))
+                .append(body(HomeSurvey.FLOOR_PER_HEAD + " floor a head past the "
+                        + "first.\n\n"))
+                .append(hint("Four beds in a cupboard house one."))));
 
         pages.add(page(Text.empty()
                 .append(title("10. SOMEBODY MOVES IN\n\n"))
@@ -418,7 +475,29 @@ public final class TrapGuide {
                         + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e."))));
 
         pages.add(page(Text.empty()
-                .append(title("10b. THEY BUY\n\n"))
+                .append(title("11. PAYDAY\n\n"))
+                .append(body("They go out to work. Paid once a day, by "
+                        + "grade.\n\n"))
+                .append(body("Income tax off the top, into the vault.\n\n"))
+                .append(hint("A wage is " + HomeSurvey.WAGE_MULTIPLE
+                        + "x the rent, so they always clear it."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12. THE TOWN PURSE\n\n"))
+                .append(body("What's left of the wages after rent.\n\n"))
+                .append(body("Your shops and floors are paid out of it. It is "
+                        + "the only money the town has.\n\n"))
+                .append(warn("Empty purse, nobody comes."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13. SO BUILD WELL\n\n"))
+                .append(body("A better house is a better wage, and a better "
+                        + "wage is spent in your shop.\n\n"))
+                .append(body("Rent, tax, and their custom.\n\n"))
+                .append(hint("/city shows the purse."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14. THEY BUY\n\n"))
                 .append(body("Right-click a resident, empty hand. They'll "
                         + "say what they fancy.\n\n"))
                 .append(body("Hold it, click again, and they pay -- "
@@ -426,14 +505,14 @@ public final class TrapGuide {
                 .append(hint("New fancy most days. Price varies."))));
 
         pages.add(page(Text.empty()
-                .append(title("10c. THEY GAMBLE\n\n"))
+                .append(title("15. THEY GAMBLE\n\n"))
                 .append(body("A resident near a wired machine will walk in "
                         + "and play it.\n\n"))
                 .append(body("Same person. They go home after.\n\n"))
                 .append(hint("Build the casino where people live."))));
 
         pages.add(page(Text.empty()
-                .append(title("11. MOOD\n\n"))
+                .append(title("16. MOOD\n\n"))
                 .append(body("Dark corners and a falling grade wear them "
                         + "down.\n\n"))
                 .append(body("An unhappy tenant pays less. At "
@@ -441,7 +520,7 @@ public final class TrapGuide {
                 .append(hint("They write. Read the post in the mailbox."))));
 
         pages.add(page(Text.empty()
-                .append(title("12. NOT NEXT DOOR\n\n"))
+                .append(title("17. NOT NEXT DOOR\n\n"))
                 .append(body("A grow near a house empties it.\n\n"))
                 .append(body("Small: they stay, miserable, paying two "
                         + "fifths.\n\n"))

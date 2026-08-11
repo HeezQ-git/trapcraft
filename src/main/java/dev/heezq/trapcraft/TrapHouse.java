@@ -928,7 +928,7 @@ public final class TrapHouse {
                 for (ItemStack stack : house.bar) {
                     bar.append(' ').append(Registries.ITEM.getId(stack.getItem()))
                             .append('|').append(stack.getCount())
-                            .append('|').append(TrapComponents.get(stack).index());
+                            .append('|').append(TrapComponents.gradeTag(stack));
                 }
                 lines.add(bar.toString());
                 lines.add("staff " + house.id + " " + (house.pitBoss ? 1 : 0)
@@ -1007,9 +1007,8 @@ public final class TrapHouse {
                             if (item == null) {
                                 continue;
                             }
-                            house.bar.add(TrapComponents.apply(
-                                    new ItemStack(item, Integer.parseInt(bits[1])),
-                                    Quality.byIndex(Integer.parseInt(bits[2]))));
+                            house.bar.add(TrapComponents.applyGradeTag(
+                                    new ItemStack(item, Integer.parseInt(bits[1])), bits[2]));
                         }
                     }
                 } else if (parts.length == 6 && parts[0].equals("staff")) {

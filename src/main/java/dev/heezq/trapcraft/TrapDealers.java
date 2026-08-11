@@ -565,6 +565,10 @@ public final class TrapDealers {
      * fits in three fields and the whole book stays a text file anybody can
      * read, same as everything else this mod saves. A general itemstack would
      * have meant NBT and a binary blob.
+     *
+     * The grade field is a {@link GradeTag}, not a bare number: three product
+     * lines keep their grade in three different places and one untagged int
+     * could only ever mean one of them.
      */
     private static void save() {
         if (saveFile == null) {
@@ -581,7 +585,7 @@ public final class TrapDealers {
                 for (ItemStack stack : dealer.stock) {
                     line.append(' ').append(Registries.ITEM.getId(stack.getItem()))
                             .append('|').append(stack.getCount())
-                            .append('|').append(TrapComponents.get(stack).index());
+                            .append('|').append(TrapComponents.gradeTag(stack));
                 }
                 lines.add(line.toString());
             }
@@ -623,9 +627,8 @@ public final class TrapDealers {
                     if (item == null) {
                         continue;
                     }
-                    dealer.stock.add(TrapComponents.apply(
-                            new ItemStack(item, Integer.parseInt(bits[1])),
-                            Quality.byIndex(Integer.parseInt(bits[2]))));
+                    dealer.stock.add(TrapComponents.applyGradeTag(
+                            new ItemStack(item, Integer.parseInt(bits[1])), bits[2]));
                 }
                 BOOK.add(dealer);
             }
