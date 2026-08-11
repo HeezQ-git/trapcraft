@@ -9,8 +9,8 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -35,6 +35,13 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * its own little business with its own barrel and its own till. Twelve of
  * those is not a supermarket, it is twelve corner shops in a row and twelve
  * things to keep stocked. Twelve of these is one building.
+ *
+ * <h2>Two sides of one counter</h2>
+ *
+ * The owner clicking a shelf gets the back office, same as the till gives
+ * them. Anybody else gets the shop window and can buy off it at exactly what a
+ * townsperson pays, duty and all -- which is what makes a kiosk somewhere your
+ * friends shop rather than a machine for turning villagers into emeralds.
  */
 public class MarketShelfBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
     private final BlockState carrier;
@@ -93,19 +100,16 @@ public class MarketShelfBlock extends Block implements PolymerBlock, PolymerText
                             + " blocks of it.").formatted(Formatting.GRAY)), false);
             return ActionResult.SUCCESS;
         }
-        Inventory under = ground.getBlockEntity(pos.down()) instanceof Inventory box
-                ? box : null;
-        who.sendMessage(Text.literal(shop.name()).formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("   " + shop.ownerName() + "'s, "
-                        + TrapShops.shelvesOf(shop).size() + " shelves, "
-                        + shop.sold() + " sold").formatted(Formatting.GRAY))
-                .append(Text.literal(under == null
-                                ? "\n  Nothing under this one. Stock goes under any shelf, "
-                                + "or under the till."
-                                : "").formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  The till is at " + shop.pos().getX() + " "
-                        + shop.pos().getY() + " " + shop.pos().getZ() + ".")
-                        .formatted(Formatting.DARK_GRAY)), false);
+        TrapShops.Shop theirs = shop;
+        // The owner gets the back office wherever they click; everybody else
+        // gets the shop window. One counter, two sides of it.
+        who.openHandledScreen(new SimpleNamedScreenHandlerFactory(
+                shop.owner().equals(who.getUuid())
+                        ? (syncId, inventory, ignored) ->
+                                new ShopScreen(syncId, inventory, theirs)
+                        : (syncId, inventory, ignored) ->
+                                new ShelfScreenHandler(syncId, inventory, theirs),
+                Text.literal(shop.name()).formatted(Formatting.GOLD)));
         return ActionResult.SUCCESS;
     }
 

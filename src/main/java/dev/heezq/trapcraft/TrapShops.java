@@ -496,6 +496,80 @@ public final class TrapShops {
         return true;
     }
 
+    /**
+     * A player over the same counter a townsperson uses.
+     *
+     * The same price and the same duty, deliberately. A kiosk selling joints is
+     * a licensed dispensary for players too, which is the entire point of the
+     * legal rate: clean, declared, no heat, and worth less than the street.
+     *
+     * Nothing here touches {@link TrapPayroll}. A player's emeralds already
+     * exist -- they are moved, not made -- and that asymmetry is the reason
+     * the town needs a purse and a player does not.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String buy(ServerPlayerEntity buyer, Shop shop, Line line) {
+        ServerWorld world = (ServerWorld) buyer.getWorld();
+        if (buyer.getUuid().equals(shop.owner)) {
+            return "It's your own shop.";
+        }
+        int duty = TrapCity.dutyOn(line.price(), line.duty());
+        if (TrapMarket.wealthOf(buyer) < line.price() + duty) {
+            return "That's " + (line.price() + duty) + "e, and you haven't got it.";
+        }
+        if (!take(world, shop, line)) {
+            return "They've sold out of that.";
+        }
+
+        // collect, not take: every emerald here is moving, not leaving. The
+        // price goes to the owner's register and the duty to the vault, and
+        // reporting either as destroyed would have the index feel a shock
+        // where nothing happened.
+        TrapMarket.collect(buyer, line.price());
+        shop.till += line.price();
+        shop.sold++;
+        shop.turnover += line.price();
+        TrapCity.charge(buyer, line.price(), line.duty());
+        // The buyer's side only. The owner is credited when they empty the
+        // till, not now -- booking both here would count the sale twice.
+        TrapLedger.record(buyer, TrapLedger.Source.STALL, -(line.price() + duty));
+        save();
+
+        ItemStack bought = line.sample().copy();
+        bought.setCount(line.count());
+        buyer.getInventory().offerOrDrop(bought);
+        world.playSound(null, shop.pos, SoundEvents.BLOCK_BARREL_CLOSE,
+                SoundCategory.BLOCKS, 0.7F, 1.3F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, buyer.getX(),
+                buyer.getY() + 1.0, buyer.getZ(), 6, 0.3, 0.2, 0.3, 0.01);
+
+        ServerPlayerEntity owner = buyer.getServer().getPlayerManager().getPlayer(shop.owner);
+        if (owner != null) {
+            owner.sendMessage(Text.literal("Sold ").formatted(Formatting.GREEN)
+                    .append(Text.literal(line.count() + "x " + line.label())
+                            .formatted(Formatting.WHITE))
+                    .append(Text.literal(" to " + buyer.getGameProfile().getName()
+                            + " -- " + line.price() + "e in the till.")
+                            .formatted(Formatting.GRAY)), false);
+        }
+        return null;
+    }
+
+    /** Everything this shop could serve right now, one entry a line. */
+    public static List<Line> onSale(MinecraftServer server, ServerWorld world, Shop shop) {
+        Map<String, Line> lines = new LinkedHashMap<>();
+        for (Inventory box : stockOf(world, shop)) {
+            for (int slot = 0; slot < box.size(); slot++) {
+                Line line = lineFor(server, box.getStack(slot), shop);
+                if (line != null) {
+                    lines.putIfAbsent(line.label(), line);
+                }
+            }
+        }
+        return new ArrayList<>(lines.values());
+    }
+
     // --- the trip out ---------------------------------------------------------
 
     private static void maybeVisit(MinecraftServer server) {

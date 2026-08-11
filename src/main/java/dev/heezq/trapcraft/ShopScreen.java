@@ -22,9 +22,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The back office of one shop.
@@ -96,7 +94,8 @@ public class ShopScreen extends ScreenHandler {
                 display.setStack(LINES_FROM, noShelves());
             }
         } else {
-            List<TrapShops.Line> lines = onSale();
+            List<TrapShops.Line> lines = TrapShops.onSale(who.getServer(),
+                    (ServerWorld) who.getWorld(), shop);
             for (int i = 0; i < lines.size() && LINES_FROM + i < SIZE; i++) {
                 display.setStack(LINES_FROM + i, priced(lines.get(i)));
             }
@@ -145,22 +144,6 @@ public class ShopScreen extends ScreenHandler {
                 line("Put market shelves within " + TrapShops.REACH + " blocks", Formatting.GRAY),
                 line("of this till and they join on their own.", Formatting.GRAY))));
         return tag;
-    }
-
-    /** Everything the shop could serve right now, one entry a line. */
-    private List<TrapShops.Line> onSale() {
-        Map<String, TrapShops.Line> lines = new LinkedHashMap<>();
-        ServerWorld world = (ServerWorld) who.getWorld();
-        for (Inventory box : TrapShops.stockOf(world, shop)) {
-            for (int slot = 0; slot < box.size(); slot++) {
-                TrapShops.Line line = TrapShops.lineFor(who.getServer(),
-                        box.getStack(slot), shop);
-                if (line != null) {
-                    lines.putIfAbsent(line.label(), line);
-                }
-            }
-        }
-        return new ArrayList<>(lines.values());
     }
 
     private ItemStack till() {
