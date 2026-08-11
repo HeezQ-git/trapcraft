@@ -180,7 +180,8 @@ public final class TrapStalls {
         if (!world.getRegistryKey().getValue().toString().equals(stall.dimension)) {
             return null;
         }
-        return world.getBlockEntity(stall.pos.down()) instanceof Inventory box ? box : null;
+        // Both halves of a double chest, not just the near one.
+        return TrapBoxes.at(world, stall.pos.down());
     }
 
     /** Catalogue lines this stall currently has on it, and how many lots of each. */

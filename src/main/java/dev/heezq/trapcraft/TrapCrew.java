@@ -2095,15 +2095,23 @@ public final class TrapCrew {
 
     /** The closest container to the patch, or null if there isn't one. */
     private static net.minecraft.inventory.Inventory nearestBox(ServerWorld world, Hand hand) {
-        if (hand.box != null
-                && world.getBlockEntity(hand.box) instanceof net.minecraft.inventory.Inventory known) {
-            return known;
+        // Through TrapBoxes, not getBlockEntity: that hands back one half of a
+        // double chest, so a hand filled 27 slots, called the chest full, and
+        // threw the rest of the harvest on the floor.
+        if (hand.box != null) {
+            net.minecraft.inventory.Inventory known = TrapBoxes.at(world, hand.box);
+            if (known != null) {
+                return known;
+            }
         }
         for (BlockPos pos : BlockPos.iterateOutwards(hand.patch, hand.reachBlocks(), 4,
                 hand.reachBlocks())) {
-            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory box) {
+            // Cheap test to find the candidate, then resolve the winner once.
+            // TrapBoxes.at costs an entity lookup and this scan is thousands
+            // of squares wide.
+            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory) {
                 hand.box = pos.toImmutable();
-                return box;
+                return TrapBoxes.at(world, pos);
             }
         }
         hand.box = null;

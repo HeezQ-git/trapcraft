@@ -387,11 +387,16 @@ public final class TrapShops {
         if (!world.getRegistryKey().getValue().toString().equals(shop.dimension)) {
             return boxes;
         }
-        if (world.getBlockEntity(shop.pos.down()) instanceof Inventory under) {
+        // TrapBoxes, so a double chest is one 54-slot container rather than
+        // the near half of it. A shop stocked out of one used to go quiet the
+        // moment the goods sat past slot 27.
+        Inventory under = TrapBoxes.at(world, shop.pos.down());
+        if (under != null) {
             boxes.add(under);
         }
         for (Shelf shelf : shelvesOf(shop)) {
-            if (world.getBlockEntity(shelf.pos.down()) instanceof Inventory box) {
+            Inventory box = TrapBoxes.at(world, shelf.pos.down());
+            if (box != null) {
                 boxes.add(box);
             }
         }

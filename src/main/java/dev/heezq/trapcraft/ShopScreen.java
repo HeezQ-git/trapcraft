@@ -117,7 +117,8 @@ public class ShopScreen extends ScreenHandler {
     private ItemStack shelfRow(TrapShops.Shelf shelf) {
         ServerWorld world = (ServerWorld) who.getWorld();
         int under = 0;
-        if (world.getBlockEntity(shelf.pos().down()) instanceof Inventory box) {
+        Inventory box = TrapBoxes.at(world, shelf.pos().down());
+        if (box != null) {
             for (int slot = 0; slot < box.size(); slot++) {
                 under += box.getStack(slot).getCount();
             }
