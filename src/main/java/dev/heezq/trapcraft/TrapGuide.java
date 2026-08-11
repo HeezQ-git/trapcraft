@@ -479,8 +479,31 @@ public final class TrapGuide {
                 .append(body("They go out to work. Paid once a day, by "
                         + "grade.\n\n"))
                 .append(body("Income tax off the top, into the vault.\n\n"))
-                .append(hint("A wage is " + HomeSurvey.WAGE_MULTIPLE
+                .append(hint("A wage starts at " + HomeSurvey.WAGE_MULTIPLE
                         + "x the rent, so they always clear it."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11b. AND BY SIZE\n\n"))
+                .append(body("Grade sets the rate. Floor lifts it inside the "
+                        + "grade.\n\n"))
+                .append(body("A big house pays halfway to the next grade. No "
+                        + "further.\n\n"))
+                .append(hint("Grades still beat sprawl."))));
+
+        // The table people will actually plan against: what one resident earns
+        // at the bottom and the top of each band. Off the arrays, because the
+        // prose version of the grade ladder went stale the day it grew.
+        MutableText paid = Text.empty()
+                .append(title("11c. WHAT THEY EARN\n\n"))
+                .append(body("grade  small   big\n"));
+        for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
+            int lo = HomeSurvey.FLOOR_STEPS[tier - 1];
+            int hi = tier >= HomeSurvey.TOP_TIER ? HomeSurvey.topFloor()
+                    : HomeSurvey.FLOOR_STEPS[tier] - 1;
+            paid.append(body(tier + "      " + HomeSurvey.wageDue(tier, 1, lo)
+                    + "e     " + HomeSurvey.wageDue(tier, 1, hi) + "e\n"));
+        }
+        pages.add(page(paid));
 
         pages.add(page(Text.empty()
                 .append(title("12. THE TOWN PURSE\n\n"))

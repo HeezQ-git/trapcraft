@@ -394,6 +394,7 @@ def gather() -> None:
     DATA["rent"] = ints("RENT", homes)
     DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
     DATA["wage_multiple"] = int(need(r"WAGE_MULTIPLE = (\d+)", homes, "WAGE_MULTIPLE"))
+    DATA["size_lift"] = float(need(r"SIZE_LIFT = ([\d.]+)f", homes, "SIZE_LIFT"))
     DATA["floor_per_head"] = int(need(r"FLOOR_PER_HEAD = (\d+)", homes, "FLOOR_PER_HEAD"))
     DATA["comfortable"] = int(need(r"COMFORTABLE = (\d+)", math, "COMFORTABLE"))
     DATA["income_rate"] = int(need(
@@ -422,6 +423,33 @@ def gather() -> None:
     # so the page would have advertised a market a third the size of the real
     # one. check_stock.py already expands those loops; borrow it.
     DATA["declared_lines"] = len(check_stock.catalogue(stock))
+
+
+def band_top(tier: int) -> int:
+    steps = DATA["floor_steps"]
+    last = len(steps) - 1
+    return steps[tier] if tier <= last else steps[last] + (steps[last] - steps[last - 1])
+
+
+def roominess(tier: int, floor: int) -> float:
+    steps = DATA["floor_steps"]
+    frm = steps[min(tier, len(steps)) - 1]
+    to = band_top(tier)
+    return max(0.0, min(1.0, (floor - frm) / (to - frm)))
+
+
+def wage_at(tier: int, floor: int) -> int:
+    """Mirror of HomeSurvey.wageDue for one head, so the table cannot drift.
+
+    Takes a FLOOR rather than a roominess on purpose: a band is exclusive at
+    the top, so quoting the rate at roominess 1.0 advertises a wage nobody in
+    that grade can actually be paid. The top grade reaches half a band past
+    itself rather than nowhere — see HomeSurvey.bandTop for why.
+    """
+    rent, top, lift = DATA["rent"], DATA["top_tier"], DATA["size_lift"]
+    reaches = rent[tier + 1] if tier < top else rent[top] + (rent[top] - rent[top - 1])
+    rate = rent[tier] + (reaches - rent[tier]) * roominess(tier, floor) * lift
+    return max(1, round(rate * DATA["wage_multiple"]))
 
 
 def minutes(rolls: int) -> float:
@@ -921,13 +949,30 @@ def build() -> str:
     Income rate — {d['income_rate']}% to start — and goes straight to the vault. What is left
     lands in the <strong>town purse</strong>.</p>
     <p>Rent is then paid <em>out of that purse</em>, into your mailbox, the same day. So the
-    wage is deliberately anchored to the rent table: <strong>{d['wage_multiple']}× the rent</strong>
-    at every grade, which guarantees a resident always clears their own landlord and leaves
-    something over to spend.</p>
-    {table(["Grade", "Earns a day", "Rent to you", "Left to spend"],
-           [[str(i), f"{d['rent'][i] * d['wage_multiple']}e", f"{d['rent'][i]}e",
-             f"{d['rent'][i] * (d['wage_multiple'] - 1)}e"]
+    wage is anchored to the rent table — <strong>{d['wage_multiple']}× the rent</strong> at the
+    bottom of every grade — which guarantees a resident always clears their own landlord and
+    leaves something over to spend.</p>
+    <h3 class="sub">Size counts too</h3>
+    <p>Grade sets the rate, and then <strong>floor area lifts it within the grade</strong>. The
+    ladder is a staircase — {d['floor_steps'][3]} squares is a grade four and so is
+    {d['floor_steps'][4] - 1} — so without this the last sixty blocks you laid bought the people
+    living there nothing at all.</p>
+    <p>A house at the top of its size band earns <strong>halfway to the next grade's rate</strong>,
+    and never more than that: climbing a grade always beats sprawling, and laying another block of
+    floor can never cost anybody money. Below, per resident:</p>
+    {table(["Grade", "Floor", "Smallest", "Biggest", "Rent to you"],
+           [[str(i),
+             f"{d['floor_steps'][i - 1]}–{band_top(i) - 1}" if i < d['top_tier']
+             else f"{d['floor_steps'][i - 1]}+",
+             f"{wage_at(i, d['floor_steps'][i - 1])}e",
+             f"{wage_at(i, band_top(i) if i >= d['top_tier'] else band_top(i) - 1)}e",
+             f"{d['rent'][i]}e"]
             for i in range(1, len(d['rent']))])}
+    <p class="note">The top grade has no band above it to reach towards, so it gets one more of
+    its own width — a palace out-earns a mansion, and past {band_top(d['top_tier'])} squares you
+    have hit the ceiling of the whole ladder.</p>
+    <p class="note">And a bigger house holds more people, so size pays twice: the household total
+    is this figure times the number of heads.</p>
     <p class="note">You collect rent by opening the mailbox — there is no second thing to
     click. A tenant who somehow cannot make rent pays <em>none</em> of it rather than part;
     the mood slide below is what eventually moves them out.</p>

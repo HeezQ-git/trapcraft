@@ -503,11 +503,83 @@ public final class HomeSurvey {
      */
     public static final int WAGE_MULTIPLE = 3;
 
-    public static int wageDue(int tier, int heads) {
+    /**
+     * How far a wage may be lifted towards the next grade's, on size alone.
+     *
+     * The grade ladder is a staircase: {@link #FLOOR_STEPS} says 90 blocks of
+     * floor is a grade four and so is 149, so two very different houses paid
+     * their residents exactly the same and the last sixty blocks somebody laid
+     * bought them nothing at all. That is the cliff this softens.
+     *
+     * Half, not all. Going the whole way would make the grade itself
+     * decorative -- the top of one band would simply BE the next band -- and
+     * the grade is the thing you are meant to be chasing. Half is enough that
+     * a big house of a given grade visibly out-earns a small one, and little
+     * enough that climbing a grade still matters more than sprawling.
+     */
+    public static final float SIZE_LIFT = 0.5f;
+
+    /**
+     * How far into its own size band this house sits, 0 at the bottom and 1
+     * anywhere at or past the top.
+     *
+     * Clamped at both ends because grade is the LOWER of what the points earn
+     * and what the floor allows, so a barn with no furniture in it can sit far
+     * past its band's ceiling while still being a grade two.
+     */
+    public static float roominess(int tier, int floor) {
+        if (tier <= 0 || tier > TOP_TIER || FLOOR_STEPS.length < 2) {
+            return 0f;
+        }
+        int from = FLOOR_STEPS[Math.min(tier, FLOOR_STEPS.length) - 1];
+        int to = bandTop(tier);
+        if (to <= from) {
+            return 0f;
+        }
+        return Math.max(0f, Math.min(1f, (floor - from) / (float) (to - from)));
+    }
+
+    /**
+     * Where this grade's size band ends.
+     *
+     * The top grade has no band above it to run into, so it gets one more of
+     * its own width. Without that, size stopped counting entirely at the exact
+     * point people start building the big thing -- a 560-block mansion and a
+     * 5000-block palace paid their residents the same, which is the opposite
+     * of the rule everywhere else on the ladder.
+     */
+    private static int bandTop(int tier) {
+        int last = FLOOR_STEPS.length - 1;
+        return tier <= last ? FLOOR_STEPS[tier]
+                : FLOOR_STEPS[last] + (FLOOR_STEPS[last] - FLOOR_STEPS[last - 1]);
+    }
+
+    /** The floor past which nothing on this ladder pays any more. */
+    public static int topFloor() {
+        return bandTop(TOP_TIER);
+    }
+
+    /** The rate this grade's size lift reaches towards. */
+    private static float reachesFor(int tier) {
+        return tier < TOP_TIER ? RENT[tier + 1]
+                : RENT[TOP_TIER] + (RENT[TOP_TIER] - RENT[TOP_TIER - 1]);
+    }
+
+    /**
+     * What a resident of this house earns a day, before tax.
+     *
+     * Grade sets the rate, size lifts it within the grade, and heads multiply
+     * it. All three are things you build, which is the point -- and the lift
+     * can never reach the next grade's rate, so the wage still only ever goes
+     * UP as a house gets bigger, across band boundaries included.
+     */
+    public static int wageDue(int tier, int heads, int floor) {
         if (tier <= 0 || tier >= RENT.length || heads <= 0) {
             return 0;
         }
-        return RENT[tier] * WAGE_MULTIPLE * heads;
+        float rate = RENT[tier]
+                + (reachesFor(tier) - RENT[tier]) * roominess(tier, floor) * SIZE_LIFT;
+        return Math.max(1, Math.round(rate * WAGE_MULTIPLE * heads));
     }
 
     /**

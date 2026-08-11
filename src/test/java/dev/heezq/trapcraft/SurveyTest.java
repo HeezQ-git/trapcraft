@@ -457,10 +457,15 @@ class SurveyTest {
 
     // --- what a resident earns ------------------------------------------------
 
+    /** The floor a house of this grade is built on, at its smallest. */
+    private static int floorFor(int tier) {
+        return HomeSurvey.FLOOR_STEPS[tier - 1];
+    }
+
     @Test
     void everyGradeClearsItsOwnRent() {
         for (int tier = 1; tier < HomeSurvey.RENT.length; tier++) {
-            int wage = HomeSurvey.wageDue(tier, 1);
+            int wage = HomeSurvey.wageDue(tier, 1, floorFor(tier));
             int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1);
             assertTrue(wage > rent,
                     "grade " + tier + " earns " + wage + " and owes " + rent);
@@ -469,18 +474,76 @@ class SurveyTest {
 
     @Test
     void aBetterHouseIsBetterPaid() {
-        assertTrue(HomeSurvey.wageDue(8, 1) > HomeSurvey.wageDue(1, 1));
+        assertTrue(HomeSurvey.wageDue(8, 1, floorFor(8))
+                > HomeSurvey.wageDue(1, 1, floorFor(1)));
     }
 
     @Test
     void aHouseholdEarnsPerHead() {
-        assertEquals(HomeSurvey.wageDue(4, 1) * 4, HomeSurvey.wageDue(4, 4));
+        assertEquals(HomeSurvey.wageDue(4, 1, 90) * 4, HomeSurvey.wageDue(4, 4, 90));
     }
 
     @Test
     void nobodyIsPaidForACondemnedRoom() {
-        assertEquals(0, HomeSurvey.wageDue(0, 1));
-        assertEquals(0, HomeSurvey.wageDue(4, 0));
+        assertEquals(0, HomeSurvey.wageDue(0, 1, 200));
+        assertEquals(0, HomeSurvey.wageDue(4, 0, 200));
+    }
+
+    // --- size counts too ------------------------------------------------------
+
+    @Test
+    void aBiggerHouseOfTheSameGradePaysMore() {
+        int small = HomeSurvey.wageDue(4, 1, HomeSurvey.FLOOR_STEPS[3]);
+        int large = HomeSurvey.wageDue(4, 1, HomeSurvey.FLOOR_STEPS[4] - 1);
+        assertTrue(large > small,
+                "149 blocks of floor should out-earn 90, got " + small + " -> " + large);
+    }
+
+    /**
+     * The property that matters: laying another block of floor must never cost
+     * somebody money, band boundaries included. A dip here would mean a house
+     * that pays LESS for being finished, which nobody would ever report as a
+     * wage bug -- they would report that the tenants were being odd.
+     */
+    @Test
+    void moreFloorIsNeverLessPay() {
+        int last = -1;
+        for (int floor = 0; floor <= 900; floor++) {
+            int tier = HomeSurvey.sizeTier(floor);
+            int wage = tier == 0 ? 0 : HomeSurvey.wageDue(tier, 1, floor);
+            assertTrue(wage >= last,
+                    "pay dipped at " + floor + " blocks: " + last + " -> " + wage);
+            last = wage;
+        }
+    }
+
+    @Test
+    void theLiftNeverReachesTheNextGrade() {
+        for (int tier = 1; tier < HomeSurvey.TOP_TIER; tier++) {
+            int topOfBand = HomeSurvey.wageDue(tier, 1, HomeSurvey.FLOOR_STEPS[tier] - 1);
+            int nextGrade = HomeSurvey.wageDue(tier + 1, 1, HomeSurvey.FLOOR_STEPS[tier]);
+            assertTrue(topOfBand < nextGrade,
+                    "grade " + tier + " at its biggest (" + topOfBand
+                            + ") must still earn under grade " + (tier + 1)
+                            + " at its smallest (" + nextGrade + ")");
+        }
+    }
+
+    /** The top grade keeps rewarding size for one more band, then stops. */
+    @Test
+    void aPalaceOutEarnsAMansion() {
+        assertTrue(HomeSurvey.wageDue(8, 1, 740) > HomeSurvey.wageDue(8, 1, 560));
+    }
+
+    @Test
+    void andThenItIsTrulyTheCeiling() {
+        assertEquals(HomeSurvey.wageDue(8, 1, 740), HomeSurvey.wageDue(8, 1, 50_000));
+    }
+
+    @Test
+    void aBarnWithNoFurnitureIsStillOnlyItsOwnGrade() {
+        assertEquals(1.0f, HomeSurvey.roominess(2, 100_000), 0.001f);
+        assertEquals(0.0f, HomeSurvey.roominess(2, 0), 0.001f);
     }
 
     @Test

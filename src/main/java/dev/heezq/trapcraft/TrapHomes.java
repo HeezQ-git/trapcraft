@@ -653,7 +653,7 @@ public final class TrapHomes {
         // Paid first, then they pay their landlord out of it. This is the only
         // mint left on the town's behalf -- rent, shelf sales and casino
         // stakes all move money this one line already made.
-        TrapPayroll.earned(HomeSurvey.wageDue(home.tier, home.heads));
+        TrapPayroll.earned(HomeSurvey.wageDue(home.tier, home.heads, home.floor));
 
         int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads);
         if (rent > 0) {
