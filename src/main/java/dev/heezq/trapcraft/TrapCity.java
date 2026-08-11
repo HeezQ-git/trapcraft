@@ -580,7 +580,12 @@ public final class TrapCity {
                 row.append("acts,works,shelves,shelf_sales,shelf_tills,")
                         .append("casino_balance,casino_handle,casino_net,worst_wear,")
                         .append("crew,crew_payroll,dealers,heat,market_index,supply,")
-                        .append("declared,undeclared,washed,owed\n");
+                        // Appended at the end rather than slotted in beside the
+                        // other money columns: a CSV that already has rows keeps
+                        // reading as short rows this way instead of silently
+                        // shifting every field after the insert.
+                        .append("declared,undeclared,washed,owed,")
+                        .append("town_purse,wages,income_tax\n");
             }
 
             int houses = TrapHomes.all().size();
@@ -655,7 +660,14 @@ public final class TrapCity {
                     .append(TrapLaw.declaredToday()).append(',')
                     .append(TrapLaw.undeclaredToday()).append(',')
                     .append(TrapLaw.washedToday()).append(',')
-                    .append(TrapLaw.owedTotal()).append('\n');
+                    .append(TrapLaw.owedTotal()).append(',')
+                    // The three that say whether WAGE_MULTIPLE is wrong. A
+                    // purse climbing every day means the town cannot spend
+                    // what it earns; a purse pinned at nothing means the
+                    // shops are starving.
+                    .append(TrapPayroll.purse()).append(',')
+                    .append(TrapPayroll.wagesPaid()).append(',')
+                    .append(TrapPayroll.incomeTax()).append('\n');
             Files.writeString(logFile, row.toString(), java.nio.charset.StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE,
                     java.nio.file.StandardOpenOption.APPEND);
@@ -702,6 +714,13 @@ public final class TrapCity {
                         Formatting.BOLD))
                 .append(Text.literal("   vault at " + vaultAt.getX() + " " + vaultAt.getY()
                         + " " + vaultAt.getZ()).formatted(Formatting.DARK_GRAY)), false);
+        who.sendMessage(Text.literal("  The town has ").formatted(Formatting.DARK_GRAY)
+                .append(Text.literal(TrapPayroll.purse() + "e").formatted(Formatting.AQUA,
+                        Formatting.BOLD))
+                .append(Text.literal(" of its own wages left to spend. ")
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal(TrapPayroll.purse() > 0 ? "" : "Nobody's shopping.")
+                        .formatted(Formatting.RED)), false);
         for (Duty duty : Duty.values()) {
             who.sendMessage(Text.literal("  " + duty.display()).formatted(Formatting.WHITE)
                     .append(Text.literal("  " + rateOf(duty) + "%")
