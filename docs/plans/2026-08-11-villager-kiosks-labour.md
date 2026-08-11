@@ -562,7 +562,10 @@ Then confirm nothing mints behind your back:
 grep -rn "TrapMarket.minted" src/main/java/dev/heezq/trapcraft/
 ```
 
-Expected: exactly one hit, in `TrapPayroll.earned`.
+Expected: two hits, and only these two. `TrapPayroll.earned` is the town's
+only mint. `LaundryBlock.collect` is the other and is unrelated — dirty money
+is an item the market has never counted, so washing it is the moment those
+emeralds start existing. Any *third* hit is a fountain that survived.
 
 **Step 3: Commit**
 

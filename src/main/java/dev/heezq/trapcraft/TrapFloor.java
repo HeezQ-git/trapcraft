@@ -304,8 +304,21 @@ public final class TrapFloor {
     /** The draw of whoever owns the machine at this wire. */
     private static float pullOf(String wire) {
         TrapHouse.House house = TrapHouse.byId(TrapHouse.wires().get(wire));
-        return house == null
-                ? TrapMath.floorPull(0, 0, TrapHomes.population()) : house.pull();
+        return (house == null
+                ? TrapMath.floorPull(0, 0, TrapHomes.population()) : house.pull())
+                * townSpending();
+    }
+
+    /**
+     * What the town can afford to lose tonight.
+     *
+     * The floor pulls on population, which is how many people COULD come. This
+     * is whether they have anything to come with -- a town that spent its
+     * wages on rent and dinner stays home, and the same wage rise that fills
+     * the shops fills the floor a day later.
+     */
+    private static float townSpending() {
+        return TrapMath.townDemand(TrapPayroll.purse(), TrapHomes.population());
     }
 
     /** Has this floor got machines that are loaded but every one of them busy? */
@@ -334,7 +347,7 @@ public final class TrapFloor {
         for (TrapHouse.House house : TrapHouse.all()) {
             best = Math.max(best, house.pull());
         }
-        return best;
+        return best * townSpending();
     }
 
     /** Is this one ours, this session? */
@@ -591,12 +604,17 @@ public final class TrapFloor {
         // Never a stake the vault could not settle: a punter who breaks the
         // bank is a punter who took the owner's money away while they were
         // stood somewhere else entirely.
+        // ...and never a stake the TOWN could not settle either. A punter is
+        // somebody who was paid on Friday, not a fountain with a felt top.
         while (stake > TrapMath.PUNTER_MIN_STAKE
-                && !TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
+                && (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)
+                        || !TrapPayroll.afford(stake))) {
             stake /= 2;
         }
-        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
-            // Turned away at the smallest bet there is. Word gets round.
+        if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)
+                || !TrapPayroll.afford(stake)) {
+            // Turned away at the smallest bet there is, by the house or by
+            // their own pocket. Word gets round either way.
             TrapHouse.turnedAway(house);
             punter.discard();
             return;
@@ -724,6 +742,11 @@ public final class TrapFloor {
     /** One round, played against the machine they are standing at. */
     private static void play(ServerWorld world, BlockPos pos, Punter punter,
                              TrapHouse.House house) {
+        // The town went broke between arriving and playing. They stand there
+        // and do nothing rather than play a round nobody paid for.
+        if (!TrapPayroll.spend(punter.stake)) {
+            return;
+        }
         TrapHouse.punterStaked(house, punter.stake);
         float rtp = returnOf(world.getBlockState(pos).getBlock());
         if (house.loose()) {
@@ -734,6 +757,11 @@ public final class TrapFloor {
         int back = Math.round(punter.stake
                 * TrapMath.punterRound(rtp, new java.util.Random(world.getRandom().nextLong())));
         int paid = TrapHouse.punterWon(house, back);
+        // Back to the purse it came out of. Without this the town leaks its
+        // entire wage bill into casino balances and quietly stops shopping,
+        // which presents as "the shops are broken" a long way from the floor
+        // that actually ate the money.
+        TrapPayroll.credit(paid);
 
         // Machines wear out. A busy floor throws up something to fix every ten
         // minutes or so, and a shabby one is worth less to its own name --

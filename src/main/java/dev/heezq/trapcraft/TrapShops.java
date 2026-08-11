@@ -490,8 +490,13 @@ public final class TrapShops {
             return;
         }
         Random random = server.getOverworld().getRandom();
+        // A town with nothing in the purse does not go shopping. This is the
+        // line that makes wages matter at all -- without it the purse only
+        // ever grows, spend() never once refuses, and payday is a tax line and
+        // nothing else.
         float pull = people * PULL
-                * (TrapCity.built(TrapCity.Work.LAMPS) ? TrapCity.LAMPS_TRADE : 1f);
+                * (TrapCity.built(TrapCity.Work.LAMPS) ? TrapCity.LAMPS_TRADE : 1f)
+                * TrapMath.townDemand(TrapPayroll.purse(), people);
         if (random.nextFloat() > Math.min(0.95f, pull)) {
             return;
         }
@@ -624,13 +629,21 @@ public final class TrapShops {
             return;
         }
         Line line = wanted(server, world, shop, world.getRandom());
-        if (line == null || !take(world, shop, line)) {
+        if (line == null) {
             leave(server, shopper);
             return;
         }
-
         int duty = TrapCity.dutyOn(line.price(), line.duty());
-        TrapMarket.minted(line.price() + duty);
+        int total = line.price() + duty;
+        // Afford BEFORE take. take() empties the chest, so a town that turns
+        // out to be broke one line later has walked off with the shopping --
+        // and it would look like the stock was miscounted, not like the money
+        // ran out.
+        if (!TrapPayroll.afford(total) || !take(world, shop, line)) {
+            leave(server, shopper);
+            return;
+        }
+        TrapPayroll.spend(total);
         shop.till += line.price();
         shop.sold++;
         shop.turnover += line.price();
