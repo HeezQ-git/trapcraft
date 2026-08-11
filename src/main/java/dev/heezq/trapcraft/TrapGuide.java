@@ -371,189 +371,191 @@ public final class TrapGuide {
         return book("Housing", pages);
     }
 
-    /** Every page below reads its numbers off {@link HomeSurvey}. */
+    /**
+     * Every page below reads its numbers off {@link HomeSurvey}.
+     *
+     * Written in plain sentences, which took a second pass to get to. The
+     * first version was in this book's house style -- clipped, allusive, "it
+     * walks the walls and puts it on the register" -- and that reads as
+     * atmosphere to somebody who already knows the system and as a riddle to
+     * everybody else. A reference is not the place to be terse. Pages are
+     * free; a player rereading one is not.
+     */
     private static void housingBook(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. THE MAILBOX\n\n"))
-                .append(body("Stand one inside the room ONCE and right-click "
-                        + "it.\n\n"))
-                .append(body("It walks the walls, grades the place, and puts "
-                        + "it on the register.\n\n"))
-                .append(hint("Then it belongs outside. See the next page."))));
+                .append(title("1. WHY BUILD HOUSES\n\n"))
+                .append(body("People move into houses you build.\n\n"))
+                .append(body("They pay you rent, they go to work, and they "
+                        + "spend their wages in your shops.\n\n"))
+                .append(hint("More houses means more customers."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. MOVING IT\n\n"))
-                .append(body("Sneak + right-click, empty-handed.\n\n"))
-                .append(body("It comes off the wall with the address on "
-                        + "it. Nail it up outside.\n\n"))
-                .append(hint("The house stays where it was measured."))));
+                .append(title("2. START: A MAILBOX\n\n"))
+                .append(body("Craft a mailbox.\n\n"))
+                .append(body("Stand INSIDE the room you built and right-click "
+                        + "it on the floor.\n\n"))
+                .append(hint("The city checks the room and writes it down."))));
 
         pages.add(page(Text.empty()
-                .append(title("2b. IF IT GETS LOST\n\n"))
-                .append(body("Blank box, back inside: it takes the job "
-                        + "again.\n\n"))
-                .append(body("Blank box outside: it serves your nearest "
-                        + "house with no post.\n\n"))
-                .append(hint("/homes demolish drops the one you stand in."))));
+                .append(title("3. MOVE IT OUTSIDE\n\n"))
+                .append(body("Crouch and right-click the mailbox with an "
+                        + "empty hand.\n\n"))
+                .append(body("Put it back down outside, by the door.\n\n"))
+                .append(hint("The house stays where you first checked it."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. WHAT COUNTS\n\n"))
-                .append(body("Sealed. Walls, floor, roof, no gaps.\n\n"))
-                .append(body("Doors are walls -- a shut bedroom door still "
-                        + "counts as your room.\n\n"))
-                .append(hint("A door onto the street is the way in."))));
+                .append(title("4. LOST THE BOX?\n\n"))
+                .append(body("A new mailbox inside takes over from the old one.\n\n"))
+                .append(body("Put one outside and it joins your nearest house "
+                        + "that has none.\n\n"))
+                .append(hint("/homes demolish removes the house you're in."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. THE FIVE MUSTS\n\n"))
-                .append(body("Sealed.\n"))
+                .append(title("5. IT MUST BE SEALED\n\n"))
+                .append(body("Walls, a floor and a roof, with no holes.\n\n"))
+                .append(body("If daylight gets in, it is not a house yet.\n\n"))
+                .append(hint("A closed door counts as a wall."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. FIVE MUST-HAVES\n\n"))
+                .append(body("No holes.\n"))
                 .append(body(HomeSurvey.MIN_FLOOR + " blocks of floor.\n"))
                 .append(body("A bed.\n"))
-                .append(body("A door out.\n"))
+                .append(body("A door outside.\n"))
                 .append(body("A light.\n\n"))
-                .append(warn("Miss one and it is not a house."))));
+                .append(warn("Miss any one and it is not a house."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. THE GRADE\n\n"))
-                .append(body("Points, " + HomeSurvey.topPoints() + " of them. Two a "
-                        + "grade, up to " + HomeSurvey.TOP_TIER + ".\n\n"))
-                .append(warn("SIZE CAPS IT. Floor picks the best grade allowed. "
-                        + "Nothing else lifts it.\n\n"))
-                .append(hint("Upstairs counts. Every storey."))));
+                .append(title("7. THE GRADE\n\n"))
+                .append(body("Every house gets a grade from 1 to "
+                        + HomeSurvey.TOP_TIER + ".\n\n"))
+                .append(body("A higher grade means more rent for you and "
+                        + "better-paid people living there.\n\n"))
+                .append(hint("The mailbox tells you how to improve it."))));
 
-        // Off the array rather than spelled out. The prose version listed
-        // grades two to five and stopped, so the three grades added later
-        // were undocumented in the one book that exists to document them.
+        pages.add(page(Text.empty()
+                .append(title("8. RAISING IT\n\n"))
+                .append(body("You earn points for building well. Every 2 "
+                        + "points is one grade.\n\n"))
+                .append(body("There are " + HomeSurvey.topPoints()
+                        + " points to get.\n\n"))
+                .append(hint("The next page says how to earn them."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. EARNING POINTS\n\n"))
+                .append(body("Build with crafted blocks, not dirt and "
+                        + "stone.\n\n"))
+                .append(body("Add a table, a chest, a furnace, a stall, a window.\n\n"))
+                .append(body("Use lots of different blocks, and light every "
+                        + "corner."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. SIZE IS A LIMIT\n\n"))
+                .append(body("A small room cannot be a high grade, however "
+                        + "nicely you build it.\n\n"))
+                .append(body("The floor you stand on decides the best grade "
+                        + "you can reach.\n\n"))
+                .append(hint("Every floor of a tall house counts."))));
+
+        // Padded rather than joined with spaces: 9 and 560 are different
+        // widths, so a plain concatenation walks the right-hand column
+        // sideways down the page and stops reading as a table at all.
         MutableText lid = Text.empty()
-                .append(title("5b. THE LID\n\n"))
-                .append(body("floor   grade\n"));
+                .append(title("11. FLOOR NEEDED\n\n"))
+                .append(body("grade   floor\n"));
         for (int step = 0; step < HomeSurvey.FLOOR_STEPS.length; step++) {
-            lid.append(body(HomeSurvey.FLOOR_STEPS[step] + "+" + "   "
-                    + (step + 1) + "\n"));
+            lid.append(body(String.format("  %d     %4d\n",
+                    step + 1, HomeSurvey.FLOOR_STEPS[step])));
         }
         pages.add(page(lid));
 
         pages.add(page(Text.empty()
-                .append(title("6. THE POINTS\n\n"))
-                .append(body("Built, not dug: "
-                        + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% then "
-                        + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "%.\n"))
-                .append(body("Fittings: table, chest, furnace, stall, "
-                        + "window.\n"))
-                .append(body("Character: " + HomeSurvey.DECOR_STEPS[0] + " then "
-                        + HomeSurvey.DECOR_STEPS[1] + " kinds of block.\n"))
-                .append(body("No dark corners.\n"))));
-
-        pages.add(page(Text.empty()
-                .append(title("7. GROUND\n\n"))
-                .append(body("Two houses can't share it.\n\n"))
-                .append(body("Flats side by side are fine. So is one above "
-                        + "another.\n\n"))
-                .append(hint("Up to " + HomeSurvey.SPAN + " blocks from the box."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8. IT KEEPS LOOKING\n\n"))
-                .append(body("Every couple of minutes it measures again.\n\n"))
-                .append(body("Knock a wall through or take the bed and the "
-                        + "grade drops.\n\n"))
-                .append(hint("/homes lists everybody's."))));
-
-        pages.add(page(Text.empty()
-                .append(title("9. HOW MANY LIVE THERE\n\n"))
-                .append(body("Beds, floor and grade. The lowest wins.\n\n"))
-                .append(body(HomeSurvey.FLOOR_PER_HEAD + " floor a head past the "
-                        + "first.\n\n"))
-                .append(hint("Four beds in a cupboard house one."))));
-
-        pages.add(page(Text.empty()
-                .append(title("10. SOMEBODY MOVES IN\n\n"))
-                .append(body("Any grade at all attracts somebody within a "
-                        + "day.\n\n"))
-                .append(body("They pay daily. Open the box and it's "
-                        + "yours.\n\n"))
-                .append(hint("From " + HomeSurvey.RENT[1] + "e to "
-                        + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e a head."))));
-
-        pages.add(page(Text.empty()
-                .append(title("11. PAYDAY\n\n"))
-                .append(body("They go out to work. Paid once a day, by "
+                .append(title("12. HOW MANY LIVE\n\n"))
+                .append(body("You need one bed each, " + HomeSurvey.FLOOR_PER_HEAD
+                        + " blocks of floor each, and a good enough "
                         + "grade.\n\n"))
-                .append(body("Income tax off the top, into the vault.\n\n"))
-                .append(hint("A wage starts at " + HomeSurvey.WAGE_MULTIPLE
-                        + "x the rent, so they always clear it."))));
+                .append(warn("Whichever of those three is smallest is how "
+                        + "many people move in."))));
 
         pages.add(page(Text.empty()
-                .append(title("11b. AND BY SIZE\n\n"))
-                .append(body("Grade sets the rate. Floor lifts it inside the "
-                        + "grade.\n\n"))
-                .append(body("Wages AND rent. Same number, both ends.\n\n"))
-                .append(hint("Halfway to the next grade, never further."))));
+                .append(title("13. THEY MOVE IN\n\n"))
+                .append(body("Somebody turns up within a day of the house "
+                        + "being finished.\n\n"))
+                .append(body("They pay rent every day. Open the mailbox to "
+                        + "take it.\n\n"))
+                .append(hint("Each person pays. Four people, four rents."))));
 
-        // The table people will actually plan against: what one resident earns
-        // at the bottom and the top of each band. Off the arrays, because the
-        // prose version of the grade ladder went stale the day it grew.
-        MutableText paid = Text.empty()
-                .append(title("11c. EARNS\n\n"))
-                .append(body("grade small   big\n"));
+        pages.add(page(Text.empty()
+                .append(title("14. THEIR WAGES\n\n"))
+                .append(body("They go out to work and are paid once a day.\n\n"))
+                .append(body("The city taxes that, then they pay you rent "
+                        + "out of what is left.\n\n"))
+                .append(hint("They spend the rest in shops and casinos."))));
+
+        pages.add(page(Text.empty()
+                .append(title("15. BIGGER IS BETTER\n\n"))
+                .append(body("Grade sets the money. Extra floor space adds "
+                        + "more on top.\n\n"))
+                .append(body("A big grade 4 beats a small one, for rent and wages.\n\n"))
+                .append(hint("But grade 5 always beats any grade 4."))));
+
         MutableText owed = Text.empty()
-                .append(title("11d. YOUR RENT\n\n"))
+                .append(title("16. RENT YOU GET\n\n"))
+                .append(body("grade small   big\n"));
+        MutableText paid = Text.empty()
+                .append(title("17. WHAT THEY EARN\n\n"))
                 .append(body("grade small   big\n"));
         for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
             int lo = HomeSurvey.FLOOR_STEPS[tier - 1];
             int hi = tier >= HomeSurvey.TOP_TIER ? HomeSurvey.topFloor()
                     : HomeSurvey.FLOOR_STEPS[tier] - 1;
-            paid.append(body(tier + "     " + HomeSurvey.wageDue(tier, 1, lo)
-                    + "e    " + HomeSurvey.wageDue(tier, 1, hi) + "e\n"));
-            owed.append(body(tier + "     "
-                    + HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, lo) + "e    "
-                    + HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, hi) + "e\n"));
+            owed.append(body(String.format("  %d   %4s %5s\n", tier,
+                    HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, lo) + "e",
+                    HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, hi) + "e")));
+            paid.append(body(String.format("  %d   %4s %5s\n", tier,
+                    HomeSurvey.wageDue(tier, 1, lo) + "e",
+                    HomeSurvey.wageDue(tier, 1, hi) + "e")));
         }
-        pages.add(page(paid));
-        pages.add(page(owed.append(hint("\nA head, at full mood."))));
+        pages.add(page(owed.append(hint("\nPer person, per day."))));
+        pages.add(page(paid.append(hint("\nPer person, per day."))));
 
         pages.add(page(Text.empty()
-                .append(title("12. THE TOWN PURSE\n\n"))
-                .append(body("What's left of the wages after rent.\n\n"))
-                .append(body("Your shops and floors are paid out of it. It is "
-                        + "the only money the town has.\n\n"))
-                .append(warn("Empty purse, nobody comes."))));
+                .append(title("18. KEEP THEM HAPPY\n\n"))
+                .append(body("Dark corners and a house falling apart make "
+                        + "people unhappy.\n\n"))
+                .append(body("An unhappy person pays less rent, then "
+                        + "leaves.\n\n"))
+                .append(hint("They post letters. Read them in the mailbox."))));
 
         pages.add(page(Text.empty()
-                .append(title("13. SO BUILD WELL\n\n"))
-                .append(body("A better house is a better wage, and a better "
-                        + "wage is spent in your shop.\n\n"))
-                .append(body("Rent, tax, and their custom.\n\n"))
-                .append(hint("/city shows the purse."))));
+                .append(title("19. NOT NEXT TO A GROW\n\n"))
+                .append(body("Nobody will live beside a cannabis or coca farm.\n\n"))
+                .append(body("A small one makes them miserable. A big one "
+                        + "makes them leave.\n\n"))
+                .append(warn("Keep your farm away from your houses."))));
 
         pages.add(page(Text.empty()
-                .append(title("14. THEY BUY\n\n"))
-                .append(body("Right-click a resident, empty hand. They'll "
-                        + "say what they fancy.\n\n"))
-                .append(body("Hold it, click again, and they pay -- "
-                        + "dirty.\n\n"))
-                .append(hint("New fancy most days. Price varies."))));
+                .append(title("20. IT IS CHECKED\n\n"))
+                .append(body("The city looks at every house every few "
+                        + "minutes.\n\n"))
+                .append(body("Break a wall or take the bed out and the grade "
+                        + "falls straight away.\n\n"))
+                .append(hint("/homes lists every house on the server."))));
 
         pages.add(page(Text.empty()
-                .append(title("15. THEY GAMBLE\n\n"))
-                .append(body("A resident near a wired machine will walk in "
-                        + "and play it.\n\n"))
-                .append(body("Same person. They go home after.\n\n"))
-                .append(hint("Build the casino where people live."))));
+                .append(title("21. TWO HOUSES\n\n"))
+                .append(body("Two houses cannot use the same room.\n\n"))
+                .append(body("Flats side by side are fine. So is one flat "
+                        + "above another.\n\n"))
+                .append(hint("A house reaches " + HomeSurvey.SPAN
+                        + " blocks from its mailbox."))));
 
         pages.add(page(Text.empty()
-                .append(title("16. MOOD\n\n"))
-                .append(body("Dark corners and a falling grade wear them "
-                        + "down.\n\n"))
-                .append(body("An unhappy tenant pays less. At "
-                        + HomeSurvey.MOOD_LEAVING + " they're packing.\n\n"))
-                .append(hint("They write. Read the post in the mailbox."))));
-
-        pages.add(page(Text.empty()
-                .append(title("17. NOT NEXT DOOR\n\n"))
-                .append(body("A grow near a house empties it.\n\n"))
-                .append(body("Small: they stay, miserable, paying two "
-                        + "fifths.\n\n"))
-                .append(warn("Anything bigger and they go. Keep the "
-                        + "plantation away from the flats."))));
+                .append(title("22. THEY SHOP\n\n"))
+                .append(body("Right-click somebody empty-handed. They say "
+                        + "what they want.\n\n"))
+                .append(body("Hold it, click again, and they pay you.\n\n"))
+                .append(hint("They visit shops on their own too."))));
     }
 
     /**
