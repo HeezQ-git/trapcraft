@@ -13,6 +13,7 @@ import net.minecraft.util.math.BlockPos;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -117,7 +118,10 @@ public final class TrapCity {
         WATCH("The Watch", "Patrols come round half as often", 4000),
         ROADS("Paved Roads", "Houses near the vault grade one higher", 6000),
         LAMPS("Street Lamps", "Townspeople go shopping far more", 3000),
-        EXCHANGE("The Exchange", "The counter pays better for everything", 8000);
+        EXCHANGE("The Exchange", "The counter pays better for everything", 8000),
+        CLINIC("The Clinic", "Tenants put up with more before they leave", 5000),
+        TRAM("The Tramway", "More people out shopping at once", 7000),
+        SCHOOL("The School", "Everybody in the city is paid better", 12000);
 
         private final String display;
         private final String blurb;
@@ -150,6 +154,12 @@ public final class TrapCity {
     public static final float LAMPS_TRADE = 1.6f;
     /** What the exchange adds to what the counter pays. */
     public static final float EXCHANGE_SELL = 1.12f;
+    /** What the clinic adds to every tenant's mood target. */
+    public static final int CLINIC_MOOD = 12;
+    /** How many townspeople can be out at once once the trams run. */
+    public static final int TRAM_SHOPPERS = 10;
+    /** What the school does to every wage in the city. */
+    public static final float SCHOOL_WAGE = 1.25f;
 
     private static final java.util.Set<Work> BUILT = java.util.EnumSet.noneOf(Work.class);
 
@@ -567,25 +577,9 @@ public final class TrapCity {
             boolean fresh = !Files.exists(logFile);
             StringBuilder row = new StringBuilder();
             if (fresh) {
-                row.append("day,online,population,houses,housed,tenants,avg_grade,")
-                        .append("purse,raised_total,");
-                for (Duty duty : Duty.values()) {
-                    row.append("rate_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
-                            .append(',');
-                }
-                for (Duty duty : Duty.values()) {
-                    row.append("raised_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
-                            .append(',');
-                }
-                row.append("acts,works,shelves,shelf_sales,shelf_tills,")
-                        .append("casino_balance,casino_handle,casino_net,worst_wear,")
-                        .append("crew,crew_payroll,dealers,heat,market_index,supply,")
-                        // Appended at the end rather than slotted in beside the
-                        // other money columns: a CSV that already has rows keeps
-                        // reading as short rows this way instead of silently
-                        // shifting every field after the insert.
-                        .append("declared,undeclared,washed,owed,")
-                        .append("town_purse,wages,income_tax\n");
+                row.append(header());
+            } else {
+                repairHeader();
             }
 
             int houses = TrapHomes.all().size();
@@ -698,7 +692,18 @@ public final class TrapCity {
                                     }
                                     books(who);
                                     return 1;
-                                })));
+                                })
+                                .then(net.minecraft.server.command.CommandManager
+                                        .literal("history")
+                                        .executes(context -> {
+                                            ServerPlayerEntity who =
+                                                    context.getSource().getPlayer();
+                                            if (who == null) {
+                                                return 0;
+                                            }
+                                            history(who);
+                                            return 1;
+                                        }))));
     }
 
     private static void books(ServerPlayerEntity who) {
@@ -741,11 +746,171 @@ public final class TrapCity {
         }
     }
 
+    /**
+     * The last few days of the books, in chat.
+     *
+     * The city has written a row a day to trapcraft-city.csv since the day it
+     * was founded and nobody could read it without leaving the game and
+     * finding the container's filesystem. A number nobody can see is a number
+     * nobody tunes.
+     *
+     * Columns are looked up BY NAME out of the header rather than by index.
+     * The file has already grown twice and rows written before each growth are
+     * short; reading by position would quietly start printing the wash figure
+     * under the heading for tax the next time somebody appends one.
+     */
+    private static void history(ServerPlayerEntity who) {
+        if (logFile == null || !Files.exists(logFile)) {
+            who.sendMessage(Text.literal("No books yet. The city writes a row a day.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
+        List<String> rows;
+        try {
+            rows = Files.readAllLines(logFile);
+        } catch (Exception failure) {
+            who.sendMessage(Text.literal("Couldn't read the books: " + failure)
+                    .formatted(Formatting.RED), false);
+            return;
+        }
+        if (rows.size() < 2) {
+            who.sendMessage(Text.literal("The books have one day in them. Come back tomorrow.")
+                    .formatted(Formatting.GRAY), false);
+            return;
+        }
+        List<String> head = List.of(rows.get(0).split(",", -1));
+        List<String> recent = rows.subList(Math.max(1, rows.size() - HISTORY_DAYS), rows.size());
+
+        long peak = 1;
+        for (String row : recent) {
+            peak = Math.max(peak, Math.abs(number(head, row, "town_purse")));
+        }
+
+        who.sendMessage(Text.literal("The Books").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("   last " + recent.size() + " days")
+                        .formatted(Formatting.DARK_GRAY)), false);
+        who.sendMessage(Text.literal(String.format("  %-5s %-6s %-8s %-8s %-7s %s",
+                        "day", "people", "vault", "purse", "tax", "index"))
+                .formatted(Formatting.DARK_GRAY), false);
+        for (String row : recent) {
+            long purse = number(head, row, "town_purse");
+            int bars = (int) Math.round(purse * 10.0 / peak);
+            who.sendMessage(Text.literal(String.format("  %-5s %-6s %-8s %-8s %-7s %-5s ",
+                            text(head, row, "day"), text(head, row, "population"),
+                            text(head, row, "purse"), text(head, row, "town_purse"),
+                            text(head, row, "income_tax"), text(head, row, "market_index")))
+                    .formatted(Formatting.WHITE)
+                    .append(Text.literal("█".repeat(Math.max(0, Math.min(10, bars))))
+                            .formatted(Formatting.GREEN)), false);
+        }
+        who.sendMessage(Text.literal("  Bars are the town purse. Empty means nobody's shopping.")
+                .formatted(Formatting.DARK_GRAY), false);
+        who.sendMessage(Text.literal("  tax and wages are running totals, not per-day.")
+                .formatted(Formatting.DARK_GRAY), false);
+    }
+
+    /** How many days {@code /city history} prints. */
+    private static final int HISTORY_DAYS = 10;
+
+    /** The column names, in the order {@link #logDay} writes their values. */
+    private static String header() {
+        StringBuilder out = new StringBuilder();
+        out.append("day,online,population,houses,housed,tenants,avg_grade,")
+                .append("purse,raised_total,");
+        for (Duty duty : Duty.values()) {
+            out.append("rate_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
+                    .append(',');
+        }
+        for (Duty duty : Duty.values()) {
+            out.append("raised_").append(duty.name().toLowerCase(java.util.Locale.ROOT))
+                    .append(',');
+        }
+        // New columns go on the END, so rows written before them stay readable
+        // as short rows rather than having every later field shift along.
+        out.append("acts,works,shelves,shelf_sales,shelf_tills,")
+                .append("casino_balance,casino_handle,casino_net,worst_wear,")
+                .append("crew,crew_payroll,dealers,heat,market_index,supply,")
+                .append("declared,undeclared,washed,owed,")
+                .append("town_purse,wages,income_tax\n");
+        return out.toString();
+    }
+
+    /**
+     * Bring an old file's header up to date with the columns being written.
+     *
+     * The header is written once, when the file is created, and every column
+     * added since has been invisible to anything reading by name -- which is
+     * how {@code /city history} came to have a purse column that only ever
+     * said "-". Rows written under the old header are shorter than the new
+     * one, and that is fine and expected: reading by name returns "-" for a
+     * field a given row genuinely never had.
+     */
+    /**
+     * The last day already in the log, so a restart does not write the day
+     * again.
+     *
+     * {@code lastLogged} lives in memory and started at -1 every boot, so
+     * eight restarts in an afternoon put eight rows in for the same day --
+     * and each was written on the tick after load, before the survey pass had
+     * recounted households, so they all understated the population too. Both
+     * of those make the history read like the town kept collapsing.
+     */
+    private static long lastLoggedInFile() {
+        try {
+            if (!Files.exists(logFile)) {
+                return -1;
+            }
+            List<String> rows = Files.readAllLines(logFile);
+            for (int at = rows.size() - 1; at > 0; at--) {
+                String[] fields = rows.get(at).split(",", -1);
+                if (fields.length > 0 && !fields[0].isBlank()) {
+                    return Long.parseLong(fields[0].trim());
+                }
+            }
+        } catch (Exception unreadable) {
+            // A log we cannot read is a log we will simply append to.
+        }
+        return -1;
+    }
+
+    private static void repairHeader() {
+        try {
+            List<String> rows = Files.readAllLines(logFile);
+            String want = header().stripTrailing();
+            if (rows.isEmpty() || rows.get(0).equals(want)) {
+                return;
+            }
+            rows.set(0, want);
+            Files.writeString(logFile, String.join("\n", rows) + "\n",
+                    java.nio.charset.StandardCharsets.UTF_8);
+            TrapCraft.LOGGER.info("city log header brought up to date ({} columns)",
+                    want.split(",", -1).length);
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't repair the city log header: {}", failure.toString());
+        }
+    }
+
+    /** One named field out of a csv row, or "-" if that row predates it. */
+    private static String text(List<String> head, String row, String column) {
+        int at = head.indexOf(column);
+        String[] fields = row.split(",", -1);
+        return at < 0 || at >= fields.length || fields[at].isBlank() ? "-" : fields[at];
+    }
+
+    private static long number(List<String> head, String row, String column) {
+        try {
+            return Long.parseLong(text(head, row, column).trim());
+        } catch (NumberFormatException notANumber) {
+            return 0;
+        }
+    }
+
     // --- persistence ----------------------------------------------------------
 
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.txt");
         logFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.csv");
+        lastLogged = lastLoggedInFile();
         ACTS.clear();
         PASSED.clear();
         RATES.clear();

@@ -266,11 +266,19 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("1d2. PUBLIC WORKS\n\n"))
-                .append(body("The purse buys things for the whole "
-                        + "town.\n\n"))
-                .append(body("The Watch, Paved Roads, Street Lamps, The "
-                        + "Exchange.\n\n"))
+                .append(body("The purse buys things for the whole town.\n\n"))
+                .append(body("Bought once, kept for good.\n\n"))
                 .append(hint("Anybody may buy one. Everybody is told."))));
+
+        // Off the enum. The prose version named four and went stale the day a
+        // fifth was added, which is the whole failure this book reads its
+        // numbers from constants to avoid.
+        MutableText works = Text.empty()
+                .append(title("1d3. WHAT IT BUYS\n\n"));
+        for (TrapCity.Work work : TrapCity.Work.values()) {
+            works.append(body(work.display() + " " + work.cost() + "e\n"));
+        }
+        pages.add(page(works));
 
         pages.add(page(Text.empty()
                 .append(title("1g. THE OFFICE\n\n"))

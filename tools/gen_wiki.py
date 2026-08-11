@@ -822,10 +822,12 @@ def build() -> str:
     {table(["Public work", "Does", "Costs"], [
         [esc(w["name"]), f'<span class="dim">{esc(w["blurb"])}</span>', f'{w["cost"]}e']
         for w in d["works"]])}
-    <p class="note">All four only make sense for a <em>city</em>. The roads are the one thing
-    in the game that rewards building near each other; the watch is the city answering the
-    thing that makes farms dangerous; and the exchange pays everybody, including whoever never
-    leaves their farm.</p>
+    <p class="note">Every one of them only makes sense for a <em>city</em>. The roads are the
+    one thing in the game that rewards building near each other; the watch is the city
+    answering the thing that makes farms dangerous; the exchange pays everybody, including
+    whoever never leaves their farm; and the school, the clinic and the tramway each make the
+    people living in your houses worth more — better paid, slower to give up on a place, and
+    more of them out shopping at once.</p>
     <h3 class="sub">Shops the town walks into</h3>
     <p>A <strong>market shelf</strong> over a chest or barrel sells what is in it — not to
     players, but to the city. Townspeople come out of the housing, walk to the building, take

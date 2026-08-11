@@ -589,7 +589,8 @@ public final class TrapShops {
     // --- the trip out ---------------------------------------------------------
 
     private static void maybeVisit(MinecraftServer server) {
-        if (!TrapCity.founded() || SHOPPERS.size() >= MAX_SHOPPERS) {
+        int crowd = TrapCity.built(TrapCity.Work.TRAM) ? TrapCity.TRAM_SHOPPERS : MAX_SHOPPERS;
+        if (!TrapCity.founded() || SHOPPERS.size() >= crowd) {
             return;
         }
         int people = TrapHomes.population();

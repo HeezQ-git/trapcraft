@@ -633,6 +633,11 @@ public final class TrapHomes {
         int heat = TrapHeat.tierAt(world, home.anchor);
         Readout now = look(world, home.anchor, home);
         int target = HomeSurvey.moodTarget(home.tier, now.dark(), heat);
+        if (TrapCity.built(TrapCity.Work.CLINIC)) {
+            // A clinic does not fix a dark, crumbling house -- it buys you
+            // time to fix it yourself before they pack.
+            target = Math.min(HomeSurvey.MOOD_MAX, target + TrapCity.CLINIC_MOOD);
+        }
         int was = home.mood;
         home.mood = HomeSurvey.moodDrift(home.mood, target);
         complain(home, now, heat, was);
@@ -653,7 +658,14 @@ public final class TrapHomes {
         // Paid first, then they pay their landlord out of it. This is the only
         // mint left on the town's behalf -- rent, shelf sales and casino
         // stakes all move money this one line already made.
-        TrapPayroll.earned(HomeSurvey.wageDue(home.tier, home.heads, home.floor));
+        // The school lifts every wage in the city. Applied here rather than in
+        // HomeSurvey because that class imports nothing from Minecraft and is
+        // not going to start knowing what a public work is.
+        int wage = HomeSurvey.wageDue(home.tier, home.heads, home.floor);
+        if (TrapCity.built(TrapCity.Work.SCHOOL)) {
+            wage = Math.round(wage * TrapCity.SCHOOL_WAGE);
+        }
+        TrapPayroll.earned(wage);
 
         int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads, home.floor);
         if (rent > 0) {
