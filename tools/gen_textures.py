@@ -2717,6 +2717,25 @@ DIRTY_EMERALD = """
 ................
 """
 
+DIRTY_EMERALD_BLOCK = """
+dxxxxxdxxxxxxxdd
+xGGggxxGgggGGgxd
+xGggGgxgGggggGxd
+xgGggGxdgGggGgdx
+xggGgdxxdggGggxx
+xdggdxdxxdgGgdxd
+xxdxxxddxxdggxxd
+dxxdGGgxdxxdxxdd
+dxGGgggGxxdxxddx
+xGggggGgGxxdggxx
+xgGggGggGgxdGGgx
+xggGggGgGgxgGggx
+xdgGggGgdgxggGgx
+xxdggGgdxdxdggdx
+ddxxdgdxxxddxdxx
+dxdxxxxxdxxxxxdd
+"""
+
 LAUNDRY_PAL = {
     "s": "#8a8d92",     # steel
     "S": "#aeb2b8",     # steel, lit
@@ -3052,6 +3071,7 @@ def main() -> None:
     write(render(TILL_KEYS, TILL_PAL), "block", "shop_till_keys.png")
     write(render(TILL_SCREEN, TILL_PAL), "block", "shop_till_screen.png")
     write(render(DIRTY_EMERALD, DIRTY_PAL), "item", "dirty_emerald.png")
+    write(render(DIRTY_EMERALD_BLOCK, DIRTY_PAL), "block", "dirty_emerald_block.png")
     write(render(LAUNDRY_EMPTY, LAUNDRY_PAL), "block", "laundry_empty.png")
     write(render(LAUNDRY_RUNNING, LAUNDRY_PAL), "block", "laundry_running.png")
     write(render(LAUNDRY_DONE, LAUNDRY_PAL), "block", "laundry_done.png")

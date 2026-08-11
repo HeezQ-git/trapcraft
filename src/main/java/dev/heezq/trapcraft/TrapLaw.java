@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WrittenBookContentComponent;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.MinecraftServer;
@@ -294,17 +295,30 @@ public final class TrapLaw {
         if (amount <= 0) {
             return;
         }
-        // In stacks the item can actually hold. A single ItemStack of 226 is
-        // accepted by every server-side check and then fails to ENCODE to the
-        // client -- "Value must be within range [1;99]" -- once a tick, for as
-        // long as it exists. A big payday left one lying in a field spamming
-        // the log 3000 times before anybody read it. LaundryBlock got this
-        // right on the way out; this is the way in.
+        // Blocks first, singles for the remainder -- the same shape TrapMath
+        // packs a legitimate payout into. A four-figure week off the street
+        // was sixteen stacks of loose emeralds to carry to the drum, and the
+        // awkwardness of dirty money is supposed to be that it needs WASHING,
+        // not that it needs a shulker box to move.
+        int[] packed = TrapMath.packEmeralds(amount);
+        give(who, TrapContent.dirtyEmeraldBlockItem, packed[0]);
+        give(who, TrapContent.dirtyEmerald, packed[1]);
+    }
+
+    /**
+     * Hand over a pile in stacks the item can actually hold.
+     *
+     * A single ItemStack of 226 is accepted by every server-side check and
+     * then fails to ENCODE to the client -- "Value must be within range
+     * [1;99]" -- once a tick for as long as it exists. One left lying in a
+     * field logged that three thousand times before anybody read it.
+     */
+    private static void give(ServerPlayerEntity who, Item what, int amount) {
         int left = amount;
-        int most = TrapContent.dirtyEmerald.getMaxCount();
+        int most = what.getMaxCount();
         while (left > 0) {
             int lot = Math.min(left, most);
-            who.getInventory().offerOrDrop(new ItemStack(TrapContent.dirtyEmerald, lot));
+            who.getInventory().offerOrDrop(new ItemStack(what, lot));
             left -= lot;
         }
     }

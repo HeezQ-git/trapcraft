@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "DDD",
+    "DDD",
+    "DDD"
+  ],
+  "key": {
+    "D": "trapcraft:dirty_emerald"
+  },
+  "result": {
+    "id": "trapcraft:dirty_emerald_block",
+    "count": 1
+  }
+}

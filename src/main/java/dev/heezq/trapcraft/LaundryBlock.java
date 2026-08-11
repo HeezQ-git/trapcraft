@@ -152,7 +152,14 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
 
         ItemStack held = player.getMainHandStack();
         if (held.isOf(TrapContent.dirtyEmerald)) {
-            load(ground, pos, state, who, held);
+            load(ground, pos, state, who, held, 1);
+            return ActionResult.SUCCESS;
+        }
+        // A block is nine, and takes nine's worth of room. Without this you
+        // would have to uncraft a week's takings back into loose emeralds on
+        // the drum's doorstep, which is busywork wearing a mechanic's hat.
+        if (held.isOf(TrapContent.dirtyEmeraldBlockItem)) {
+            load(ground, pos, state, who, held, 9);
             return ActionResult.SUCCESS;
         }
 
@@ -167,14 +174,20 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
 
     /** Tip some in and set it turning. */
     private void load(ServerWorld world, BlockPos pos, BlockState state,
-                      ServerPlayerEntity who, ItemStack held) {
+                      ServerPlayerEntity who, ItemStack held, int each) {
         int room = MAX_LOAD - state.get(LOAD);
-        if (room <= 0) {
-            who.sendMessage(Text.literal("The drum's full.").formatted(Formatting.GRAY), true);
+        if (room < each) {
+            who.sendMessage(Text.literal(room <= 0 ? "The drum's full."
+                            : "Only room for " + room + " more. Break a block up.")
+                    .formatted(Formatting.GRAY), true);
             return;
         }
-        int going = Math.min(room, held.getCount());
-        held.decrement(going);
+        // Whole items only: half a block down the drum would have to round
+        // somewhere, and every rounding in this mod is money appearing or
+        // vanishing.
+        int lots = Math.min(room / each, held.getCount());
+        held.decrement(lots);
+        int going = lots * each;
         int load = state.get(LOAD) + going;
         world.setBlockState(pos, state.with(LOAD, load));
 

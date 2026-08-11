@@ -490,6 +490,8 @@ def lang() -> None:
         "block.trapcraft.market_shelf": "Shop Shelf",
         "item.trapcraft.market_shelf": "Shop Shelf",
         "item.trapcraft.dirty_emerald": "Dirty Emerald",
+        "block.trapcraft.dirty_emerald_block": "Block of Dirty Emeralds",
+        "item.trapcraft.dirty_emerald_block": "Block of Dirty Emeralds",
         "block.trapcraft.shop_till": "Shop Till",
         "item.trapcraft.shop_till": "Shop Till",
         "block.trapcraft.laundry": "Laundry Drum",
@@ -2198,6 +2200,43 @@ def laundry_assets() -> None:
     })
     put(f"assets/{NS}/items/dirty_emerald.json", {
         "model": {"type": "minecraft:model", "model": f"{NS}:item/dirty_emerald"},
+    })
+
+    # Nine to a block and back, exactly like emeralds. The whole point is that
+    # it behaves like money you can carry; a one-way recipe would be a trap.
+    # Spelled out rather than parented to cube_all: check_models reads the
+    # elements to prove a FULL_BLOCK carrier is actually solid, and an
+    # inherited cube has no elements to read.
+    put(f"assets/{NS}/models/block/dirty_emerald_block.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "all": f"{NS}:block/dirty_emerald_block",
+            "particle": f"{NS}:block/dirty_emerald_block",
+        },
+        "elements": [box([0, 0, 0], [16, 16, 16], "all")],
+    })
+    put(f"assets/{NS}/models/item/dirty_emerald_block.json",
+        {"parent": f"{NS}:block/dirty_emerald_block"})
+    put(f"assets/{NS}/items/dirty_emerald_block.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/dirty_emerald_block"},
+    })
+    put(f"data/{NS}/loot_table/blocks/dirty_emerald_block.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:dirty_emerald_block"}]}],
+    })
+    put(f"data/{NS}/recipe/dirty_emerald_block.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["DDD", "DDD", "DDD"],
+        "key": {"D": f"{NS}:dirty_emerald"},
+        "result": {"id": f"{NS}:dirty_emerald_block", "count": 1},
+    })
+    put(f"data/{NS}/recipe/dirty_emerald_from_block.json", {
+        "type": "minecraft:crafting_shapeless",
+        "category": "misc",
+        "ingredients": [f"{NS}:dirty_emerald_block"],
+        "result": {"id": f"{NS}:dirty_emerald", "count": 9},
     })
     for name in ("laundry_empty", "laundry_running", "laundry_done"):
         put(f"assets/{NS}/models/block/{name}.json", {

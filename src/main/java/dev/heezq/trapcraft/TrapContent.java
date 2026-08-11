@@ -85,6 +85,8 @@ public final class TrapContent {
     public static Block shopTill;
     public static Item shopTillItem;
     public static Item dirtyEmerald;
+    public static Block dirtyEmeraldBlock;
+    public static Item dirtyEmeraldBlockItem;
     public static Block laundry;
     public static Item laundryItem;
     public static Block slotMachine;
@@ -413,6 +415,15 @@ public final class TrapContent {
         // a lava pool is a story about laundering rather than a bug report.
         dirtyEmerald = registerItem("dirty_emerald", TrapItem::new);
 
+        // Packs nine to a block like the real thing. Dirty money is meant to
+        // be awkward because it has to be washed, not because a week's takings
+        // is sixteen stacks to carry.
+        dirtyEmeraldBlock = registerBlock("dirty_emerald_block", DirtyEmeraldBlock::new,
+                AbstractBlock.Settings.create().strength(3.0F, 6.0F).requiresTool()
+                        .sounds(BlockSoundGroup.METAL));
+        dirtyEmeraldBlockItem = registerItem("dirty_emerald_block",
+                (settings, model) -> new RackItem(dirtyEmeraldBlock, settings, model));
+
         laundry = registerBlock("laundry", LaundryBlock::new,
                 AbstractBlock.Settings.create().strength(3.0F).requiresTool()
                         .sounds(BlockSoundGroup.METAL).nonOpaque());
@@ -555,6 +566,7 @@ public final class TrapContent {
                     entries.add(marketShelfItem);
                     entries.add(laundryItem);
                     entries.add(dirtyEmerald);
+                    entries.add(dirtyEmeraldBlockItem);
                     entries.add(slotMachineItem);
                     entries.add(rouletteItem);
                     entries.add(plinkoItem);

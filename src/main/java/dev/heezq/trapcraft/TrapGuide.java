@@ -288,6 +288,13 @@ public final class TrapGuide {
                 .append(hint("Craft a laundry drum."))));
 
         pages.add(page(Text.empty()
+                .append(title("1h2. CARRYING IT\n\n"))
+                .append(body("Nine make a block, and a block makes nine "
+                        + "again. Same as emeralds.\n\n"))
+                .append(body("A big payout arrives in blocks already.\n\n"))
+                .append(hint("The drum takes blocks too. One counts as 9."))));
+
+        pages.add(page(Text.empty()
                 .append(title("1i. THE DRUM\n\n"))
                 .append(body("Right-click holding dirty money. "
                         + LaundryBlock.MIN_LOAD + " min, "

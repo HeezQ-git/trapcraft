@@ -861,6 +861,10 @@ def build() -> str:
     <p>The street does not pay in emeralds. Customers and dealers pay in <strong>dirty
     emeralds</strong> — an item, not a balance. No shop takes them, no wage comes out of them,
     and the market does not know they exist. They are not money yet.</p>
+    <p>They stack and pack like the real thing: <strong>nine to a block and back again</strong>,
+    and a big payout arrives as blocks already. The awkward part of dirty money is meant to be
+    that it has to be washed, not that a week off the street is sixteen stacks to carry. The
+    drum takes blocks too, each counting as nine.</p>
     <p>They become money in a <strong>laundry drum</strong>: right-click it holding them,
     {d['wash_min']} at a minimum and <strong>{d['wash_max']}</strong> to a load, then wait —
     {d['wash_each'] / 20:g} seconds an emerald, so about
