@@ -469,6 +469,46 @@ def casino_floor() -> list[str]:
     return problems
 
 
+def half_a_chest() -> list[str]:
+    """Position lookups that would see one half of a double chest.
+
+    `world.getBlockEntity(pos) instanceof Inventory` returns a 27-slot
+    ChestBlockEntity for a double chest, never the 54-slot pair. Every reader
+    in the mod was written that way once, and the symptom was a crew hand
+    filling half a chest, calling it full and throwing the harvest on the
+    floor -- reported, reasonably, as "the workers are broken" rather than as
+    anything to do with chests.
+
+    TrapBoxes.at is the fix and the hopper's own resolver underneath it.
+
+    Two shapes are deliberately NOT flagged, because neither can be wrong:
+
+    Chunk-wide sweeps. Iterating a chunk's block entities visits both halves as
+    separate entries, so counting money or finding a stash that way is already
+    right.
+
+    Presence tests -- `instanceof Inventory` with nothing bound. "Is there a
+    container on this square" has the same answer for half a chest and a whole
+    one. Only a BINDING (`instanceof Inventory box`) says the code is about to
+    read slots out of it, and that is what has to see all fifty-four. The first
+    version of this rule flagged the presence tests too and cried wolf three
+    times on its first run.
+    """
+    binds = re.compile(r"getBlockEntity\(.*instanceof\s+(?:[\w.]+\.)*Inventory\s+\w")
+    allowed = {"TrapBoxes.java"}
+    problems = []
+    src = ROOT / "src/main/java/dev/heezq/trapcraft"
+    for java in sorted(src.glob("*.java")):
+        if java.name in allowed:
+            continue
+        for number, line in enumerate(java.read_text().splitlines(), 1):
+            if binds.search(line):
+                problems.append(
+                    f"{java.name}:{number}: binds one half of a double chest -- "
+                    f"use TrapBoxes.at(world, pos)")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -495,6 +535,7 @@ def main() -> int:
     problems.extend(recipes())
     problems.extend(casino_floor())
     problems.extend(craft_loops(goods))
+    problems.extend(half_a_chest())
 
     for ident, _, base in goods:
         if round(base * WORST_INDEX) < SELL_FLOOR:
