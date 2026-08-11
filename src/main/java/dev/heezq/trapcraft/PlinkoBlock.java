@@ -16,8 +16,6 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
-import net.minecraft.util.BlockRotation;
-import net.minecraft.util.BlockMirror;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -42,34 +40,10 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * The game is in {@link PlinkoScreenHandler}; this is the cabinet.
  */
 public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
-
-    private static int spin(Direction facing) {
-        return switch (facing) {
-            case EAST -> 90;
-            case SOUTH -> 180;
-            case WEST -> 270;
-            default -> 0;
-        };
-    }
-
-    @Override
-    protected BlockState rotate(BlockState state, BlockRotation rotation) {
-        return state.with(FACING, rotation.rotate(state.get(FACING)));
-    }
-
-    @Override
-    protected BlockState mirror(BlockState state, BlockMirror mirror) {
-        return state.rotate(mirror.getRotation(state.get(FACING)));
-    }
     public static final EnumProperty<DoubleBlockHalf> HALF = Properties.DOUBLE_BLOCK_HALF;
 
-    /** Which way the player stands. The model is drawn facing north. */
-    public static final EnumProperty<Direction> FACING = Properties.HORIZONTAL_FACING;
-
-    private final java.util.Map<Direction, BlockState> lower =
-            new java.util.EnumMap<>(Direction.class);
-    private final java.util.Map<Direction, BlockState> upper =
-            new java.util.EnumMap<>(Direction.class);
+    private final BlockState lowerCarrier;
+    private final BlockState upperCarrier;
 
     public PlinkoBlock(Settings settings) {
         super(settings);
@@ -77,31 +51,25 @@ public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedB
         // carrier that claims to be a solid cube makes the client cull the
         // faces of whatever is behind and below -- the roulette table shipped
         // exactly that bug and showed the caves under the floor.
-        for (Direction facing : Direction.Type.HORIZONTAL) {
-            lower.put(facing, TrapPolymer.requestOrFallback(
+        this.lowerCarrier = TrapPolymer.requestOrFallback(
                 BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_lower"),
-                                    0, spin(facing)),
-                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_lower facing " + facing.asString()));
-            upper.put(facing, TrapPolymer.requestOrFallback(
+                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_lower")),
+                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_lower");
+        this.upperCarrier = TrapPolymer.requestOrFallback(
                 BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_upper"),
-                                    0, spin(facing)),
-                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_upper facing " + facing.asString()));
-        }
-        setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER)
-                .with(FACING, Direction.NORTH));
+                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_upper")),
+                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_upper");
+        setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(HALF, FACING);
+        builder.add(HALF);
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return (state.get(HALF) == DoubleBlockHalf.UPPER ? upper : lower)
-                .get(state.get(FACING));
+        return state.get(HALF) == DoubleBlockHalf.UPPER ? upperCarrier : lowerCarrier;
     }
 
     @Override
@@ -118,11 +86,7 @@ public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedB
                 || !context.getWorld().getBlockState(pos.up()).isReplaceable()) {
             return null;   // no headroom: refuse rather than place half a board
         }
-        // Faces whoever put it down, like a furnace. onPlaced builds the upper
-        // half from THIS state, so it inherits the facing -- both halves turn
-        // together or the board gets its top on backwards.
-        return getDefaultState().with(FACING,
-                context.getHorizontalPlayerFacing().getOpposite());
+        return getDefaultState();
     }
 
     @Override
