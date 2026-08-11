@@ -470,9 +470,8 @@ public final class TrapGuide {
                         + "day.\n\n"))
                 .append(body("They pay daily. Open the box and it's "
                         + "yours.\n\n"))
-                .append(hint("Grade 1: " + HomeSurvey.RENT[1] + "e. Grade "
-                        + HomeSurvey.TOP_TIER + ": "
-                        + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e."))));
+                .append(hint("From " + HomeSurvey.RENT[1] + "e to "
+                        + HomeSurvey.RENT[HomeSurvey.TOP_TIER] + "e a head."))));
 
         pages.add(page(Text.empty()
                 .append(title("11. PAYDAY\n\n"))
@@ -486,24 +485,30 @@ public final class TrapGuide {
                 .append(title("11b. AND BY SIZE\n\n"))
                 .append(body("Grade sets the rate. Floor lifts it inside the "
                         + "grade.\n\n"))
-                .append(body("A big house pays halfway to the next grade. No "
-                        + "further.\n\n"))
-                .append(hint("Grades still beat sprawl."))));
+                .append(body("Wages AND rent. Same number, both ends.\n\n"))
+                .append(hint("Halfway to the next grade, never further."))));
 
         // The table people will actually plan against: what one resident earns
         // at the bottom and the top of each band. Off the arrays, because the
         // prose version of the grade ladder went stale the day it grew.
         MutableText paid = Text.empty()
-                .append(title("11c. WHAT THEY EARN\n\n"))
-                .append(body("grade  small   big\n"));
+                .append(title("11c. EARNS\n\n"))
+                .append(body("grade small   big\n"));
+        MutableText owed = Text.empty()
+                .append(title("11d. YOUR RENT\n\n"))
+                .append(body("grade small   big\n"));
         for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
             int lo = HomeSurvey.FLOOR_STEPS[tier - 1];
             int hi = tier >= HomeSurvey.TOP_TIER ? HomeSurvey.topFloor()
                     : HomeSurvey.FLOOR_STEPS[tier] - 1;
-            paid.append(body(tier + "      " + HomeSurvey.wageDue(tier, 1, lo)
-                    + "e     " + HomeSurvey.wageDue(tier, 1, hi) + "e\n"));
+            paid.append(body(tier + "     " + HomeSurvey.wageDue(tier, 1, lo)
+                    + "e    " + HomeSurvey.wageDue(tier, 1, hi) + "e\n"));
+            owed.append(body(tier + "     "
+                    + HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, lo) + "e    "
+                    + HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, hi) + "e\n"));
         }
         pages.add(page(paid));
+        pages.add(page(owed.append(hint("\nA head, at full mood."))));
 
         pages.add(page(Text.empty()
                 .append(title("12. THE TOWN PURSE\n\n"))

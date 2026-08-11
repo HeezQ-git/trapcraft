@@ -566,6 +566,24 @@ public final class HomeSurvey {
     }
 
     /**
+     * What one head of this house is worth a day: the grade's rate, lifted by
+     * how big the place is inside that grade.
+     *
+     * The single source for BOTH sides of the ledger. Rent and wages are the
+     * same number seen from two ends -- what the tenant hands the landlord and
+     * what the tenant was paid to hand it over -- and computing the size lift
+     * twice is how the two quietly stop agreeing after somebody tunes one of
+     * them. {@link #WAGE_MULTIPLE} is the only thing that separates them.
+     */
+    public static float rateOf(int tier, int floor) {
+        if (tier <= 0 || tier >= RENT.length) {
+            return 0f;
+        }
+        return RENT[tier]
+                + (reachesFor(tier) - RENT[tier]) * roominess(tier, floor) * SIZE_LIFT;
+    }
+
+    /**
      * What a resident of this house earns a day, before tax.
      *
      * Grade sets the rate, size lifts it within the grade, and heads multiply
@@ -577,9 +595,7 @@ public final class HomeSurvey {
         if (tier <= 0 || tier >= RENT.length || heads <= 0) {
             return 0;
         }
-        float rate = RENT[tier]
-                + (reachesFor(tier) - RENT[tier]) * roominess(tier, floor) * SIZE_LIFT;
-        return Math.max(1, Math.round(rate * WAGE_MULTIPLE * heads));
+        return Math.max(1, Math.round(rateOf(tier, floor) * WAGE_MULTIPLE * heads));
     }
 
     /**
@@ -666,11 +682,11 @@ public final class HomeSurvey {
      * which is the difference between a system that warns you and a system
      * that surprises you.
      */
-    public static int rentDue(int tier, int mood, int heads) {
+    public static int rentDue(int tier, int mood, int heads, int floor) {
         if (tier <= 0 || tier >= RENT.length || mood <= 0 || heads <= 0) {
             return 0;
         }
-        return Math.max(1, Math.round(RENT[tier] * heads
+        return Math.max(1, Math.round(rateOf(tier, floor) * heads
                 * Math.min(MOOD_MAX, mood) / (float) MOOD_MAX));
     }
 

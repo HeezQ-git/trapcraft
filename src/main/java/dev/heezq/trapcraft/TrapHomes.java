@@ -655,7 +655,7 @@ public final class TrapHomes {
         // stakes all move money this one line already made.
         TrapPayroll.earned(HomeSurvey.wageDue(home.tier, home.heads, home.floor));
 
-        int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads);
+        int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads, home.floor);
         if (rent > 0) {
             TrapCity.Duty duty = TrapCity.Duty.RENT;
             int owed = TrapCity.dutyOn(rent, duty);

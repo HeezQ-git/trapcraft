@@ -341,11 +341,16 @@ class SurveyTest {
 
     // --- somebody lives there -------------------------------------------------
 
+    /** Smallest floor that reaches this grade. Tier 0 is not a house at all. */
+    private static int smallestFloor(int tier) {
+        return tier <= 0 ? 0 : HomeSurvey.FLOOR_STEPS[tier - 1];
+    }
+
     @Test
     void betterHousesPayMore() {
         int last = -1;
         for (int tier = 0; tier <= HomeSurvey.TOP_TIER; tier++) {
-            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1);
+            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, smallestFloor(tier));
             assertTrue(rent > last, "grade " + tier + " pays " + rent);
             last = rent;
         }
@@ -353,11 +358,11 @@ class SurveyTest {
 
     @Test
     void anUnhappyTenantPaysLess() {
-        int happy = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX, 1);
-        int fed = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX / 2, 1);
+        int happy = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX, 1, 45);
+        int fed = HomeSurvey.rentDue(3, HomeSurvey.MOOD_MAX / 2, 1, 45);
         assertTrue(fed < happy, fed + " should be under " + happy);
-        assertEquals(0, HomeSurvey.rentDue(3, 0, 1), "nobody pays on the way out");
-        assertEquals(0, HomeSurvey.rentDue(0, HomeSurvey.MOOD_MAX, 1), "nor for a condemned room");
+        assertEquals(0, HomeSurvey.rentDue(3, 0, 1, 45), "nobody pays on the way out");
+        assertEquals(0, HomeSurvey.rentDue(0, HomeSurvey.MOOD_MAX, 1, 45), "nor for a condemned room");
     }
 
     @Test
@@ -365,8 +370,8 @@ class SurveyTest {
         // The rebalance in one assertion: a grade five with one bed is a
         // fraction of what it used to pay, and the way back to the old number
         // is four people in it rather than one.
-        int lodger = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 1);
-        int family = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 4);
+        int lodger = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 1, 150);
+        int family = HomeSurvey.rentDue(5, HomeSurvey.MOOD_MAX, 4, 150);
         assertEquals(lodger * 4, family, "rent is per head");
         assertTrue(lodger < 100, "one bed in one house should not be a wage, got " + lodger);
     }
@@ -413,7 +418,7 @@ class SurveyTest {
         int smallest = HomeSurvey.moodTarget(5, 0, 0);
         assertTrue(smallest > 0 && smallest < HomeSurvey.MOOD_MAX / 2,
                 "a grow next door should more than halve it, got " + smallest);
-        assertTrue(HomeSurvey.rentDue(5, smallest, 1) < HomeSurvey.RENT[5] / 2);
+        assertTrue(HomeSurvey.rentDue(5, smallest, 1, 150) < HomeSurvey.RENT[5] / 2);
 
         // Anything bigger and they go.
         for (int tier = 1; tier <= 3; tier++) {
@@ -457,16 +462,19 @@ class SurveyTest {
 
     // --- what a resident earns ------------------------------------------------
 
-    /** The floor a house of this grade is built on, at its smallest. */
+    /**
+     * The floor a house of this grade is built on, at its smallest -- where
+     * the size lift is worth nothing, so these are the bare table rates.
+     */
     private static int floorFor(int tier) {
-        return HomeSurvey.FLOOR_STEPS[tier - 1];
+        return smallestFloor(tier);
     }
 
     @Test
     void everyGradeClearsItsOwnRent() {
         for (int tier = 1; tier < HomeSurvey.RENT.length; tier++) {
             int wage = HomeSurvey.wageDue(tier, 1, floorFor(tier));
-            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1);
+            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, floorFor(tier));
             assertTrue(wage > rent,
                     "grade " + tier + " earns " + wage + " and owes " + rent);
         }
@@ -538,6 +546,35 @@ class SurveyTest {
     @Test
     void andThenItIsTrulyTheCeiling() {
         assertEquals(HomeSurvey.wageDue(8, 1, 740), HomeSurvey.wageDue(8, 1, 50_000));
+    }
+
+    @Test
+    void rentIsLiftedBySizeTheSameWayWagesAre() {
+        int small = HomeSurvey.rentDue(4, HomeSurvey.MOOD_MAX, 1, HomeSurvey.FLOOR_STEPS[3]);
+        int large = HomeSurvey.rentDue(4, HomeSurvey.MOOD_MAX, 1,
+                HomeSurvey.FLOOR_STEPS[4] - 1);
+        assertTrue(large > small, "a bigger grade four should be owed more rent, got "
+                + small + " -> " + large);
+    }
+
+    /**
+     * The two sides of the ledger must move together. They are one rate seen
+     * from both ends, and the only thing between them is WAGE_MULTIPLE -- if
+     * that stops being true, somewhere a tenant is being paid on one size and
+     * billed on another.
+     */
+    @Test
+    void wagesStayExactlyAMultipleOfRent() {
+        for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
+            for (int floor : new int[]{smallestFloor(tier), smallestFloor(tier) + 25,
+                    HomeSurvey.topFloor()}) {
+                int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1, floor);
+                int wage = HomeSurvey.wageDue(tier, 1, floor);
+                assertEquals(rent * HomeSurvey.WAGE_MULTIPLE, wage, 1,
+                        "grade " + tier + " at " + floor + ": rent " + rent
+                                + ", wage " + wage);
+            }
+        }
     }
 
     @Test

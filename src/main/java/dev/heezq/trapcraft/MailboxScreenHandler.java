@@ -261,11 +261,13 @@ public class MailboxScreenHandler extends ScreenHandler {
                     mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED : Formatting.GRAY));
             lore.add(Text.empty());
             int heads = reading.household();
-            int full = HomeSurvey.RENT[Math.min(reading.tier(),
-                    HomeSurvey.RENT.length - 1)] * heads;
+            // Off rateOf, not the bare RENT row: size lifts the rate inside a
+            // grade, so the flat table understates what a big house is owed
+            // and this line would read as "pays 60e of 42e".
+            int full = Math.round(HomeSurvey.rateOf(reading.tier(), reading.floor()) * heads);
             lore.add(line("Pays  ", Formatting.DARK_GRAY)
-                    .append(plain(HomeSurvey.rentDue(reading.tier(), mood, heads) + "e a day")
-                            .formatted(Formatting.GREEN))
+                    .append(plain(HomeSurvey.rentDue(reading.tier(), mood, heads,
+                            reading.floor()) + "e a day").formatted(Formatting.GREEN))
                     .append(plain("  of " + full + "e").formatted(Formatting.DARK_GRAY)));
             // Rent is per person now, so the number on this screen is
             // meaningless without saying how many people are behind it --

@@ -438,6 +438,18 @@ def roominess(tier: int, floor: int) -> float:
     return max(0.0, min(1.0, (floor - frm) / (to - frm)))
 
 
+def rate_at(tier: int, floor: int) -> float:
+    """Mirror of HomeSurvey.rateOf — the one number both sides read."""
+    rent, top, lift = DATA["rent"], DATA["top_tier"], DATA["size_lift"]
+    reaches = rent[tier + 1] if tier < top else rent[top] + (rent[top] - rent[top - 1])
+    return rent[tier] + (reaches - rent[tier]) * roominess(tier, floor) * lift
+
+
+def rent_at(tier: int, floor: int) -> int:
+    """A contented tenant's rent, so mood drops out of it."""
+    return max(1, round(rate_at(tier, floor)))
+
+
 def wage_at(tier: int, floor: int) -> int:
     """Mirror of HomeSurvey.wageDue for one head, so the table cannot drift.
 
@@ -446,10 +458,7 @@ def wage_at(tier: int, floor: int) -> int:
     that grade can actually be paid. The top grade reaches half a band past
     itself rather than nowhere — see HomeSurvey.bandTop for why.
     """
-    rent, top, lift = DATA["rent"], DATA["top_tier"], DATA["size_lift"]
-    reaches = rent[tier + 1] if tier < top else rent[top] + (rent[top] - rent[top - 1])
-    rate = rent[tier] + (reaches - rent[tier]) * roominess(tier, floor) * lift
-    return max(1, round(rate * DATA["wage_multiple"]))
+    return max(1, round(rate_at(tier, floor) * DATA["wage_multiple"]))
 
 
 def minutes(rolls: int) -> float:
@@ -957,16 +966,20 @@ def build() -> str:
     ladder is a staircase — {d['floor_steps'][3]} squares is a grade four and so is
     {d['floor_steps'][4] - 1} — so without this the last sixty blocks you laid bought the people
     living there nothing at all.</p>
-    <p>A house at the top of its size band earns <strong>halfway to the next grade's rate</strong>,
-    and never more than that: climbing a grade always beats sprawling, and laying another block of
-    floor can never cost anybody money. Below, per resident:</p>
-    {table(["Grade", "Floor", "Smallest", "Biggest", "Rent to you"],
+    <p>A house at the top of its size band is worth <strong>halfway to the next grade's
+    rate</strong>, and never more than that: climbing a grade always beats sprawling, and laying
+    another block of floor can never cost anybody money.</p>
+    <p><strong>Rent moves with it.</strong> The two are one number seen from both ends — what the
+    tenant is paid, and what they hand you for the room — so a big house of a grade is owed more
+    rent as well as earning its resident more. Per resident, per day:</p>
+    {table(["Grade", "Floor", "Earns (small → big)", "Rent to you (small → big)"],
            [[str(i),
              f"{d['floor_steps'][i - 1]}–{band_top(i) - 1}" if i < d['top_tier']
              else f"{d['floor_steps'][i - 1]}+",
-             f"{wage_at(i, d['floor_steps'][i - 1])}e",
+             f"{wage_at(i, d['floor_steps'][i - 1])}e → "
              f"{wage_at(i, band_top(i) if i >= d['top_tier'] else band_top(i) - 1)}e",
-             f"{d['rent'][i]}e"]
+             f"{rent_at(i, d['floor_steps'][i - 1])}e → "
+             f"{rent_at(i, band_top(i) if i >= d['top_tier'] else band_top(i) - 1)}e"]
             for i in range(1, len(d['rent']))])}
     <p class="note">The top grade has no band above it to reach towards, so it gets one more of
     its own width — a palace out-earns a mansion, and past {band_top(d['top_tier'])} squares you
