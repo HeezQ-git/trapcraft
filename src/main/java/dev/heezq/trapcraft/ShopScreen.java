@@ -39,6 +39,7 @@ public class ShopScreen extends ScreenHandler {
     private static final int TILL_SLOT = 0;
     private static final int PRICE_SLOT = 2;
     private static final int SHELVES_SLOT = 4;
+    private static final int STAFF_SLOT = 6;
     private static final int LINES_FROM = 9;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
@@ -82,6 +83,7 @@ public class ShopScreen extends ScreenHandler {
         display.setStack(TILL_SLOT, till());
         display.setStack(PRICE_SLOT, prices());
         display.setStack(SHELVES_SLOT, shelves());
+        display.setStack(STAFF_SLOT, staff());
 
         rows.clear();
         if (listingShelves) {
@@ -204,6 +206,28 @@ public class ShopScreen extends ScreenHandler {
         return tag;
     }
 
+    private ItemStack staff() {
+        boolean on = shop.staffed();
+        ItemStack tag = new ItemStack(on ? Items.VILLAGER_SPAWN_EGG : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Shopkeeper").formatted(on ? Formatting.GREEN : Formatting.GRAY,
+                        Formatting.BOLD)
+                        .append(plain(on ? "   on the counter" : "   nobody")
+                                .formatted(Formatting.WHITE)));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(TrapShops.KEEPER_WAGE + "e a day, out of the till.", Formatting.GRAY),
+                Text.empty(),
+                line("Somebody stands at the counter and the", Formatting.DARK_GRAY),
+                line("shop draws far more custom.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("It keeps trading while you're anywhere", Formatting.DARK_GRAY),
+                line("on the server -- but not while you're", Formatting.DARK_GRAY),
+                line("logged off.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line(on ? "Click to let them go." : "Click to hire.", Formatting.YELLOW))));
+        return tag;
+    }
+
     private ItemStack priced(TrapShops.Line entry) {
         ItemStack tag = entry.sample().copy();
         int duty = TrapCity.dutyOn(entry.price(), entry.duty());
@@ -262,6 +286,14 @@ public class ShopScreen extends ScreenHandler {
                 who.sendMessage(plain("Now trading as ").formatted(Formatting.GRAY)
                         .append(plain(shop.name()).formatted(Formatting.GOLD)), true);
             }
+            paint();
+            return;
+        }
+        if (index == STAFF_SLOT) {
+            who.sendMessage(Text.literal(TrapShops.staff(who, shop))
+                    .formatted(Formatting.GRAY), false);
+            who.getWorld().playSound(null, who.getBlockPos(),
+                    SoundEvents.ENTITY_VILLAGER_YES, SoundCategory.PLAYERS, 0.7F, 1.0F);
             paint();
             return;
         }

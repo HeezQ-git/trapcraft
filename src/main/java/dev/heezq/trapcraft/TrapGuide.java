@@ -329,6 +329,21 @@ public final class TrapGuide {
                 .append(hint("Stock any chest under the till or a shelf."))));
 
         pages.add(page(Text.empty()
+                .append(title("1e4. A SHOPKEEPER\n\n"))
+                .append(body("Hire one at the till for "
+                        + TrapShops.KEEPER_WAGE + "e a day.\n\n"))
+                .append(body("They stand at the counter and the shop draws far "
+                        + "more people.\n\n"))
+                .append(warn("Empty till, and they walk out."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1e5. WHY BOTHER\n\n"))
+                .append(body("A staffed shop keeps trading while you are "
+                        + "anywhere on the server.\n\n"))
+                .append(body("Not while you're logged off.\n\n"))
+                .append(hint("Go mining. The shop stays open."))));
+
+        pages.add(page(Text.empty()
                 .append(title("1e2. THE TILL\n\n"))
                 .append(body("One register for the whole building.\n\n"))
                 .append(body("Open it and the takings are yours. Set your "

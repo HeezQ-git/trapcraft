@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
@@ -93,6 +94,17 @@ public final class TrapShops {
         int till;
         int sold;
         int turnover;
+        /**
+         * Is somebody behind the counter?
+         *
+         * Saved in the comma-packed money field rather than as a new
+         * space-separated one, because the shop's NAME is the unsplit tail of
+         * the line -- the same trap that once took the whole housing register
+         * down. The commas are the only place this format can grow.
+         */
+        boolean staffed;
+        /** The last in-game day the keeper was paid, so a restart can't double it. */
+        long lastPaid = -1;
 
         Shop(String dimension, BlockPos pos, UUID owner, String ownerName, String name) {
             this.dimension = dimension;
@@ -128,6 +140,10 @@ public final class TrapShops {
 
         public int turnover() {
             return turnover;
+        }
+
+        public boolean staffed() {
+            return staffed;
         }
 
         public int markup() {
@@ -196,6 +212,9 @@ public final class TrapShops {
             }
             if (now % CHECK_INTERVAL == 0) {
                 maybeVisit(server);
+            }
+            if (now % 200 == 0) {
+                keepers(server);
             }
         });
     }
@@ -291,6 +310,7 @@ public final class TrapShops {
             return;
         }
         spill(world, pos, shop.till);
+        sendHome(world.getServer(), shop);
         SHOPS.remove(shop);
         save();
     }
@@ -351,6 +371,138 @@ public final class TrapShops {
         }
         shop.name = trimmed;
         save();
+    }
+
+    // --- somebody behind the counter ------------------------------------------
+
+    /** What a shopkeeper takes out of the till a day. */
+    public static final int KEEPER_WAGE = 45;
+    /** What having one does to the custom a shop draws. */
+    public static final float KEEPER_PULL = 1.5f;
+
+    /**
+     * Our own chunk ticket, deliberately not equal to anybody else's.
+     *
+     * {@link net.minecraft.server.world.ChunkTicketType} is a record, so two
+     * are the same ticket when their three fields match -- registered or not.
+     * TrapCrew's is 20*20 and vanilla's PORTAL is 300 and persists; 20*25 is
+     * nobody's, which keeps a shop's ticket from silently merging into a
+     * hand's or turning up in /forceload.
+     */
+    private static final net.minecraft.server.world.ChunkTicketType KEEPER_TICKET =
+            new net.minecraft.server.world.ChunkTicketType(20 * 25, false,
+                    net.minecraft.server.world.ChunkTicketType.Use.LOADING_AND_SIMULATION);
+
+    /** Shopkeepers we have out, by the till they stand at. Memory only. */
+    private static final Map<BlockPos, UUID> KEEPERS = new HashMap<>();
+
+    /**
+     * Take somebody on, or let them go.
+     *
+     * @return what to tell the owner
+     */
+    public static String staff(ServerPlayerEntity owner, Shop shop) {
+        shop.staffed = !shop.staffed;
+        if (!shop.staffed) {
+            shop.lastPaid = -1;
+            sendHome(owner.getServer(), shop);
+            save();
+            return "They've gone home. The counter is yours again.";
+        }
+        save();
+        return "Hired. " + KEEPER_WAGE + "e a day out of the till, and the shop keeps "
+                + "trading while you're anywhere on the server.";
+    }
+
+    /**
+     * Pay the keepers, and hold their shops awake.
+     *
+     * The awake half deliberately copies the crew's rule -- only while the
+     * OWNER is logged in. A shop that held its chunk open forever would be a
+     * chunk loader you buy for 45e a day, and a server of them is somebody
+     * else's tick budget.
+     */
+    private static void keepers(MinecraftServer server) {
+        long day = server.getOverworld().getTimeOfDay() / 24000L;
+        for (Shop shop : new ArrayList<>(SHOPS)) {
+            if (!shop.staffed) {
+                continue;
+            }
+            if (shop.lastPaid != day) {
+                shop.lastPaid = day;
+                if (shop.till < KEEPER_WAGE) {
+                    shop.staffed = false;
+                    sendHome(server, shop);
+                    ServerPlayerEntity boss = server.getPlayerManager().getPlayer(shop.owner);
+                    if (boss != null) {
+                        boss.sendMessage(Text.literal("Your shopkeeper walked out of ")
+                                .formatted(Formatting.RED)
+                                .append(Text.literal(shop.name).formatted(Formatting.GOLD))
+                                .append(Text.literal(" -- the till couldn't make their "
+                                        + KEEPER_WAGE + "e.").formatted(Formatting.GRAY)), false);
+                    }
+                    save();
+                    continue;
+                }
+                shop.till -= KEEPER_WAGE;
+                save();
+            }
+            if (server.getPlayerManager().getPlayer(shop.owner) == null) {
+                sendHome(server, shop);
+                continue;
+            }
+            ServerWorld world = worldOf(server, shop.dimension);
+            if (world == null) {
+                continue;
+            }
+            // Re-adding the same ticket pushes its expiry out rather than
+            // stacking another, so this is a hash lookup a shop every ten
+            // seconds.
+            world.getChunkManager().addTicket(KEEPER_TICKET,
+                    new net.minecraft.util.math.ChunkPos(shop.pos), 2);
+            stand(world, shop);
+        }
+    }
+
+    /** Put the keeper back on their feet if they've wandered off or unloaded. */
+    private static void stand(ServerWorld world, Shop shop) {
+        UUID known = KEEPERS.get(shop.pos);
+        if (known != null && world.getEntity(known) instanceof VillagerEntity alive
+                && alive.isAlive()) {
+            return;
+        }
+        BlockPos spot = TrapSpawn.near(world, shop.pos.up());
+        if (spot == null) {
+            return;
+        }
+        VillagerEntity keeper = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
+        if (keeper == null) {
+            return;
+        }
+        keeper.refreshPositionAndAngles(spot, world.getRandom().nextFloat() * 360f, 0f);
+        keeper.setCustomName(Text.literal(shop.name + "'s keeper").formatted(Formatting.AQUA));
+        keeper.setCustomNameVisible(true);
+        keeper.addCommandTag(KEEPER_TAG);
+        keeper.setAiDisabled(true);
+        keeper.setPersistent();
+        world.spawnEntity(keeper);
+        KEEPERS.put(shop.pos.toImmutable(), keeper.getUuid());
+    }
+
+    /** Marks a shopkeeper, so nothing else mistakes one for a wandering local. */
+    public static final String KEEPER_TAG = "trapcraft_keeper";
+
+    private static void sendHome(MinecraftServer server, Shop shop) {
+        UUID id = KEEPERS.remove(shop.pos);
+        if (id == null || server == null) {
+            return;
+        }
+        for (ServerWorld world : server.getWorlds()) {
+            if (world.getEntity(id) instanceof VillagerEntity keeper) {
+                keeper.discard();
+                return;
+            }
+        }
     }
 
     /** Cycle the price policy and write it down. */
@@ -628,7 +780,10 @@ public final class TrapShops {
             if (shelvesOf(shop).isEmpty() || wanted(server, world, shop, random) == null) {
                 continue;
             }
-            int weight = Math.max(1, 200 - shop.markup());
+            // A staffed counter draws more custom than an empty one, which is
+            // most of what you are paying the wage for.
+            int weight = Math.round(Math.max(1, 200 - shop.markup())
+                    * (shop.staffed ? KEEPER_PULL : 1f));
             for (int i = 0; i < weight; i += 20) {
                 open.add(shop);
             }
@@ -959,6 +1114,8 @@ public final class TrapShops {
                     shop.till = Integer.parseInt(money[0]);
                     shop.sold = money.length > 1 ? Integer.parseInt(money[1]) : 0;
                     shop.turnover = money.length > 2 ? Integer.parseInt(money[2]) : 0;
+                    shop.staffed = money.length > 3 && money[3].equals("1");
+                    shop.lastPaid = money.length > 4 ? Long.parseLong(money[4]) : -1;
                     SHOPS.add(shop);
                 }
             }
@@ -980,7 +1137,9 @@ public final class TrapShops {
                         .append(shop.owner).append(' ').append(shop.ownerName).append(' ')
                         .append(shop.markup).append(' ')
                         .append(shop.till).append(',').append(shop.sold).append(',')
-                        .append(shop.turnover).append(' ')
+                        .append(shop.turnover).append(',')
+                        .append(shop.staffed ? 1 : 0).append(',')
+                        .append(shop.lastPaid).append(' ')
                         .append(shop.name.replace('\n', ' ')).append('\n');
             }
             for (Shelf shelf : SHELVES) {

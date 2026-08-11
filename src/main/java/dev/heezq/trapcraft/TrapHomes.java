@@ -1471,6 +1471,10 @@ public final class TrapHomes {
                         // The tag is what marks a tenant, and a household has
                         // three of them the register has never heard of.
                         && !found.getCommandTags().contains(TENANT_TAG)
+                        // A shopkeeper is somebody's employee stood at their
+                        // till, not a stray tenant, and evicting one costs the
+                        // owner a hire they paid for.
+                        && !found.getCommandTags().contains(TrapShops.KEEPER_TAG)
                         && !TrapCrew.isHand(found.getUuid()))) {
             double away = villager.squaredDistanceTo(who);
             if (away <= closest) {

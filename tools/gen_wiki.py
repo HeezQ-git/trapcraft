@@ -390,6 +390,7 @@ def gather() -> None:
     DATA["retail"] = float(need(r"RETAIL = ([\d.]+)f", shops, "RETAIL"))
     DATA["legal_rate"] = float(need(r"LEGAL_RATE = ([\d.]+)f", shops, "LEGAL_RATE"))
     DATA["shop_reach"] = int(need(r"REACH = (\d+)", shops, "REACH"))
+    DATA["keeper_wage"] = int(need(r"KEEPER_WAGE = (\d+)", shops, "KEEPER_WAGE"))
     DATA["markups"] = ints("MARKUP", shops)
     DATA["rent"] = ints("RENT", homes)
     DATA["mood_leaving"] = int(need(r"MOOD_LEAVING = (\d+)", homes, "MOOD_LEAVING"))
@@ -842,6 +843,17 @@ def build() -> str:
     <p>Prices are yours: from {min(d['markups'])}% to {max(d['markups'])}% of what the town
     expects to pay. Cheap brings more of them through the door; dear takes more off each one.
     Opening the till pays you the takings.</p>
+    <h3 class="sub">Somebody behind the counter</h3>
+    <p>Hire a <strong>shopkeeper</strong> at the till for {d['keeper_wage']}e a day, taken out
+    of the takings. They stand at the counter, the shop draws far more custom, and — the real
+    reason — <strong>it keeps trading while you are anywhere on the server</strong> instead of
+    only when you happen to be stood nearby.</p>
+    <p class="note">Not while you are logged off. A shop that held its chunk loaded forever
+    would be a chunk loader you buy for {d['keeper_wage']}e a day, and a server full of them is
+    somebody else's tick budget. The crew works the same way for the same reason.</p>
+    <p class="note">If the till cannot make the wage, they walk out and you are told. A
+    shopkeeper is paid out of the shop, not out of your pocket, so a shop that sells nothing
+    cannot quietly bleed you.</p>
     <h3 class="sub">Over the counter</h3>
     <p>Shelves sell <strong>joints, cured buds and powder</strong> as well as groceries — at
     {round(d['legal_rate'] * 100)}% of the street price, but <strong>clean</strong>: paid in
