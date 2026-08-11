@@ -8,6 +8,7 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.Slot;
@@ -45,6 +46,10 @@ public class ShopScreen extends ScreenHandler {
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity who;
     private final TrapShops.Shop shop;
+    /** Which page the bottom two rows are showing. */
+    private boolean listingShelves;
+    /** What each row on the shelves page points at. See StallScreenHandler. */
+    private final List<TrapShops.Shelf> rows = new ArrayList<>();
 
     public ShopScreen(int syncId, PlayerInventory playerInventory, TrapShops.Shop shop) {
         super(ScreenHandlerType.GENERIC_9X3, syncId);
@@ -80,14 +85,66 @@ public class ShopScreen extends ScreenHandler {
         display.setStack(PRICE_SLOT, prices());
         display.setStack(SHELVES_SLOT, shelves());
 
-        List<TrapShops.Line> lines = onSale();
-        for (int i = 0; i < lines.size() && LINES_FROM + i < SIZE; i++) {
-            display.setStack(LINES_FROM + i, priced(lines.get(i)));
-        }
-        if (lines.isEmpty()) {
-            display.setStack(LINES_FROM, empty());
+        rows.clear();
+        if (listingShelves) {
+            List<TrapShops.Shelf> mine = TrapShops.shelvesOf(shop);
+            for (int i = 0; i < mine.size() && LINES_FROM + i < SIZE; i++) {
+                display.setStack(LINES_FROM + i, shelfRow(mine.get(i)));
+                rows.add(mine.get(i));
+            }
+            if (mine.isEmpty()) {
+                display.setStack(LINES_FROM, noShelves());
+            }
+        } else {
+            List<TrapShops.Line> lines = onSale();
+            for (int i = 0; i < lines.size() && LINES_FROM + i < SIZE; i++) {
+                display.setStack(LINES_FROM + i, priced(lines.get(i)));
+            }
+            if (lines.isEmpty()) {
+                display.setStack(LINES_FROM, empty());
+            }
         }
         sendContentUpdates();
+    }
+
+    /**
+     * One counter: where it is, how far, and whether anything is under it.
+     *
+     * This is the whole answer to "which shelves are connected". The question
+     * was never control -- shelves join the nearest till on their own and that
+     * is deliberate -- it was that you could not SEE which ones had, and an
+     * empty shelf looks identical to one belonging to somebody else's shop.
+     */
+    private ItemStack shelfRow(TrapShops.Shelf shelf) {
+        ServerWorld world = (ServerWorld) who.getWorld();
+        int under = 0;
+        if (world.getBlockEntity(shelf.pos().down()) instanceof Inventory box) {
+            for (int slot = 0; slot < box.size(); slot++) {
+                under += box.getStack(slot).getCount();
+            }
+        }
+        int away = (int) Math.round(Math.sqrt(shop.pos().getSquaredDistance(shelf.pos())));
+        ItemStack tag = new ItemStack(TrapContent.marketShelfItem);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(shelf.pos().getX() + " " + shelf.pos().getY() + " " + shelf.pos().getZ())
+                        .formatted(Formatting.WHITE, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(away + " blocks from the till", Formatting.GRAY),
+                line(under == 0 ? "Nothing stocked under it" : under + " items under it",
+                        under == 0 ? Formatting.RED : Formatting.GREEN),
+                Text.empty(),
+                line("Click to make it sparkle.", Formatting.YELLOW))));
+        return tag;
+    }
+
+    private ItemStack noShelves() {
+        ItemStack tag = new ItemStack(Items.BARRIER);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("No shelves").formatted(Formatting.RED, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Put market shelves within " + TrapShops.REACH + " blocks", Formatting.GRAY),
+                line("of this till and they join on their own.", Formatting.GRAY))));
+        return tag;
     }
 
     /** Everything the shop could serve right now, one entry a line. */
@@ -118,7 +175,10 @@ public class ShopScreen extends ScreenHandler {
                 line("open this. It's your money.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Turnover is what the revenue office", Formatting.DARK_GRAY),
-                line("will believe about your other money.", Formatting.DARK_GRAY))));
+                line("will believe about your other money.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("Click holding an anvil-named item to", Formatting.YELLOW),
+                line("rename the shop. Shows next time you open.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -153,7 +213,10 @@ public class ShopScreen extends ScreenHandler {
                 line("to whichever till is nearest.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Stock goes in any chest or barrel under", Formatting.DARK_GRAY),
-                line("this till or under any of them.", Formatting.DARK_GRAY))));
+                line("this till or under any of them.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line(listingShelves ? "Click for what's on sale."
+                        : "Click to list them.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -201,6 +264,37 @@ public class ShopScreen extends ScreenHandler {
             who.getWorld().playSound(null, who.getBlockPos(),
                     SoundEvents.UI_BUTTON_CLICK.value(), SoundCategory.PLAYERS, 0.7F, 1.3F);
             paint();
+            return;
+        }
+        if (index == TILL_SLOT) {
+            Text named = who.getMainHandStack().get(DataComponentTypes.CUSTOM_NAME);
+            if (named == null || named.getString().isBlank()) {
+                who.sendMessage(plain("Hold something you've named in an anvil and click "
+                        + "this to name the shop.").formatted(Formatting.GRAY), true);
+            } else {
+                TrapShops.rename(shop, named.getString());
+                who.getWorld().playSound(null, who.getBlockPos(),
+                        SoundEvents.BLOCK_ANVIL_USE, SoundCategory.PLAYERS, 0.6F, 1.4F);
+                who.sendMessage(plain("Now trading as ").formatted(Formatting.GRAY)
+                        .append(plain(shop.name()).formatted(Formatting.GOLD)), true);
+            }
+            paint();
+            return;
+        }
+        if (index == SHELVES_SLOT) {
+            listingShelves = !listingShelves;
+            who.getWorld().playSound(null, who.getBlockPos(),
+                    SoundEvents.ITEM_BOOK_PAGE_TURN, SoundCategory.PLAYERS, 0.8F, 1.0F);
+            paint();
+            return;
+        }
+        if (listingShelves && index >= LINES_FROM && index - LINES_FROM < rows.size()) {
+            TrapShops.Shelf shelf = rows.get(index - LINES_FROM);
+            ServerWorld world = (ServerWorld) who.getWorld();
+            world.spawnParticles(ParticleTypes.END_ROD, shelf.pos().getX() + 0.5,
+                    shelf.pos().getY() + 1.2, shelf.pos().getZ() + 0.5, 30, 0.3, 0.6, 0.3, 0.02);
+            world.playSound(null, shelf.pos(), SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
+                    SoundCategory.BLOCKS, 1.0F, 1.6F);
         }
     }
 

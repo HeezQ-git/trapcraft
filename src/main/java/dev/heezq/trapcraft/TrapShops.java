@@ -325,6 +325,23 @@ public final class TrapShops {
         }
     }
 
+    /**
+     * Whatever the anvil called it.
+     *
+     * MailboxItem's rule, for MailboxItem's reason: an anvil is the only text
+     * entry this mod has, and a directory of "HeezQ's shop 2", "HeezQ's shop
+     * 3" is a directory nobody can read. Blank names are ignored rather than
+     * stored -- an unnamed item should not be able to wipe a sign.
+     */
+    public static void rename(Shop shop, String name) {
+        String trimmed = name == null ? "" : name.replace('\n', ' ').trim();
+        if (trimmed.isBlank() || trimmed.equals(shop.name)) {
+            return;
+        }
+        shop.name = trimmed;
+        save();
+    }
+
     /** Cycle the price policy and write it down. */
     public static void repricePrices(Shop shop) {
         shop.nextMarkup();

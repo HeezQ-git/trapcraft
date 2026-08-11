@@ -5,6 +5,7 @@ import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
 import net.minecraft.block.Block;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
@@ -63,6 +64,14 @@ public class ShopTillBlock extends Block implements PolymerBlock, PolymerTexture
                          LivingEntity placer, ItemStack stack) {
         if (world instanceof ServerWorld ground && placer instanceof ServerPlayerEntity owner) {
             TrapShops.open(ground, pos, owner);
+            // A named till is a named shop the moment it lands, the way a
+            // named shulker is a named shulker. Saves anybody discovering the
+            // rename button before they have a shop worth naming.
+            Text named = stack.get(DataComponentTypes.CUSTOM_NAME);
+            TrapShops.Shop shop = named == null ? null : TrapShops.shopAt(ground, pos);
+            if (shop != null) {
+                TrapShops.rename(shop, named.getString());
+            }
         }
     }
 
