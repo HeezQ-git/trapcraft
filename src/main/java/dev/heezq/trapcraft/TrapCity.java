@@ -408,6 +408,9 @@ public final class TrapCity {
      * separate from {@link #charge} on purpose: one moves money and the other
      * receives money that has just been made, and conflating them is how a
      * treasury quietly starts inventing itself.
+     *
+     * Also takes transfers out of the town purse -- rent and shelf duty are
+     * money {@link TrapPayroll} minted at payday, arriving late.
      */
     public static void receive(int amount, Duty duty) {
         if (!founded() || amount <= 0) {

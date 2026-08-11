@@ -650,15 +650,23 @@ public final class TrapHomes {
         home.craving = world.getRandom().nextFloat() < CRAVING_ODDS
                 ? roll(world.getRandom(), home.mood) : null;
 
+        // Paid first, then they pay their landlord out of it. This is the only
+        // mint left on the town's behalf -- rent, shelf sales and casino
+        // stakes all move money this one line already made.
+        TrapPayroll.earned(HomeSurvey.wageDue(home.tier, home.heads));
+
         int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads);
         if (rent > 0) {
             TrapCity.Duty duty = TrapCity.Duty.RENT;
             int owed = TrapCity.dutyOn(rent, duty);
-            // Minted, like a shopper's money: a tenant is not a player and
-            // their emeralds were never in the world before. Split at once
-            // between the mailbox and the purse, both of which the market
-            // resample knows to count.
-            TrapMarket.minted(rent + owed);
+            // Out of the purse now, not minted. A tenant who cannot make rent
+            // pays none of it rather than part of it -- the mood drift above
+            // is what eventually evicts them, and a town this broke has bigger
+            // problems than one mailbox.
+            if (!TrapPayroll.spend(rent + owed)) {
+                save();
+                return;
+            }
             home.till += rent;
             TrapCity.receive(owed, duty);
             ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
