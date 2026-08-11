@@ -59,7 +59,8 @@ class SurveyTest {
         @Override
         public boolean open(int x, int y, int z) {
             char c = at(x, y, z);
-            return c == '.' || c == '@';
+            // 'B' is a second anchor, for plans with two houses in them.
+            return c == '.' || c == '@' || c == 'B';
         }
 
         @Override
@@ -73,13 +74,17 @@ class SurveyTest {
         }
 
         HomeSurvey.Rooms survey() {
+            return surveyFrom('@');
+        }
+
+        HomeSurvey.Rooms surveyFrom(char anchor) {
             for (int z = 0; z < rows.length; z++) {
-                int x = rows[z].indexOf('@');
+                int x = rows[z].indexOf(anchor);
                 if (x >= 0) {
                     return HomeSurvey.survey(this, x, 0, z);
                 }
             }
-            throw new IllegalStateException("no anchor in the plan");
+            throw new IllegalStateException("no anchor '" + anchor + "' in the plan");
         }
     }
 
@@ -581,6 +586,57 @@ class SurveyTest {
     void aBarnWithNoFurnitureIsStillOnlyItsOwnGrade() {
         assertEquals(1.0f, HomeSurvey.roominess(2, 100_000), 0.001f);
         assertEquals(0.0f, HomeSurvey.roominess(2, 0), 0.001f);
+    }
+
+    // --- blocks of flats ------------------------------------------------------
+
+    /**
+     * Flats each opening onto the street are separate houses, and their ground
+     * does not clash. This is the shape a terrace or a walkway block wants.
+     */
+    @Test
+    void flatsWithTheirOwnFrontDoorAreSeparateHouses() {
+        Plan block = new Plan(
+                ".........",
+                "###D#D###",
+                "#.@.#.B.#",
+                "#...#...#",
+                "#########");
+        HomeSurvey.Rooms left = block.surveyFrom('@');
+        HomeSurvey.Rooms right = block.surveyFrom('B');
+
+        assertTrue(left.sealed() && right.sealed(), "both flats are sealed");
+        assertEquals(1, left.exits().size(), "one door onto the street each");
+        assertEquals(1, right.exits().size());
+        assertFalse(HomeSurvey.overlaps(HomeSurvey.bounds(left.inside()),
+                        HomeSurvey.bounds(right.inside())),
+                "flats sharing a wall must not fight over the same ground");
+    }
+
+    /**
+     * Flats off a SHARED corridor are one building, not several.
+     *
+     * A door probe that closes merges the room it found and queues that room's
+     * doors, so the corridor merges and then carries the survey on through
+     * every other flat's door. Worth knowing rather than fixing: the merged
+     * result is a bigger house, and rent and wages are per head, so a block
+     * surveyed whole out-earns the same flats surveyed apart.
+     */
+    @Test
+    void flatsOffASharedCorridorAreOneBuilding() {
+        Plan block = new Plan(
+                ".........",
+                "####D####",
+                "#.......#",
+                "##D###D##",
+                "#.@.#.B.#",
+                "#########");
+        HomeSurvey.Rooms whole = block.surveyFrom('@');
+
+        assertTrue(whole.sealed());
+        assertEquals(1, whole.exits().size(), "the corridor's street door, and only that");
+        assertTrue(whole.inside().contains(HomeSurvey.cell(4, 0, 2)), "corridor is inside");
+        assertTrue(whole.inside().contains(HomeSurvey.cell(6, 0, 4)), "so is the far flat");
     }
 
     @Test
