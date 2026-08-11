@@ -491,6 +491,26 @@ public final class HomeSurvey {
     public static final int[] RENT = {0, 6, 14, 26, 42, 62, 86, 112, 140};
 
     /**
+     * What a resident of this grade earns a day, before tax.
+     *
+     * Anchored to {@link #RENT} rather than given a table of its own, so the
+     * two can never drift into a grade that costs more to live in than it pays
+     * to live in. Somebody would have to notice that, and nobody ever does --
+     * it reads as "the tenants keep leaving" three systems away.
+     *
+     * Mood is deliberately not a term here. Rent bends with how a tenant feels
+     * about the place; a wage is paid by an employer who has never seen it.
+     */
+    public static final int WAGE_MULTIPLE = 3;
+
+    public static int wageDue(int tier, int heads) {
+        if (tier <= 0 || tier >= RENT.length || heads <= 0) {
+            return 0;
+        }
+        return RENT[tier] * WAGE_MULTIPLE * heads;
+    }
+
+    /**
      * Floor each resident past the first needs.
      *
      * Beds alone would make a dormitory: eight bunks in a grade one and the

@@ -1499,6 +1499,31 @@ public final class TrapMath {
         return town * (0.55f + 0.85f * known + 0.60f * hooked);
     }
 
+    /** Emeralds a head in the town purse that means a town is comfortably off. */
+    public static final int COMFORTABLE = 200;
+    /** The most a flush town can multiply its own custom by. */
+    public static final float DEMAND_CAP = 2.0f;
+
+    /**
+     * How hard the town is shopping, against how hard it shops when comfortable.
+     *
+     * The purse alone would make a big poor town look rich, so this is per
+     * head: twenty people with 4000e between them are comfortable, and two
+     * hundred people with the same 4000e are not.
+     *
+     * Capped because the alternative is a town that got lucky once and bought
+     * out every shop on the server forever. The cap is also what makes the
+     * whole loop stable -- spending rises with the purse, which lowers the
+     * purse -- so a wrong {@link HomeSurvey#WAGE_MULTIPLE} is a slow town or a
+     * busy one, never a runaway one.
+     */
+    public static float townDemand(long purse, int people) {
+        if (people <= 0 || purse <= 0) {
+            return 0f;
+        }
+        return Math.min(DEMAND_CAP, (purse / (float) people) / COMFORTABLE);
+    }
+
     /** Wear at which a cabinet starts letting people down. */
     public static final int JAM_FROM = 45;
 

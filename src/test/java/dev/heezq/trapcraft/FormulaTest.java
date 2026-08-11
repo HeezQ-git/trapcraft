@@ -2001,4 +2001,44 @@ class FormulaTest {
         assertEquals(Map.of("overworld", -2, "nether", 1),
                 TrapMath.shiftBells(known, Map.of("overworld", 0, "nether", 1)));
     }
+
+    // --- the town's spending money --------------------------------------------
+
+    @Test
+    void aBrokeTownStaysIn() {
+        assertEquals(0.0f, TrapMath.townDemand(0, 20), 0.001f);
+    }
+
+    @Test
+    void anEmptyTownWantsNothing() {
+        assertEquals(0.0f, TrapMath.townDemand(10_000, 0), 0.001f);
+    }
+
+    @Test
+    void aComfortableTownShopsAsItAlwaysDid() {
+        assertEquals(1.0f, TrapMath.townDemand(TrapMath.COMFORTABLE * 20L, 20), 0.01f);
+    }
+
+    @Test
+    void theSamePurseGoesLessFarSpreadWider() {
+        assertTrue(TrapMath.townDemand(4000, 200) < TrapMath.townDemand(4000, 20),
+                "two hundred people sharing 4000e are not comfortable");
+    }
+
+    @Test
+    void aRichTownIsCapped() {
+        assertEquals(TrapMath.townDemand(TrapMath.COMFORTABLE * 2_000L, 20),
+                TrapMath.townDemand(TrapMath.COMFORTABLE * 200_000L, 20), 0.001f);
+    }
+
+    /** The loop only settles if custom never falls as the purse grows. */
+    @Test
+    void moreMoneyIsNeverLessCustom() {
+        float last = -1f;
+        for (long purse = 0; purse <= 100_000; purse += 500) {
+            float now = TrapMath.townDemand(purse, 20);
+            assertTrue(now >= last, "demand dipped at " + purse);
+            last = now;
+        }
+    }
 }

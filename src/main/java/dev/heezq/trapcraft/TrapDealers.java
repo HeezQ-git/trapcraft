@@ -1,5 +1,6 @@
 package dev.heezq.trapcraft;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.EntityType;
@@ -163,6 +164,34 @@ public final class TrapDealers {
                     open(boss, dealer);
                     return net.minecraft.util.ActionResult.SUCCESS;
                 });
+
+        // Litter patrol, and the only thing standing between this feature and
+        // a permanent stranger in somebody's base.
+        //
+        // A called dealer's body is persistent, invulnerable and AI-disabled --
+        // it cannot despawn, be killed, or walk off -- and the UUID tying it
+        // back to the book is held in memory only. Two ordinary things sever
+        // that link: a restart while one is stood there (the villager is in the
+        // chunk, the UUID never was in the save file), and the visit timer
+        // running out while the chunk is unloaded (sendHome cannot find a body
+        // it cannot see, so it clears the record and leaves the villager). Both
+        // end the same way: a golden name nothing in the mod can reach and
+        // nothing in the game can remove. One stood in this world as "Mira the
+        // Clock" until this existed.
+        //
+        // So the tag is the truth and the book is the guest list. Anything
+        // wearing the tag that the book does not claim is litter, binned the
+        // moment it loads -- which also clears out the ones already standing
+        // about, the first time a player walks near them.
+        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+            if (entity instanceof VillagerEntity villager
+                    && villager.getCommandTags().contains(TAG)
+                    && byMob(villager.getUuid()) == null) {
+                TrapCraft.LOGGER.info("binning a dealer nobody owns: {}",
+                        villager.getName().getString());
+                villager.discard();
+            }
+        });
     }
 
     public static void open(ServerPlayerEntity boss, Dealer dealer) {
@@ -337,10 +366,18 @@ public final class TrapDealers {
                 world.getRegistryManager().getOrThrow(RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(VillagerProfession.NITWIT)));
         body.addCommandTag(TAG);
-        world.spawnEntity(body);
-
+        // On the books BEFORE spawnEntity, never after. spawnEntity fires
+        // ENTITY_LOAD synchronously, the sweep up there asks whether the book
+        // claims this villager, and the answer has to already be yes. The
+        // casino floor learnt this one the hard way: for the whole of 1.0.134
+        // every punter ever sent in was binned by its own litter patrol at the
+        // instant it appeared, and nobody saw a villager all release.
         dealer.mob = body.getUuid();
         dealer.calledAt = boss.getServer().getTicks();
+        if (!world.spawnEntity(body)) {
+            dealer.mob = null;
+            return "Couldn't reach them.";
+        }
         world.playSound(null, spot, SoundEvents.ENTITY_VILLAGER_AMBIENT,
                 SoundCategory.NEUTRAL, 0.9F, 1.0F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
@@ -557,6 +594,12 @@ public final class TrapDealers {
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-dealers.txt");
         BOOK.clear();
+        // A board belongs to the world it was drawn in, and DRAWN holds tick
+        // counts from a server that no longer exists. Carried across a world
+        // switch in one process, a stale entry reads as drawn in the future
+        // and the board never turns over again.
+        OFFERS.clear();
+        DRAWN.clear();
         try {
             if (!Files.exists(saveFile)) {
                 return;

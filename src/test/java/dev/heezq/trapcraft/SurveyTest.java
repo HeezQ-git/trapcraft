@@ -455,6 +455,34 @@ class SurveyTest {
                 new int[]{0, 69, 0, 9, 73, 9}));
     }
 
+    // --- what a resident earns ------------------------------------------------
+
+    @Test
+    void everyGradeClearsItsOwnRent() {
+        for (int tier = 1; tier < HomeSurvey.RENT.length; tier++) {
+            int wage = HomeSurvey.wageDue(tier, 1);
+            int rent = HomeSurvey.rentDue(tier, HomeSurvey.MOOD_MAX, 1);
+            assertTrue(wage > rent,
+                    "grade " + tier + " earns " + wage + " and owes " + rent);
+        }
+    }
+
+    @Test
+    void aBetterHouseIsBetterPaid() {
+        assertTrue(HomeSurvey.wageDue(8, 1) > HomeSurvey.wageDue(1, 1));
+    }
+
+    @Test
+    void aHouseholdEarnsPerHead() {
+        assertEquals(HomeSurvey.wageDue(4, 1) * 4, HomeSurvey.wageDue(4, 4));
+    }
+
+    @Test
+    void nobodyIsPaidForACondemnedRoom() {
+        assertEquals(0, HomeSurvey.wageDue(0, 1));
+        assertEquals(0, HomeSurvey.wageDue(4, 0));
+    }
+
     @Test
     void boundsCoverEverythingFound() {
         HomeSurvey.Rooms found = new Plan(
