@@ -294,7 +294,19 @@ public final class TrapLaw {
         if (amount <= 0) {
             return;
         }
-        who.getInventory().offerOrDrop(new ItemStack(TrapContent.dirtyEmerald, amount));
+        // In stacks the item can actually hold. A single ItemStack of 226 is
+        // accepted by every server-side check and then fails to ENCODE to the
+        // client -- "Value must be within range [1;99]" -- once a tick, for as
+        // long as it exists. A big payday left one lying in a field spamming
+        // the log 3000 times before anybody read it. LaundryBlock got this
+        // right on the way out; this is the way in.
+        int left = amount;
+        int most = TrapContent.dirtyEmerald.getMaxCount();
+        while (left > 0) {
+            int lot = Math.min(left, most);
+            who.getInventory().offerOrDrop(new ItemStack(TrapContent.dirtyEmerald, lot));
+            left -= lot;
+        }
     }
 
     /**
