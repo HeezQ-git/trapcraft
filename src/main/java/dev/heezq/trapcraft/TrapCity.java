@@ -911,6 +911,11 @@ public final class TrapCity {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.txt");
         logFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-city.csv");
         lastLogged = lastLoggedInFile();
+        // At load, not only when a day rolls over. logDay fires once an
+        // in-game day, so leaving the repair in there meant /city history
+        // printed "-" for the newest columns until tomorrow -- on a feature
+        // whose entire job is showing you those columns.
+        repairHeader();
         ACTS.clear();
         PASSED.clear();
         RATES.clear();
