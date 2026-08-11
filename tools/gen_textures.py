@@ -2863,6 +2863,83 @@ xxxxxxxxxxxxxxxx
 """
 
 
+TILL_KEYS = """
+xxxxxxxxxxxxxxxx
+xWwwwwwwwwwwwwWx
+xwddddddddddddwx
+xwdmMmMmMmMmMdwx
+xwdmmmmmmmmmmdwx
+xwddddddddddddwx
+xwdmMmMmMmMmMdwx
+xwdmmmmmmmmmmdwx
+xwddddddddddddwx
+xwdmMmMmMmMmMdwx
+xwdmmmmmmmmmmdwx
+xwddddddddddddwx
+xwdMMmmmmmmMMdwx
+xwdmmmmmmmmmmdwx
+xWwwwwwwwwwwwwWx
+xxxxxxxxxxxxxxxx
+"""
+
+TILL_SCREEN = """
+xxxxxxxxxxxxxxxx
+xmMMMMMMMMMMMMmx
+xMkkkkkkkkkkkkMx
+xMkggggggggggkMx
+xMkgGGGgggGGGgkx
+xMkgGgGgggGgGgkx
+xMkgGGGgggGGGgkx
+xMkgggggggggggkx
+xMkgGGGgggGGGgkx
+xMkgGgggggGgggkx
+xMkgGGGgggGGGgkx
+xMkkkkkkkkkkkkMx
+xmMMMMMMMMMMMMmx
+xwddddddddddddwx
+xWwwwwwwwwwwwwWx
+xxxxxxxxxxxxxxxx
+"""
+
+SHELF_BOARD = """
+WWWWWWWWWWWWWWWW
+wwwwwwwwwwwwwwww
+wdwwwwwdwwwwwdww
+wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+wwdwwwwwwwdwwwww
+wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+wdwwwwwdwwwwwdww
+wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+wwwwwdwwwwwwwdww
+wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+dddddddddddddddd
+"""
+
+SHELF_STOCK = """
+cCcjJjrrppprrjJj
+cccjjjrrpppprjjj
+cccjjjrrpppprjjj
+dddddddddddddddd
+pppcCcjJjrrpppcC
+pppcccjjjrrpppcc
+pppcccjjjrrpppcc
+dddddddddddddddd
+jJjrrpppcCcjJjrr
+jjjrrpppcccjjjrr
+jjjrrpppcccjjjrr
+dddddddddddddddd
+rrpppcCcjJjrrppp
+rrpppcccjjjrrppp
+rrpppcccjjjrrppp
+dddddddddddddddd
+"""
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -2972,6 +3049,8 @@ def main() -> None:
     write(render(TILL_FRONT, TILL_PAL), "block", "shop_till_front.png")
     write(render(TILL_SIDE, TILL_PAL), "block", "shop_till_side.png")
     write(render(TILL_TOP, TILL_PAL), "block", "shop_till_top.png")
+    write(render(TILL_KEYS, TILL_PAL), "block", "shop_till_keys.png")
+    write(render(TILL_SCREEN, TILL_PAL), "block", "shop_till_screen.png")
     write(render(DIRTY_EMERALD, DIRTY_PAL), "item", "dirty_emerald.png")
     write(render(LAUNDRY_EMPTY, LAUNDRY_PAL), "block", "laundry_empty.png")
     write(render(LAUNDRY_RUNNING, LAUNDRY_PAL), "block", "laundry_running.png")
@@ -2979,6 +3058,8 @@ def main() -> None:
     write(render(SHELF_FRONT, SHELF_PAL), "block", "market_shelf_front.png")
     write(render(SHELF_SIDE, SHELF_PAL), "block", "market_shelf_side.png")
     write(render(SHELF_TOP, SHELF_PAL), "block", "market_shelf_top.png")
+    write(render(SHELF_BOARD, SHELF_PAL), "block", "market_shelf_board.png")
+    write(render(SHELF_STOCK, SHELF_PAL), "block", "market_shelf_stock.png")
     write(render(VAULT_FACE, VAULT_PAL), "block", "city_vault_face.png")
     write(render(VAULT_SIDE, VAULT_PAL), "block", "city_vault_side.png")
     write(render(VAULT_TOP, VAULT_PAL), "block", "city_vault_top.png")

@@ -483,8 +483,12 @@ def lang() -> None:
         "item.trapcraft.mailbox": "Mailbox",
         "block.trapcraft.city_vault": "City Vault",
         "item.trapcraft.city_vault": "City Vault",
-        "block.trapcraft.market_shelf": "Market Shelf",
-        "item.trapcraft.market_shelf": "Market Shelf",
+        # "Shop Shelf", not "Market Shelf". Three things called market -- the
+        # counter, the stall and this -- meant the word had stopped narrowing
+        # anything down. The ID stays market_shelf: every placed block on the
+        # live world is that ID, and renaming it orphans the lot.
+        "block.trapcraft.market_shelf": "Shop Shelf",
+        "item.trapcraft.market_shelf": "Shop Shelf",
         "item.trapcraft.dirty_emerald": "Dirty Emerald",
         "block.trapcraft.shop_till": "Shop Till",
         "item.trapcraft.shop_till": "Shop Till",
@@ -2135,27 +2139,36 @@ def mailbox_model() -> dict:
 
 
 def till_assets() -> None:
-    """The register. A solid cube, spelled out for check_models."""
+    """A register standing on a counter, not a cube with a picture of one.
+
+    The counter you lean on, the brass body, the key deck and the display
+    standing up behind it -- with an overhead shelf across the top.
+
+    The shelf is not decoration. A FULL_BLOCK carrier whose model leaves the up
+    face open shows the sky through it (check_models fails on exactly this),
+    so the top has to be covered by something. A canopy over the counter is
+    what a shop has anyway, and it gives the till the same silhouette the
+    stall's awning does, which is what makes a street of them read as one
+    trade rather than three mods.
+    """
     put(f"assets/{NS}/models/block/shop_till.json", {
         "parent": "minecraft:block/block",
+        "ambientocclusion": False,
         "textures": {
-            "front": f"{NS}:block/shop_till_front",
-            "side": f"{NS}:block/shop_till_side",
+            "counter": f"{NS}:block/shop_till_side",
             "top": f"{NS}:block/shop_till_top",
+            "body": f"{NS}:block/shop_till_front",
+            "keys": f"{NS}:block/shop_till_keys",
+            "screen": f"{NS}:block/shop_till_screen",
             "particle": f"{NS}:block/shop_till_side",
         },
-        "elements": [{
-            "from": [0, 0, 0],
-            "to": [16, 16, 16],
-            "faces": {
-                "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
-                "south": {"uv": [0, 0, 16, 16], "texture": "#front"},
-                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
-                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
-                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
-                "down": {"uv": [0, 0, 16, 16], "texture": "#side"},
-            },
-        }],
+        "elements": [
+            box([0, 0, 0], [16, 10, 16], "counter", up="top"),    # the counter
+            box([2, 10, 3], [14, 13, 13], "body", up="body"),     # the register
+            box([3, 13, 4], [13, 14, 9], "keys", up="keys"),      # the key deck
+            box([4, 13, 9], [12, 15, 12], "screen"),              # the display
+            box([0, 15, 0], [16, 16, 16], "counter", up="top"),   # overhead shelf
+        ],
     })
     put(f"assets/{NS}/models/item/shop_till.json", {"parent": f"{NS}:block/shop_till"})
     put(f"assets/{NS}/items/shop_till.json", {
@@ -2222,27 +2235,36 @@ def laundry_assets() -> None:
 
 
 def shelf_assets() -> None:
-    """A solid cube of stocked shelving, spelled out for check_models."""
+    """Actual shelving: a frame, two boards, and goods sitting on them.
+
+    The old one was a cube wearing a drawing of shelves, which is fine in a
+    screenshot and wrong the moment you stand next to a row of them. Uprights
+    and a back panel give it depth from the side, which is how you see most of
+    a shop -- you walk along the aisle, not at it.
+
+    Timber matches the till and the stall on purpose. A street of the three
+    should read as one trade.
+    """
     put(f"assets/{NS}/models/block/market_shelf.json", {
         "parent": "minecraft:block/block",
+        "ambientocclusion": False,
         "textures": {
-            "front": f"{NS}:block/market_shelf_front",
-            "side": f"{NS}:block/market_shelf_side",
-            "top": f"{NS}:block/market_shelf_top",
+            "frame": f"{NS}:block/market_shelf_side",
+            "back": f"{NS}:block/market_shelf_front",
+            "board": f"{NS}:block/market_shelf_board",
+            "goods": f"{NS}:block/market_shelf_stock",
             "particle": f"{NS}:block/market_shelf_side",
         },
-        "elements": [{
-            "from": [0, 0, 0],
-            "to": [16, 16, 16],
-            "faces": {
-                "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
-                "south": {"uv": [0, 0, 16, 16], "texture": "#front"},
-                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
-                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
-                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
-                "down": {"uv": [0, 0, 16, 16], "texture": "#side"},
-            },
-        }],
+        "elements": [
+            box([0, 0, 0], [16, 1, 16], "frame", up="board"),     # the base
+            box([0, 1, 14], [16, 15, 16], "back", up="frame"),    # the back panel
+            box([0, 1, 0], [2, 15, 14], "frame", up="frame"),     # left upright
+            box([14, 1, 0], [16, 15, 14], "frame", up="frame"),   # right upright
+            box([2, 7, 1], [14, 8, 14], "board", up="board"),     # middle board
+            box([2, 1, 2], [14, 7, 13], "goods", up="goods"),     # goods, lower
+            box([2, 8, 2], [14, 15, 13], "goods", up="goods"),    # goods, upper
+            box([0, 15, 0], [16, 16, 16], "board", up="board"),   # the top board
+        ],
     })
     put(f"assets/{NS}/models/item/market_shelf.json", {"parent": f"{NS}:block/market_shelf"})
     put(f"assets/{NS}/items/market_shelf.json", {
