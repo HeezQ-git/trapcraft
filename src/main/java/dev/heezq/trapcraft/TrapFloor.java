@@ -193,6 +193,8 @@ public final class TrapFloor {
     private static final int TICKS_PER_BLOCK = 20;
     /** Patience that does not depend on the distance at all. */
     private static final int WALK_GRACE = 200;
+    /** How far out they come in from, so they walk the last few blocks. */
+    private static final int APPROACH = 6;
     /**
      * How far ahead they are aimed at a time.
      *
@@ -229,7 +231,9 @@ public final class TrapFloor {
          * visit walking round a fence has not played anything and the machine
          * they never reached has been locked the entire time.
          */
-        final long deadline;
+        long deadline;
+        /** Already brought to the door once. Only ever happens the once. */
+        boolean shownIn;
 
         Punter(UUID id, String at, UUID house, int stake, int rounds, BlockPos stand,
                String name, long deadline) {
@@ -822,23 +826,50 @@ public final class TrapFloor {
                     step(body, punter.stand);
                     continue;
                 }
-                // Out of patience. Somebody a step away is stuck on the wrong
-                // side of their own bar stool and is simply put at the machine;
-                // somebody still streets away could not get here at all, and
-                // goes home rather than teleporting across the town. A casino
-                // nobody can walk to earning nothing is a thing you can look at
-                // and fix -- a customer materialising inside it is not.
+                // Out of patience, which for anybody who does not live round
+                // the corner is the normal outcome rather than the exception.
                 //
-                // ponytail: no waypoint graph, no door opening, no boats. If a
-                // river or a cliff is costing a floor its trade, the fix is a
-                // path, which is a nicer thing to build than a config option.
-                if (body.getBlockPos().isWithinDistance(punter.stand, GIVE_UP)
-                        && TrapSpawn.safe(world, punter.stand)) {
+                // A villager's pathfinder plans about forty blocks and a Brain
+                // reclaims the walk target between plans, so a town-length
+                // walk is not a thing the engine will do however politely it
+                // is asked -- three restarts went on establishing that, at
+                // rates of three trips failing in four with the punters barely
+                // moving. So the walk is what happens when somebody lives near
+                // enough for it to work, and this is what happens otherwise:
+                // they turn up at the door and walk the last of it in.
+                //
+                // Which is the honest reading anyway. Nobody watches a
+                // neighbour cross town; they see somebody come in off the
+                // street. What must never happen is a body appearing AT the
+                // machine, or a second copy of somebody who was already at
+                // home -- and neither can, because this is the same one body
+                // the register knows about, moved.
+                //
+                // ponytail: no waypoint graph, no door-to-door pathing. If
+                // that ever matters, the fix is to walk them between loaded
+                // chunk anchors, and it is a lot of machinery for a walk
+                // nobody is watching.
+                if (!punter.shownIn) {
+                    BlockPos from = doorway(world, pos, world.getRandom());
+                    if (from != null) {
+                        punter.shownIn = true;
+                        punter.deadline = world.getTime() + WALK_GRACE;
+                        body.refreshPositionAndAngles(from,
+                                world.getRandom().nextFloat() * 360.0F, 0.0F);
+                        step(body, punter.stand);
+                        TrapCraft.LOGGER.info("{} came the last of the way to {} {} {} "
+                                        + "on foot, {} blocks out", punter.name,
+                                pos.getX(), pos.getY(), pos.getZ(), (int) Math.sqrt(left));
+                        continue;
+                    }
+                }
+                // Even the doorway did not work: boxed in, or the last few
+                // blocks are through a wall. They play from the spot itself if
+                // there is still room on it, and go home if there is not --
+                // a machine nobody can stand at is a thing you can look at.
+                if (TrapSpawn.safe(world, punter.stand)) {
                     body.refreshPositionAndAngles(punter.stand, 0.0F, 0.0F);
                 } else {
-                    // Says how far short, because "never set off" and "almost
-                    // made it" are the same line in the log and want opposite
-                    // fixes -- a blocked spot against more patience.
                     TrapCraft.LOGGER.info("{} couldn't get to the machine at {} {} {}, "
                                     + "{} blocks short, and went home", punter.name,
                             pos.getX(), pos.getY(), pos.getZ(), (int) Math.sqrt(left));
@@ -1032,9 +1063,6 @@ public final class TrapFloor {
 
     /** Near enough the standing spot to be playing the machine at it. */
     private static final double ARRIVED = 1.75;
-    /** Close enough that they are stuck on the furniture rather than lost. */
-    private static final int GIVE_UP = 6;
-
     private static void leave(ServerWorld world, VillagerEntity body, Punter punter) {
         int net = punter.won - punter.lost;
         world.spawnParticles(net >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER,
@@ -1055,6 +1083,35 @@ public final class TrapFloor {
         if (home != null) {
             TrapHomes.walkTo(body, home.anchor());
         }
+    }
+
+    /**
+     * Somewhere with room to stand, a short walk from the machine.
+     *
+     * Checked rather than assumed. Dropping a villager at a fixed offset puts
+     * them inside a wall about as often as not indoors, and a villager inside
+     * a wall suffocates -- which reads as the casino killing its own
+     * customers.
+     */
+    private static BlockPos doorway(ServerWorld world, BlockPos pos,
+                                    net.minecraft.util.math.random.Random random) {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2;
+            int away = 2 + random.nextInt(APPROACH);
+            BlockPos spot = new BlockPos(
+                    pos.getX() + (int) Math.round(Math.cos(angle) * away),
+                    pos.getY(),
+                    pos.getZ() + (int) Math.round(Math.sin(angle) * away));
+            for (int drop = 0; drop <= 2; drop++) {
+                BlockPos at = spot.down(drop);
+                // "Not air below" counted a lava lake as a floor, which is a
+                // casino that sets its customers on fire at the door.
+                if (TrapSpawn.safe(world, at)) {
+                    return at;
+                }
+            }
+        }
+        return null;
     }
 
     /**
