@@ -850,6 +850,26 @@ public final class TrapHomes {
         return null;
     }
 
+    /**
+     * The house this body belongs to, by the tag it carries, or null.
+     *
+     * {@link #byBody} only knows the head of the household -- the one id the
+     * register keeps. This works for the family too, which is what anybody
+     * asking "where does this person live" actually means.
+     */
+    public static Home homeOf(net.minecraft.entity.Entity body) {
+        for (String tag : body.getCommandTags()) {
+            if (tag.startsWith(TENANT_TAG + "_")) {
+                try {
+                    return byId(UUID.fromString(tag.substring(TENANT_TAG.length() + 1)));
+                } catch (IllegalArgumentException notOurs) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     /** The tenant this villager is, or null. */
     public static Home byBody(java.util.UUID body) {
         for (Home home : HOMES) {
@@ -993,6 +1013,17 @@ public final class TrapHomes {
      *
      * The head of the household keeps {@link Home#body}, because the stray
      * sweep and the eviction both already know that field.
+     *
+     * <h2>Counted across the whole world, not near the house</h2>
+     *
+     * This used to count the bodies standing within {@link #BODY_RANGE} of the
+     * building, which quietly meant "a resident who is anywhere else does not
+     * exist". Somebody walking to the casino left the box, the house declared
+     * them missing and spawned a replacement, and the town ended up with two
+     * of the same person -- one at a slot machine and one at home, which is
+     * exactly the thing a register is supposed to make impossible. The
+     * question is "how many of ours are alive", and that is a question about
+     * the world rather than about one box in it.
      */
     private static void keepBodies(ServerWorld world, Home home) {
         if (home.tenant == null) {
@@ -1002,8 +1033,8 @@ public final class TrapHomes {
         var box = new net.minecraft.util.math.Box(
                 home.box[0], home.box[1], home.box[2],
                 home.box[3] + 1, home.box[4] + 1, home.box[5] + 1).expand(BODY_RANGE);
-        List<net.minecraft.entity.passive.VillagerEntity> living =
-                world.getEntitiesByClass(net.minecraft.entity.passive.VillagerEntity.class, box,
+        List<? extends net.minecraft.entity.passive.VillagerEntity> living =
+                world.getEntitiesByType(net.minecraft.entity.EntityType.VILLAGER,
                         found -> found.isAlive() && found.getCommandTags().contains(tag));
 
         // A body that gets turned stops being a VillagerEntity and becomes a
@@ -1023,19 +1054,55 @@ public final class TrapHomes {
         }
 
         // Fewer beds than there were, or a grade that slipped: the household
-        // shrinks. Discarded from the end so the head of it is the last to go.
+        // shrinks. Discarded from the end so the head of it is the last to go,
+        // and never somebody who is out -- a person at a machine has a seat
+        // held for them and a session running, and binning them mid-round is
+        // how a casino used to eat the town that pays for it.
         for (int extra = living.size() - 1; extra >= home.heads; extra--) {
             var going = living.get(extra);
-            if (!going.getUuid().equals(home.body)) {
+            if (!going.getUuid().equals(home.body) && !out(going)) {
                 going.discard();
             }
         }
         for (int missing = living.size(); missing < home.heads; missing++) {
             body(world, home, tag, missing);
         }
+        // Everybody else goes home. A villager Brain with nothing to do picks
+        // a direction and strolls, which over an evening walks the whole
+        // household off across the map -- the town looking abandoned while
+        // twelve people mill about in a field. Somebody who is out is out on
+        // purpose and left alone.
+        for (var body : living) {
+            if (!out(body) && !body.getBlockPos().isWithinDistance(home.anchor, BODY_RANGE)) {
+                walkTo(body, home.anchor);
+            }
+        }
     }
 
-    /** How far from the house a resident still counts as living there. */
+    /** Away on business of their own -- at a machine, or on their way to one. */
+    private static boolean out(net.minecraft.entity.Entity body) {
+        return body.getCommandTags().contains(TrapFloor.PUNTER_TAG);
+    }
+
+    /**
+     * Send somebody walking, the way the game does it.
+     *
+     * A walk target rather than a navigation call, because the Brain re-picks
+     * its own destination whenever it has none and would simply overwrite the
+     * path a tick later. Given one, the stroll task stands down -- that is the
+     * memory it waits on being empty.
+     */
+    static void walkTo(net.minecraft.entity.passive.VillagerEntity body, BlockPos target) {
+        body.getBrain().remember(net.minecraft.entity.ai.brain.MemoryModuleType.WALK_TARGET,
+                new net.minecraft.entity.ai.brain.WalkTarget(target, 0.5F, 1));
+    }
+
+    /**
+     * How far from the house a resident still counts as being at home.
+     *
+     * Not a leash: a resident past it is walked back rather than deleted, and
+     * one who is out at a machine is not measured against it at all.
+     */
     private static final int BODY_RANGE = 24;
 
     private static void body(ServerWorld world, Home home, String tag, int index) {
@@ -1618,19 +1685,30 @@ public final class TrapHomes {
      * thought of: a command, a file edited by hand, a version of this mod that
      * no longer has the same ideas. Runs on the same round-robin as the
      * survey, in loaded chunks only, and costs one entity sweep of one chunk.
+     *
+     * <h2>By house, not by body</h2>
+     *
+     * The test used to be "is this the id in {@link Home#body}", which is the
+     * HEAD of the household and nobody else. Every other person in every
+     * four-bed house on the server therefore failed it, and was binned the
+     * moment a player walked within twenty-four blocks of them -- then respawned
+     * at the anchor twelve seconds later by {@link #keepBodies}. That is the
+     * flicker: residents vanishing and reappearing at their front door forever,
+     * worst exactly where players stand. A body belongs here if the house named
+     * on it is on the register and has somebody living in it.
      */
     private static void sweep(ServerWorld world, BlockPos near) {
-        java.util.Set<UUID> living = new HashSet<>();
+        Set<String> housed = new HashSet<>();
         for (Home home : HOMES) {
-            if (home.body != null) {
-                living.add(home.body);
+            if (home.tenant != null) {
+                housed.add(TENANT_TAG + "_" + home.id);
             }
         }
         net.minecraft.util.math.Box around = new net.minecraft.util.math.Box(near).expand(24);
         for (net.minecraft.entity.passive.VillagerEntity villager
                 : world.getEntitiesByClass(net.minecraft.entity.passive.VillagerEntity.class,
                         around, found -> found.getCommandTags().contains(TENANT_TAG))) {
-            if (!living.contains(villager.getUuid())) {
+            if (java.util.Collections.disjoint(villager.getCommandTags(), housed)) {
                 villager.discard();
             }
         }
