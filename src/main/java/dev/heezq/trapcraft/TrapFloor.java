@@ -697,10 +697,25 @@ public final class TrapFloor {
         punter.setCustomName(named(who, stake, served == 2 ? Formatting.LIGHT_PURPLE
                 : served == 1 ? Formatting.WHITE : Formatting.DARK_GRAY));
         punter.setCustomNameVisible(true);
-        // Out of bed if they were in it. The floor is busiest at midnight,
-        // which is precisely when a villager Brain would otherwise have them
-        // asleep and unable to answer the door.
+        // Out of bed, and off the two hooks that would drag them back to it.
+        //
+        // This is the whole of why the walk did not work. A villager with a
+        // claimed bed runs a task every tick that walks it home, and after
+        // dusk that task is the entire point of its evening -- so a walk
+        // target pointed at a casino was being replaced within the second, and
+        // three trips in five ended in somebody giving up thirteen blocks from
+        // where they started. Worst at midnight, which is exactly when a
+        // casino is busiest. The daytime version of the same fight is the
+        // meeting bell.
+        //
+        // Forgotten rather than fought: they gave up their spot at the bell
+        // and their bed for the night because they went out, which is what
+        // going out is. Vanilla hands them another bed when they are home and
+        // idle again -- the same path a villager takes when somebody breaks
+        // the one they had.
         punter.wakeUp();
+        punter.getBrain().forget(net.minecraft.entity.ai.brain.MemoryModuleType.HOME);
+        punter.getBrain().forget(net.minecraft.entity.ai.brain.MemoryModuleType.MEETING_POINT);
 
         // Patience for the walk, worked out from how far they actually live.
         int away = (int) Math.sqrt(punter.squaredDistanceTo(
