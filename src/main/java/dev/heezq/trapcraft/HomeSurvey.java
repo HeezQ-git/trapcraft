@@ -199,23 +199,22 @@ public final class HomeSurvey {
         }
 
         /**
-         * Every square the house holds, for the claim it puts on the ground.
+         * The claim is the ROOMS, and only the rooms.
          *
-         * Furniture is deliberately NOT in here. A chest against a party wall
-         * sits one block outside the room, so counting it would push the claim
-         * box into the wall itself -- and two flats that share a wall would
-         * then each claim it and stop being able to exist side by side, which
-         * is a shape this design goes out of its way to allow. A balcony is
-         * the opposite case: it is ground nobody else should be able to build
-         * on, so it belongs in the box.
+         * Not the furniture, and -- learned the expensive way -- not the
+         * terrace. A claim is a box, so a house with a yard on one side claims
+         * the whole rectangle out to the far corner of it, and the neighbour's
+         * next survey reads its own front room as somebody else's ground and
+         * condemns itself. Two of five houses on the live server went to grade
+         * nothing within ten minutes of it shipping, both of them next door to
+         * a place with a yard.
+         *
+         * So a balcony is floor you are paid for and not ground you own. If it
+         * ever needs protecting, protect the cells rather than their bounding
+         * box -- the box is what does the damage.
          */
         public Set<Long> claimed() {
-            if (terrace.isEmpty()) {
-                return inside;
-            }
-            Set<Long> all = new HashSet<>(inside);
-            all.addAll(terrace);
-            return all;
+            return inside;
         }
     }
 
