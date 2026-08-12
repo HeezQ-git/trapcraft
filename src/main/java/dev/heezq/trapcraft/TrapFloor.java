@@ -170,18 +170,29 @@ public final class TrapFloor {
     /** Ticks between one punter's rounds. Slow enough to watch. */
     private static final int ROUND_TICKS = 70;
     /**
-     * Rounds of walking allowed per this many blocks of the journey.
+     * Ticks between one shove along the way.
      *
-     * A villager covers something like seven blocks in a round at the pace
-     * they are sent off at, and a path is never the straight line this
-     * measures; five is that with room for a fence and a corner. Budgeted
-     * rather than fixed, because the old flat three rounds was ten seconds --
-     * fine for the stranger who materialised outside the door, and nowhere
-     * near enough for a neighbour walking in from four streets away.
+     * Much shorter than a round. A walk target is a thing the Brain is free to
+     * replace with its own -- somebody's bed, the meeting bell, a shove from
+     * the villager next to them -- and on a three-and-a-half second cadence
+     * that is most of the journey spent walking somewhere else. Re-asserted
+     * every second, the wandering is a wobble on the way rather than the
+     * destination.
      */
-    private static final int BLOCKS_PER_ROUND = 5;
-    /** Least walking patience, however short the trip looks. */
-    private static final int WALK_ROUNDS = 4;
+    private static final int NUDGE_TICKS = 20;
+    /**
+     * Ticks of patience per block of the journey, and a lump to start with.
+     *
+     * A villager makes about a block a second when the road is clear, so this
+     * is roughly twice as long as it should take -- which is about right for a
+     * floor with a crowd on it, since most of the delay is other people. A
+     * deadline rather than a count of attempts: the two are the same thing
+     * only while the attempts are evenly spaced, and they stopped being that
+     * the moment walking got its own faster clock.
+     */
+    private static final int TICKS_PER_BLOCK = 20;
+    /** Patience that does not depend on the distance at all. */
+    private static final int WALK_GRACE = 200;
     /**
      * How far ahead they are aimed at a time.
      *
@@ -212,16 +223,16 @@ public final class TrapFloor {
         int won;
         int lost;
         /**
-         * Rounds' worth of patience for getting there.
+         * World time by which they have to have got there.
          *
          * Separate from roundsLeft, because a punter who spent their whole
          * visit walking round a fence has not played anything and the machine
          * they never reached has been locked the entire time.
          */
-        int walking;
+        final long deadline;
 
         Punter(UUID id, String at, UUID house, int stake, int rounds, BlockPos stand,
-               String name, int walking) {
+               String name, long deadline) {
             this.id = id;
             this.at = at;
             this.house = house;
@@ -230,7 +241,7 @@ public final class TrapFloor {
             this.wait = ROUND_TICKS;
             this.stand = stand;
             this.name = name;
-            this.walking = walking;
+            this.deadline = deadline;
         }
 
         /** Still on the way in. */
@@ -697,7 +708,7 @@ public final class TrapFloor {
         Punter session = new Punter(punter.getUuid(), at, houseId, stake,
                 TrapMath.punterRoundsServed(house.addiction, served,
                         new java.util.Random(random.nextLong())), stand, who,
-                WALK_ROUNDS + away / BLOCKS_PER_ROUND);
+                world.getTime() + WALK_GRACE + (long) away * TICKS_PER_BLOCK);
         session.walkingIn = true;
         PUNTERS.add(session);
 
@@ -710,7 +721,7 @@ public final class TrapFloor {
         }
         // The seat is held from here, not from when they arrive. A machine
         // two people are walking to is a machine one of them finds taken, and
-        // the walk is bounded -- see Punter.walking -- so a reservation cannot
+        // the walk is bounded -- see Punter.deadline -- so a reservation cannot
         // outlast somebody's patience for getting there.
         step(punter, stand);
         claim(world, pos, punter.getUuid(), false);
@@ -776,7 +787,6 @@ public final class TrapFloor {
             if (--punter.wait > 0) {
                 continue;
             }
-            punter.wait = ROUND_TICKS;
 
             // At their spot, or still on the way. Measured against the
             // STANDING spot rather than the machine, so "close enough" cannot
@@ -786,8 +796,13 @@ public final class TrapFloor {
             // the old equality test somebody who had walked the whole way and
             // stopped one step short stood there running out their patience
             // before being shoved the last block.
-            if (body.squaredDistanceTo(Vec3d.ofCenter(punter.stand)) > ARRIVED * ARRIVED) {
-                if (punter.walking-- > 0) {
+            double left = body.squaredDistanceTo(Vec3d.ofCenter(punter.stand));
+            if (left > ARRIVED * ARRIVED) {
+                // Shoved along on a much shorter clock than a round, and the
+                // wait is set before the deadline is tested so a punter who is
+                // giving up this tick does not first sit out a full round.
+                punter.wait = NUDGE_TICKS;
+                if (world.getTime() < punter.deadline) {
                     body.wakeUp();
                     step(body, punter.stand);
                     continue;
@@ -806,14 +821,18 @@ public final class TrapFloor {
                         && TrapSpawn.safe(world, punter.stand)) {
                     body.refreshPositionAndAngles(punter.stand, 0.0F, 0.0F);
                 } else {
-                    TrapCraft.LOGGER.info("{} couldn't get to the machine at {} {} {} "
-                                    + "and went home", punter.name,
-                            pos.getX(), pos.getY(), pos.getZ());
+                    // Says how far short, because "never set off" and "almost
+                    // made it" are the same line in the log and want opposite
+                    // fixes -- a blocked spot against more patience.
+                    TrapCraft.LOGGER.info("{} couldn't get to the machine at {} {} {}, "
+                                    + "{} blocks short, and went home", punter.name,
+                            pos.getX(), pos.getY(), pos.getZ(), (int) Math.sqrt(left));
                     leaving.add(punter);
                     leave(world, body, punter);
                     continue;
                 }
             }
+            punter.wait = ROUND_TICKS;
             punter.walkingIn = false;
             // A villager Brain re-picks its own destination every tick and
             // will happily wander off mid-session, so once they are at the
@@ -1043,12 +1062,36 @@ public final class TrapFloor {
         for (int[] offset : offsets) {
             for (int drop = 0; drop <= 1; drop++) {
                 BlockPos spot = pos.add(offset[0], -drop, offset[1]);
-                if (TrapSpawn.safe(world, spot)) {
+                if (TrapSpawn.safe(world, spot) && !spoken(spot)) {
                     return spot;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Somebody is already standing here, or walking here to stand.
+     *
+     * Machines two blocks apart share the square between them, and the seat
+     * only ever reserved the MACHINE. So a floor packed close -- which is what
+     * a floor looks like -- had punters sent to a spot another punter was
+     * already rooted on, where they could not get within reach of it, milled
+     * about until their patience ran out and went home. Three trips in four
+     * ended that way on a thirty-one machine floor, and every one of them read
+     * from the outside as a villager that would not walk.
+     *
+     * ponytail: a scan of the punters on the floor, not an index of spoken-for
+     * squares. There are at most a couple of dozen and this runs when somebody
+     * sets off.
+     */
+    private static boolean spoken(BlockPos spot) {
+        for (Punter punter : PUNTERS) {
+            if (punter.stand.equals(spot)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
