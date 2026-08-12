@@ -134,8 +134,12 @@ public class BarBlock extends Block implements PolymerBlock, PolymerTexturedBloc
         }
         world.playSound(null, pos, SoundEvents.BLOCK_BARREL_OPEN,
                 SoundCategory.BLOCKS, 0.7F, 1.1F);
+        // This counter's own shelf. Four bars on one casino is four times the
+        // room behind them, not four doors onto the same eighteen stacks.
+        String wire = TrapHouse.wireAt(world, pos);
         keeper.openHandledScreen(new SimpleNamedScreenHandlerFactory(
-                (syncId, inventory, ignored) -> new BarScreenHandler(syncId, inventory, house),
+                (syncId, inventory, ignored) ->
+                        new BarScreenHandler(syncId, inventory, house, wire),
                 TrapHouse.sign(Text.literal("The Bar")
                         .formatted(Formatting.GOLD, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;

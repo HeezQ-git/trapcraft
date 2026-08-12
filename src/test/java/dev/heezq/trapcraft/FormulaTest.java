@@ -997,6 +997,102 @@ class FormulaTest {
     }
 
     @Test
+    void aKeptFloorPaysItsWayAcrossAWholeDay() {
+        // aCasinoRunsOnAThinMargin asks whether the BETS are profitable. This
+        // asks whether the BUSINESS is: a four-machine floor across a full
+        // day-night cycle, including the daytime hours where the cabinets
+        // stand empty and still cost an emerald a beat each, the repairs the
+        // play wears into them, and the advantage players nobody is watching
+        // for. If a floor somebody actually looks after comes out behind on
+        // that, there is no reason to build one.
+        // Run against a real vault, because the vault is what makes this a
+        // business rather than a coin flip: the table limit is a fraction of
+        // what is in it, so a floor only ever takes bets it can survive.
+        int machines = 4;
+        long opened = machines * (long) TrapMath.FLOAT_PER_MACHINE;
+        long worstDay = Long.MAX_VALUE;
+        long total = 0;
+        int losing = 0;
+        int days = 40;
+        for (int day = 0; day < days; day++) {
+            java.util.Random rng = new java.util.Random(day * 977L + 11);
+            long vault = opened;
+            long handle = 0;
+            long handleThisBeat = 0;
+            long rounds = 0;
+            // stake, rounds left, and whether they are playing at an edge
+            List<int[]> inside = new java.util.ArrayList<>();
+            List<Float> rtps = new java.util.ArrayList<>();
+            for (int tick = 0; tick < 24_000; tick += 10) {
+                if (tick % 600 == 0) {
+                    vault -= machines * TrapMath.MACHINE_UPKEEP
+                            + TrapMath.protectionOn(handleThisBeat);
+                    handleThisBeat = 0;
+                }
+                float busy = TrapMath.casinoHourFactor(tick);
+                // One attempt every 60 ticks, as TrapFloor makes it. Pull 1.0:
+                // a decent room, not a famous one.
+                if (tick % 60 == 0 && inside.size() < machines
+                        && inside.size() < Math.max(1, Math.round(8 * busy))
+                        && rng.nextFloat() < Math.min(1.0f, 0.55f * busy)) {
+                    int stake = TrapMath.punterStake(rng, inside.size());
+                    // The table limit, exactly as the floor applies it.
+                    while (stake > TrapMath.PUNTER_MIN_STAKE
+                            && !TrapMath.houseCovers(vault, stake, (int) TrapMath.PAY_RUN5)) {
+                        stake /= 2;
+                    }
+                    if (TrapMath.houseCovers(vault, stake, (int) TrapMath.PAY_RUN5)) {
+                        inside.add(new int[]{stake,
+                                TrapMath.punterRoundsServed(50, 2, rng)});
+                        // Nobody on the door, so some of them are playing at
+                        // better than even money.
+                        rtps.add(rng.nextFloat() < TrapMath.CHEAT_CHANCE
+                                ? TrapMath.CHEAT_RETURN : 0.97f);
+                    }
+                }
+                // A round each, every 70 ticks.
+                if (tick % 70 == 0) {
+                    for (int seat = inside.size() - 1; seat >= 0; seat--) {
+                        int[] punter = inside.get(seat);
+                        vault += punter[0];
+                        handle += punter[0];
+                        handleThisBeat += punter[0];
+                        vault -= Math.min(vault, Math.round(
+                                punter[0] * TrapMath.punterRound(rtps.get(seat), rng)));
+                        rounds++;
+                        // A point of wear every so often, and the parts for it
+                        // come out of the same vault.
+                        if (rng.nextInt(TrapMath.WEAR_PER_ROUNDS) == 0) {
+                            vault -= TrapMath.REPAIR_COST_PER_POINT;
+                        }
+                        if (--punter[1] <= 0) {
+                            inside.remove(seat);
+                            rtps.remove(seat);
+                        }
+                    }
+                }
+            }
+            long kept = vault - opened;
+            total += kept;
+            worstDay = Math.min(worstDay, kept);
+            if (kept <= 0) {
+                losing++;
+            }
+        }
+        long average = total / days;
+        assertTrue(average > 0, "a floor that is looked after has to come out ahead: "
+                + average + "e a day across " + days + " of them");
+        // Measured at 4 machines, no pit boss, a 3200e float: about +100e a
+        // day on average, with a bit over half of individual days losing and
+        // the worst of them taking the whole float. The average is the part
+        // that must not regress; the spread is a known property of a thin
+        // edge played a few thousand times a day, not something this test
+        // pretends is comfortable.
+        assertTrue(losing < days, "and not lose on every single one");
+        assertTrue(worstDay < 0, "while a bad night stays possible: " + worstDay + "e");
+    }
+
+    @Test
     void theCutScalesWithPlayNotWithLuck() {
         // Taken on the handle, so a bad night genuinely costs money. That is
         // what a running cost is, and the difference between a business and an
@@ -1069,6 +1165,26 @@ class FormulaTest {
             food += TrapMath.punterRoundsServed(50, 1, rng);
         }
         assertTrue(served > food * 1.3, "your own product should be worth stocking");
+    }
+
+    @Test
+    void aStockedBarLastsAnEveningNotAMinute() {
+        // The bar has to eat what you grow, but not faster than you can grow
+        // it: one item a head drank a stack of bud in about a quarter of an
+        // hour of a four-machine floor, which is nobody's farm.
+        java.util.Random rng = new java.util.Random(88);
+        double rounds = 0;
+        for (int visit = 0; visit < 20_000; visit++) {
+            rounds += TrapMath.punterRoundsServed(50, 2, rng);
+        }
+        rounds /= 20_000;
+        // Four machines, one punter each, 3.5s a round -- so this many walk
+        // in an hour, and each of them is served once at the door.
+        double visitsPerHour = 4 * 3600 / (rounds * 3.5);
+        double stackMinutes = 64.0 * TrapMath.SERVINGS_PER_ITEM / visitsPerHour * 60;
+        assertTrue(stackMinutes > 45 && stackMinutes < 240,
+                "a stack of product should last an evening, not "
+                        + Math.round(stackMinutes) + " minutes");
     }
 
     @Test

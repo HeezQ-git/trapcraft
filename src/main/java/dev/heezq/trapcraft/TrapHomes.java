@@ -689,7 +689,7 @@ public final class TrapHomes {
         // A new fancy each day, sometimes none at all. Rolled off the world's
         // random so two people asking the same tenant get the same answer.
         home.craving = world.getRandom().nextFloat() < CRAVING_ODDS
-                ? roll(world.getRandom(), home.mood) : null;
+                ? roll(world.getRandom(), home.mood, TrapAddiction.street(home.owner)) : null;
 
         // Paid first, then they pay their landlord out of it. This is the only
         // mint left on the town's behalf -- rent, shelf sales and casino
@@ -736,9 +736,41 @@ public final class TrapHomes {
      * of an evening; powder is rarer and dearer, and a raw bud is what you
      * sell to somebody who could not get anything better. Mood shades the
      * price -- a tenant who likes where they live pays a bit over.
+     *
+     * <h2>The landlord's own client list</h2>
+     *
+     * {@code demand} is {@link TrapAddiction#street}, the neighbourhood's taste
+     * for what this landlord sells. It does two things: it opens a dope bucket
+     * that does not exist for somebody who has never sold any, and it widens
+     * that bucket as the habit takes hold, so a street a fortnight into being
+     * supplied stops asking for joints and starts asking for bags.
+     *
+     * That is the tenants' half of "more addicting to villagers", and it is
+     * deliberately the same number the customers at the door read -- one meter
+     * for the town's habit, not two that could disagree about it.
      */
-    private static Craving roll(net.minecraft.util.math.random.Random random, int mood) {
+    private static Craving roll(net.minecraft.util.math.random.Random random, int mood,
+                                float demand) {
         Strain strain = Strain.values()[random.nextInt(Strain.values().length)];
+        // Up to three of the ten buckets go over to dope once the street is
+        // properly hooked, taking them off the joints at the bottom of the
+        // table rather than off the powder.
+        //
+        // Truncated rather than rounded, so nothing opens below a client list
+        // of 30. Rounding let a demand of 15 -- which a weed-only seller can
+        // reach without ever having made a bag -- put a tenant on the doorstep
+        // asking for one, and a craving nobody can fill is a dead day.
+        int dopeBuckets = Math.min(3, (int) (demand / 30.0F));
+        if (dopeBuckets > 0 && random.nextInt(10) < dopeBuckets) {
+            int count = 1 + random.nextInt(3);
+            // Well above powder's 48-78 a unit, and the mood bonus rides on
+            // top exactly as it does for everything else.
+            int each = 130 + random.nextInt(70);
+            float liked = 0.85f + 0.3f * Math.max(0, Math.min(HomeSurvey.MOOD_MAX, mood))
+                    / HomeSurvey.MOOD_MAX;
+            return new Craving(TrapContent.heroin, count,
+                    Math.max(1, Math.round(each * count * liked)), "Dope");
+        }
         int roll = random.nextInt(10);
         Item item;
         String label;
@@ -808,6 +840,16 @@ public final class TrapHomes {
                 SoundCategory.NEUTRAL, 0.7F, 1.0F);
     }
 
+    /** Which strain a bud or joint belongs to, for the client list. Null if neither. */
+    private static Drug drugOfBud(Item item) {
+        for (Strain strain : Strain.values()) {
+            if (item == TrapContent.driedBud(strain) || item == TrapContent.joint(strain)) {
+                return Drug.of(strain);
+            }
+        }
+        return null;
+    }
+
     /** The tenant this villager is, or null. */
     public static Home byBody(java.util.UUID body) {
         for (Home home : HOMES) {
@@ -852,8 +894,14 @@ public final class TrapHomes {
             }
         }
         TrapLaw.payDirty(seller, wants.price());
-        TrapLedger.record(seller, wants.item() == TrapContent.cocaPowder
-                ? TrapLedger.Source.COCA : TrapLedger.Source.WEED, wants.price());
+        Drug sold = wants.item() == TrapContent.heroin ? Drug.DOPE
+                : wants.item() == TrapContent.cocaPowder ? Drug.COKE : null;
+        TrapLedger.record(seller, sold == Drug.DOPE ? TrapLedger.Source.DOPE
+                : sold == Drug.COKE ? TrapLedger.Source.COCA : TrapLedger.Source.WEED,
+                wants.price());
+        // Tenants feed the same client list the door customers do. A weed sale
+        // to a neighbour still counts, it just counts for very little.
+        TrapAddiction.sold(seller, sold != null ? sold : drugOfBud(wants.item()), wants.count());
         TrapHeat.stirTheStreet(seller.getWorld(), wants.count());
         home.craving = null;
         save();

@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:heroin"
+    },
+    "title": "Timed It",
+    "description": "Pull the acetylator at peak for a Pure batch.",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:dope"
+}

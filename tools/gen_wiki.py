@@ -403,6 +403,49 @@ def gather() -> None:
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
+    # --- the poppy line and the habit ---------------------------------------
+    # Same rule as everything above: read it, never retype it. The habit page
+    # in particular quotes numbers a player is expected to plan around, and a
+    # wiki quoting a retuned decay rate is worse than no wiki.
+    poppy = java("PoppyCropBlock")
+    scoring = java("ScoringTableBlock")
+    pot = java("WashPotBlock")
+    acet = java("AcetylatorBlock")
+    drug = java("Drug")
+
+    DATA["poppy_rolls"] = int(need(r"POPPY_GROWTH_ROLLS = (\d+)", math, "POPPY_GROWTH_ROLLS"))
+    DATA["poppy_light"] = int(need(r"NEEDS_LIGHT = (\d+)", poppy, "NEEDS_LIGHT"))
+    DATA["poppy_min"] = int(need(r"MIN_PODS = (\d+)", poppy, "MIN_PODS"))
+    DATA["poppy_max"] = int(need(r"MAX_PODS = (\d+)", poppy, "MAX_PODS"))
+    DATA["pods"] = int(need(r"PODS_PER_BATCH = (\d+)", scoring, "PODS_PER_BATCH"))
+    DATA["opium"] = int(need(r"OPIUM_PER_BATCH = (\d+)", pot, "OPIUM_PER_BATCH"))
+    DATA["lime"] = int(need(r"LIME_PER_BATCH = (\d+)", pot, "LIME_PER_BATCH"))
+    DATA["ac_peak"] = int(need(r"int PEAK = (\d+)", acet, "acetylator PEAK"))
+    DATA["ac_ruined"] = int(need(r"int RUINED = (\d+)", acet, "acetylator RUINED"))
+    DATA["ac_grace"] = int(need(r"PEAK_GRACE = (\d+)", acet, "PEAK_GRACE"))
+
+    DATA["drug_max"] = float(need(r"MAX = ([\d.]+)F", drug, "Drug MAX"))
+    DATA["weed_hook"] = float(need(r"WEED_HOOK = ([\d.]+)F", drug, "WEED_HOOK"))
+    DATA["weed_decay"] = float(need(r"WEED_DECAY = ([\d.]+)F", drug, "WEED_DECAY"))
+    DATA["weed_period"] = int(need(r"WEED_PERIOD = (\d+)", drug, "WEED_PERIOD"))
+    # The two refined lines carry their numbers on the enum row itself. Matched
+    # as a whole row so a reordered argument can't silently swap decay for hook
+    # -- which would read as a plausible table and be completely wrong.
+    row = r'{}\("[^"]+", "[^"]+", 0x[0-9A-Fa-f]+, Formatting\.\w+,\s*' \
+          r'([\d.]+)F,\s*([\d.]+)F,\s*(\d+),\s*([\d.]+)F\)'
+    for key, const in (("coke", "COKE"), ("dope", "DOPE")):
+        found = re.search(row.format(const), drug, re.S)
+        if not found:
+            raise SystemExit(f"  couldn't read the {const} row out of Drug.java")
+        DATA[f"{key}_hook"] = float(found.group(1))
+        DATA[f"{key}_decay"] = float(found.group(2))
+        DATA[f"{key}_period"] = int(found.group(3))
+        DATA[f"{key}_price"] = float(found.group(4))
+
+    DATA["itch_at"] = float(need(r"HABIT_ITCH = ([\d.]+)f", math, "HABIT_ITCH"))
+    DATA["crave_at"] = float(need(r"HABIT_CRAVE = ([\d.]+)f", math, "HABIT_CRAVE"))
+    DATA["sick_at"] = float(need(r"HABIT_SICK = ([\d.]+)f", math, "HABIT_SICK"))
+
     DATA["heat_thresholds"] = ints("THRESHOLDS", heat)
     DATA["pillagers"] = ints("PILLAGERS", heat)
     DATA["vindicators"] = ints("VINDICATORS", heat)
@@ -630,7 +673,9 @@ def build() -> str:
         ("00", "start", "Getting Started"),
         ("01", "grow", "The Grow"), ("02", "cure", "Curing & Rolling"),
         ("03", "blends", "Blends"), ("04", "high", "The High"),
-        ("05", "coca", "The Coca Line"), ("06", "market", "The Market"),
+        ("05", "coca", "The Coca Line"),
+        ("05b", "poppy", "The Poppy Line"), ("05c", "habit", "The Habit"),
+        ("06", "market", "The Market"),
         ("07", "stalls", "Stalls"), ("08", "city", "The City"),
         ("08b", "homes", "Housing"),
         ("09", "crew", "The Crew"),
@@ -752,6 +797,113 @@ def build() -> str:
     <p class="note">Running coca and weed in the same place is
     <strong>{round((d['mixed_trade'] - 1) * 100)}% more heat</strong> than the two
     apart. Presses and refiners count as well as the plants. Two sheds beat one shed.</p>"""))
+
+    poppy_min = round(minutes(d["poppy_rolls"]) * 3)
+    dope_rows = [
+        [f'<span class="acc">{esc(g["name"])}</span>', f'{g["potency"]:.2f}x',
+         f'{round(g["emeralds"] * d["dope_price"])}e']
+        for g in DATA["purity"]]
+
+    sections.append(section("05b", "poppy", "The Poppy Line",
+                            "three machines, and it can still come to nothing", f"""
+    <p class="lede">The long line. A poppy takes about {poppy_min} minutes to ripen —
+    slower than anything else you can plant — and it refuses to grow below
+    <strong>light {d['poppy_light']}</strong>, so unlike weed there is no cellar farm.
+    The one crop worth the most is the one you cannot hide.</p>
+    <ol class="chain">
+      <li><span class="step">01</span><strong>Poppy</strong><span class="dim">{d['poppy_min']}–{d['poppy_max']} pods a harvest, full daylight</span></li>
+      <li><span class="step">02</span><strong>Scoring table</strong><span class="dim">{d['pods']} pods → raw opium</span></li>
+      <li><span class="step">03</span><strong>Wash pot</strong><span class="dim">{d['opium']} opium + {d['lime']} bone meal, over a live fire</span></li>
+      <li><span class="step">04</span><strong>Acetylator</strong><span class="dim">base + fermented spider eye</span></li>
+      <li><span class="step">05</span><strong>Dope</strong><span class="dim">purity from timing, and a batch you can lose</span></li>
+    </ol>
+    <div class="cards">
+      <div class="card reveal"><h4>The pot has no fire</h4><p>It only advances while
+      something under it is burning — a campfire, a lit furnace, lava. Let it go out and
+      nothing spoils, but nothing moves either. This step is a build, not a click.</p></div>
+      <div class="card reveal"><h4>The acetylator can beat you</h4><p>The refiner's worst
+      case is a bad grade. This one's is an empty machine: one step past peak and the
+      batch is gone — base, acid, pods and all. You get
+      <strong>{d['ac_grace']} steps</strong> of grace where the refiner gives five.</p></div>
+    </div>
+    {table(["Purity", "Potency", "Per unit"], dope_rows)}
+    <p>Roughly <strong>{d['dope_price']:.0f}x</strong> what powder of the same purity
+    fetches, off about twice the field and three times the wait. Priced off the powder
+    curve rather than invented, so the two refined lines cannot drift into an
+    arbitrage against each other.</p>
+    {craft_row([("scoring_table", "Scoring Table"), ("wash_pot", "Wash Pot"),
+                ("acetylator", "Acetylator")])}
+    <p class="note">Seeds are the gate: one per wandering trader visit at 26 emeralds,
+    or a rare find in an outpost, a mansion or a bastion. The plant reseeds itself often
+    enough that you only ever have to get one.</p>
+    <h3 class="sub">Nod</h3>
+    <p>The third shape a high takes here, and the only one whose bill arrives somewhere
+    else. Nothing hurts, you heal, you do not get hungry — and you cannot run, fight or
+    mine while it lasts. Take a second dose on top of a live one and you go over: it will
+    not kill you, and it will cost you the next few minutes.</p>
+    <p class="note">Weed bills you <em>now</em>, in hunger. Coke bills you
+    <em>after</em>, in the crash. Dope bills you <em>later</em> — see below.</p>"""))
+
+    def clean_min(decay):
+        return round(d["drug_max"] / decay)
+
+    def to_max(hook):
+        return round(d["drug_max"] / hook)
+
+    habit_rows = [
+        ["<strong>Weed</strong>", f'{d["weed_hook"]:.1f}', f'{to_max(d["weed_hook"])}',
+         f'{d["weed_period"]} min', f'{clean_min(d["weed_decay"])} min'],
+        ["<strong>Cocaine</strong>", f'{d["coke_hook"]:.1f}', f'{to_max(d["coke_hook"])}',
+         f'{d["coke_period"]} min', f'{clean_min(d["coke_decay"])} min'],
+        ['<strong class="acc">Heroin</strong>', f'{d["dope_hook"]:.1f}',
+         f'{to_max(d["dope_hook"])}', f'{d["dope_period"]} min',
+         f'{clean_min(d["dope_decay"])} min'],
+    ]
+
+    sections.append(section("05c", "habit", "The Habit",
+                            "a meter per strain, on both sides of the counter", f"""
+    <p class="lede">Tolerance answers "how much does the next one do for me" and wears
+    off in minutes. This answers the other question, the one that outlives a session:
+    how much do you <em>need</em> it. Two meters, deliberately.</p>
+    <p>Every strain has its own. A Purp habit wants Purp — a shed full of Kush is no help
+    at all, which makes a monoculture farm a liability and gives the six phenotypes a
+    reason to exist beyond their effect lists. Cocaine and heroin have one meter each.</p>
+    <h3 class="sub">Pressure, not a timer</h3>
+    <p class="formula"><code>pressure = (meter ÷ {round(d['drug_max'])})
+    × min(1, time since your last hit ÷ that drug's period)</code></p>
+    <p>Both factors have to be large for the product to be. A light habit is not merely
+    slow to hurt you — it is <em>incapable</em> of it, because its first factor caps the
+    result below the band it would need to reach. Being ill is something you have to have
+    earned.</p>
+    {table(["Band", "Needs a meter of", "What it does"], [
+        ['<span class="dim">Itching</span>', f'{round(d["itch_at"] * d["drug_max"])}+',
+         '<span class="dim">the nag, and nothing else</span>'],
+        ['<span class="acc">Craving</span>', f'{round(d["crave_at"] * d["drug_max"])}+',
+         '<span class="dim">your hands stop working</span>'],
+        ['<strong>Withdrawal</strong>', f'{round(d["sick_at"] * d["drug_max"])}+',
+         '<span class="dim">everything stops working — and dope bleeds you</span>'],
+    ])}
+    {table(["Drug", "Per hit", "Hits to max", "Craving ripens in", "Clean in"],
+           habit_rows)}
+    <p class="note">Strong grades count for more than one hit. Withdrawal never kills —
+    it stops biting before it can.</p>
+    <h3 class="sub">Getting out</h3>
+    <p>Time, and time only. The meter bleeds off on its own and bleeds
+    <strong>twice as fast while you are properly sick</strong>, so riding out the worst
+    of it is the cure and quietly nursing a small habit is the slow road. Nerve tonic
+    holds the symptoms off without touching the meter: a way to get an afternoon's work
+    done, not a way to get clean.</p>
+    <p class="note">Taking the thing you crave clears it on the spot and pays a bonus —
+    scaled by how bad it had got. The worse it gets, the better the fix feels. That is
+    the trap, and it is meant to be.</p>
+    <h3 class="sub">The other side of the counter</h3>
+    <p>They get hooked too, and they get hooked on <em>you</em>. Every hand-over builds a
+    client list — weighted by the drug, so dope moves it about eight times faster per
+    unit than a joint does. What it buys is customers who turn up sooner, ask for the
+    strong stuff specifically, and take more each visit; and tenants who start asking for
+    bags instead of joints.</p>
+    <p class="note">Both meters read from <code>/addiction</code>. Stop selling and the
+    client list fades.</p>"""))
 
     sections.append(section("06", "market", "The Market", "a price list that breathes", f"""
     <p class="lede">{d['categories']} shelves and over a thousand lines, priced by three

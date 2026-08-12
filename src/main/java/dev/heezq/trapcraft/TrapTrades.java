@@ -82,8 +82,15 @@ public final class TrapTrades {
             // Coca seeds cost more than any strain: the payoff is far higher,
             // and the chain is long enough that starting it should be a choice.
             sells.add(sell(new ItemStack(TrapContent.cocaSeeds, 1), 14, 2, 2));
+            // Poppy seed is the dearest thing on the cart and the scarcest --
+            // one per visit, twice. Starting the long line should be a decision
+            // you had to save up for, and the plant reseeds itself often enough
+            // that you only ever have to make it once.
+            sells.add(sell(new ItemStack(TrapContent.poppySeeds, 1), 26, 1, 3));
             for (Purity purity : Purity.values()) {
                 buys.add(buyPurity(TrapContent.cocaPowder, purity, 2, purity.emeralds()));
+                buys.add(buyPurity(TrapContent.heroin, purity, 1,
+                        Math.round(purity.emeralds() * Drug.DOPE.priceScale())));
             }
 
             builder.pool(Identifier.of(TrapCraft.MOD_ID, "plug_sells"), 1, sells);
@@ -170,8 +177,15 @@ public final class TrapTrades {
             for (Purity purity : Purity.values()) {
                 factories.add(buyPurity(TrapContent.cocaPowder, purity, 2,
                         villagerRate(purity.emeralds())));
+                factories.add(buyPurity(TrapContent.heroin, purity, 1,
+                        villagerRate(Math.round(purity.emeralds() * Drug.DOPE.priceScale()))));
             }
             factories.add(buy(TrapContent.cocaPaste, 4, 3, 8, 3));
+            factories.add(buy(TrapContent.morphineBase, 1, 6, 6, 3));
+            // The acid, for the same reason blaze powder is on the level below:
+            // the third line should be gated by skill and patience, not by how
+            // recently a spider dropped an eye.
+            factories.add(sell(new ItemStack(Items.FERMENTED_SPIDER_EYE, 2), 8, 6, 3));
         });
     }
 

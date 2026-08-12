@@ -1,0 +1,33 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:morphine_base"
+    },
+    "title": "Over A Fire",
+    "description": "Cook opium down to base. The pot brings no fire of its own.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:morphine_base"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:opium"
+}

@@ -161,6 +161,9 @@ public final class TrapDealing {
                     root.then(net.minecraft.server.command.CommandManager.literal("powder")
                             .executes(context -> summon(context.getSource().getPlayer(),
                                     Craving.forPowder())));
+                    root.then(net.minecraft.server.command.CommandManager.literal("dope")
+                            .executes(context -> summon(context.getSource().getPlayer(),
+                                    Craving.forDope())));
                     // "any mix" rather than a name: the named blends are data,
                     // and a test command that only works for blends you happen
                     // to have already discovered isn't much of a test command.
@@ -225,7 +228,11 @@ public final class TrapDealing {
         // floor -- deliberately an UPSIDE rather than a gate, because the
         // black market existing without a city is the whole premise and it
         // predates the city by about a hundred versions.
-        int odds = Math.max(SPAWN_FLOOR, SPAWN_CHANCE - TrapHomes.population());
+        // A city is a market, and a client list is a shorter walk. Both pull
+        // the same way and both bottom out at the floor, so however hooked the
+        // neighbourhood gets it never becomes a queue.
+        int odds = Math.max(SPAWN_FLOOR, SPAWN_CHANCE - TrapHomes.population()
+                - Math.round(TrapAddiction.street(player.getUuid()) / 8.0F));
         if (player.getWorld().getRandom().nextInt(odds) != 0) {
             return;
         }
@@ -479,7 +486,12 @@ public final class TrapDealing {
         }
 
         int each;
-        if (craving.powder()) {
+        if (craving.dope()) {
+            if (!held.isOf(TrapContent.heroin)) {
+                return false;
+            }
+            each = dopePrice(TrapComponents.getPurity(held));
+        } else if (craving.powder()) {
             if (!held.isOf(TrapContent.cocaPowder)) {
                 return false;
             }
@@ -502,7 +514,7 @@ public final class TrapDealing {
         // click would mean eight clicks for a full sale, and the grade is read
         // per stack anyway -- so hand over the good stuff separately if you
         // want paying for it separately.
-        int appetite = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED);
+        int appetite = APPETITE.getOrDefault(customer.getUuid(), wanted(seller, craving));
         int units = Math.min(held.getCount(), appetite);
         if (units <= 0) {
             return false;
@@ -515,8 +527,12 @@ public final class TrapDealing {
 
         held.decrement(units);
         TrapLaw.payDirty(seller, paid);
-        TrapLedger.record(seller, craving.powder()
-                ? TrapLedger.Source.COCA : TrapLedger.Source.WEED, paid);
+        TrapLedger.record(seller, source(craving), paid);
+        // The client list grows with what went across the table. This is the
+        // whole "more addicting to villagers" half of it: dope moves this
+        // roughly eight times faster per unit than a joint does, and what it
+        // buys is more visits, sooner, wanting more.
+        TrapAddiction.sold(seller, craving.drug(), units);
 
         int left = appetite - units;
         APPETITE.put(customer.getUuid(), left);
@@ -571,10 +587,16 @@ public final class TrapDealing {
      */
     private static void nudge(ServerPlayerEntity seller, WanderingTraderEntity customer,
                               Craving craving) {
-        int appetite = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED);
+        // The same default handOver uses, not the bare constant -- a dope
+        // customer off a big client list wants more than eight, and a hint
+        // that disagrees with the sale is worse than no hint.
+        int appetite = APPETITE.getOrDefault(customer.getUuid(), wanted(seller, craving));
         Text message;
         if (appetite <= 0) {
             message = Text.literal("They've had enough. They're off.")
+                    .formatted(Formatting.GRAY);
+        } else if (craving.dope()) {
+            message = Text.literal("They're rattling. They want dope, in your hand.")
                     .formatted(Formatting.GRAY);
         } else if (craving.powder()) {
             message = Text.literal("They want powder. Put some in your hand.")
@@ -602,6 +624,9 @@ public final class TrapDealing {
 
     /** Is the player still carrying anything this customer would buy? */
     private static boolean hasMore(ServerPlayerEntity seller, Craving craving) {
+        if (craving.dope()) {
+            return carries(seller, TrapContent.heroin);
+        }
         if (craving.powder()) {
             return lowestPurity(seller) != null;
         }
@@ -696,7 +721,11 @@ public final class TrapDealing {
      * loitering for product you don't intend to sell them.
      */
     private static void dismiss(WanderingTraderEntity customer, ServerPlayerEntity seller, int now) {
-        boolean bought = APPETITE.getOrDefault(customer.getUuid(), UNITS_WANTED) < UNITS_WANTED;
+        // Presence, not a comparison against the base. APPETITE only ever gets
+        // a row when a sale happens, and comparing against UNITS_WANTED read
+        // "you waved them off" for any customer whose appetite started above
+        // it -- which is every dope customer worth having.
+        boolean bought = APPETITE.containsKey(customer.getUuid());
         DEALT.add(customer.getUuid());
         startLeaving(customer, seller, now, bought);
         seller.sendMessage(Text.literal(bought
@@ -781,17 +810,33 @@ public final class TrapDealing {
      * for having found one -- a customer who walks up asking for Trinity by
      * name is worth more than the arithmetic says.
      */
-    private record Craving(Strain strain, boolean powder, String mix, Contract.Form form) {
+    private record Craving(Strain strain, boolean powder, boolean dope, String mix,
+                           Contract.Form form) {
         static Craving of(Strain strain, Contract.Form form) {
-            return new Craving(strain, false, null, form);
+            return new Craving(strain, false, false, null, form);
         }
 
         static Craving forPowder() {
-            return new Craving(null, true, null, Contract.Form.EITHER);
+            return new Craving(null, true, false, null, Contract.Form.EITHER);
+        }
+
+        static Craving forDope() {
+            return new Craving(null, false, true, null, Contract.Form.EITHER);
         }
 
         static Craving mixed(String name) {
-            return new Craving(null, false, name, Contract.Form.EITHER);
+            return new Craving(null, false, false, name, Contract.Form.EITHER);
+        }
+
+        /** Which meter a sale of this feeds, on both sides of the counter. */
+        Drug drug() {
+            if (dope) {
+                return Drug.DOPE;
+            }
+            if (powder) {
+                return Drug.COKE;
+            }
+            return strain == null ? null : Drug.of(strain);
         }
 
         boolean takesBuds() {
@@ -830,6 +875,9 @@ public final class TrapDealing {
 
         /** On the nameplate, so you can tell from across a field whether it's worth walking over. */
         String title() {
+            if (dope) {
+                return "Customer (dope)";
+            }
             if (powder) {
                 return "Customer (powder)";
             }
@@ -840,6 +888,9 @@ public final class TrapDealing {
         }
 
         String greeting() {
+            if (dope) {
+                return "Somebody's heading your way, and they're in a hurry. They want dope.";
+            }
             if (powder) {
                 return "Somebody's heading your way. They want powder.";
             }
@@ -886,6 +937,17 @@ public final class TrapDealing {
         }
         if (carries(player, TrapContent.cocaPowder)) {
             options.add(Craving.forPowder());
+        }
+        if (carries(player, TrapContent.heroin)) {
+            // Listed once for being carried, and again for every quarter of the
+            // client list. A dealer nobody knows gets a customer who might want
+            // dope; a dealer who has been supplying the neighbourhood for a
+            // fortnight gets customers who want nothing else. That crowding-out
+            // IS the town's addiction -- there is no second meter for it.
+            int weight = 1 + Math.round(TrapAddiction.street(player.getUuid()) / 25.0F);
+            for (int i = 0; i < weight; i++) {
+                options.add(Craving.forDope());
+            }
         }
         // Mixes are drawn from what you're actually holding, same as strains,
         // and a named one is listed twice: it's rarer to be carrying, and
@@ -969,6 +1031,9 @@ public final class TrapDealing {
             return 0;
         }
         var item = stack.getItem();
+        if (item == TrapContent.heroin) {
+            return dopePrice(TrapComponents.getPurity(stack));
+        }
         if (item == TrapContent.cocaPowder) {
             return premium(TrapComponents.getPurity(stack).emeralds());
         }
@@ -985,6 +1050,42 @@ public final class TrapDealing {
             }
         }
         return 0;
+    }
+
+    /**
+     * What a bag of dope fetches.
+     *
+     * Priced off the powder curve times {@link Drug#priceScale()} rather than
+     * invented, so the two refined lines can never drift into an arbitrage
+     * against each other -- if powder is retuned, this moves with it. A Pure
+     * bag comes out at about three times a Pure line, which is what a chain
+     * three machines long and twice the field ought to be worth.
+     */
+    private static int dopePrice(Purity grade) {
+        return premium(Math.round(grade.emeralds() * Drug.DOPE.priceScale()));
+    }
+
+    /** Which column of the ledger a sale lands in. */
+    private static TrapLedger.Source source(Craving craving) {
+        if (craving.dope()) {
+            return TrapLedger.Source.DOPE;
+        }
+        return craving.powder() ? TrapLedger.Source.COCA : TrapLedger.Source.WEED;
+    }
+
+    /**
+     * How much one customer will take before they are done.
+     *
+     * The base is the same for everybody; what moves it is the seller's client
+     * list. Somebody who has been putting dope into a neighbourhood for a week
+     * gets customers who turn up wanting half a stack, which is the visible
+     * payoff for having made the street dependent on them.
+     */
+    private static int wanted(ServerPlayerEntity seller, Craving craving) {
+        if (!craving.dope()) {
+            return UNITS_WANTED;
+        }
+        return UNITS_WANTED + Math.round(TrapAddiction.street(seller.getUuid()) / 20.0F);
     }
 
     private static int budPrice(Quality grade) {

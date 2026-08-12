@@ -57,6 +57,7 @@ public final class TrapLedger {
     public enum Source {
         WEED(false, "weed"),
         COCA(false, "coca"),
+        DOPE(false, "dope"),
         FOOD(true, "food/farm"),
         MARKET(true, "market"),
         STALL(true, "stall"),

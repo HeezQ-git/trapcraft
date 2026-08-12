@@ -358,12 +358,18 @@ public final class TrapHeat {
      * Applied only when BOTH are present, so a pure coca grower and a pure
      * weed grower are each measured on their own merits and only the person
      * doing both pays for doing both.
+     *
+     * Compounds per extra line since the poppy arrived: two trades in one
+     * place is 1.35x, three is 1.35 squared. Somebody running the whole mod
+     * off one plot is not doing something 35% more obvious than somebody
+     * running two thirds of it.
      */
     public static final float MIXED_TRADE = 1.35f;
 
     public static int measureHeat(ServerWorld world, BlockPos centre) {
         int weed = 0;
         int coca = 0;
+        int poppy = 0;
         BlockPos.Mutable cursor = new BlockPos.Mutable();
         for (int dx = -RADIUS; dx <= RADIUS; dx++) {
             for (int dz = -RADIUS; dz <= RADIUS; dz++) {
@@ -385,6 +391,14 @@ public final class TrapHeat {
                     } else if (state.getBlock() instanceof CocaCropBlock bush) {
                         boolean seen = world.isSkyVisible(cursor);
                         coca += bush.isMature(state) ? (seen ? 3 : 2) : (seen ? 1 : 0);
+                    } else if (state.getBlock() instanceof PoppyCropBlock flower) {
+                        // Worth more per plant than either of the others, and
+                        // that is forced rather than chosen: a poppy needs
+                        // light 12 to grow at all, so a poppy field is a thing
+                        // under the sky by definition. The one crop you cannot
+                        // hide should be the one that costs the most to have.
+                        boolean seen = world.isSkyVisible(cursor);
+                        poppy += flower.isMature(state) ? (seen ? 4 : 3) : (seen ? 2 : 1);
                     } else if (state.getBlock() instanceof DryingRackBlock
                             && state.get(DryingRackBlock.OCCUPIED)) {
                         weed += 1;
@@ -393,12 +407,19 @@ public final class TrapHeat {
                         // The machinery is as damning as the plants. A shed of
                         // presses is not a hobby.
                         coca += 2;
+                    } else if (state.getBlock() instanceof ScoringTableBlock
+                            || state.getBlock() instanceof WashPotBlock
+                            || state.getBlock() instanceof AcetylatorBlock) {
+                        poppy += 2;
                     }
                 }
             }
         }
-        int total = weed + coca;
-        return weed > 0 && coca > 0 ? Math.round(total * MIXED_TRADE) : total;
+        int total = weed + coca + poppy;
+        int lines = (weed > 0 ? 1 : 0) + (coca > 0 ? 1 : 0) + (poppy > 0 ? 1 : 0);
+        return lines > 1
+                ? Math.round(total * (float) Math.pow(MIXED_TRADE, lines - 1))
+                : total;
     }
 
     /** What tier this heat reaches, or -1. Public for the diagnostic. */

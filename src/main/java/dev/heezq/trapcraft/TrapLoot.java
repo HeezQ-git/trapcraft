@@ -50,6 +50,21 @@ public final class TrapLoot {
             chest("shipwreck_supply"),
             chest("village/village_desert_house"));
 
+    /**
+     * Where somebody is already in the business.
+     *
+     * Poppy seed comes off nobody's lawn and out of no village chest -- it is
+     * in the places the game already marks as run by people with an operation,
+     * which is the fiction AND the gate. Between these and the wandering
+     * trader's one-per-visit stock, starting the long line is an expedition
+     * rather than a walk, and that is the whole idea.
+     */
+    private static final Set<RegistryKey<LootTable>> LAB_CHESTS = Set.of(
+            chest("pillager_outpost"),
+            chest("woodland_mansion"),
+            chest("bastion_treasure"),
+            chest("bastion_other"));
+
     private static RegistryKey<LootTable> blocks(String name) {
         return RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.ofVanilla("blocks/" + name));
     }
@@ -81,6 +96,15 @@ public final class TrapLoot {
                         .with(ItemEntry.builder(TrapContent.cocaSeeds)
                                 .apply(SetCountLootFunction.builder(
                                         UniformLootNumberProvider.create(1, 2)))));
+            }
+            // Rarer again than coca, and never more than one. See LAB_CHESTS.
+            if (LAB_CHESTS.contains(key)) {
+                builder.pool(LootPool.builder()
+                        .rolls(ConstantLootNumberProvider.create(1))
+                        .conditionally(RandomChanceLootCondition.builder(0.08F))
+                        .with(ItemEntry.builder(TrapContent.poppySeeds)
+                                .apply(SetCountLootFunction.builder(
+                                        ConstantLootNumberProvider.create(1)))));
             }
         });
     }

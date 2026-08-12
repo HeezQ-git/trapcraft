@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "C C",
+    "CKC",
+    "BBB"
+  ],
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "K": "minecraft:cauldron",
+    "B": "minecraft:bricks"
+  },
+  "result": {
+    "id": "trapcraft:wash_pot",
+    "count": 1
+  }
+}

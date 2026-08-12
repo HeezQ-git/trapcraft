@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GSG",
+    "CRC",
+    "III"
+  ],
+  "key": {
+    "G": "minecraft:glass",
+    "S": "minecraft:brewing_stand",
+    "C": "minecraft:copper_block",
+    "R": "minecraft:blaze_rod",
+    "I": "minecraft:iron_block"
+  },
+  "result": {
+    "id": "trapcraft:acetylator",
+    "count": 1
+  }
+}

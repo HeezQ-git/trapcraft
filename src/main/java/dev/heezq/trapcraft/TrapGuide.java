@@ -56,6 +56,10 @@ public final class TrapGuide {
                                 .executes(context -> give(context.getSource(), createWeed())))
                         .then(CommandManager.literal("refiner")
                                 .executes(context -> give(context.getSource(), createCoca())))
+                        .then(CommandManager.literal("chemist")
+                                .executes(context -> give(context.getSource(), createPoppy())))
+                        .then(CommandManager.literal("habit")
+                                .executes(context -> give(context.getSource(), createHabit())))
                         .then(CommandManager.literal("street")
                                 .executes(context -> give(context.getSource(), createStreet())))
                         .then(CommandManager.literal("crew")
@@ -119,6 +123,8 @@ public final class TrapGuide {
                 .append(Text.literal("The Trap House\n").formatted(Formatting.DARK_GREEN, Formatting.BOLD))
                 .append(pick("grower", "growing, curing, rolling, heat"))
                 .append(pick("refiner", "the coca line"))
+                .append(pick("chemist", "the poppy line, end to end"))
+                .append(pick("habit", "addiction, cravings, the street"))
                 .append(pick("street", "paranoia, the ledger, contracts"))
                 .append(pick("crew", "hiring hands, and what they cost"))
                 .append(pick("casino", "running a floor"))
@@ -186,6 +192,32 @@ public final class TrapGuide {
         cocaCover(pages);
         coca(pages);
         return book("Refiner's Handbook", pages);
+    }
+
+    /**
+     * The third product line, and the only one long enough to need its own
+     * volume rather than a section of somebody else's.
+     */
+    public static ItemStack createPoppy() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        poppyCover(pages);
+        poppy(pages);
+        return book("Chemist's Handbook", pages);
+    }
+
+    /**
+     * Split from all three product books on purpose.
+     *
+     * The habit is not a feature of weed, or of coca, or of the poppy -- it is
+     * the thing all three feed, and it works the same way whichever one you
+     * are on. Filing it under one of them would have made it look like that
+     * one's problem, and the whole point is that it is not.
+     */
+    public static ItemStack createHabit() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        habitCover(pages);
+        habit(pages);
+        return book("The Habit", pages);
     }
 
     /**
@@ -648,8 +680,11 @@ public final class TrapGuide {
                 .append(title("4b. THE BAR\n\n"))
                 .append(body("Wire a "))
                 .append(item("Bar"))
-                .append(body(" to the house and stock it. "
-                        + "Everybody through the door gets one.\n\n"))
+                .append(body(" to the house and stock it. Everybody gets one, "
+                        + "and one off the shelf pours about "
+                        + TrapMath.SERVINGS_PER_ITEM + ".\n\n"))
+                .append(body("Holds " + TrapMath.BAR_SLOTS
+                        + " stacks. Wire a second for twice the room.\n\n"))
                 .append(warn("Dry bar: one go each and out."))));
 
         pages.add(page(Text.empty()
@@ -1141,7 +1176,7 @@ public final class TrapGuide {
                 .append(Text.literal("\nrefiner's handbook\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
                 .append(body("The coca line. Longer than weed, worth far more.\n\n"))
-                .append(hint("Weed: /guide grower\nStreet: /guide street"))));
+                .append(hint("Poppy: /guide chemist\nHabit: /guide habit"))));
     }
 
     // --- pages ----------------------------------------------------------------
@@ -1153,7 +1188,7 @@ public final class TrapGuide {
                 // Paired per line: nine on their own lines plus the header and
                 // footer came to ~16, over the 14-line page limit.
                 .append(body("1 Growing  2 Grade\n3 Curing   4 Rolling\n5 Baked    6 Strains\n7 Breeding 8 Heat\n9 Supply\n"))
-                .append(hint("Coca: /guide refiner\nStreet: /guide street"))));
+                .append(hint("Coca: /guide refiner\nHabit: /guide habit"))));
     }
 
     private static void growing(List<RawFilteredPair<Text>> pages) {
@@ -1417,6 +1452,232 @@ public final class TrapGuide {
         worth.append(body("\n"))
                 .append(warn("Wired costs nothing until it ends. Then it all lands at once."));
         pages.add(page(worth));
+    }
+
+    // --- the chemist's handbook -----------------------------------------------
+
+    private static void poppyCover(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("THE TRAP HOUSE"))
+                .append(Text.literal("\nchemist's handbook\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("The long line. Three machines, and it can still "
+                        + "come to nothing.\n\n"))
+                .append(hint("The habit: /guide habit\nCoca: /guide refiner"))));
+    }
+
+    /**
+     * Every figure below comes off the block that governs it -- pods per batch
+     * off {@link ScoringTableBlock}, lime off {@link WashPotBlock}, the whole
+     * purity ladder off {@link AcetylatorBlock#purityFor}. Retune any of them
+     * and the book retunes with it.
+     */
+    private static void poppy(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. THE POPPY\n\n"))
+                .append(body("Pod -> score -> wash -> acetylate -> dope.\n\n"))
+                .append(body("~" + Math.round(TrapMath.stageMinutes(
+                        TrapMath.POPPY_GROWTH_ROLLS, 3) * 3) + " min to ripen, and "
+                        + "it wants light " + PoppyCropBlock.NEEDS_LIGHT + ".\n\n"))
+                .append(warn("No cellar farms. This one needs sky."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1b. HARVEST\n\n"))
+                .append(body("Right-click a ripe plant. " + PoppyCropBlock.MIN_PODS + "-"
+                        + PoppyCropBlock.MAX_PODS + " pods, sometimes a seed, "
+                        + "and it stays standing.\n\n"))
+                .append(hint("Red flowers mean nearly. Pods mean now."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. SCORING\n\n"))
+                .append(body("Craft a "))
+                .append(item("Scoring Table"))
+                .append(body(": iron over logs.\n\n"))
+                .append(body("Right-click with " + ScoringTableBlock.PODS_PER_BATCH
+                        + " pods. Wait, then click for opium.\n\n"))
+                .append(hint("No window. It just takes a while."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. THE WASH\n\n"))
+                .append(body("Craft a "))
+                .append(item("Wash Pot"))
+                .append(body(": copper, a cauldron, bricks.\n\n"))
+                .append(body(WashPotBlock.OPIUM_PER_BATCH + " opium in hand, "
+                        + WashPotBlock.LIME_PER_BATCH + " bone meal in the bag.\n\n"))
+                .append(warn("It only cooks over a fire. No fire, no progress."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. THE FIRE\n\n"))
+                .append(body("Anything lit counts: campfire, furnace, lava.\n\n"))
+                .append(body("Let it go out and nothing spoils. Nothing moves, "
+                        + "either.\n\n"))
+                .append(hint("Build the lab. Don't click the pot."))));
+
+        MutableText timing = Text.empty()
+                .append(title("4. ACETYLATING\n\n"))
+                .append(body("Base + fermented spider eye in the "))
+                .append(item("Acetylator"))
+                .append(body(".\n\n"));
+        for (int step = 1; step <= AcetylatorBlock.RUINED; step++) {
+            Purity grade = AcetylatorBlock.purityFor(step);
+            if (grade == null) {
+                timing.append(body("stage " + step + "  "))
+                        .append(Text.literal("GONE\n").formatted(Formatting.DARK_RED));
+            } else {
+                boolean peak = step == AcetylatorBlock.PEAK;
+                timing.append(body("stage " + step + "  "))
+                        .append(Text.literal(grade.display() + (peak ? " *\n" : "\n"))
+                                .formatted(grade.bookColour()));
+            }
+        }
+        pages.add(page(timing));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. THE WINDOW\n\n"))
+                .append(body("The refiner gives you five steps of slack at peak. "
+                        + "This gives you " + AcetylatorBlock.PEAK_GRACE + ".\n\n"))
+                .append(body("Miss it and the batch is gone -- base, acid, pods, "
+                        + "the lot.\n\n"))
+                .append(warn("Stand next to this one."))));
+
+        MutableText worth = Text.empty().append(title("4c. WORTH IT\n\n"));
+        for (Purity grade : Purity.values()) {
+            worth.append(Text.literal(pad(grade.display(), 7)).formatted(grade.bookColour()))
+                    .append(body(String.format("%.1fx  %de\n", grade.potency(),
+                            Math.round(grade.emeralds() * Drug.DOPE.priceScale()))));
+        }
+        worth.append(body("\n"))
+                .append(hint(String.format("%.0fx what powder fetches.",
+                        Drug.DOPE.priceScale())));
+        pages.add(page(worth));
+
+        pages.add(page(Text.empty()
+                .append(title("5. NOD\n\n"))
+                .append(body("Nothing hurts, you heal, you don't get hungry.\n\n"))
+                .append(body("And you can't run, fight or mine while it lasts.\n\n"))
+                .append(hint("Weed bills you now. Coke bills you after. This one bills you later."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. GOING OVER\n\n"))
+                .append(body("A second hit on a live one puts you on the floor "
+                        + "and keeps you there.\n\n"))
+                .append(body("It won't kill you. It costs you minutes.\n\n"))
+                .append(warn("Wait for the icon to go."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. THE BILL\n\n"))
+                .append(body("Dope hooks " + Math.round(
+                        Drug.DOPE.hookPerHit() / Drug.KUSH.hookPerHit())
+                        + "x harder than weed and lets go "
+                        + Math.round(Drug.KUSH.decayPerMinute() / Drug.DOPE.decayPerMinute())
+                        + "x slower.\n\n"))
+                .append(body(Drug.DOPE.hitsToMax() + " hits and you're at the top "
+                        + "of the meter.\n\n"))
+                .append(hint("All of it: /guide habit"))));
+    }
+
+    // --- the habit ------------------------------------------------------------
+
+    private static void habitCover(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("THE HABIT"))
+                .append(Text.literal("\nand the client list\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("What using costs, and what selling buys.\n\n"))
+                .append(hint("Your meters: /addiction"))));
+    }
+
+    private static void habit(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. THE METER\n\n"))
+                .append(body("One per thing you take. Every strain counts "
+                        + "separately.\n\n"))
+                .append(body("A Purp habit wants Purp. A shed full of Kush is "
+                        + "no use at all.\n\n"))
+                .append(hint("/addiction"))));
+
+        MutableText bands = Text.empty()
+                .append(title("2. THE BANDS\n\n"))
+                .append(body("Two things at once: a high meter AND time off it.\n\n"));
+        bands.append(Text.literal(pad("itch", 8)).formatted(Formatting.DARK_GRAY))
+                .append(body("from " + Math.round(TrapAddiction.ITCH_AT * Drug.MAX) + "\n"))
+                .append(Text.literal(pad("craving", 8)).formatted(Formatting.GOLD))
+                .append(body("from " + Math.round(TrapAddiction.CRAVE_AT * Drug.MAX) + "\n"))
+                .append(Text.literal(pad("sick", 8)).formatted(Formatting.DARK_RED))
+                .append(body("from " + Math.round(TrapAddiction.SICK_AT * Drug.MAX) + "\n\n"))
+                .append(hint("Below the number, you never get there."));
+        pages.add(page(bands));
+
+        pages.add(page(Text.empty()
+                .append(title("2b. HOW LONG\n\n"))
+                .append(body("Each takes its own time to build after your last hit:\n\n"))
+                .append(body("weed  " + Drug.KUSH.cravePeriodMinutes() + " min\n"
+                        + "coke  " + Drug.COKE.cravePeriodMinutes() + " min\n"
+                        + "dope  " + Drug.DOPE.cravePeriodMinutes() + " min\n\n"))
+                .append(hint("Dope is at you again in minutes."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. WHAT IT DOES\n\n"))
+                .append(body("Itching: nothing but the nag.\n\n"))
+                .append(body("Craving: your hands stop working.\n\n"))
+                .append(body("Sick: everything stops working, and dope also "
+                        + "bleeds you.\n\n"))
+                .append(hint("It won't kill you."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. THE FIX\n\n"))
+                .append(body("Taking the thing you crave clears it on the spot "
+                        + "and pays a bonus.\n\n"))
+                .append(body("And puts the meter up again.\n\n"))
+                .append(warn("That's the trap. It is meant to be."))));
+
+        MutableText clean = Text.empty()
+                .append(title("5. GETTING CLEAN\n\n"))
+                .append(body("Time. From the top:\n\n"));
+        for (Drug drug : new Drug[]{Drug.KUSH, Drug.COKE, Drug.DOPE}) {
+            clean.append(Text.literal(pad(drug.isWeed() ? "weed" : drug.display(), 8))
+                            .formatted(drug.text() == Formatting.WHITE
+                                    ? Formatting.DARK_GRAY : Formatting.BLACK))
+                    .append(body(drug.minutesToClean() + " min\n"));
+        }
+        clean.append(body("\n"))
+                .append(hint("Half that if you ride out the sick part."));
+        pages.add(page(clean));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. TONIC\n\n"))
+                .append(item("Nerve Tonic"))
+                .append(body(" holds the shakes off for "
+                        + (TrapContent.NerveTonicItem.CALM_TICKS / 20) + "s.\n\n"))
+                .append(body("It does not lower the meter. It buys you an "
+                        + "afternoon's work.\n\n"))
+                .append(hint("Honey, sugar, a flower."))));
+
+        MutableText hooks = Text.empty()
+                .append(title("6. THE NUMBERS\n\n"))
+                .append(body("Hits at normal strength to fill the meter:\n\n"));
+        for (Drug drug : new Drug[]{Drug.KUSH, Drug.COKE, Drug.DOPE}) {
+            hooks.append(Text.literal(pad(drug.isWeed() ? "weed" : drug.display(), 8))
+                            .formatted(Formatting.BLACK))
+                    .append(body(drug.hitsToMax() + "\n"));
+        }
+        hooks.append(body("\n"))
+                .append(hint("Strong grades count for more than one."));
+        pages.add(page(hooks));
+
+        pages.add(page(Text.empty()
+                .append(title("7. THE STREET\n\n"))
+                .append(body("They get hooked too, and they get hooked on YOU.\n\n"))
+                .append(body("Every sale builds a client list. Dope builds it "
+                        + "fastest by a mile.\n\n"))
+                .append(hint("Shown on /addiction once it's moving."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7b. WHAT IT BUYS\n\n"))
+                .append(body("Customers turn up sooner, ask for the strong stuff, "
+                        + "and take more each visit.\n\n"))
+                .append(body("Your tenants start asking for it too.\n\n"))
+                .append(warn("Stop selling and it fades."))));
     }
 
     private static void checking(List<RawFilteredPair<Text>> pages) {

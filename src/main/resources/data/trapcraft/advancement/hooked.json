@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:nerve_tonic"
+    },
+    "title": "Hooked",
+    "description": "Let a meter get all the way to withdrawal.",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:root"
+}

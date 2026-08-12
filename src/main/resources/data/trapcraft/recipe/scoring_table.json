@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "LLL",
+    "L L"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "L": "#minecraft:logs"
+  },
+  "result": {
+    "id": "trapcraft:scoring_table",
+    "count": 1
+  }
+}

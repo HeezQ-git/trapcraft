@@ -1,0 +1,102 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "stem": "trapcraft:block/crop_stem",
+    "leaf": "trapcraft:block/poppy_leaf",
+    "particle": "trapcraft:block/poppy_leaf"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        0,
+        7
+      ],
+      "to": [
+        9,
+        5,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#stem"
+        },
+        "south": {
+          "texture": "#stem"
+        },
+        "east": {
+          "texture": "#stem"
+        },
+        "west": {
+          "texture": "#stem"
+        },
+        "up": {
+          "texture": "#stem"
+        }
+      }
+    },
+    {
+      "from": [
+        2.5,
+        1,
+        8
+      ],
+      "to": [
+        13.5,
+        8,
+        8
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          4.5,
+          8
+        ],
+        "axis": "y",
+        "angle": 45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "north": {
+          "texture": "#leaf"
+        },
+        "south": {
+          "texture": "#leaf"
+        }
+      }
+    },
+    {
+      "from": [
+        8,
+        1,
+        2.5
+      ],
+      "to": [
+        8,
+        8,
+        13.5
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          4.5,
+          8
+        ],
+        "axis": "y",
+        "angle": -45,
+        "rescale": true
+      },
+      "shade": false,
+      "faces": {
+        "east": {
+          "texture": "#leaf"
+        },
+        "west": {
+          "texture": "#leaf"
+        }
+      }
+    }
+  ]
+}

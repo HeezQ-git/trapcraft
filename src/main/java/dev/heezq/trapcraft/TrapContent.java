@@ -106,6 +106,20 @@ public final class TrapContent {
     public static Block casinoBar;
     public static Item casinoBarItem;
     public static RegistryEntry<StatusEffect> wiredEffect;
+    public static Block poppyCrop;
+    public static Item poppySeeds;
+    public static Item poppyPod;
+    public static Item rawOpium;
+    public static Item morphineBase;
+    public static Item heroin;
+    public static Block scoringTable;
+    public static Item scoringTableItem;
+    public static Block washPot;
+    public static Item washPotItem;
+    public static Block acetylator;
+    public static Item acetylatorItem;
+    public static RegistryEntry<StatusEffect> nodEffect;
+    public static RegistryEntry<StatusEffect> withdrawalEffect;
     public static Block bong;
     public static Item bongItem;
     public static Block gravityBong;
@@ -232,6 +246,17 @@ public final class TrapContent {
                 toleranceEffect, ToleranceStatusEffect.DURATION_TICKS,
                 Math.min(level + extraTolerance, ToleranceStatusEffect.MAX_LEVEL), false, true));
 
+        // A mix hooks you on its PARTS, weighted by how much of each went in.
+        // Nobody gets addicted to "Trinity" -- they get addicted to the Kush in
+        // it, which is why a blend is a way to spread a habit thin rather than
+        // a way to dodge one.
+        if (player instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+            for (var share : blend.shares().entrySet()) {
+                TrapAddiction.hit(actor, Drug.of(share.getKey()),
+                        share.getValue() * blend.potency() * methodPotency);
+            }
+        }
+
         TrapNet.sendBlend(player, blend);
         TrapCough.maybe(world, player, blend.potency() * damping * methodPotency);
     }
@@ -258,6 +283,14 @@ public final class TrapContent {
         player.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
                 toleranceEffect, ToleranceStatusEffect.DURATION_TICKS,
                 Math.min(level + extraTolerance, ToleranceStatusEffect.MAX_LEVEL), false, true));
+
+        // Fed by the size of the hit, NOT by the damped effect. A tolerant
+        // smoker gets less out of a bong rip and is still smoking a bong rip;
+        // damping both would make tolerance a cure for addiction, which is
+        // exactly backwards.
+        if (player instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+            TrapAddiction.hit(actor, Drug.of(strain), grade.potency() * potency);
+        }
 
         TrapCough.maybe(world, player, grade.potency() * damping * potency);
     }
@@ -326,9 +359,50 @@ public final class TrapContent {
                 model));
 
         registerCoca();
+        registerPoppy();
         registerDevices();
         registerItemGroup();
         registerWorldgen();
+    }
+
+    /** The long line: grow -> score -> wash -> acetylate -> use. */
+    private static void registerPoppy() {
+        nodEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("nod")),
+                new NodStatusEffect());
+        withdrawalEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("withdrawal")),
+                new WithdrawalStatusEffect());
+
+        poppyCrop = registerBlock("poppy_crop", PoppyCropBlock::new,
+                AbstractBlock.Settings.create()
+                        .noCollision().ticksRandomly().breakInstantly()
+                        .sounds(BlockSoundGroup.CROP)
+                        .pistonBehavior(net.minecraft.block.piston.PistonBehavior.DESTROY));
+        poppySeeds = registerItem("poppy_seeds",
+                (settings, model) -> new SeedsItem(poppyCrop, settings, model));
+        poppyPod = registerItem("poppy_pod", TrapItem::new);
+        rawOpium = registerItem("raw_opium", TrapItem::new);
+        morphineBase = registerItem("morphine_base", TrapItem::new);
+        heroin = registerItem("heroin", HeroinItem::new);
+
+        // Timber and blades: WOOD, so it places and breaks as what it is.
+        scoringTable = registerBlock("scoring_table", ScoringTableBlock::new,
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
+        scoringTableItem = registerItem("scoring_table",
+                (settings, model) -> new RackItem(scoringTable, settings, model));
+
+        washPot = registerBlock("wash_pot", WashPotBlock::new,
+                AbstractBlock.Settings.create().strength(3.0F).requiresTool()
+                        .sounds(BlockSoundGroup.COPPER));
+        washPotItem = registerItem("wash_pot",
+                (settings, model) -> new RackItem(washPot, settings, model));
+
+        acetylator = registerBlock("acetylator", AcetylatorBlock::new,
+                AbstractBlock.Settings.create().strength(3.5F).requiresTool()
+                        .sounds(BlockSoundGroup.METAL));
+        acetylatorItem = registerItem("acetylator",
+                (settings, model) -> new RackItem(acetylator, settings, model));
     }
 
     /** The two water pipes. Joint < bong < tlok, in setup cost and in payoff. */
@@ -543,6 +617,17 @@ public final class TrapContent {
                     entries.add(cocaPowder);
                     entries.add(leafPressItem);
                     entries.add(refinerItem);
+                    // Poppy line, chain order again.
+                    entries.add(poppySeeds);
+                    entries.add(poppyPod);
+                    entries.add(rawOpium);
+                    entries.add(morphineBase);
+                    // Graded, for the same reason the buds are: a bare stack
+                    // has no purity on it and no dealer would touch it.
+                    entries.add(TrapComponents.applyPurity(new ItemStack(heroin), Purity.STREET));
+                    entries.add(scoringTableItem);
+                    entries.add(washPotItem);
+                    entries.add(acetylatorItem);
                     entries.add(bongItem);
                     entries.add(gravityBongItem);
                     entries.add(mixerItem);
@@ -633,7 +718,12 @@ public final class TrapContent {
         }
         Item item = stack.getItem();
         if (item == blendBudItem || item == blendJointItem
-                || item == cocaLeaves || item == cocaPaste || item == cocaPowder) {
+                || item == cocaLeaves || item == cocaPaste || item == cocaPowder
+                // The whole poppy line bar the seeds, including the pods --
+                // unlike coca leaves there is nothing else a pod is for, so a
+                // sack of them found in your chest is not innocent.
+                || item == poppyPod || item == rawOpium || item == morphineBase
+                || item == heroin) {
             return true;
         }
         return RAW_BUDS.containsValue(item)
@@ -746,6 +836,10 @@ public final class TrapContent {
             if (world instanceof ServerWorld server
                     && user instanceof net.minecraft.server.network.ServerPlayerEntity player) {
                 TrapParanoia.calm(player, CALM_TICKS);
+                // Second job, added with the habit: it holds the shakes off for
+                // as long as it holds the fear off. It does NOT touch the meter
+                // -- see TrapAddiction.medicate for why that line matters.
+                TrapAddiction.medicate(player, CALM_TICKS);
 
                 // The relief has to be legible or the tonic feels like it did
                 // nothing -- the meter it clears is invisible by design.
@@ -798,6 +892,10 @@ public final class TrapContent {
 
                 server.spawnParticles(ParticleTypes.END_ROD,
                         user.getX(), user.getEyeY(), user.getZ(), 12, 0.3, 0.3, 0.3, 0.03);
+
+                if (user instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+                    TrapAddiction.hit(actor, Drug.COKE, potency);
+                }
             }
             return result;
         }
@@ -806,6 +904,148 @@ public final class TrapContent {
                                 int ticks, int amplifier) {
             user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
                     effect, ticks, amplifier, false, true));
+        }
+    }
+
+    /**
+     * The needle.
+     *
+     * Everything about how it plays is a deliberate inversion of the powder:
+     * powder is fast, strong and free until the crash; this is slow, blissful,
+     * and free until the bill arrives days later on the addiction meter. See
+     * {@link NodStatusEffect} for the three-way split that makes each line feel
+     * like a different drug rather than a different number.
+     *
+     * The one thing that CAN hurt you here and now is stacking doses. Take a
+     * second while the first is still riding and you go over -- which is the
+     * only place in the mod where using something is dangerous rather than
+     * expensive, and heroin is the right thing for that to be true of.
+     */
+    static class HeroinItem extends TrapItem {
+        /** Nod, at a Street purity. Purity scales it from there. */
+        private static final int BASE_SECONDS = 100;
+        /**
+         * A second dose lands badly while this much of the first is left.
+         *
+         * Fraction rather than a flat window on purpose: a Pure hit nods you
+         * for longer, so the danger zone after one is longer too.
+         */
+        private static final float OVERDOSE_ABOVE = 0.55F;
+
+        HeroinItem(Settings settings, Identifier model) {
+            super(settings.food(
+                            new FoodComponent.Builder().nutrition(0).saturationModifier(0.0F)
+                                    .alwaysEdible().build(),
+                            ConsumableComponents.food()
+                                    .consumeSeconds(2.6F)
+                                    // BOW holds the item up in front of the
+                                    // chest with the off hand steadying it,
+                                    // which is as close to a syringe as vanilla
+                                    // gets and reads correctly on a client with
+                                    // no mod at all.
+                                    .useAction(UseAction.BOW)
+                                    .sound(sound(SoundEvents.ENTITY_PLAYER_BREATH))
+                                    .finishSound(sound(SoundEvents.ENTITY_PLAYER_BREATH))
+                                    .consumeParticles(false)
+                                    .build())
+                            .maxCount(16),
+                    model);
+        }
+
+        /** Fires on START, so the gesture runs alongside the 2.6s. See JointItem. */
+        @Override
+        public ActionResult use(World world, net.minecraft.entity.player.PlayerEntity user,
+                                net.minecraft.util.Hand hand) {
+            ActionResult result = super.use(world, user, hand);
+            if (!world.isClient && result.isAccepted()) {
+                TrapNet.play(user, TrapNet.SHOOT_UP);
+            }
+            return result;
+        }
+
+        @Override
+        public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
+            // Read before super shrinks it -- on the last one it's air by now.
+            Purity grade = TrapComponents.getPurity(stack);
+            var riding = user.getStatusEffect(nodEffect);
+            ItemStack result = super.finishUsing(stack, world, user);
+            if (!(world instanceof ServerWorld server)) {
+                return result;
+            }
+
+            float potency = grade.potency();
+            int ticks = Math.round(BASE_SECONDS * 20 * potency);
+
+            if (riding != null && riding.getDuration() > ticks * OVERDOSE_ABOVE) {
+                overdose(server, user, grade);
+                return result;
+            }
+
+            int amplifier = Math.min(2, grade.index());
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    nodEffect, ticks, amplifier, false, true));
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.RESISTANCE,
+                    ticks, Math.min(1, amplifier), false, true));
+            // The price of the bliss, paid in usefulness. This is what stops
+            // the strongest drug in the mod being the best combat buff in it.
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.SLOWNESS,
+                    ticks, 1 + Math.min(1, amplifier), false, true));
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.MINING_FATIGUE,
+                    ticks, 1, false, true));
+
+            server.spawnParticles(ParticleTypes.FALLING_HONEY,
+                    user.getX(), user.getEyeY(), user.getZ(), 14, 0.3, 0.35, 0.3, 0.01);
+            server.playSound(null, user.getX(), user.getY(), user.getZ(),
+                    SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 0.35F, 0.6F);
+
+            if (user instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+                TrapAddiction.hit(actor, Drug.DOPE, potency);
+            }
+            return result;
+        }
+
+        /**
+         * Going over.
+         *
+         * Deliberately survivable: it takes you to the floor rather than
+         * through it, because a mechanic that scatters your inventory into a
+         * lava-adjacent cave is a griefing mechanic dressed as a story. What it
+         * costs is the next two minutes, which is plenty.
+         */
+        private static void overdose(ServerWorld world, LivingEntity user, Purity grade) {
+            float damage = Math.max(0.0F, user.getHealth() - 3.0F);
+            if (damage > 0.0F) {
+                user.damage(world, world.getDamageSources().magic(), damage);
+            }
+            int ticks = (60 + grade.index() * 20) * 20;
+            for (var effect : java.util.List.of(
+                    net.minecraft.entity.effect.StatusEffects.SLOWNESS,
+                    net.minecraft.entity.effect.StatusEffects.MINING_FATIGUE,
+                    net.minecraft.entity.effect.StatusEffects.WEAKNESS)) {
+                user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                        effect, ticks, 2, false, true));
+            }
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.BLINDNESS, ticks / 3, 0, false, true));
+            user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.NAUSEA, ticks / 2, 0, false, true));
+            user.removeStatusEffect(nodEffect);
+
+            world.spawnParticles(ParticleTypes.LARGE_SMOKE,
+                    user.getX(), user.getEyeY(), user.getZ(), 30, 0.4, 0.5, 0.4, 0.02);
+            world.playSound(null, user.getX(), user.getY(), user.getZ(),
+                    SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 1.0F, 0.5F);
+            if (user instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+                actor.sendMessage(Text.literal("Too much, too soon.")
+                        .formatted(net.minecraft.util.Formatting.DARK_RED,
+                                net.minecraft.util.Formatting.BOLD), false);
+                // Still counts. Going over is not a lucky escape from the
+                // meter, it is the meter's whole argument.
+                TrapAddiction.hit(actor, Drug.DOPE, grade.potency());
+            }
         }
     }
 
@@ -1002,6 +1242,10 @@ public final class TrapContent {
                 user.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
                         toleranceEffect, ToleranceStatusEffect.DURATION_TICKS,
                         Math.min(level, ToleranceStatusEffect.MAX_LEVEL), false, true));
+
+                if (user instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
+                    TrapAddiction.hit(actor, Drug.of(strain), grade.potency());
+                }
 
                 exhale(server, user);
                 // No method multiplier here -- a joint is the 1.0 that the

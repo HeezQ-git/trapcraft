@@ -500,6 +500,22 @@ def lang() -> None:
         "item.trapcraft.slot_machine": "Lucky Streak",
         "effect.trapcraft.baked": "Baked",
         "effect.trapcraft.tolerance": "Tolerance",
+        "block.trapcraft.poppy_crop": "Opium Poppy",
+        "item.trapcraft.poppy_seeds": "Poppy Seeds",
+        "item.trapcraft.poppy_pod": "Poppy Pod",
+        "item.trapcraft.raw_opium": "Raw Opium",
+        "item.trapcraft.morphine_base": "Morphine Base",
+        # Renamed per-purity by the component, like powder; this is the bare
+        # name a /give with no grade on it shows.
+        "item.trapcraft.heroin": "Dope",
+        "block.trapcraft.scoring_table": "Scoring Table",
+        "item.trapcraft.scoring_table": "Scoring Table",
+        "block.trapcraft.wash_pot": "Wash Pot",
+        "item.trapcraft.wash_pot": "Wash Pot",
+        "block.trapcraft.acetylator": "Acetylator",
+        "item.trapcraft.acetylator": "Acetylator",
+        "effect.trapcraft.nod": "Nod",
+        "effect.trapcraft.withdrawal": "Withdrawal",
         "entity.minecraft.villager.trapcraft.dealer": "Dealer",
     }
     for strain, nice in STRAINS.items():
@@ -793,6 +809,272 @@ def coca_assets() -> None:
         "key": {"I": "minecraft:iron_ingot", "B": "minecraft:blaze_rod",
                 "C": "minecraft:copper_block"},
         "result": {"id": f"{NS}:refiner", "count": 1},
+    })
+
+
+POPPY_ITEMS = ["poppy_seeds", "poppy_pod", "raw_opium", "morphine_base", "heroin"]
+
+
+def scoring_model(progress: int | None) -> dict:
+    """The scoring bench: pods on a slab, blades over them, sap in the channel.
+
+    Closed shell with recessed sides, same rule as every other machine in the
+    pack -- Polymer serves these on a FULL_BLOCK carrier and the client lights
+    the volume as solid, so a see-through frame shows a hole in the world.
+
+    The stage is geometry, not a different picture: the pods sit up proud at
+    stage 0 and sink as they are worked, while the sap channel round the base
+    fills. So a bench half way through reads as a bench half way through, from
+    across the room, without a progress bar.
+    """
+    loaded = progress is not None
+    # Pods lose a pixel and a half a step; the sap gains what they lose.
+    pod_top = 11.0 - (progress * 1.2) if loaded else 11.0
+    sap_top = 3.2 + (progress * 0.45) if loaded else 3.2
+
+    els = [
+        box([0, 0, 0], [16, 3, 16], "wood", up="wood", down="wood"),      # plinth
+        box([0, 13, 0], [16, 16, 16], "wood", up="wood", down="wood"),    # lid
+        # Corner posts, proud of the core so the recess between them reads.
+        box([0, 3, 0], [3.5, 13, 3.5], "wood"),
+        box([12.5, 3, 0], [16, 13, 3.5], "wood"),
+        box([0, 3, 12.5], [3.5, 13, 16], "wood"),
+        box([12.5, 3, 12.5], [16, 13, 16], "wood"),
+        # Dark interior above the work, which is what keeps it solid.
+        box([3.5, 12, 3.5], [12.5, 13, 12.5], "void"),
+        # The sap channel, running right round the base and standing proud so
+        # it catches light on all four sides.
+        box([-0.05, 3, -0.05], [16.05, sap_top, 16.05], "latex"),
+    ]
+    if loaded:
+        els.append(box([3.6, sap_top, 3.6], [12.4, pod_top, 12.4], "pods"))
+        # Blades, hanging just above whatever is left of the pods.
+        for offset in (4.5, 7.5, 10.5):
+            els.append(box([3.4, pod_top + 0.4, offset - 0.4],
+                           [12.6, pod_top + 1.4, offset + 0.4], "iron"))
+    else:
+        els.append(box([3.5, sap_top, 3.5], [12.5, 11.5, 12.5], "void"))
+        for offset in (4.5, 7.5, 10.5):
+            els.append(box([3.4, 11.5, offset - 0.4], [12.6, 12.5, offset + 0.4], "iron"))
+
+    # A handle across the lid, so the top is not a blank slab.
+    els.append(box([5, 16, 7.2], [11, 17, 8.8], "iron"))
+
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "wood": f"{NS}:block/press_wood",
+            "iron": f"{NS}:block/press_iron",
+            "void": f"{NS}:block/press_void",
+            "latex": f"{NS}:block/scoring_latex",
+            "pods": f"{NS}:block/poppy_pod_block",
+            "particle": f"{NS}:block/press_wood",
+        },
+        "elements": els,
+    }
+
+
+def wash_pot_model(progress: int | None) -> dict:
+    """A lidded copper pot on a brick collar, wearing its level on the outside.
+
+    First shape of this was an open pot you looked down into, which is the
+    honest picture and the wrong model: a FULL_BLOCK carrier lights the volume
+    as solid, and tools/check_models.py rightly failed it for a top face that
+    was 2% covered. So the pot is sealed and the wash is read from the SIDE
+    instead, as a band standing proud of the vessel that climbs and darkens a
+    step at a time -- the refiner's sight glass, doing a second job.
+
+    Which is also the better block. You look at these from across a room, and a
+    band that rises all the way round beats a puddle you have to stand over.
+
+    The pot deliberately carries no fire of its own -- see WashPotBlock -- so
+    there is no firebox and no ember here. The fire is a block you built
+    underneath, and its absence is the other half of the read.
+    """
+    loaded = progress is not None
+    liquid = "wash_liquid_idle" if not loaded else f"wash_liquid_{progress}"
+    # Climbs as it cooks down and thickens: 5.5 at load, 11.1 at done.
+    level = 5.5 + (progress * 1.4) if loaded else 4.5
+
+    els = [
+        box([0, 0, 0], [16, 2.5, 16], "brick", up="brick", down="brick"),   # collar
+        box([0, 14, 0], [16, 16, 16], "copper", up="copper", down="copper"),  # lid
+        # Corner posts and the solid belly between them, same construction as
+        # the refiner -- closed shell, depth from the recess.
+        box([0, 2.5, 0], [3, 14, 3], "copper"),
+        box([13, 2.5, 0], [16, 14, 3], "copper"),
+        box([0, 2.5, 13], [3, 14, 16], "copper"),
+        box([13, 2.5, 13], [16, 14, 16], "copper"),
+        box([3, 2.5, 3], [13, 14, 13], "copper"),
+        # The wash, standing half a pixel proud of the belly so it catches
+        # light on all four faces. Prouder than the refiner's sight glass on
+        # purpose: this band IS the progress bar, and at 0.3 it read as a
+        # discolouration rather than a level.
+        box([2.5, 3.5, 2.5], [13.5, level, 13.5], "wash"),
+        # Handles either side, so it reads as something you lift off a fire.
+        box([-0.4, 9, 5], [0.6, 12, 11], "copper"),
+        box([15.4, 9, 5], [16.4, 12, 11], "copper"),
+        # Vent stack on the lid: the steam has to be going somewhere.
+        box([6.5, 16, 6.5], [9.5, 18, 9.5], "copper"),
+        box([6, 18, 6], [10, 18.8, 10], "copper"),
+    ]
+
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "brick": f"{NS}:block/refiner_brick",
+            "copper": f"{NS}:block/refiner_copper",
+            "wash": f"{NS}:block/{liquid}",
+            "particle": f"{NS}:block/refiner_copper",
+        },
+        "elements": els,
+    }
+
+
+def acetylator_model(progress: int | None) -> dict:
+    """A sealed glass vessel clamped in an iron frame over a stone bench.
+
+    The whole block exists to make one moment legible: the stage the batch is
+    at. So the vessel is the tallest thing on it, the fluid inside it is a
+    proper column rather than a puddle, and its texture pulses at peak and goes
+    to tar one step later. Everything else -- frame, bench, condenser -- is
+    deliberately dull so the glass is where your eye lands.
+    """
+    running = progress is not None
+    fluid = "acetylator_fluid_idle" if not running else f"acetylator_fluid_{progress}"
+    # Fills toward peak, then collapses when it goes over: a ruined batch looks
+    # ruined without having to read the colour.
+    if not running:
+        level = 6.0
+    elif progress >= AC_RUINED:
+        level = 6.5
+    else:
+        level = 6.0 + progress * 1.4
+
+    els = [
+        box([0, 0, 0], [16, 4, 16], "stone", up="stone", down="stone"),      # bench
+        box([0, 14.5, 0], [16, 16, 16], "iron", up="iron", down="iron"),     # yoke
+        # Frame posts at the corners, proud of the vessel between them.
+        box([0, 4, 0], [3, 14.5, 3], "iron"),
+        box([13, 4, 0], [16, 14.5, 3], "iron"),
+        box([0, 4, 13], [3, 14.5, 16], "iron"),
+        box([13, 4, 13], [16, 14.5, 16], "iron"),
+        # The vessel: a solid core wearing glass, with the fluid a separate box
+        # standing proud of it so it is lit rather than seen through.
+        box([3, 4, 3], [13, 14.5, 13], "glass"),
+        box([2.8, 4.2, 2.8], [13.2, level, 13.2], "fluid"),
+        # Clamp bands across the glass, top and bottom.
+        box([2.6, 5.4, 2.6], [13.4, 6.2, 13.4], "iron"),
+        box([2.6, 12.6, 2.6], [13.4, 13.4, 13.4], "iron"),
+        # Condenser: a stack off the yoke and an arm returning to the bench.
+        box([6.5, 16, 6.5], [9.5, 18.5, 9.5], "copper"),
+        box([9.5, 16.6, 7.2], [14.6, 17.9, 8.8], "copper"),
+        box([13.2, 10, 7.2], [14.8, 16.6, 8.8], "copper"),
+    ]
+
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "stone": f"{NS}:block/press_stone",
+            "iron": f"{NS}:block/press_iron",
+            "copper": f"{NS}:block/refiner_copper",
+            "glass": f"{NS}:block/refiner_glass",
+            "fluid": f"{NS}:block/{fluid}",
+            "particle": f"{NS}:block/press_iron",
+        },
+        "elements": els,
+    }
+
+
+# Mirrors of the constants in AcetylatorBlock and its friends. Kept as names
+# rather than bare numbers so a retune in Java is one grep away from here --
+# tools/check_models.py has no way to notice a model built for four stages
+# serving a block that now has five.
+AC_PEAK = 4
+AC_RUINED = 5
+SCORING_DONE = 4
+WASH_DONE = 4
+
+
+def poppy_assets() -> None:
+    """Crop stages, three machines, items, loot and recipes for the long line."""
+    # Leaves at every stage, a red flower at stage two, and pods at three. The
+    # flower is the tell that it is nearly ready; the pods are the harvest.
+    for age in range(2):
+        put(f"assets/{NS}/models/block/poppy_crop_age{age}.json",
+            plant_model(age, f"{NS}:block/poppy_leaf", None))
+    put(f"assets/{NS}/models/block/poppy_crop_age2.json",
+        plant_model(2, f"{NS}:block/poppy_leaf", f"{NS}:block/poppy_flower"))
+    put(f"assets/{NS}/models/block/poppy_crop_age3.json",
+        plant_model(3, f"{NS}:block/poppy_leaf", f"{NS}:block/poppy_pod_block"))
+
+    put(f"assets/{NS}/models/block/scoring_table_empty.json", scoring_model(None))
+    for step in range(SCORING_DONE + 1):
+        put(f"assets/{NS}/models/block/scoring_table_{step}.json", scoring_model(step))
+
+    put(f"assets/{NS}/models/block/wash_pot_empty.json", wash_pot_model(None))
+    for step in range(WASH_DONE + 1):
+        put(f"assets/{NS}/models/block/wash_pot_{step}.json", wash_pot_model(step))
+
+    put(f"assets/{NS}/models/block/acetylator_idle.json", acetylator_model(None))
+    for step in range(AC_RUINED + 1):
+        put(f"assets/{NS}/models/block/acetylator_{step}.json", acetylator_model(step))
+
+    for name in POPPY_ITEMS:
+        put(f"assets/{NS}/models/item/{name}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"{NS}:item/{name}"},
+        })
+    for block in ("scoring_table", "wash_pot", "acetylator"):
+        parent = {"scoring_table": "scoring_table_empty", "wash_pot": "wash_pot_empty",
+                  "acetylator": "acetylator_idle"}[block]
+        put(f"assets/{NS}/models/item/{block}.json", {"parent": f"{NS}:block/{parent}"})
+    for name in POPPY_ITEMS + ["scoring_table", "wash_pot", "acetylator"]:
+        put(f"assets/{NS}/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+        })
+
+    put(f"data/{NS}/loot_table/blocks/poppy_crop.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:poppy_seeds"}]}],
+    })
+    for block in ("scoring_table", "wash_pot", "acetylator"):
+        put(f"data/{NS}/loot_table/blocks/{block}.json", {
+            "type": "minecraft:block",
+            "pools": [{"rolls": 1, "entries": [
+                {"type": "minecraft:item", "name": f"{NS}:{block}"}]}],
+        })
+
+    # Three recipes, each dearer than the last, and the last one dearer than
+    # anything in the coca line -- which is the whole point of the long line.
+    put(f"data/{NS}/recipe/scoring_table.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["III", "LLL", "L L"],
+        # #minecraft:logs, not oak -- see the note on the leaf press recipe.
+        "key": {"I": "minecraft:iron_ingot", "L": "#minecraft:logs"},
+        "result": {"id": f"{NS}:scoring_table", "count": 1},
+    })
+    put(f"data/{NS}/recipe/wash_pot.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["C C", "CKC", "BBB"],
+        "key": {"C": "minecraft:copper_ingot", "K": "minecraft:cauldron",
+                "B": "minecraft:bricks"},
+        "result": {"id": f"{NS}:wash_pot", "count": 1},
+    })
+    put(f"data/{NS}/recipe/acetylator.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["GSG", "CRC", "III"],
+        "key": {"G": "minecraft:glass", "S": "minecraft:brewing_stand",
+                "C": "minecraft:copper_block", "R": "minecraft:blaze_rod",
+                "I": "minecraft:iron_block"},
+        "result": {"id": f"{NS}:acetylator", "count": 1},
     })
 
 
@@ -1516,6 +1798,29 @@ def advancements() -> None:
 
     award("refined", "Refined", "Take the coca line all the way to powder.",
           f"{NS}:coca_powder", "root", trigger=has(f"{NS}:coca_powder"))
+
+    # The long line. Hung off `refined` rather than off root, because the poppy
+    # is the thing you go looking for once powder has stopped being exciting --
+    # and the tree should say so.
+    award("poppy", "Full Daylight", "Get hold of poppy seed. It won't grow in a cellar.",
+          f"{NS}:poppy_seeds", "refined", trigger=has(f"{NS}:poppy_seeds"))
+    award("opium", "Weeping", "Score a batch of pods and collect what runs out.",
+          f"{NS}:raw_opium", "poppy", trigger=has(f"{NS}:raw_opium"))
+    award("base", "Over A Fire", "Cook opium down to base. The pot brings no fire of its own.",
+          f"{NS}:morphine_base", "opium", trigger=has(f"{NS}:morphine_base"))
+    award("dope", "The Long Line", "Three machines, and it can still come to nothing.",
+          f"{NS}:heroin", "base", frame="goal", trigger=has(f"{NS}:heroin"))
+    # No vanilla criterion can see "the acetylator hit peak and you were there",
+    # so this one is granted from code -- see TrapAwards.
+    award("pure_dope", "Timed It", "Pull the acetylator at peak for a Pure batch.",
+          f"{NS}:heroin", "dope", frame="challenge")
+    # Under root, not under dope. The habit is what all three lines feed and
+    # you can earn this on weed alone -- filing it under the poppy branch would
+    # hang it off an advancement the player might never take.
+    award("hooked", "Hooked", "Let a meter get all the way to withdrawal.",
+          f"{NS}:nerve_tonic", "root", frame="goal", hidden=True)
+    award("clean_sheet", "Cold Turkey", "Ride a full habit all the way back down to nothing.",
+          "minecraft:milk_bucket", "hooked", frame="challenge")
 
     award("open", "Open For Business", "Set up a market stall.",
           f"{NS}:market_stall", "root", trigger=has(f"{NS}:market_stall"))
@@ -2454,6 +2759,7 @@ def main() -> None:
     lang()
     loot_tables()
     coca_assets()
+    poppy_assets()
     device_assets()
     nerve_tonic_assets()
     ledger_assets()

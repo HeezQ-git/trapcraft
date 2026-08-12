@@ -592,6 +592,7 @@ public final class TrapShops {
     private static boolean contraband(Item item) {
         if (TrapContent.strainOfDriedBud(item) != null
                 || item == TrapContent.cocaPowder
+                || item == TrapContent.heroin
                 || item == TrapContent.blendJointItem) {
             return true;
         }

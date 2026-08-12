@@ -1,0 +1,43 @@
+{
+  "name": "shoot_up",
+  "format": "player_animation",
+  "version": 3,
+  "emote": {
+    "beginTick": 0, "endTick": 52, "stopTick": 60,
+    "isLoop": false, "returnTick": 0, "degrees": true, "easeBeforeKeyframe": false,
+    "moves": [
+      { "comment": "rest -- authored to the item's 2.6s use, which is 52 ticks", "tick": 0, "easing": "easeInOutSine",
+        "head": {"pitch": 0}, "torso": {"pitch": 0},
+        "rightArm": {"pitch": 0, "roll": 0, "yaw": 0},
+        "leftArm": {"pitch": 0, "roll": 0, "yaw": 0} },
+      { "comment": "offer the arm up", "tick": 9, "easing": "easeOutQuad",
+        "head": {"pitch": 22}, "torso": {"pitch": 6},
+        "rightArm": {"pitch": -42, "roll": 14, "yaw": 0},
+        "leftArm": {"pitch": -74, "roll": -34, "yaw": 12} },
+      { "comment": "line it up", "tick": 19, "easing": "easeInOutSine",
+        "head": {"pitch": 26}, "torso": {"pitch": 8},
+        "rightArm": {"pitch": -68, "roll": 40, "yaw": -14},
+        "leftArm": {"pitch": -76, "roll": -36, "yaw": 12} },
+      { "comment": "in", "tick": 25, "easing": "easeOutQuad",
+        "head": {"pitch": 27}, "torso": {"pitch": 9},
+        "rightArm": {"pitch": -74, "roll": 46, "yaw": -18},
+        "leftArm": {"pitch": -76, "roll": -36, "yaw": 12} },
+      { "comment": "push it", "tick": 34, "easing": "easeInOutSine",
+        "head": {"pitch": 24}, "torso": {"pitch": 7},
+        "rightArm": {"pitch": -72, "roll": 44, "yaw": -17},
+        "leftArm": {"pitch": -74, "roll": -35, "yaw": 11} },
+      { "comment": "hands fall away", "tick": 41, "easing": "easeOutQuad",
+        "head": {"pitch": 8}, "torso": {"pitch": 2},
+        "rightArm": {"pitch": -18, "roll": 6, "yaw": 0},
+        "leftArm": {"pitch": -20, "roll": -8, "yaw": 0} },
+      { "comment": "it lands", "tick": 47, "easing": "easeInOutSine",
+        "head": {"pitch": -28}, "torso": {"pitch": -9},
+        "rightArm": {"pitch": 6, "roll": -4, "yaw": 0},
+        "leftArm": {"pitch": 6, "roll": 4, "yaw": 0} },
+      { "comment": "slack", "tick": 52, "easing": "easeInOutSine",
+        "head": {"pitch": -10}, "torso": {"pitch": -3},
+        "rightArm": {"pitch": 0, "roll": 0, "yaw": 0},
+        "leftArm": {"pitch": 0, "roll": 0, "yaw": 0} }
+    ]
+  }
+}

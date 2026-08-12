@@ -58,6 +58,69 @@ Three strains, each with its own effect profile:
 saturation then hunger (the munchies), heals you slowly while you're well fed,
 and chips your health if you smoke on an empty stomach.
 
+## The three lines
+
+Weed is the short one. There are two longer ones behind it, and each is meant
+to feel like a different job rather than the same job with bigger numbers.
+
+```
+weed    seeds ──> plant ──> drying rack ──> joint                       Baked
+coca    seeds ──> bush  ──> leaf press ──> refiner ──> powder           Wired
+poppy   seeds ──> poppy ──> scoring table ──> wash pot ──> acetylator   Nod
+```
+
+The poppy line is deliberately the hard one:
+
+* **Slowest crop in the mod**, and the only one that needs light 12 — no
+  cellar farms, so the crop worth the most is the one you cannot hide.
+* **The wash pot carries no fire.** It only advances while something under it
+  is burning, which makes the middle step a build rather than a click.
+* **The acetylator can lose the batch.** The refiner's worst case is a bad
+  grade; this one's is an empty machine one step past peak, with two steps of
+  grace where the refiner gives five.
+* Roughly 3× powder's price per unit, off about twice the field.
+
+The three highs are shaped as three different bills. **Baked** charges you
+while it lasts (hunger). **Wired** charges you when it ends (the crash).
+**Nod** charges you days later, on the meter below.
+
+## The habit
+
+`/addiction` (or `/habit`). One meter per thing you take, 0–100 — and every
+weed strain has its own, so a Purp habit wants Purp and a shed full of Kush is
+no help at all.
+
+```
+pressure = (meter / 100) × min(1, time since your last hit / that drug's period)
+```
+
+A product, not a timer. Both factors have to be large, so a light habit is not
+merely slow to hurt you — it is *incapable* of it, because the first factor
+caps the result below the band it would need. Bands at 20 / 45 / 72: the nag,
+then your hands stop working, then everything does.
+
+|  | Per hit | Hits to max | Craving ripens | Clean in |
+|--|---------|-------------|----------------|----------|
+| weed | 2.0 | 50 | 14 min | 83 min |
+| cocaine | 6.0 | 17 | 7 min | 167 min |
+| heroin | 16.0 | 6 | 3 min | 333 min |
+
+The meter bleeds off **twice as fast while you are properly sick**, so riding
+out the worst of it is the cure. Nerve tonic holds the symptoms off without
+touching the meter — an afternoon's work, not a way out. Taking the thing you
+crave clears it instantly and pays a bonus scaled by how bad it had got, which
+is the trap and is meant to be.
+
+**The street gets hooked too, and on you specifically.** Every sale builds a
+per-dealer client list, weighted by the drug — dope moves it about eight times
+faster per unit than a joint. What it buys: customers who turn up sooner, ask
+for the strong stuff, and take more per visit, plus tenants who start asking
+for bags instead of joints. Stop selling and it fades.
+
+Numbers live in `Drug.java` (one row per thing you can be hooked on) and the
+formula in `TrapMath.habitPressure`, which is the half a plain JUnit run can
+reach — see `AddictionTest`.
+
 ## Paranoia
 
 A big operation makes the world feel like it's watching you. A meter builds
@@ -152,6 +215,8 @@ Two things worth knowing about how it works:
 |---------|--------|
 | `/guide grower` | growing, curing, rolling, heat |
 | `/guide refiner` | the coca line |
+| `/guide chemist` | the poppy line, end to end |
+| `/guide habit` | addiction, cravings, withdrawal, the street |
 | `/guide street` | paranoia, the ledger, contracts |
 | `/guide crew` | hiring hands, the ladders, what they cost |
 | `/guide casino` | running a floor |
@@ -209,6 +274,7 @@ that you went creative.
 | `/sun` `/rain` `/storm` | op | weather, 10 min |
 | `/heal` `/feed` `/fly [players]` | op | `/fly` toggles |
 | `/sethome [name]` `/home [name]` `/delhome <name>` `/homes` | everyone | 10 per player |
+| `/addiction` `/habit` | everyone | your meters, and the street's appetite for you |
 | `/spawn` | everyone | world spawn |
 | `/back` | everyone | where you died, or where you were before the last teleport |
 

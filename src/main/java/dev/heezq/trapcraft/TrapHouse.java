@@ -22,6 +22,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ItemScatterer;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -122,19 +123,33 @@ public final class TrapHouse {
         public int looseCooldown;
         public int compCooldown;
         /**
-         * What's behind the counter.
+         * What's behind each counter, keyed by that bar's own wire.
          *
-         * Held on the house rather than in a block entity for the same reason
-         * a dealer's stock is: one counter per casino is the shape of the
-         * thing, and a text ledger anybody can read beats a binary blob.
+         * One shelf per bar, not one per casino. A second counter used to be
+         * four blocks of decoration sharing the first one's eighteen stacks,
+         * so "we run dry every night" had no answer except a bigger farm.
+         * Four bars is four shelves and four times the room -- and they all
+         * feed the same floor, because a punter is handed the best thing
+         * standing on any of them.
+         *
+         * Held on the house rather than in block entities for the same reason
+         * a dealer's stock is: a text ledger anybody can read beats a binary
+         * blob.
          */
-        public final List<ItemStack> bar = new ArrayList<>();
+        public final Map<String, List<ItemStack>> bars = new LinkedHashMap<>();
 
-        /** Is there anything left to hand anybody? */
+        /** The shelf behind one counter, made the first time it is stocked. */
+        public List<ItemStack> shelf(String wire) {
+            return bars.computeIfAbsent(wire, made -> new ArrayList<>());
+        }
+
+        /** Is there anything left to hand anybody, on any counter? */
         public boolean dryBar() {
-            for (ItemStack stack : bar) {
-                if (!stack.isEmpty()) {
-                    return false;
+            for (List<ItemStack> shelf : bars.values()) {
+                for (ItemStack stack : shelf) {
+                    if (!stack.isEmpty()) {
+                        return false;
+                    }
                 }
             }
             return true;
@@ -320,6 +335,36 @@ public final class TrapHouse {
         WEAR.remove(wire);
         save();
         return cost;
+    }
+
+    /**
+     * Drop wires whose machine is no longer there.
+     *
+     * The break hook only fires when a PLAYER mines it. A creeper, a piston, a
+     * /fill, or a room rebuilt somewhere else left the wire behind -- and a
+     * wire with nothing on it was a machine forever: billed upkeep every beat,
+     * counted as capacity the floor's name is judged against, and listed OUT
+     * OF ORDER at coordinates with nothing at them. Swept from the beat, which
+     * already looks at every wired block once every thirty seconds.
+     */
+    public static void forget(Collection<String> gone) {
+        boolean any = false;
+        for (String wire : gone) {
+            // Whatever was on that counter went with it. Leaving the shelf
+            // behind would keep serving punters out of a bar nobody can see,
+            // let alone restock.
+            for (House house : HOUSES.values()) {
+                house.bars.remove(wire);
+            }
+            WEAR.remove(wire);
+            if (WIRES.remove(wire) != null) {
+                any = true;
+                TrapCraft.LOGGER.info("unwired {}: nothing there any more", wire);
+            }
+        }
+        if (any) {
+            save();
+        }
     }
 
     /** The shabbiest cabinet on this floor, 0 fresh .. 100 in pieces. */
@@ -816,6 +861,19 @@ public final class TrapHouse {
             // gone by AFTER. The state we were handed is the one that broke,
             // so an upper half still resolves to the machine's own square.
             String wire = key(world, floorOf(state, pos));
+            // A counter with stock on it hands it back rather than eating it.
+            // The shelf belongs to this block now, so mining one is the same
+            // as mining a chest.
+            House house = HOUSES.get(WIRES.get(wire));
+            if (house != null) {
+                List<ItemStack> shelf = house.bars.remove(wire);
+                if (shelf != null) {
+                    for (ItemStack stack : shelf) {
+                        ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 0.5,
+                                pos.getZ() + 0.5, stack);
+                    }
+                }
+            }
             WEAR.remove(wire);
             if (WIRES.remove(wire) != null) {
                 save();
@@ -838,6 +896,16 @@ public final class TrapHouse {
 
         if (house.id.equals(already)) {
             WIRES.remove(where);
+            // A counter cut loose is not this casino's any more, so its stock
+            // comes back over the bar rather than sitting in a shelf the floor
+            // still quietly serves out of.
+            List<ItemStack> shelf = house.bars.remove(where);
+            if (shelf != null) {
+                for (ItemStack stack : shelf) {
+                    ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 1.0,
+                            pos.getZ() + 0.5, stack);
+                }
+            }
             save();
             owner.sendMessage(plain("Cut loose. That machine keeps its own takings again.")
                     .formatted(Formatting.GRAY), false);
@@ -924,13 +992,19 @@ public final class TrapHouse {
             for (House house : HOUSES.values()) {
                 lines.add("costs " + house.id + " " + house.costs
                         + " " + house.ownPlay);
-                StringBuilder bar = new StringBuilder("bar ").append(house.id);
-                for (ItemStack stack : house.bar) {
-                    bar.append(' ').append(Registries.ITEM.getId(stack.getItem()))
-                            .append('|').append(stack.getCount())
-                            .append('|').append(TrapComponents.gradeTag(stack));
+                // One line per counter. The wire goes in comma-separated so
+                // the key stays a single token and the item list can keep its
+                // fixed position after it.
+                for (Map.Entry<String, List<ItemStack>> counter : house.bars.entrySet()) {
+                    StringBuilder bar = new StringBuilder("shelf ").append(house.id)
+                            .append(' ').append(counter.getKey().replace(' ', ','));
+                    for (ItemStack stack : counter.getValue()) {
+                        bar.append(' ').append(Registries.ITEM.getId(stack.getItem()))
+                                .append('|').append(stack.getCount())
+                                .append('|').append(TrapComponents.gradeTag(stack));
+                    }
+                    lines.add(bar.toString());
                 }
-                lines.add(bar.toString());
                 lines.add("staff " + house.id + " " + (house.pitBoss ? 1 : 0)
                         + " " + house.looseBeats + " " + house.looseCooldown
                         + " " + house.compCooldown);
@@ -940,6 +1014,24 @@ public final class TrapHouse {
             Files.write(saveFile, lines);
         } catch (Exception failure) {
             TrapCraft.LOGGER.error("couldn't save the casinos: {}", failure.toString());
+        }
+    }
+
+    /** item|count|grade, from `at` to the end of the line, onto one shelf. */
+    private static void readShelf(List<ItemStack> shelf, String[] parts, int at) {
+        shelf.clear();
+        for (int i = at; i < parts.length; i++) {
+            String[] bits = parts[i].split("\\|");
+            if (bits.length != 3) {
+                continue;
+            }
+            Item item = Registries.ITEM.getOptionalValue(
+                    Identifier.of(bits[0])).orElse(null);
+            if (item == null) {
+                continue;
+            }
+            shelf.add(TrapComponents.applyGradeTag(
+                    new ItemStack(item, Integer.parseInt(bits[1])), bits[2]));
         }
     }
 
@@ -993,23 +1085,17 @@ public final class TrapHouse {
                             house.ownPlay = Long.parseLong(parts[3]);
                         }
                     }
-                } else if (parts.length >= 2 && parts[0].equals("bar")) {
+                } else if (parts.length >= 3 && parts[0].equals("shelf")) {
                     House house = HOUSES.get(UUID.fromString(parts[1]));
                     if (house != null) {
-                        house.bar.clear();
-                        for (int i = 2; i < parts.length; i++) {
-                            String[] bits = parts[i].split("\\|");
-                            if (bits.length != 3) {
-                                continue;
-                            }
-                            Item item = Registries.ITEM.getOptionalValue(
-                                    Identifier.of(bits[0])).orElse(null);
-                            if (item == null) {
-                                continue;
-                            }
-                            house.bar.add(TrapComponents.applyGradeTag(
-                                    new ItemStack(item, Integer.parseInt(bits[1])), bits[2]));
-                        }
+                        readShelf(house.shelf(parts[2].replace(',', ' ')), parts, 3);
+                    }
+                } else if (parts.length >= 2 && parts[0].equals("bar")) {
+                    // The single house-wide shelf, from before every counter
+                    // had its own. See adoptOldStock.
+                    House house = HOUSES.get(UUID.fromString(parts[1]));
+                    if (house != null) {
+                        readShelf(house.shelf(OLD_STOCK), parts, 2);
                     }
                 } else if (parts.length == 6 && parts[0].equals("staff")) {
                     House house = HOUSES.get(UUID.fromString(parts[1]));
@@ -1124,39 +1210,81 @@ public final class TrapHouse {
      * staying: see {@link TrapMath#punterRoundsServed}. Charging for it would
      * make the bar a second income and miss the point, which is that a casino
      * has to eat what you grow.
+     *
+     * Everybody gets served, but only about one in
+     * {@link TrapMath#SERVINGS_PER_ITEM} of them empties something: one item
+     * pours several rounds. Rolled rather than counted so the bar keeps no
+     * state of its own -- a half-poured bottle would be another number to
+     * save, and over an evening the roll comes out at the same rate.
      */
-    public static int serve(House house) {
+    public static int serve(House house, java.util.Random rng) {
+        List<ItemStack> from = null;
         int best = -1;
         int tier = 0;
-        for (int slot = 0; slot < house.bar.size(); slot++) {
-            ItemStack stack = house.bar.get(slot);
-            if (stack.isEmpty()) {
-                continue;
-            }
-            int worth = TrapContent.isContraband(stack) ? 2 : 1;
-            if (worth > tier) {
-                tier = worth;
-                best = slot;
+        // Every counter, not just the nearest one: which shelf a punter's
+        // drink comes off is nobody's decision, and a floor with four bars
+        // should not go dry because the product all went on one of them.
+        for (List<ItemStack> shelf : house.bars.values()) {
+            for (int slot = 0; slot < shelf.size(); slot++) {
+                ItemStack stack = shelf.get(slot);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                int worth = TrapContent.isContraband(stack) ? 2 : 1;
+                if (worth > tier) {
+                    tier = worth;
+                    from = shelf;
+                    best = slot;
+                }
             }
         }
         if (best < 0) {
             return 0;
         }
-        house.bar.get(best).decrement(1);
-        house.bar.removeIf(ItemStack::isEmpty);
+        if (rng.nextInt(TrapMath.SERVINGS_PER_ITEM) == 0) {
+            from.get(best).decrement(1);
+            from.removeIf(ItemStack::isEmpty);
+        }
         house.nudge(0, tier == 2
                 ? TrapMath.BAR_ADDICTION_PRODUCT : TrapMath.BAR_ADDICTION_FOOD);
         save();
         return tier;
     }
 
-    /** How much is left behind the counter, in items. */
+    /** How much is left behind the counters, in items, across all of them. */
     public static int barStock(House house) {
         int total = 0;
-        for (ItemStack stack : house.bar) {
-            total += stack.getCount();
+        for (List<ItemStack> shelf : house.bars.values()) {
+            for (ItemStack stack : shelf) {
+                total += stack.getCount();
+            }
         }
         return total;
+    }
+
+    /**
+     * The one shelf a house used to keep, before every counter had its own.
+     *
+     * Kept under a key no wire can have, so it goes on serving punters until
+     * somebody opens a bar -- at which point that counter inherits it. Losing
+     * a stocked bar to an update would be losing a season of somebody's farm.
+     */
+    static final String OLD_STOCK = "-";
+
+    /** Hand the old house-wide shelf to the first counter anybody opens. */
+    public static void adoptOldStock(House house, String wire) {
+        List<ItemStack> old = house.bars.get(OLD_STOCK);
+        if (old == null || wire.equals(OLD_STOCK)) {
+            return;
+        }
+        List<ItemStack> shelf = house.shelf(wire);
+        while (!old.isEmpty() && shelf.size() < TrapMath.BAR_SLOTS) {
+            shelf.add(old.remove(0));
+        }
+        if (old.isEmpty()) {
+            house.bars.remove(OLD_STOCK);
+        }
+        save();
     }
 
     /** How many beats this floor has been behind on what it owes. */

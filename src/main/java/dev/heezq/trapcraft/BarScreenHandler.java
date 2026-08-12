@@ -39,6 +39,8 @@ public class BarScreenHandler extends ScreenHandler {
     private final SimpleInventory shelf = new SimpleInventory(SIZE);
     private final ServerPlayerEntity keeper;
     private final TrapHouse.House house;
+    /** Which counter this is. Each one holds its own eighteen stacks. */
+    private final String wire;
     /**
      * Set while the sign column is being repainted.
      *
@@ -51,10 +53,12 @@ public class BarScreenHandler extends ScreenHandler {
     private boolean painting;
 
     public BarScreenHandler(int syncId, PlayerInventory playerInventory,
-                            TrapHouse.House house) {
+                            TrapHouse.House house, String wire) {
         super(ScreenHandlerType.GENERIC_9X3, syncId);
         this.keeper = (ServerPlayerEntity) playerInventory.player;
         this.house = house;
+        this.wire = wire;
+        TrapHouse.adoptOldStock(house, wire);
 
         for (int index = 0; index < STOCK; index++) {
             this.addSlot(new StockSlot(shelf, index,
@@ -74,8 +78,9 @@ public class BarScreenHandler extends ScreenHandler {
             this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
         }
 
-        for (int index = 0; index < STOCK && index < house.bar.size(); index++) {
-            shelf.setStack(index, house.bar.get(index));
+        List<ItemStack> standing = house.shelf(wire);
+        for (int index = 0; index < STOCK && index < standing.size(); index++) {
+            shelf.setStack(index, standing.get(index));
         }
         paintSign();
         // SimpleInventory never calls onContentChanged, so a listener is the
@@ -96,14 +101,29 @@ public class BarScreenHandler extends ScreenHandler {
 
     private ItemStack sign(int row) {
         int stock = TrapHouse.barStock(house);
+        int here = 0;
+        for (ItemStack standing : house.shelf(wire)) {
+            here += standing.getCount();
+        }
         if (row == 0) {
             ItemStack tag = new ItemStack(stock > 0 ? Items.BARREL : Items.GRAY_DYE);
             tag.set(DataComponentTypes.CUSTOM_NAME,
                     plain("The Bar").formatted(Formatting.GOLD, Formatting.BOLD));
             List<Text> lore = new ArrayList<>(List.of(
-                    line(stock + " to hand out", stock > 0 ? Formatting.GREEN : Formatting.RED),
+                    line(here + " on this counter", here > 0
+                            ? Formatting.GREEN : Formatting.RED),
+                    // The house figure, because a punter is served off
+                    // whichever counter has the best thing on it: what keeps
+                    // the room open is the total, not this shelf.
+                    line(stock + " across the house, about "
+                            + stock * TrapMath.SERVINGS_PER_ITEM + " rounds",
+                            stock > 0 ? Formatting.WHITE : Formatting.RED),
                     Text.empty(),
-                    line("Everybody through the door gets one.", Formatting.GRAY),
+                    line("Everybody through the door gets one. One", Formatting.GRAY),
+                    line("off the shelf pours about "
+                            + TrapMath.SERVINGS_PER_ITEM + " of them.", Formatting.GRAY),
+                    line("Another bar wired is another " + TrapMath.BAR_SLOTS
+                            + " stacks.", Formatting.DARK_GRAY),
                     line("Served punters stay. Dry bar, they", Formatting.GRAY),
                     line("have a go and leave.", Formatting.GRAY),
                     Text.empty(),
@@ -159,11 +179,12 @@ public class BarScreenHandler extends ScreenHandler {
         if (painting) {
             return;   // our own brush, not somebody putting a stack down
         }
-        house.bar.clear();
+        List<ItemStack> standing = house.shelf(wire);
+        standing.clear();
         for (int index = 0; index < STOCK; index++) {
             ItemStack stack = shelf.getStack(index);
             if (!stack.isEmpty()) {
-                house.bar.add(stack);
+                standing.add(stack);
             }
         }
         TrapHouse.touch();

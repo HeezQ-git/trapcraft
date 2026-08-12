@@ -1205,6 +1205,81 @@ public final class TrapMath {
     public static final int WEED_GROWTH_ROLLS_WET = 13;
     public static final int WEED_GROWTH_ROLLS_DRY = 26;
 
+    /**
+     * Random ticks an opium poppy waits per stage. The slowest thing you can
+     * plant, and flatly slower than a watered cannabis plant.
+     *
+     * Deliberately the wrong shape for a min-maxer: there is no watering trick
+     * and no grade to chase, so the only lever on a poppy field is how big it
+     * is. That is the whole design of the long line -- the money is real, and
+     * the way you earn it is by committing acreage and daylight to it for an
+     * afternoon rather than by playing any single step cleverly. Coca is 6 and
+     * a watered weed plant is 13; this is 16, on top of needing light
+     * {@link PoppyCropBlock#NEEDS_LIGHT} rather than 9.
+     */
+    public static final int POPPY_GROWTH_ROLLS = 16;
+
+    // --- the habit --------------------------------------------------------------
+    //
+    // The formula lives here rather than in TrapAddiction for the same reason
+    // everything else in this file does: this class imports nothing from
+    // Minecraft, so it is the only part of the habit that can be tested without
+    // starting a game. The per-drug numbers stay on Drug, which is a table; what
+    // is here is the one piece that is actually arithmetic.
+
+    /** Meter floors, as a fraction of the worst possible pressure. */
+    public static final float HABIT_ITCH = 0.20f;
+    public static final float HABIT_CRAVE = 0.45f;
+    public static final float HABIT_SICK = 0.72f;
+
+    /** Bands, by index, matching TrapAddiction.Band's ordinals. */
+    public static final int BAND_CLEAN = 0;
+    public static final int BAND_ITCH = 1;
+    public static final int BAND_CRAVING = 2;
+    public static final int BAND_SICK = 3;
+
+    /**
+     * How badly somebody wants it right now.
+     *
+     * A product, not a timer, and that is the whole design:
+     *
+     * <pre>pressure = (hooked / max) * min(1, sinceUse / period)</pre>
+     *
+     * Both factors have to be large for the result to be. A meter of 30 can
+     * never exceed 0.30 however long you abstain, which puts every band above
+     * it permanently out of reach -- so being ill is something you have to have
+     * earned, and a light user genuinely cannot stumble into withdrawal by
+     * going on holiday.
+     *
+     * @param hooked        the meter, 0..max
+     * @param max           the top of the meter
+     * @param sinceUseTicks ticks since the last hit of this specific thing
+     * @param periodMinutes real minutes for the craving to reach full ripeness
+     */
+    public static float habitPressure(float hooked, float max, long sinceUseTicks,
+                                          int periodMinutes) {
+        if (hooked <= 0 || max <= 0 || periodMinutes <= 0) {
+            return 0f;
+        }
+        float period = periodMinutes * 60f * 20f;
+        float ripeness = Math.min(1f, Math.max(0f, sinceUseTicks / period));
+        return Math.min(1f, hooked / max) * ripeness;
+    }
+
+    /** Which band a pressure falls in. See the constants above. */
+    public static int habitBand(float pressure) {
+        if (pressure >= HABIT_SICK) {
+            return BAND_SICK;
+        }
+        if (pressure >= HABIT_CRAVE) {
+            return BAND_CRAVING;
+        }
+        if (pressure >= HABIT_ITCH) {
+            return BAND_ITCH;
+        }
+        return BAND_CLEAN;
+    }
+
     // --- the kitchen ------------------------------------------------------------
 
     /**
@@ -1614,6 +1689,16 @@ public final class TrapMath {
     public static final float SERVED_PRODUCT = 1.6f;
     public static final float SERVED_FOOD = 1.15f;
     public static final float SERVED_NOTHING = 0.18f;
+
+    /**
+     * Punters one item off the shelf covers.
+     *
+     * A bud is a few joints and a loaf is a few rounds of sandwiches, not one
+     * of each. Taking a whole item per head drank a stack of product in about
+     * six minutes of a busy floor -- faster than any farm on the server
+     * fills, so the bar was never stocked and the room was always dry.
+     */
+    public static final int SERVINGS_PER_ITEM = 5;
 
     /** What one serving is worth to the regulars. */
     public static final int BAR_ADDICTION_PRODUCT = 3;

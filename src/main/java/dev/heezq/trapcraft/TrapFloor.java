@@ -226,6 +226,7 @@ public final class TrapFloor {
      * those are the things the owner is actually being asked to look after.
      */
     private static void beat(MinecraftServer server) {
+        List<String> gone = new ArrayList<>();
         for (TrapHouse.House house : TrapHouse.all()) {
             java.util.Set<net.minecraft.block.Block> games = new java.util.HashSet<>();
             int machines = 0;
@@ -239,6 +240,13 @@ public final class TrapFloor {
                 if (world == null || pos == null) {
                     continue;
                 }
+                // Nothing there any more. See TrapHouse.forget: the wire
+                // outlives its machine whenever something other than a player
+                // takes it away, and a ghost costs upkeep every beat forever.
+                if (!TrapHouse.isFitting(world.getBlockState(pos).getBlock())) {
+                    gone.add(wire.getKey());
+                    continue;
+                }
                 // The bar is wired like a machine but is not one: it takes no
                 // bets, holds no seat, and must not be counted as either
                 // variety or capacity or a floor of ten bars would look
@@ -248,7 +256,10 @@ public final class TrapFloor {
                 }
                 machines++;
                 games.add(world.getBlockState(pos).getBlock());
-                if (occupant(world, pos) == null) {
+                // Out of order is not somewhere to play. A dead cabinet used
+                // to score the floor for room it did not have, which paid it
+                // rep for the exact thing it was supposed to be losing rep for.
+                if (occupant(world, pos) == null && !TrapHouse.broken(world, pos)) {
                     free++;
                 }
             }
@@ -256,6 +267,9 @@ public final class TrapFloor {
             if (TrapHouse.owing(house) >= 3) {
                 collectors(server, house);
             }
+        }
+        if (!gone.isEmpty()) {
+            TrapHouse.forget(gone);
         }
     }
 
@@ -635,7 +649,7 @@ public final class TrapFloor {
         // Served at the door, out of your own stash. This is the whole
         // difference between a floor and a faucet: a dry bar means one go and
         // out, and that is most of the trade gone.
-        int served = TrapHouse.serve(house);
+        int served = TrapHouse.serve(house, new java.util.Random(random.nextLong()));
         // Somebody out of the town, not a label. They are the same people who
         // pay your rent, and "Punter" over every head read as spawned scenery.
         String who = TrapHomes.someoneFromTown(random);

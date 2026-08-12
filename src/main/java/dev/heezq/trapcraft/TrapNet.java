@@ -68,6 +68,7 @@ public final class TrapNet {
     public static final Identifier BONG_HIT = TrapCraft.id("bong_hit");
     public static final Identifier MIX_STIR = TrapCraft.id("mix_stir");
     public static final Identifier JOINT_SMOKE = TrapCraft.id("joint_smoke");
+    public static final Identifier SHOOT_UP = TrapCraft.id("shoot_up");
 
     private TrapNet() {
     }
