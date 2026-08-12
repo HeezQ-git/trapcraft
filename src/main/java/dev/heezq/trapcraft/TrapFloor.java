@@ -129,7 +129,16 @@ public final class TrapFloor {
                 done.add(at);
                 return;
             }
-            if (world.getTime() - seat.since() > STALE_TICKS) {
+            // ...but only a punter nobody is running times out. The minute was
+            // written when a punter appeared at the door and played four quick
+            // rounds; a resident who walks in from three streets away and then
+            // settles in is past it before they have finished, and the seat
+            // was being handed to somebody else underneath them. Eight of the
+            // eighteen people playing held no seat at all the first night this
+            // shipped, which is the "one machine, one player" rule quietly off.
+            // The session list is the truthful answer; the clock stays as the
+            // backstop for a seat whose session died with the server.
+            if (!known(seat.who()) && world.getTime() - seat.since() > STALE_TICKS) {
                 done.add(at);
             }
         });
