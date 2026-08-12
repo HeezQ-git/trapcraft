@@ -83,11 +83,49 @@ public final class TrapHomes {
     public static final String TENANT_TAG = "trapcraft_tenant";
     /** Letters kept on a mailbox. Nobody reads the fifth. */
     private static final int LETTERS_KEPT = 3;
-    /** Names the city hands out. Nobody is "Tenant".*/
+    /**
+     * Names the city hands out. Nobody is "Tenant".
+     *
+     * Two registers, because a town has two. There are the names on the old
+     * headstones, and there is whatever the kids are called now, and a place
+     * where everybody is a Maud is as obviously invented as one where
+     * everybody is a Skibidi. Both sets are in one pool on purpose: the joke
+     * only works if Yorick lives next door to Rizzler and neither of them
+     * thinks it is strange.
+     *
+     * Twenty-four was exactly the size of the town, which meant the pigeonhole
+     * principle ran the naming: every household had a duplicate in it and the
+     * street read as four copies of six people. Long enough now that a
+     * collision is a coincidence rather than a certainty.
+     *
+     * Short on purpose -- these sit over a villager's head next to a stake or
+     * a receipt ("Pookie  ·  32e"), and a long one pushes the nameplate wider
+     * than the thing it is labelling.
+     */
     private static final String[] NAMES = {
+            // The old families.
             "Alma", "Bertie", "Cass", "Dot", "Edwin", "Fen", "Greta", "Hal",
             "Isolde", "Jory", "Kit", "Lom", "Maud", "Ned", "Orla", "Pike",
-            "Quill", "Rina", "Sef", "Tam", "Ubel", "Vesta", "Wren", "Yorick"};
+            "Quill", "Rina", "Sef", "Tam", "Ubel", "Vesta", "Wren", "Yorick",
+            "Ada", "Blythe", "Bram", "Cleo", "Corin", "Dilys", "Esme", "Eira",
+            "Fitch", "Gil", "Gwyn", "Hettie", "Hesper", "Ivo", "Inge", "Joss",
+            "Kest", "Lark", "Mab", "Nell", "Osric", "Perrin", "Quenna", "Rufe",
+            "Sable", "Thea", "Ulla", "Vance", "Wilkin", "Xan", "Yarrow", "Zeb",
+            // And whatever the kids are called now.
+            "Rizzler", "Skibidi", "Sigma", "Ohio", "Fanum", "Sussy", "Bussin",
+            "Sheesh", "Yeet", "Goated", "Ratio", "Delulu", "Pookie", "Bestie",
+            "Baddie", "Zoomer", "Doomer", "Aura", "Lore", "NPC", "Mid", "Slay",
+            "Drip", "Cheugy", "Clout", "Ick", "Feral", "Deadass", "Moot",
+            "Chad", "Karen", "Bet",
+            "Gyatt", "Mewing", "Mogger", "Crashout", "Cooked", "Yapper", "Bozo",
+            "Simp", "Stan", "Opp", "Blud", "Innit", "Twin", "Chat", "Lowkey",
+            "Cringe", "Based", "Zamn", "Banger", "Peak", "Skrrt", "Grimace",
+            "Sturdy", "Hawk", "Grindset", "Alpha", "Omega", "Beta", "Fein",
+            "Looksmax", "Griddy", "Amogus", "Poggers", "Copium", "Sadge",
+            "Grass", "Goblin", "Gremlin", "Bloomer", "Boomer", "Snatched",
+            "Shook", "Savage", "Bruh", "Cap", "Yass", "Uwu", "Vibe", "Wojak",
+            "Gigachad", "Chungus", "Slop", "Skull", "Brainrot", "Freaky",
+            "Bruv", "Toilet", "Tralala", "Tung", "Sahur", "Patapim"};
 
     /** One address. */
     public static final class Home {
@@ -337,18 +375,6 @@ public final class TrapHomes {
      * in, so housing pays twice: rent, and everybody it brings past a till.
      */
     /**
-     * A name for somebody out of the town: a real tenant's, if there is one.
-     *
-     * Punters and shoppers were labelled "Punter" and "Townsperson", from back
-     * when they arrived from nowhere in particular. They come out of your
-     * houses now -- the same people who pay your rent -- and a room of
-     * identical labels reads as spawned scenery rather than as the town
-     * turning up.
-     *
-     * Falls back to the name pool when nobody is housed, because the
-     * alternative is an unnamed villager and there is nothing better to say.
-     */
-    /**
      * The same name every time for the same seed.
      *
      * For somebody who STAYS -- a shopkeeper stood at a till gets respawned
@@ -358,18 +384,6 @@ public final class TrapHomes {
      */
     public static String nameFor(int seed) {
         return NAMES[Math.floorMod(seed, NAMES.length)];
-    }
-
-    public static String someoneFromTown(net.minecraft.util.math.random.Random random) {
-        List<String> living = new ArrayList<>();
-        for (Home home : HOMES) {
-            if (home.tenant != null) {
-                living.add(home.tenant);
-            }
-        }
-        return living.isEmpty()
-                ? NAMES[random.nextInt(NAMES.length)]
-                : living.get(random.nextInt(living.size()));
     }
 
     public static int population() {
@@ -653,10 +667,22 @@ public final class TrapHomes {
      * who was not there.
      */
     private static void live(MinecraftServer server, ServerWorld world, Home home) {
-        long day = world.getTimeOfDay() / 24000L;
+        long day = TrapMarket.today(server);
         if (home.tenant == null) {
-            if (home.tier > 0) {
-                moveIn(world, home, day);
+            // One roll a day, not one a pass. Gated on the same field the rent
+            // is, which for an empty house means "the last day anybody was
+            // asked" -- so a house being looked at every twelve seconds is
+            // still only offered to the street once.
+            if (home.tier > 0 && home.lastRent != day) {
+                home.lastRent = day;
+                // Nobody takes a place on a day they would already be walking
+                // out of. The notice is rolled off the house and the day, so
+                // without this a tenant could move in on a notice day and be
+                // gone tomorrow having never posted the letter.
+                if (!HomeSurvey.quitting(seedOf(home), day)
+                        && world.getRandom().nextFloat() < HomeSurvey.lettingOdds(home.tier)) {
+                    moveIn(world, home, day);
+                }
             }
             return;
         }
@@ -664,7 +690,16 @@ public final class TrapHomes {
         if (home.lastRent == day) {
             return;
         }
+        // The day we were last here, before it is overwritten: if THAT day
+        // rolled a notice, the letter went up then and this is the morning
+        // after. Reading the notice off the last day rather than off yesterday
+        // is what makes a house whose chunk slept for a week still honour it.
+        long lastSeen = home.lastRent;
         home.lastRent = day;
+        if (lastSeen >= 0 && HomeSurvey.quitting(seedOf(home), lastSeen)) {
+            moveOut(server, world, home, "gave their notice and moved on");
+            return;
+        }
 
         int heat = TrapHeat.tierAt(world, home.anchor);
         Readout now = look(world, home.anchor, home);
@@ -678,6 +713,13 @@ public final class TrapHomes {
         home.mood = HomeSurvey.moodDrift(home.mood, target);
         complain(home, now, heat, was);
 
+        // Somebody is in a hospital bed, or waiting for one. They are not at a
+        // job, they are not buying anything off the street, and the household
+        // is short of their wage -- which is the whole cost of a bite and the
+        // reason a city builds a ward.
+        int away = TrapHospitals.awayFrom(home.id);
+        int working = Math.max(0, home.heads - away);
+
         if (home.mood <= 0) {
             moveOut(server, world, home, heat >= 0
                     ? "couldn't stand what's growing next door"
@@ -686,9 +728,29 @@ public final class TrapHomes {
             return;
         }
 
+        // And the other way out, which has nothing to do with the house: a
+        // person can simply decide they are done living here. A day's notice,
+        // posted on the mailbox, and the pass after this one empties the
+        // place -- see HomeSurvey#quitting for why this is asked rather than
+        // remembered. They pay today's rent on their way out, because notice
+        // is a day you have still paid for.
+        if (HomeSurvey.quitting(seedOf(home), day)) {
+            home.write("Sorry -- I'm moving on. Gone tomorrow.");
+            ServerPlayerEntity landlord = server.getPlayerManager().getPlayer(home.owner);
+            if (landlord != null) {
+                landlord.sendMessage(Text.literal(home.tenant + " is leaving " + home.name + ". ")
+                        .formatted(Formatting.YELLOW, Formatting.BOLD)
+                        .append(Text.literal("A day's notice. It's empty tomorrow.")
+                                .formatted(Formatting.GRAY)), false);
+            }
+        }
+
         // A new fancy each day, sometimes none at all. Rolled off the world's
         // random so two people asking the same tenant get the same answer.
-        home.craving = world.getRandom().nextFloat() < CRAVING_ODDS
+        // Nobody in a ward is out buying anything, and the person the letters
+        // are about is the one the door gets knocked for.
+        home.craving = !TrapHospitals.tenantAway(home)
+                && world.getRandom().nextFloat() < CRAVING_ODDS
                 ? roll(world.getRandom(), home.mood, TrapAddiction.street(home.owner)) : null;
 
         // Paid first, then they pay their landlord out of it. This is the only
@@ -697,13 +759,18 @@ public final class TrapHomes {
         // The school lifts every wage in the city. Applied here rather than in
         // HomeSurvey because that class imports nothing from Minecraft and is
         // not going to start knowing what a public work is.
-        int wage = HomeSurvey.wageDue(home.tier, home.heads, home.floor);
+        //
+        // Charged per person WORKING rather than per person living here, which
+        // is the whole of "an ill resident earns nothing". A household with
+        // everybody in a ward pays no rent either -- there is nothing coming
+        // in for it to come out of.
+        int wage = HomeSurvey.wageDue(home.tier, working, home.floor);
         if (TrapCity.built(TrapCity.Work.SCHOOL)) {
             wage = Math.round(wage * TrapCity.SCHOOL_WAGE);
         }
         TrapPayroll.earned(wage);
 
-        int rent = HomeSurvey.rentDue(home.tier, home.mood, home.heads, home.floor);
+        int rent = HomeSurvey.rentDue(home.tier, home.mood, working, home.floor);
         if (rent > 0) {
             TrapCity.Duty duty = TrapCity.Duty.RENT;
             int owed = TrapCity.dutyOn(rent, duty);
@@ -723,7 +790,9 @@ public final class TrapHomes {
                         .formatted(Formatting.DARK_GRAY)
                         .append(Text.literal("+" + rent + "e").formatted(Formatting.GREEN))
                         .append(Text.literal(owed > 0 ? "   " + owed + "e duty" : "")
-                                .formatted(Formatting.DARK_GRAY)), true);
+                                .formatted(Formatting.DARK_GRAY))
+                        .append(Text.literal(away > 0 ? "   " + away + " ill" : "")
+                                .formatted(Formatting.RED)), true);
             }
         }
         save();
@@ -928,6 +997,29 @@ public final class TrapHomes {
         return null;
     }
 
+    /**
+     * The one number a house's luck hangs off.
+     *
+     * The low half of the id, which is the half {@link #moveIn} already picks
+     * a name out of: one house, one thread of luck, and it outlives every
+     * tenant because the id does.
+     */
+    private static long seedOf(Home home) {
+        return home.id.getLeastSignificantBits();
+    }
+
+    /**
+     * Has the tenant given notice? Asked, not remembered.
+     *
+     * The mailbox needs the same answer the daily pass does, and deriving it
+     * in both places is the point of {@link HomeSurvey#quitting}: there is no
+     * flag for the two of them to disagree about.
+     */
+    public static boolean leaving(Home home) {
+        return home.tenant != null && home.lastRent >= 0
+                && HomeSurvey.quitting(seedOf(home), home.lastRent);
+    }
+
     /** Somebody takes the place on. */
     private static void moveIn(ServerWorld world, Home home, long day) {
         home.tenant = NAMES[Math.floorMod((int) (home.id.getLeastSignificantBits() + day),
@@ -953,8 +1045,8 @@ public final class TrapHomes {
     }
 
     /** And gives it up. */
-    private static void moveOut(MinecraftServer server, ServerWorld world, Home home,
-                                String why) {
+    static void moveOut(MinecraftServer server, ServerWorld world, Home home,
+                        String why) {
         String who = home.tenant;
         evict(world, home);
         home.write(who + " has gone. They " + why + ".");
@@ -1053,18 +1145,26 @@ public final class TrapHomes {
             turned.discard();
         }
 
+        // Anybody in a hospital bed is a body TrapHospitals is holding, in a
+        // building that may be nowhere near here. They are counted OUT of the
+        // house rather than counted among it: their body carries no house tag
+        // at all, so the census above cannot see them, and a house that kept
+        // spawning to its full household would put a second copy of a patient
+        // on its own doorstep every pass.
+        int athome = Math.max(0, home.heads - TrapHospitals.awayFrom(home.id));
+
         // Fewer beds than there were, or a grade that slipped: the household
         // shrinks. Discarded from the end so the head of it is the last to go,
         // and never somebody who is out -- a person at a machine has a seat
         // held for them and a session running, and binning them mid-round is
         // how a casino used to eat the town that pays for it.
-        for (int extra = living.size() - 1; extra >= home.heads; extra--) {
+        for (int extra = living.size() - 1; extra >= athome; extra--) {
             var going = living.get(extra);
             if (!going.getUuid().equals(home.body) && !out(going)) {
                 going.discard();
             }
         }
-        for (int missing = living.size(); missing < home.heads; missing++) {
+        for (int missing = living.size(); missing < athome; missing++) {
             body(world, home, tag, missing);
         }
         // Everybody else goes home. A villager Brain with nothing to do picks
@@ -1073,15 +1173,147 @@ public final class TrapHomes {
         // twelve people mill about in a field. Somebody who is out is out on
         // purpose and left alone.
         for (var body : living) {
-            if (!out(body) && !body.getBlockPos().isWithinDistance(home.anchor, BODY_RANGE)) {
-                walkTo(body, home.anchor);
+            if (out(body) || indoors(home, body)) {
+                continue;
             }
+            // Walked if the walk is one a villager can actually plan, and put
+            // back if it is not. The casino brings somebody in from up to five
+            // hundred blocks by standing them at its door; without the same
+            // courtesy in reverse they finish their evening, fail to path
+            // home, and spend the next day strolling around the floor they
+            // were left on -- which is precisely what "they are never at home"
+            // looks like from the street.
+            //
+            // ponytail: put back at the door of their own house, not walked
+            // across town. Same trade as the arrival and the same reason --
+            // nobody watches a neighbour walk home either.
+            sendHome(world, body);
         }
     }
 
-    /** Away on business of their own -- at a machine, or on their way to one. */
-    private static boolean out(net.minecraft.entity.Entity body) {
-        return body.getCommandTags().contains(TrapFloor.PUNTER_TAG);
+    /**
+     * Standing in their own house, or in the garden of it.
+     *
+     * Measured against the surveyed BOX rather than a radius round the anchor.
+     * A radius is a circle drawn on a map, and the thing it kept catching was
+     * the casino next door: residents stood on a slot machine forty feet from
+     * their own front door counted as being at home, so nothing ever sent them
+     * back. A house is a shape somebody built, and this is that shape with a
+     * garden's worth of margin on it.
+     */
+    private static boolean indoors(Home home, net.minecraft.entity.Entity body) {
+        BlockPos at = body.getBlockPos();
+        return at.getX() >= home.box[0] - HOME_EDGE && at.getX() <= home.box[3] + HOME_EDGE
+                && at.getZ() >= home.box[2] - HOME_EDGE && at.getZ() <= home.box[5] + HOME_EDGE;
+    }
+
+    /** How far outside their own walls still counts as being home. */
+    private static final int HOME_EDGE = 6;
+    /**
+     * The longest walk home worth asking a villager to plan.
+     *
+     * A pathfinder gives up somewhere past forty blocks and the Brain reclaims
+     * the walk target between plans, so anything further is a walk target that
+     * quietly does nothing while the person stands where they are.
+     */
+    private static final int WALK_HOME = 40;
+
+    /**
+     * Away on business of their own, whatever that business is.
+     *
+     * Both errands in one question, and it has to stay that way. The town is
+     * one set of people: somebody at a slot machine is not also queuing at a
+     * till, and neither of them is at home. Two systems each keeping their own
+     * idea of who is out is two systems that will each send the same person
+     * somewhere.
+     */
+    public static boolean out(net.minecraft.entity.Entity body) {
+        return body.getCommandTags().contains(TrapFloor.PUNTER_TAG)
+                || body.getCommandTags().contains(TrapShops.TAG);
+    }
+
+    /**
+     * Who is staying in, and until when.
+     *
+     * Shared by everything that sends somebody out, because a cooldown per
+     * errand is no cooldown at all -- a resident would finish at the shop and
+     * be walked straight into the casino, which is the same "they are never
+     * home" the casino found on its own. One person, one errand, then a while
+     * at home.
+     *
+     * ponytail: a map the size of the town, not saved. A restart lets
+     * everybody out again -- a fresh morning rather than a bug -- and entries
+     * are dropped as they expire.
+     */
+    private static final java.util.Map<UUID, Long> STAYING_IN = new java.util.HashMap<>();
+
+    /** Had their go. Send them in for a while. */
+    public static void stayIn(net.minecraft.entity.Entity body, long until) {
+        STAYING_IN.put(body.getUuid(), until);
+    }
+
+    /**
+     * The nearest resident who is free to be asked, or nobody.
+     *
+     * Nearest rather than first-found, which is what the entity list happens
+     * to hand back -- and it is what keeps the walk over short enough to be
+     * worth watching. Asked of the entity index by type rather than of a box,
+     * because a box this size is a thousand chunk columns to walk and the
+     * index is a list of what actually exists; a town of two dozen is two
+     * dozen things to look at.
+     */
+    public static net.minecraft.entity.passive.VillagerEntity freeResident(
+            ServerWorld world, BlockPos near, int range) {
+        net.minecraft.entity.passive.VillagerEntity nearest = null;
+        double closest = (double) range * range;
+        for (var villager : world.getEntitiesByType(
+                net.minecraft.entity.EntityType.VILLAGER,
+                found -> found.isAlive()
+                        && found.getCommandTags().contains(TENANT_TAG)
+                        && !out(found))) {
+            // Dropped as it expires rather than swept, which is the whole of
+            // this map's housekeeping.
+            Long until = STAYING_IN.get(villager.getUuid());
+            if (until != null) {
+                if (world.getTime() < until) {
+                    continue;
+                }
+                STAYING_IN.remove(villager.getUuid());
+            }
+            double away = villager.squaredDistanceTo(
+                    near.getX() + 0.5, near.getY() + 0.5, near.getZ() + 0.5);
+            if (away < closest) {
+                closest = away;
+                nearest = villager;
+            }
+        }
+        return nearest;
+    }
+
+    /**
+     * Their errand is over: back to the house they pay for.
+     *
+     * Walked if the walk is one a villager can actually plan, and put on their
+     * own doorstep if it is not. The errand brought them across town by
+     * standing them at a door; without the same courtesy in reverse they
+     * finish, fail to path home, and spend the next day strolling around
+     * whatever room they were left in.
+     */
+    public static void sendHome(ServerWorld world,
+                                net.minecraft.entity.passive.VillagerEntity body) {
+        Home home = homeOf(body);
+        if (home == null) {
+            return;
+        }
+        if (body.getBlockPos().isWithinDistance(home.anchor, WALK_HOME)) {
+            walkTo(body, home.anchor);
+            return;
+        }
+        BlockPos doorstep = TrapSpawn.near(world, home.anchor.up());
+        if (doorstep != null) {
+            body.refreshPositionAndAngles(doorstep,
+                    world.getRandom().nextFloat() * 360f, 0f);
+        }
     }
 
     /**
@@ -1458,7 +1690,11 @@ public final class TrapHomes {
             if (state == null) {
                 return false;
             }
-            if (state.isAir() || state.isOf(TrapContent.mailbox)) {
+            // The mailbox and the hospital sign are the two blocks a survey is
+            // taken FROM, so both have to read as air: a fill that starts
+            // inside a solid block never leaves it.
+            if (state.isAir() || state.isOf(TrapContent.mailbox)
+                    || state.isOf(TrapContent.hospital)) {
                 return true;
             }
             // Water is walkable to a flood fill and would run a house into the
@@ -1661,6 +1897,10 @@ public final class TrapHomes {
                         // till, not a stray tenant, and evicting one costs the
                         // owner a hire they paid for.
                         && !found.getCommandTags().contains(TrapShops.KEEPER_TAG)
+                        // Neither is somebody lying in a hospital bed, nor the
+                        // doctor the city is paying to stand over them.
+                        && !found.getCommandTags().contains(TrapHospitals.PATIENT_TAG)
+                        && !found.getCommandTags().contains(TrapHospitals.DOCTOR_TAG)
                         && !TrapCrew.isHand(found.getUuid()))) {
             double away = villager.squaredDistanceTo(who);
             if (away <= closest) {
@@ -1676,8 +1916,32 @@ public final class TrapHomes {
         return name + " has been put out. Their house wasn't on the register.";
     }
 
+    /**
+     * A day of being ill with nobody treating it.
+     *
+     * Straight at the mood rather than at the target, on purpose: the target
+     * is what the BUILDING is worth and a bite is not the landlord's fault.
+     * This is a bad week that the house has to make up for afterwards, and it
+     * evicts through the ordinary door if it goes on long enough.
+     */
+    static void sicken(Home home, int cost) {
+        home.mood = Math.max(0, home.mood - cost);
+        save();
+    }
+
+    /** Somebody is back from the ward: put a body in the house for them now. */
+    static void backFromTheWard(ServerWorld world, Home home) {
+        if (loaded(world, home)) {
+            keepBodies(world, home);
+        }
+    }
+
     /** Put the tenant out and take their whole household with them. */
     private static void evict(ServerWorld world, Home home) {
+        // Anybody of theirs in a hospital bed leaves it with them. A patient
+        // whose house is gone is a body nothing owns and a bill nobody is
+        // getting a resident back for.
+        TrapHospitals.forget(world, home.id);
         if (home.body != null && world.getEntity(home.body) != null) {
             world.getEntity(home.body).discard();
         }
@@ -1811,10 +2075,11 @@ public final class TrapHomes {
                                     : "  grade " + home.tier)
                             .formatted(home.tier == 0 ? Formatting.RED : Formatting.GREEN))
                     .append(Text.literal(home.tenant == null ? "  empty"
-                                    : "  " + home.tenant + " (" + home.mood + ")")
+                                    : "  " + home.tenant + " (" + home.mood + ")"
+                                    + (leaving(home) ? " leaving" : ""))
                             .formatted(home.tenant == null ? Formatting.DARK_GRAY
-                                    : home.mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED
-                                    : Formatting.AQUA))
+                                    : leaving(home) || home.mood < HomeSurvey.MOOD_LEAVING
+                                    ? Formatting.RED : Formatting.AQUA))
                     .append(Text.literal("  " + home.anchor.getX() + " " + home.anchor.getY()
                                     + " " + home.anchor.getZ())
                             .formatted(Formatting.DARK_GRAY)), false);
