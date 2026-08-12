@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -85,6 +86,81 @@ class SurveyTest {
                 }
             }
             throw new IllegalStateException("no anchor '" + anchor + "' in the plan");
+        }
+    }
+
+    /**
+     * A drawing with storeys: levels[y], then row z, then character x.
+     *
+     * The flat {@link Plan} answers every vertical question with "wall", which
+     * is what makes it a clean test of the fill and useless for the two things
+     * that are ABOUT the vertical: a wardrobe standing floor to ceiling, and a
+     * balcony with the sky over it and a drop off the end.
+     *
+     * <pre>
+     *   #  solid   .  air   D  door   F  furniture   @  the anchor
+     * </pre>
+     *
+     * Below the bottom level is bedrock and above the top one is sky. Off the
+     * sides, each level repeats its own character from {@code beyond} -- so a
+     * level of ground can go on forever while the one above it is open air,
+     * which is the whole difference between a terrace and a field.
+     */
+    private static final class Tower implements HomeSurvey.Space {
+        private final String beyond;
+        private final String[][] levels;
+
+        Tower(String beyond, String[]... levels) {
+            this.beyond = beyond;
+            this.levels = levels;
+        }
+
+        private char at(int x, int y, int z) {
+            if (y < 0) {
+                return '#';
+            }
+            if (y >= levels.length) {
+                return '.';
+            }
+            String[] rows = levels[y];
+            if (z < 0 || z >= rows.length) {
+                return beyond.charAt(y);
+            }
+            String row = rows[z];
+            return x < 0 || x >= row.length() ? beyond.charAt(y) : row.charAt(x);
+        }
+
+        @Override
+        public boolean open(int x, int y, int z) {
+            char c = at(x, y, z);
+            return c == '.' || c == '@';
+        }
+
+        @Override
+        public boolean door(int x, int y, int z) {
+            return at(x, y, z) == 'D';
+        }
+
+        @Override
+        public boolean taken(int x, int y, int z) {
+            return at(x, y, z) == 'X';
+        }
+
+        @Override
+        public boolean prop(int x, int y, int z) {
+            return at(x, y, z) == 'F';
+        }
+
+        HomeSurvey.Rooms survey() {
+            for (int y = 0; y < levels.length; y++) {
+                for (int z = 0; z < levels[y].length; z++) {
+                    int x = levels[y][z].indexOf('@');
+                    if (x >= 0) {
+                        return HomeSurvey.survey(this, x, y, z);
+                    }
+                }
+            }
+            throw new IllegalStateException("no anchor in the plan");
         }
     }
 
@@ -220,6 +296,119 @@ class SurveyTest {
         assertTrue(found.sealed());
         assertEquals(0, found.exits().size(), "no way out at all, so no front door");
         assertTrue(found.floor() > 140, "the big room merged, got " + found.floor());
+    }
+
+    // --- furniture is floor ---------------------------------------------------
+
+    /**
+     * A wardrobe standing floor to ceiling does not take that square off you.
+     *
+     * The fill goes OVER a chest, so in a tall room the square above it was
+     * counted and nobody ever noticed. In a two-high room there is no square
+     * above it, and furnishing the place quietly made it smaller -- which is
+     * exactly backwards.
+     */
+    @Test
+    void furnitureToTheCeilingStillCounts() {
+        String[] storey = {
+                "#####",
+                "#@F.#",
+                "#...#",
+                "#####"};
+        HomeSurvey.Rooms found = new Tower("...",
+                new String[]{"#####", "#####", "#####", "#####"},   // the floor
+                storey,                                             // knees
+                storey,                                             // head
+                new String[]{"#####", "#####", "#####", "#####"}    // the ceiling
+        ).survey();
+
+        assertTrue(found.sealed());
+        assertEquals(6, found.floor(), "three by two, furniture and all -- it was 5");
+        assertEquals(2, found.props().size(), "both halves of the wardrobe");
+    }
+
+    // --- balconies ------------------------------------------------------------
+
+    /**
+     * A platform in the air with a house on one end and a balcony on the other.
+     *
+     * @param ground what lies off the edge of the platform: '.' is a drop, '#'
+     *               is the rest of the world's ground going on forever
+     */
+    private static Tower withBalcony(char ground) {
+        String[] platform = {
+                "########...",
+                "##########.",
+                "##########.",
+                "########...",
+                "########...",
+                "########..."};
+        // Everything the platform does NOT cover is the drop, or the rest of
+        // the world's ground -- which is the only difference between the two
+        // plans and the only thing these two tests are about.
+        for (int z = 0; z < platform.length; z++) {
+            platform[z] = platform[z].replace('.', ground);
+        }
+        return new Tower(ground + "..",
+                platform,
+                new String[]{          // the storey, and the balcony floor
+                        "########...",
+                        "#......#...",
+                        "#..@...D...",
+                        "#......#...",
+                        "#......#...",
+                        "########..."},
+                new String[]{          // roof over the house, sky over the balcony
+                        "########...",
+                        "########...",
+                        "########...",
+                        "########...",
+                        "########...",
+                        "########..."});
+    }
+
+    @Test
+    void aBalconyCountsTowardsTheHouse() {
+        HomeSurvey.Rooms found = withBalcony('.').survey();
+
+        assertTrue(found.sealed(), "the house is still sealed; the balcony is outside it");
+        assertEquals(1, found.exits().size(), "the balcony door is still a way in");
+        assertEquals(24, found.indoors(), "six by four of actual house");
+        assertEquals(4, found.terrace().size(), "two by two of balcony, and the drop past it");
+        assertEquals(28, found.floor());
+    }
+
+    /** The same house on flat ground has a doorstep, not a terrace. */
+    @Test
+    void theGroundOutsideIsNotABalcony() {
+        HomeSurvey.Rooms found = withBalcony('#').survey();
+
+        assertTrue(found.sealed());
+        assertEquals(0, found.terrace().size(), "the world is not somebody's patio");
+        assertEquals(24, found.floor());
+    }
+
+    /**
+     * A ring of fence is an afternoon and a storey is a week, so outdoor floor
+     * is only ever worth a share of what is already built.
+     */
+    @Test
+    void aBalconyIsWorthAShareOfTheHouse() {
+        Set<Long> inside = new java.util.HashSet<>();
+        for (int x = 0; x < 8; x++) {
+            inside.add(HomeSurvey.cell(x, 1, 0));
+        }
+        Set<Long> terrace = new java.util.HashSet<>();
+        for (int x = 0; x < 20; x++) {
+            terrace.add(HomeSurvey.cell(x, 1, 5));
+        }
+        HomeSurvey.Rooms found = new HomeSurvey.Rooms(inside, Set.of(), terrace,
+                List.of(), true, false, 0L, false);
+
+        assertEquals(8, found.indoors());
+        assertEquals(8 / HomeSurvey.TERRACE_SHARE, found.decking(),
+                "twenty squares of decking on an eight-square shack is still a shack");
+        assertEquals(10, found.floor());
     }
 
     // --- the grade ------------------------------------------------------------

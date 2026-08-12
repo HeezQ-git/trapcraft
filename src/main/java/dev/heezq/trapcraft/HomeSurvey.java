@@ -49,7 +49,7 @@ import java.util.Set;
  */
 public final class HomeSurvey {
 
-    /** The world, reduced to the three questions a survey asks about a block. */
+    /** The world, reduced to the questions a survey asks about a block. */
     public interface Space {
         /** Can the fill expand into it: air, or something you can stand in. */
         boolean open(int x, int y, int z);
@@ -59,6 +59,17 @@ public final class HomeSurvey {
 
         /** Inside somebody else's claim. */
         boolean taken(int x, int y, int z);
+
+        /**
+         * Furniture: a thing somebody PUT in the room rather than built it of.
+         *
+         * A wall to the fill, like any other solid block, and floor space to
+         * the count -- see {@link Rooms#floor()}. Defaulted so a drawing that
+         * has no furniture in it need not answer.
+         */
+        default boolean prop(int x, int y, int z) {
+            return false;
+        }
     }
 
     /** Blocks one room may hold before the survey calls it "not sealed". */
@@ -79,6 +90,16 @@ public final class HomeSurvey {
     public static final int PROBE_CAP = 1024;
     /** Blocks every probe of one house may look at between them. */
     public static final int TOTAL_CAP = 16384;
+    /**
+     * Squares a balcony may cover before it is simply the ground outside.
+     *
+     * Ninety-six is a nine by ten terrace, which is a big one, and a long way
+     * short of a garden. The number is doing one job: telling a floor
+     * somebody built from a floor that was already there.
+     */
+    public static final int TERRACE_CAP = 96;
+    /** A balcony is worth up to this fraction of the house it hangs off. */
+    public static final int TERRACE_SHARE = 4;
 
     private HomeSurvey() {
     }
@@ -110,15 +131,24 @@ public final class HomeSurvey {
     /**
      * What one right-click of a mailbox found.
      *
-     * @param inside every position that counts as floor space
-     * @param exits  doors whose probe escaped -- the way in from the street
-     * @param sealed false if the fill leaked; everything else is then noise
-     * @param clash  the fill ran into another house's claim
+     * @param inside  every open position that counts as floor space
+     * @param props   furniture standing in those rooms, which counts too
+     * @param terrace balconies: open air the house has its arms round
+     * @param exits   doors whose probe escaped -- the way in from the street
+     * @param sealed  false if the fill leaked; everything else is then noise
+     * @param clash   the fill ran into another house's claim
      */
-    public record Rooms(Set<Long> inside, List<Long> exits, boolean sealed, boolean clash,
-                        long escape, boolean buried) {
+    public record Rooms(Set<Long> inside, Set<Long> props, Set<Long> terrace, List<Long> exits,
+                        boolean sealed, boolean clash, long escape, boolean buried) {
+        /** Is the square under this one part of the same house? */
+        private boolean rests(long at) {
+            long under = cell(cellX(at), cellY(at) - 1, cellZ(at));
+            return inside.contains(under) || props.contains(under);
+        }
+
         /**
-         * Squares you could stand on. Every storey counts, headroom does not.
+         * Squares you could stand on under the roof. Every storey counts,
+         * headroom does not.
          *
          * Was distinct COLUMNS, which quietly said that building upwards is
          * worth nothing: a three-storey tower on a six by six footprint
@@ -127,20 +157,70 @@ public final class HomeSurvey {
          * something solid under it is a floor tile, so a staircase adds a
          * whole storey and a high ceiling adds nothing -- which is the way
          * round anybody would count it by eye.
+         *
+         * Furniture is counted with the air. A chest is not open, so the fill
+         * goes over the top of it and the square ABOVE the chest is what used
+         * to be counted -- fine in a tall room and worth nothing in a low one,
+         * where a wardrobe or a stack of barrels reaching the ceiling took its
+         * square off you for the crime of being furnished. The square under
+         * the chest is floor; something is standing on it.
          */
-        public int floor() {
+        public int indoors() {
             int tiles = 0;
             for (long at : inside) {
-                if (!inside.contains(cell(cellX(at), cellY(at) - 1, cellZ(at)))) {
+                if (!rests(at)) {
+                    tiles++;
+                }
+            }
+            for (long at : props) {
+                if (!rests(at)) {
                     tiles++;
                 }
             }
             return tiles;
         }
+
+        /**
+         * Balcony squares that actually count, which is a share of the house
+         * and never more.
+         *
+         * Outdoor floor is cheap -- a ring of fence is an afternoon and a
+         * storey is a week -- so it is worth a quarter of what you have
+         * already built and nothing on its own. A mansion gets a terrace; a
+         * shack with an acre of paddock round it gets a shack.
+         */
+        public int decking() {
+            return Math.min(terrace.size(), indoors() / TERRACE_SHARE);
+        }
+
+        /** Everything the house is measured on. */
+        public int floor() {
+            return indoors() + decking();
+        }
+
+        /**
+         * Every square the house holds, for the claim it puts on the ground.
+         *
+         * Furniture is deliberately NOT in here. A chest against a party wall
+         * sits one block outside the room, so counting it would push the claim
+         * box into the wall itself -- and two flats that share a wall would
+         * then each claim it and stop being able to exist side by side, which
+         * is a shape this design goes out of its way to allow. A balcony is
+         * the opposite case: it is ground nobody else should be able to build
+         * on, so it belongs in the box.
+         */
+        public Set<Long> claimed() {
+            if (terrace.isEmpty()) {
+                return inside;
+            }
+            Set<Long> all = new HashSet<>(inside);
+            all.addAll(terrace);
+            return all;
+        }
     }
 
     private static final Rooms CLASHED =
-            new Rooms(Set.of(), List.of(), false, true, 0L, false);
+            new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, true, 0L, false);
 
     /**
      * It leaked, and WHERE it leaked.
@@ -151,7 +231,7 @@ public final class HomeSurvey {
      * of whatever gap it went through.
      */
     private static Rooms leaked(long escape) {
-        return new Rooms(Set.of(), List.of(), false, false, escape, false);
+        return new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, false, escape, false);
     }
 
     /** What one fill did: closed on itself, ran out of room, or hit a claim. */
@@ -174,7 +254,8 @@ public final class HomeSurvey {
             // Not a hole. Somebody built over the spot this was measured from,
             // which is a completely different problem and used to be reported
             // as the same one.
-            return new Rooms(Set.of(), List.of(), false, false, cell(ax, ay, az), true);
+            return new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, false,
+                    cell(ax, ay, az), true);
         }
 
         Set<Long> visited = new HashSet<>();
@@ -188,6 +269,7 @@ public final class HomeSurvey {
         }
 
         List<Long> exits = new ArrayList<>();
+        Set<Long> terrace = new HashSet<>();
         Deque<Long> queue = new ArrayDeque<>(doors);
         Set<Long> probed = new HashSet<>();
         int spent = 0;
@@ -218,13 +300,103 @@ public final class HomeSurvey {
             }
             if (probe == CAPPED) {
                 exits.add(door);
+                // The probe went to the sky, so whatever is out there is not a
+                // room. It can still be a balcony -- see terrace().
+                terrace.addAll(terrace(space, door, ax, ay, az, inside, terrace));
                 continue;
             }
             inside.addAll(room);
             queue.addAll(beyond);
         }
 
-        return new Rooms(inside, exits, true, false, 0L, false);
+        return new Rooms(inside, props(space, inside), terrace, exits, true, false, 0L, false);
+    }
+
+    /**
+     * The furniture the rooms have their arms round.
+     *
+     * A pass over what the fill already found rather than a job for the fill
+     * itself: furniture is a wall as far as walking through it goes, and the
+     * only question left is whether the wall is a wall or a wardrobe. Every
+     * solid block touching a room gets asked once.
+     */
+    private static Set<Long> props(Space space, Set<Long> inside) {
+        Set<Long> props = new HashSet<>();
+        for (long at : inside) {
+            int x = cellX(at);
+            int y = cellY(at);
+            int z = cellZ(at);
+            for (int side = 0; side < 6; side++) {
+                int nx = x + (side == 0 ? 1 : side == 1 ? -1 : 0);
+                int ny = y + (side == 2 ? 1 : side == 3 ? -1 : 0);
+                int nz = z + (side == 4 ? 1 : side == 5 ? -1 : 0);
+                long next = cell(nx, ny, nz);
+                if (!inside.contains(next) && !props.contains(next)
+                        && space.prop(nx, ny, nz)) {
+                    props.add(next);
+                }
+            }
+        }
+        return props;
+    }
+
+    /**
+     * A balcony, from the door that opens onto it.
+     *
+     * One storey, flat, four ways -- because a balcony is a floor and not a
+     * room, and the thing that bounds it is a railing you can see over rather
+     * than a wall. Two rules do all the work and neither of them is a
+     * special case:
+     *
+     * <ul>
+     *   <li>a square must be OPEN, so a fence, a wall or a hedge stops it;
+     *   <li>a square must have something UNDER it, so a ledge with nothing
+     *       but air past it stops it as surely as a railing does.
+     * </ul>
+     *
+     * Which is why an unrailed balcony jutting off the first floor closes on
+     * its own, and why a front door onto flat ground does not: the ground
+     * holds the fill up all the way to {@link #TERRACE_CAP}, at which point
+     * this is plainly the outdoors and worth nothing. The house gets a
+     * terrace when it has built one, not when it happens to have a door.
+     */
+    private static Set<Long> terrace(Space space, long door, int ax, int ay, int az,
+                                     Set<Long> inside, Set<Long> already) {
+        int y = cellY(door);
+        Set<Long> found = new HashSet<>();
+        Set<Long> seen = new HashSet<>();
+        Deque<Long> queue = new ArrayDeque<>();
+        queue.add(door);
+        seen.add(door);
+
+        while (!queue.isEmpty()) {
+            long at = queue.poll();
+            int x = cellX(at);
+            int z = cellZ(at);
+            for (int side = 0; side < 4; side++) {
+                int nx = x + (side == 0 ? 1 : side == 1 ? -1 : 0);
+                int nz = z + (side == 2 ? 1 : side == 3 ? -1 : 0);
+                if (Math.abs(nx - ax) > SPAN || Math.abs(nz - az) > SPAN) {
+                    return Set.of();   // reaches the edge of the claim: outdoors
+                }
+                long next = cell(nx, y, nz);
+                if (!seen.add(next) || inside.contains(next) || already.contains(next)) {
+                    continue;
+                }
+                if (space.taken(nx, y, nz)) {
+                    return Set.of();   // the neighbours' garden, not a balcony
+                }
+                if (!space.open(nx, y, nz) || space.open(nx, y - 1, nz)) {
+                    continue;          // a railing, or the drop past the end of it
+                }
+                found.add(next);
+                if (found.size() > TERRACE_CAP) {
+                    return Set.of();   // this is a field with a house in it
+                }
+                queue.add(next);
+            }
+        }
+        return found;
     }
 
     /** The square the fill got furthest from home. Through the hole, if there is one. */

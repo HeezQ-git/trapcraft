@@ -358,7 +358,7 @@ public final class TrapGuide {
                 .append(body("Put a SHOP TILL down. That's the shop.\n\n"))
                 .append(body("Shelves within " + TrapShops.REACH
                         + " blocks join it on their own.\n\n"))
-                .append(hint("Stock any chest under the till or a shelf."))));
+                .append(hint("Open a shelf and fill it. That's the stock."))));
 
         pages.add(page(Text.empty()
                 .append(title("1e4. A SHOPKEEPER\n\n"))
@@ -513,11 +513,11 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("10. SIZE IS A LIMIT\n\n"))
-                .append(body("A small room cannot be a high grade, however "
-                        + "nicely you build it.\n\n"))
-                .append(body("The floor you stand on decides the best grade "
-                        + "you can reach.\n\n"))
-                .append(hint("Every floor of a tall house counts."))));
+                .append(body("However nicely you build it, a small room is a "
+                        + "low grade.\n\n"))
+                .append(body("Every storey counts. So does the square under "
+                        + "a chest.\n\n"))
+                .append(hint("A balcony counts too."))));
 
         // Padded rather than joined with spaces: 9 and 560 are different
         // widths, so a plain concatenation walks the right-hand column

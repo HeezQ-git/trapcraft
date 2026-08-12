@@ -519,7 +519,7 @@ public final class TrapHomes {
             return "There's no way in. A door to the outside, please.";
         }
 
-        int[] box = HomeSurvey.bounds(rooms.inside());
+        int[] box = HomeSurvey.bounds(rooms.claimed());
         String dimension = world.getRegistryKey().getValue().toString();
         for (Home other : HOMES) {
             if (other.dimension.equals(dimension) && HomeSurvey.overlaps(box, other.box)) {
@@ -602,7 +602,7 @@ public final class TrapHomes {
             // Only when the survey succeeded. A house that failed keeps the
             // box it had, so a wall knocked through for one pass does not hand
             // its ground to the next person who builds nearby.
-            home.box = HomeSurvey.bounds(rooms.inside());
+            home.box = HomeSurvey.bounds(rooms.claimed());
         }
         if (was != home.tier) {
             save();
@@ -1469,6 +1469,25 @@ public final class TrapHomes {
                 return false;
             }
             return state.getCollisionShape(world, new BlockPos(x, y, z)).isEmpty();
+        }
+
+        /**
+         * A block entity, which is very nearly the definition of furniture.
+         *
+         * Chests, barrels, beds, furnaces, signs, lecterns, campfires, flower
+         * pots, banners and every modded machine and cabinet on the pack have
+         * one; walls, floors and ceilings do not. It is one question instead
+         * of a list of two hundred blocks, and it stays right when the pack
+         * grows.
+         *
+         * ponytail: a crafting table and a bookshelf are furniture with no
+         * block entity, so a column of them floor-to-ceiling still measures
+         * nothing. Name them here if anybody ever notices.
+         */
+        @Override
+        public boolean prop(int x, int y, int z) {
+            BlockState state = stateAt(x, y, z);
+            return state != null && state.hasBlockEntity();
         }
 
         @Override
