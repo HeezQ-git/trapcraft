@@ -2,9 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    " AC",
-    " RA",
-    "R  "
+    " CC",
+    " RC",
+    "RA "
   ],
   "key": {
     "A": "minecraft:amethyst_shard",

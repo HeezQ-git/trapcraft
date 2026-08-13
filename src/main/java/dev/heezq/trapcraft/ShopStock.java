@@ -538,23 +538,25 @@ public final class ShopStock {
     /**
      * The wand rack, priced as the thing you are saving for.
      *
-     * A fat contract pays a couple of hundred, so the cheap one is a good month
-     * and the storm wand is a season. That is deliberate: every other shelf can
-     * be undercut by going and getting the stuff yourself, and this one is the
-     * only place emeralds buy something emeralds are the only route to.
+     * These shipped at 4,500e to 18,000e and that was wrong: the players they
+     * are for were sitting on 30-50k, so the whole rack cost about one stash
+     * and the most powerful items in the mod were an afternoon's pocket money.
+     * Re-cut so the cheapest is a real dent in a rich player's savings and the
+     * storm wand is several times anybody's, which is the only way a sink
+     * works on people who have already won the earning game.
      *
      * The shop does not buy them back at any price -- see TrapScrap.refusal.
-     * Each of these can be crafted from a nether star or a recovery compass,
-     * and a counter that paid half of eighteen thousand for one would be a
-     * crafting table with a mint attached.
+     * Each of these can also be crafted, so the recipes carry one to three of
+     * something that has to be fought for (see WANDS in gen_assets.py); a wand
+     * off one nether star would make this shelf decoration.
      */
     private static void wands() {
         Category c = MAGIC;
-        add(c, "trapcraft:boost_wand", 1, 4500);
-        add(c, "trapcraft:harvest_wand", 1, 7000);
-        add(c, "trapcraft:prospect_wand", 1, 9000);
-        add(c, "trapcraft:builder_wand", 1, 13000);
-        add(c, "trapcraft:storm_wand", 1, 18000);
+        add(c, "trapcraft:boost_wand", 1, 25000);
+        add(c, "trapcraft:harvest_wand", 1, 40000);
+        add(c, "trapcraft:prospect_wand", 1, 55000);
+        add(c, "trapcraft:builder_wand", 1, 80000);
+        add(c, "trapcraft:storm_wand", 1, 120000);
     }
 
     /**

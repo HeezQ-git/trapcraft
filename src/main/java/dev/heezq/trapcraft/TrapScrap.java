@@ -46,9 +46,9 @@ public final class TrapScrap {
             return "to całe kasyno";
         }
         // The wands are the one thing the market sells and will not take back.
-        // Every one of them can be crafted from a nether star or a recovery
-        // compass, and buying that at 1,400e to sell the wand made from it at
-        // half of eighteen thousand is a crafting table with a mint attached.
+        // Every one of them can be crafted from nether stars or recovery
+        // compasses, and buying those to sell the wand made from them at half
+        // of six figures is a crafting table with a mint attached.
         if (stack.getItem() instanceof WandItem) {
             return "różdżki nie wracają na półkę";
         }

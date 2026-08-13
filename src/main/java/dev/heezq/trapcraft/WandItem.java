@@ -66,9 +66,10 @@ public class WandItem extends Item implements PolymerItem {
         BOOST, HARVEST, PROSPECT, BUILDER, STORM;
 
         /**
-         * Two lines on the stack itself, so the wand explains itself wherever
-         * it is looked at: in a hand, in a chest, and on the shelf where
-         * somebody is deciding whether it is worth eighteen thousand.
+         * Three lines on the stack itself -- what it does, how you use it, how
+         * often -- so the wand explains itself wherever it is looked at: in a
+         * hand, in a chest, and on the shelf where somebody is deciding
+         * whether it is worth a hundred and twenty thousand.
          *
          * The figures come from the constants below rather than being typed
          * out again, for the same reason the guide book reads them: a tooltip
@@ -77,21 +78,45 @@ public class WandItem extends Item implements PolymerItem {
         public List<Text> blurb() {
             return switch (this) {
                 case BOOST -> lines("Rzuca cię tam, gdzie patrzysz.",
-                        "Skradanie: przeskok o " + BLINK_RANGE + " bloków.");
+                        "Skradanie: przeskok o " + BLINK_RANGE + " bloków.",
+                        every(DASH_COOLDOWN) + ", przeskok co " + secs(BLINK_COOLDOWN) + ".");
                 case HARVEST -> lines("Zbiera dojrzałe plony "
                                 + (HARVEST_RADIUS * 2 + 1) + "x" + (HARVEST_RADIUS * 2 + 1)
                                 + " wokół ciebie.",
-                        "Sadzi je z powrotem, plon idzie do plecaka.");
+                        "Sadzi je z powrotem, plon idzie do plecaka.",
+                        every(HARVEST_COOLDOWN) + ".");
                 case PROSPECT -> lines("Podświetla rudy w promieniu "
                                 + PROSPECT_RADIUS + " bloków.",
-                        "Przez kamień. Widzisz je tylko ty.");
+                        "Przez kamień. Widzisz je tylko ty.",
+                        every(PROSPECT_COOLDOWN) + ".");
                 case BUILDER -> lines("Dokłada do " + BUILDER_REACH
                                 + " takich samych bloków w bok.",
-                        "Bierze je z twojego plecaka.");
+                        "Bierze je z twojego plecaka.",
+                        every(BUILDER_COOLDOWN) + ".");
                 case STORM -> lines("Piorun tam, gdzie patrzysz. Zasięg "
                                 + STORM_RANGE + " bloków.",
-                        "Nie podpala. Bije tylko potwory.");
+                        "Nie podpala. Bije tylko potwory.",
+                        every(STORM_COOLDOWN) + ".");
             };
+        }
+
+        /**
+         * "Raz na 15 s".
+         *
+         * The cooldown is drawn on the item as a sweep, which tells you that
+         * you are waiting but never how long for -- and how long for is the
+         * whole question when you are deciding whether the thing is worth
+         * five figures.
+         */
+        private static String every(int ticks) {
+            return "Raz na " + secs(ticks);
+        }
+
+        private static String secs(int ticks) {
+            float seconds = ticks / 20.0f;
+            return (seconds == Math.round(seconds)
+                    ? String.valueOf(Math.round(seconds))
+                    : String.valueOf(seconds).replace('.', ',')) + " s";
         }
 
         /**
@@ -139,7 +164,15 @@ public class WandItem extends Item implements PolymerItem {
     public static final float STORM_DAMAGE = 12.0F;
     /** Everything hostile this close to the strike takes it too. */
     public static final double STORM_SPLASH = 3.5;
-    public static final int STORM_COOLDOWN = 160;
+    /**
+     * Fifteen seconds, up from eight.
+     *
+     * Six hearts in an area, from forty blocks away, through a wall, on a
+     * count of eight is not a wand -- it is a turret, and it makes every mob
+     * in the game somebody else's problem. Long enough now that a fight is
+     * still a fight and the wand is what opens it.
+     */
+    public static final int STORM_COOLDOWN = 300;
 
     private final Kind kind;
     private final Identifier model;
@@ -239,7 +272,7 @@ public class WandItem extends Item implements PolymerItem {
      * Walked out in half blocks with the player's own hitbox rather than
      * raycast-and-hope: a ray finds the wall's face, which is exactly where you
      * must NOT land, and the difference between the two is a suffocating player
-     * asking for their 4,500 emeralds back.
+     * asking for their twenty-five thousand emeralds back.
      */
     private static int blink(ServerWorld world, ServerPlayerEntity player) {
         Vec3d from = player.getPos();

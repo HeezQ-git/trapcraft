@@ -1,3 +1,6 @@
 {
-  "parent": "trapcraft:block/builder_wand"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "trapcraft:item/builder_wand"
+  }
 }

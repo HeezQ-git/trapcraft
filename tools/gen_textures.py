@@ -2050,9 +2050,14 @@ yyyyyyyyyyyyyyyy
 
 # --- wands ------------------------------------------------------------------
 #
-# One shaft, one grip and one gem shape, recoloured five ways. They are a
-# family and should read as one from across a hotbar: what tells a boost wand
-# from a storm wand is the colour of the stone in the head, not a redraw.
+# One sprite, recoloured five ways. They are a family and should read as one
+# from across a hotbar: what tells a boost wand from a storm wand is the colour
+# of the stone in the head, not a redraw.
+#
+# Flat, on the same diagonal as a stick or a blaze rod, rather than the 3D
+# model these shipped with first. A wand is a stick with something on the end
+# and it reads better as one -- and it puts the gem where the eye already looks
+# for a tool's business end.
 
 WAND_PAL = {
     "w": "#3b2a1c",     # wand wood, shadow
@@ -2065,72 +2070,38 @@ WAND_PAL = {
     "s": "#c8b98a",     # binding thread
 }
 
-WAND_SHAFT = """
-WWHHWWWWHHWWWWHH
-WWHHWWnnHHWWWWHH
-WWHHWWnnHHWWWWHH
-wwWWWWWWWWWWWWww
-WWHHWWWWHHWWWWHH
-WWHHWWWWHHWWnnHH
-wwWWWWWWWWWWWWww
-WWHHWWnnHHWWWWHH
-WWHHWWnnHHWWWWHH
-wwWWWWWWWWWWWWww
-WWHHWWWWHHWWWWHH
-WWHHWWWWHHWWnnHH
-WWHHWWWWHHWWnnHH
-wwWWWWWWWWWWWWww
-WWHHWWWWHHWWWWHH
-WWHHWWWWHHWWWWHH
-"""
-
-WAND_GRIP = """
-LLTTLLLLTTLLLLTT
-llLLllllLLllllLL
-ssssssssssssssss
-LLTTLLLLTTLLLLTT
-LLTTLLLLTTLLLLTT
-llLLllllLLllllLL
-ssssssssssssssss
-LLTTLLLLTTLLLLTT
-LLTTLLLLTTLLLLTT
-llLLllllLLllllLL
-ssssssssssssssss
-LLTTLLLLTTLLLLTT
-LLTTLLLLTTLLLLTT
-llLLllllLLllllLL
-ssssssssssssssss
-LLTTLLLLTTLLLLTT
-"""
-
-# The gem, cut so the light sits top-left. Rendered once per wand with the
-# three colours swapped, which is why the map itself is colourless.
-WAND_GEM = """
-ggggGGGGGGGGgggg
-gggGGGGGGGGGGggg
-ggGGGGBBBBGGGGgg
-gGGGGBBBBBBGGGGg
-GGGGBBBBBBBBGGGG
-GGGBBBBBBBBBBGGG
-GGBBBBddddBBBBGG
-GGBBBBddddBBBBGG
-GGBBBBddddBBBBGG
-GGBBBBddddBBBBGG
-GGGBBBBBBBBBBGGG
-GGGGBBBBBBBBGGGG
-gGGGGBBBBBBGGGGg
-ggGGGGBBBBGGGGgg
-gggGGGGGGGGGGggg
-ggggGGGGGGGGgggg
+# Gem at the tip, wrapped grip at the butt, on the stick diagonal. Rendered
+# once per wand with the three stone colours swapped, which is why the map
+# itself is colourless.
+WAND = """
+................
+..........GGG...
+.........GBBBG..
+........GBdddBG.
+........GBdddBG.
+.........GBBBG..
+.........HW.....
+........HW......
+.......HW.......
+......HW........
+.....HW.........
+....TL..........
+...TL...........
+..TL............
+.wW.............
+................
 """
 
 # lit face, body, core -- in that order, per wand.
 WAND_GEMS = {
     "boost": ("#d8f4ff", "#6fd0f0", "#2b7fa8"),      # wind and cold light
     "harvest": ("#e6f9a8", "#8fd44a", "#3f7a22"),    # a field in July
-    "prospect": ("#ffe9a8", "#e0a93c", "#8a5a15"),   # lamplight on ore
+    "prospect": ("#ffcf8a", "#d9822b", "#7a3d0a"),   # lamplight on ore
     "builder": ("#dccfff", "#9a7ce0", "#4b3287"),    # amethyst, near enough
-    "storm": ("#fff6c9", "#f2c53d", "#8a4a12"),      # the flash, held still
+    # White-hot in the middle rather than dark: at 16px a gold stone with a
+    # brown heart is the prospecting one, and two wands that look alike in a
+    # hotbar are two wands somebody casts by mistake.
+    "storm": ("#fff08a", "#ffd21f", "#fffbe0"),      # the flash, held still
 }
 
 
@@ -3589,11 +3560,9 @@ def main() -> None:
     write(render(SLOT_SCREEN, SLOT_PAL), "block", "slot_screen.png")
     write(render(SLOT_TRIM, SLOT_PAL), "block", "slot_trim.png")
     write(render(SLOT_DECK, SLOT_PAL), "block", "slot_deck.png")
-    write(render(WAND_SHAFT, WAND_PAL), "item", "wand_shaft.png")
-    write(render(WAND_GRIP, WAND_PAL), "item", "wand_grip.png")
     for wand, (lit, body, core) in WAND_GEMS.items():
-        write(render(WAND_GEM, {"G": lit, "B": body, "d": core, "g": core}),
-              "item", f"wand_gem_{wand}.png")
+        write(render(WAND, dict(WAND_PAL, G=lit, B=body, d=core)),
+              "item", f"{wand}_wand.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

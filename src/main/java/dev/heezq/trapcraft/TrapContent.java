@@ -378,8 +378,8 @@ public final class TrapContent {
      * The five wands.
      *
      * EPIC rarity and a forced glint because these are the most expensive
-     * things on the market by a factor of four, and an 18,000e item that reads
-     * as a grey stick in a chest is an 18,000e item nobody believes in.
+     * things on the market by a factor of twelve, and a 120,000e item that
+     * reads as a grey stick in a chest is a 120,000e item nobody believes in.
      * Unstackable: each one is a purchase, not a supply.
      */
     private static void registerWands() {

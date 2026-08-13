@@ -489,6 +489,14 @@ def gather() -> None:
     # so the page would have advertised a market a third the size of the real
     # one. check_stock.py already expands those loops; borrow it.
     DATA["declared_lines"] = len(check_stock.catalogue(stock))
+    # The wand shelf, read off the catalogue rather than typed: it is the one
+    # shelf whose PRICE is the feature, so a page quoting a stale one is worse
+    # than a page that never mentioned it.
+    wands = [int(p) for p in re.findall(r'add\(c, "trapcraft:\w+_wand", 1, (\d+)\)', stock)]
+    # Grouped with a space, not a comma: these are the only five-figure prices
+    # on the page and 120,000 reads as a decimal to a Polish eye.
+    DATA["wand_low"] = f"{min(wands):,}".replace(",", " ")
+    DATA["wand_high"] = f"{max(wands):,}".replace(",", " ")
 
 
 def band_top(tier: int) -> int:
@@ -946,7 +954,13 @@ def build() -> str:
     ostatnich godzin, a nie pierwszy dzień. Dobry tydzień staje się nową normą, zamiast
     zostawiać wszystko drogie na zawsze.</p>
     <p class="note">Lada odkupuje po {round(d['sell_rate'] * 100)}% — celowo z dużym spreadem.
-    Sklep NPC to wygoda, nie źródło dochodu.</p>"""))
+    Sklep NPC to wygoda, nie źródło dochodu.</p>
+    <p>Na samym końcu półek stoją <strong>różdżki</strong>: pięć sztuk od
+    {d["wand_low"]}e do {d["wand_high"]}e — pęd i przeskok, żniwa całego pola,
+    podświetlone rudy, dokładanie bloków i piorun na zawołanie. Wszystko inne na rynku
+    da się zdobyć samemu; to jest ta półka, na którą się zbiera.</p>
+    <p class="note">Różdżek lada nie odkupuje za żadne pieniądze. Da się je też
+    wykuć — z jednej do trzech rzeczy, po które trzeba się bić.</p>"""))
 
     sections.append(section("07", "stalls", "Stragany", "powód, żeby przejść przez miasto", f"""
     <p class="lede">Stragan, który postawisz, należy do ciebie. Postaw pod nim skrzynię,

@@ -1,3 +1,6 @@
 {
-  "parent": "trapcraft:block/harvest_wand"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "trapcraft:item/harvest_wand"
+  }
 }

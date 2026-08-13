@@ -1578,9 +1578,9 @@ public final class TrapGuide {
      * The wand rack.
      *
      * Every number here comes off WandItem, because the whole reason anybody
-     * reads this chapter is to decide whether eighteen thousand emeralds is
-     * worth it, and a book that quotes a range the wand no longer has is worse
-     * than no book.
+     * reads this chapter is to decide whether six figures of emeralds is worth
+     * it, and a book that quotes a range the wand no longer has is worse than
+     * no book.
      */
     private static void wands(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
@@ -1632,8 +1632,14 @@ public final class TrapGuide {
                 .append(title("6f. SKĄD JE WZIĄĆ\n\n"))
                 .append(body("Kup gotową na półce RÓŻDŻKI.\n\n"))
                 .append(item("__ Amet Rdz\n__ Pręt Amet\nPręt __ __\n\n"))
-                .append(hint("Rdzeń: pręt bryzy, jajo sniffera, "
-                        + "muszla echa, kompas lub gwiazda."))));
+                .append(hint("Ten sam kształt dla wszystkich pięciu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6f2. RDZEŃ\n\n"))
+                .append(body("Pęd: pręt bryzy\nŻniwa: 2 jaja\nŻyły: 2 muszle\n"
+                        + "Murarze: 3 kompasy\nBurza: 3 gwiazdy\n\n"))
+                .append(hint("Jaja snifferów, muszle echa, kompasy "
+                        + "powrotu, gwiazdy netheru."))));
 
         pages.add(page(Text.empty()
                 .append(title("6g. UWAGA\n\n"))

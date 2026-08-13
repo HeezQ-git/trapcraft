@@ -2237,64 +2237,56 @@ def ledger_assets() -> None:
     })
 
 
-# The wand rack. Every entry is (english name, gem texture suffix, the one
-# ingredient that makes it that wand). The shaft, the grip and the amethyst are
-# the same on all five -- what you are really buying is the thing in the head,
-# which is exactly what the recipe should read like.
+# The wand rack: (name, the ingredient that makes it that wand, how many).
+#
+# The rods and the amethyst are the same on all five -- what you are buying is
+# the thing in the head, which is exactly what the recipe should read like. The
+# COUNT is what keeps the two routes honest: the shop wants five figures for
+# these, so a wand you could craft from one nether star would make the shelf
+# decoration. Three withers is a comparable evening.
 WANDS = {
-    "boost_wand": ("Różdżka Pędu", "boost", "minecraft:breeze_rod"),
-    "harvest_wand": ("Różdżka Żniw", "harvest", "minecraft:sniffer_egg"),
-    "prospect_wand": ("Różdżka Żył", "prospect", "minecraft:echo_shard"),
-    "builder_wand": ("Różdżka Murarzy", "builder", "minecraft:recovery_compass"),
-    "storm_wand": ("Różdżka Burz", "storm", "minecraft:nether_star"),
+    "boost_wand": ("Różdżka Pędu", "minecraft:breeze_rod", 1),
+    "harvest_wand": ("Różdżka Żniw", "minecraft:sniffer_egg", 2),
+    "prospect_wand": ("Różdżka Żył", "minecraft:echo_shard", 2),
+    "builder_wand": ("Różdżka Murarzy", "minecraft:recovery_compass", 3),
+    "storm_wand": ("Różdżka Burz", "minecraft:nether_star", 3),
+}
+
+# Same five cells filled whichever count it is, so the guide book can draw the
+# shape once and only say how many of them are cores.
+WAND_PATTERNS = {
+    1: [" AC", " RA", "R  "],
+    2: [" CC", " RA", "R  "],
+    3: [" CC", " RC", "RA "],
 }
 
 
-def wand_model(gem: str) -> dict:
-    """A wand: turned shaft, wrapped grip, a cut stone standing proud of it.
-
-    One shape for all five. The gem is the only element that changes texture,
-    and it is deliberately the biggest thing in the silhouette -- at 16px in a
-    hotbar a stick is a stick, and the stone is the only part that can carry
-    which wand this is.
-    """
-    return {
-        "parent": "minecraft:block/block",
-        "ambientocclusion": False,
-        "textures": {
-            "shaft": f"{NS}:item/wand_shaft",
-            "grip": f"{NS}:item/wand_grip",
-            "gem": f"{NS}:item/wand_gem_{gem}",
-            "particle": f"{NS}:item/wand_gem_{gem}",
-        },
-        # Stood up and turned a little further than vanilla's 225: the gem is
-        # the whole read, and at the default angle the shaft crosses it.
-        "display": held(1.05, gui_rotation=(25, 200, 0)),
-        "elements": [
-            box([7, 0, 7], [9, 9.5, 9], "shaft"),           # shaft
-            box([6.6, 1, 6.6], [9.4, 4, 9.4], "grip"),      # where you hold it
-            box([6.6, 9.5, 6.6], [9.4, 10.5, 9.4], "grip"), # collar under the stone
-            box([5.5, 10.5, 5.5], [10.5, 15, 10.5], "gem"), # the stone
-        ],
-    }
-
-
 def wand_assets() -> None:
-    for name, (_, gem, core) in WANDS.items():
-        put(f"assets/{NS}/models/block/{name}.json", wand_model(gem))
-        put(f"assets/{NS}/models/item/{name}.json", {"parent": f"{NS}:block/{name}"})
+    """Flat, like a stick.
+
+    These started as 3D models -- shaft, grip and a stone standing proud of it
+    -- and they were worse: a wand is a stick with something on the end, and
+    held on the vanilla item diagonal it reads as one at a glance. The only
+    thing that separates the five is the colour of the stone, which is the same
+    thing that separated them before, now drawn rather than modelled.
+    """
+    for name, (_, core, cores) in WANDS.items():
+        put(f"assets/{NS}/models/item/{name}.json", {
+            "parent": "minecraft:item/generated",
+            "textures": {"layer0": f"{NS}:item/{name}"},
+        })
         put(f"assets/{NS}/items/{name}.json", {
             "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
         })
 
-        # Blaze rods for the shaft, amethyst to focus it, and one thing that
-        # only comes off something that fought back. The market sells these
-        # finished for four to eighteen thousand; this is the other route, and
-        # it is deliberately paid for in effort rather than emeralds.
+        # Blaze rods for the shaft, amethyst to focus it, and one to three of
+        # the thing that only comes off something that fought back. This is the
+        # other route to a wand and it is paid in effort rather than emeralds
+        # -- but not in pennies, or the five-figure shelf price is a joke.
         put(f"data/{NS}/recipe/{name}.json", {
             "type": "minecraft:crafting_shaped",
             "category": "equipment",
-            "pattern": [" AC", " RA", "R  "],
+            "pattern": WAND_PATTERNS[cores],
             "key": {
                 "A": "minecraft:amethyst_shard",
                 "C": core,

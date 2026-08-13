@@ -188,25 +188,37 @@ there is no price editor to fill in — the only decision is what to stock.
 ## Wands
 
 The far end of the market, and the only shelf on it that answers "what am I
-saving *for*". Five items, 4,500e to 18,000e, when a fat contract pays a couple
-of hundred. All five are one class (`WandItem`) and one model recoloured five
-ways; a right-click is the whole interface, with sneak as the second verb where
-there is one.
+saving *for*". Five items, 25,000e to 120,000e, when a fat contract pays a
+couple of hundred. All five are one class (`WandItem`) and one sprite recoloured
+five ways; a right-click is the whole interface, with sneak as the second verb
+where there is one.
 
 | Wand | Right-click | Cooldown | Shelf |
 |------|-------------|----------|-------|
-| Rush | Throws you where you're looking, then 6s of slow falling. Sneak blinks 12 blocks | 2s / 5s | 4,500e |
-| Reaping | Harvests and replants everything ripe in 9×9 around you, into your bag | 3s | 7,000e |
-| Seams | Lights up every ore within 10 blocks, through stone, for your eyes only | 10s | 9,000e |
-| Masons | Extends the face you clicked by up to 8 blocks, out of your inventory | 1.5s | 13,000e |
-| Storms | Lightning where you're looking, 12 damage, no fire, never players | 8s | 18,000e |
+| Rush | Throws you where you're looking, then 6s of slow falling. Sneak blinks 12 blocks | 2s / 5s | 25,000e |
+| Reaping | Harvests and replants everything ripe in 9×9 around you, into your bag | 3s | 40,000e |
+| Seams | Lights up every ore within 10 blocks, through stone, for your eyes only | 10s | 55,000e |
+| Masons | Extends the face you clicked by up to 8 blocks, out of your inventory | 1.5s | 80,000e |
+| Storms | Lightning where you're looking, 12 damage, no fire, only hostiles | 15s | 120,000e |
+
+They first shipped at a fifth of those prices, against players holding 30–50k:
+the whole rack cost one stash. A sink priced under what its buyers already have
+is not a sink.
+
+Each one carries its own three-line description as default lore
+(`Kind.blurb()`) — what it does, how you use it, how often — so it explains
+itself in the hand, in a chest and on the shelf. The shelf tag rewrites lore
+wholesale, so `priceTag` puts any self-description back on top. Every figure in
+it is read from the same constants the guide book quotes, the cooldown
+included: the item draws a sweep that says you are waiting but never how long
+for.
 
 Three things they get right that are easy to get wrong:
 
 - **The shop will not buy them back at any price** (`TrapScrap.refusal`, and
-  `TrapMarket.sellPrice` returns 0). Each is craftable from one endgame drop —
-  a nether star, a recovery compass — and a counter paying half of 18,000e for
-  a wand made from a 1,400e star is a crafting table with a mint attached.
+  `TrapMarket.sellPrice` returns 0). Each is craftable, and a counter paying
+  half of six figures for a wand made from a few thousand emeralds of nether
+  stars is a crafting table with a mint attached.
 - **Reaping goes through each crop's own `harvest()`**, never
   `getDroppedStacks`. Breaking one of this mod's plants runs the loot table and
   returns a *seed*; the buds only come off a right-click. Same trap the crew
@@ -214,9 +226,11 @@ Three things they get right that are easy to get wrong:
 - **Blink walks the player's hitbox out in half blocks** rather than raycasting.
   A ray finds the wall's face, which is precisely where you must not land.
 
-Crafting is the other route and is paid in effort rather than emeralds: two
-blaze rods, two amethyst shards, and the one ingredient that decides which wand
-it is (breeze rod, sniffer egg, echo shard, recovery compass, nether star).
+Crafting is the other route and is paid in effort rather than emeralds: blaze
+rods, amethyst, and **one to three** of the ingredient that decides which wand
+it is — 1 breeze rod, 2 sniffer eggs, 2 echo shards, 3 recovery compasses,
+3 nether stars. The count scales with the shelf price on purpose; at one star
+apiece the shelf would be decoration.
 
 ## The crew
 
