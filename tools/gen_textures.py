@@ -2048,6 +2048,92 @@ yyyyyyyyyyyyyyyy
 """
 
 
+# --- wands ------------------------------------------------------------------
+#
+# One shaft, one grip and one gem shape, recoloured five ways. They are a
+# family and should read as one from across a hotbar: what tells a boost wand
+# from a storm wand is the colour of the stone in the head, not a redraw.
+
+WAND_PAL = {
+    "w": "#3b2a1c",     # wand wood, shadow
+    "W": "#5a3f2a",     # wand wood
+    "H": "#7a5738",     # wand wood, lit edge
+    "n": "#241a11",     # grain
+    "l": "#2f2318",     # leather wrap, shadow
+    "L": "#4a382a",     # leather wrap
+    "T": "#6b5340",     # leather wrap, lit
+    "s": "#c8b98a",     # binding thread
+}
+
+WAND_SHAFT = """
+WWHHWWWWHHWWWWHH
+WWHHWWnnHHWWWWHH
+WWHHWWnnHHWWWWHH
+wwWWWWWWWWWWWWww
+WWHHWWWWHHWWWWHH
+WWHHWWWWHHWWnnHH
+wwWWWWWWWWWWWWww
+WWHHWWnnHHWWWWHH
+WWHHWWnnHHWWWWHH
+wwWWWWWWWWWWWWww
+WWHHWWWWHHWWWWHH
+WWHHWWWWHHWWnnHH
+WWHHWWWWHHWWnnHH
+wwWWWWWWWWWWWWww
+WWHHWWWWHHWWWWHH
+WWHHWWWWHHWWWWHH
+"""
+
+WAND_GRIP = """
+LLTTLLLLTTLLLLTT
+llLLllllLLllllLL
+ssssssssssssssss
+LLTTLLLLTTLLLLTT
+LLTTLLLLTTLLLLTT
+llLLllllLLllllLL
+ssssssssssssssss
+LLTTLLLLTTLLLLTT
+LLTTLLLLTTLLLLTT
+llLLllllLLllllLL
+ssssssssssssssss
+LLTTLLLLTTLLLLTT
+LLTTLLLLTTLLLLTT
+llLLllllLLllllLL
+ssssssssssssssss
+LLTTLLLLTTLLLLTT
+"""
+
+# The gem, cut so the light sits top-left. Rendered once per wand with the
+# three colours swapped, which is why the map itself is colourless.
+WAND_GEM = """
+ggggGGGGGGGGgggg
+gggGGGGGGGGGGggg
+ggGGGGBBBBGGGGgg
+gGGGGBBBBBBGGGGg
+GGGGBBBBBBBBGGGG
+GGGBBBBBBBBBBGGG
+GGBBBBddddBBBBGG
+GGBBBBddddBBBBGG
+GGBBBBddddBBBBGG
+GGBBBBddddBBBBGG
+GGGBBBBBBBBBBGGG
+GGGGBBBBBBBBGGGG
+gGGGGBBBBBBGGGGg
+ggGGGGBBBBGGGGgg
+gggGGGGGGGGGGggg
+ggggGGGGGGGGgggg
+"""
+
+# lit face, body, core -- in that order, per wand.
+WAND_GEMS = {
+    "boost": ("#d8f4ff", "#6fd0f0", "#2b7fa8"),      # wind and cold light
+    "harvest": ("#e6f9a8", "#8fd44a", "#3f7a22"),    # a field in July
+    "prospect": ("#ffe9a8", "#e0a93c", "#8a5a15"),   # lamplight on ore
+    "builder": ("#dccfff", "#9a7ce0", "#4b3287"),    # amethyst, near enough
+    "storm": ("#fff6c9", "#f2c53d", "#8a4a12"),      # the flash, held still
+}
+
+
 # --- burner phone ---------------------------------------------------------
 
 PHONE_PAL = {
@@ -3503,6 +3589,11 @@ def main() -> None:
     write(render(SLOT_SCREEN, SLOT_PAL), "block", "slot_screen.png")
     write(render(SLOT_TRIM, SLOT_PAL), "block", "slot_trim.png")
     write(render(SLOT_DECK, SLOT_PAL), "block", "slot_deck.png")
+    write(render(WAND_SHAFT, WAND_PAL), "item", "wand_shaft.png")
+    write(render(WAND_GRIP, WAND_PAL), "item", "wand_grip.png")
+    for wand, (lit, body, core) in WAND_GEMS.items():
+        write(render(WAND_GEM, {"G": lit, "B": body, "d": core, "g": core}),
+              "item", f"wand_gem_{wand}.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

@@ -4,7 +4,7 @@
       "id": "trapcraft:blend_joint"
     },
     "title": "Z nazwy",
-    "description": "Zrób mieszankę, która ma już swoją nazwę.",
+    "description": "Zr\u00f3b mieszank\u0119, kt\u00f3ra ma ju\u017c swoj\u0105 nazw\u0119.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

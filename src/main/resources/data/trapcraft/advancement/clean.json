@@ -4,7 +4,7 @@
       "id": "minecraft:barrier"
     },
     "title": "Nic tu nie ma",
-    "description": "Przetrwaj nalot, nie tracąc ani grama towaru.",
+    "description": "Przetrwaj nalot, nie trac\u0105c ani grama towaru.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

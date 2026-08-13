@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:city_vault"
     },
-    "title": "Miasto założone",
-    "description": "Postaw skarbiec miasta i zacznij ściągać podatki.",
+    "title": "Miasto za\u0142o\u017cone",
+    "description": "Postaw skarbiec miasta i zacznij \u015bci\u0105ga\u0107 podatki.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

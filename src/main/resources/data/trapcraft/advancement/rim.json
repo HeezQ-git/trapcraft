@@ -4,7 +4,7 @@
       "id": "minecraft:nether_star"
     },
     "title": "Na kancie",
-    "description": "Obstaw kant przy rzucie monetą i trafi.",
+    "description": "Obstaw kant przy rzucie monet\u0105 i trafi.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

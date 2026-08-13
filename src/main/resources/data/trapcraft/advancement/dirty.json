@@ -4,7 +4,7 @@
       "id": "trapcraft:dirty_emerald"
     },
     "title": "Brudna kasa",
-    "description": "Przyjmij zapłatę, której żaden bank nie przyjmie.",
+    "description": "Przyjmij zap\u0142at\u0119, kt\u00f3rej \u017caden bank nie przyjmie.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

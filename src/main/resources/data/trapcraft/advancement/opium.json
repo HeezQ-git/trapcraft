@@ -4,7 +4,7 @@
       "id": "trapcraft:raw_opium"
     },
     "title": "Nacinanie",
-    "description": "Natnij partię makówek i zbierz to, co z nich wypłynie.",
+    "description": "Natnij parti\u0119 mak\u00f3wek i zbierz to, co z nich wyp\u0142ynie.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

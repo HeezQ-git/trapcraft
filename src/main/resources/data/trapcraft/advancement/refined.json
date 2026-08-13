@@ -4,7 +4,7 @@
       "id": "trapcraft:coca_powder"
     },
     "title": "Oczyszczone",
-    "description": "Przejdź całą linię koki aż do proszku.",
+    "description": "Przejd\u017a ca\u0142\u0105 lini\u0119 koki a\u017c do proszku.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

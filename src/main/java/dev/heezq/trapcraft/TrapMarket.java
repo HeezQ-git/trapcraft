@@ -227,6 +227,12 @@ public final class TrapMarket {
     }
 
     public static int sellPrice(MinecraftServer server, ShopStock.Entry entry) {
+        // Zero is the shop's existing way of saying "not at any price", and the
+        // shelf already knows how to say so. The wands are the only listing
+        // that uses it deliberately rather than by falling under 2e.
+        if (entry.item() instanceof WandItem) {
+            return 0;
+        }
         int paid = TrapMath.sellPrice(buyPrice(server, entry));
         // The Exchange. A market town gets a better counter, which is the one
         // public work that pays everybody including whoever never leaves their

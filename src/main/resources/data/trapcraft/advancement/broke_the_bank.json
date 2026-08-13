@@ -4,7 +4,7 @@
       "id": "minecraft:gold_block"
     },
     "title": "Rozbity bank",
-    "description": "Wygraj z automatu więcej, niż kasyno miało w skarbcu.",
+    "description": "Wygraj z automatu wi\u0119cej, ni\u017c kasyno mia\u0142o w skarbcu.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

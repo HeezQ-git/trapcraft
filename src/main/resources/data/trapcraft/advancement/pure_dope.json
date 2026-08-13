@@ -4,7 +4,7 @@
       "id": "trapcraft:heroin"
     },
     "title": "W punkt",
-    "description": "Wyjmij towar z acetylatora dokładnie na szczycie czystości.",
+    "description": "Wyjmij towar z acetylatora dok\u0142adnie na szczycie czysto\u015bci.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

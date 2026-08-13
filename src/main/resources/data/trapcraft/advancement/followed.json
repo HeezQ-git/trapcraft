@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:crossbow"
     },
-    "title": "Ktoś cię śledził",
-    "description": "Sprzedaj z ręki raz za dużo i przekonaj się, kto patrzył.",
+    "title": "Kto\u015b ci\u0119 \u015bledzi\u0142",
+    "description": "Sprzedaj z r\u0119ki raz za du\u017co i przekonaj si\u0119, kto patrzy\u0142.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:villager_spawn_egg"
     },
-    "title": "Lista płac",
-    "description": "Zatrudnij pierwszą osobę. Pensja leci od razu.",
+    "title": "Lista p\u0142ac",
+    "description": "Zatrudnij pierwsz\u0105 osob\u0119. Pensja leci od razu.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

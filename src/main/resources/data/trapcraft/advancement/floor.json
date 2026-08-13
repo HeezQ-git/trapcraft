@@ -3,7 +3,7 @@
     "icon": {
       "id": "trapcraft:slot_machine"
     },
-    "title": "Własna sala",
+    "title": "W\u0142asna sala",
     "description": "Postaw pierwszy automat na swojej sali.",
     "frame": "task",
     "show_toast": true,

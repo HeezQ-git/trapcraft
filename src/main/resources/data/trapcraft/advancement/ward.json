@@ -4,7 +4,7 @@
       "id": "trapcraft:hospital"
     },
     "title": "Miejsce do leczenia",
-    "description": "Otwórz szpital, żeby ugryzienie przestało być wyrokiem.",
+    "description": "Otw\u00f3rz szpital, \u017ceby ugryzienie przesta\u0142o by\u0107 wyrokiem.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

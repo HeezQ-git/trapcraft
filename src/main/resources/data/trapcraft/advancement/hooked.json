@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:nerve_tonic"
     },
-    "title": "Uzależniony",
-    "description": "Doprowadź licznik nałogu aż do odstawienia.",
+    "title": "Uzale\u017cniony",
+    "description": "Doprowad\u017a licznik na\u0142ogu a\u017c do odstawienia.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

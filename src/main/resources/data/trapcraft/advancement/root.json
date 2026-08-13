@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:seeds_kush"
     },
-    "title": "Każdy musi jeść",
-    "description": "Zdobądź nasiona i zacznij działać.",
+    "title": "Ka\u017cdy musi je\u015b\u0107",
+    "description": "Zdob\u0105d\u017a nasiona i zacznij dzia\u0142a\u0107.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

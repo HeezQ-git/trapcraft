@@ -4,7 +4,7 @@
       "id": "minecraft:snowball"
     },
     "title": "Skrajny przypadek",
-    "description": "Trafi kulką w skrajną przegródkę w Plinko.",
+    "description": "Trafi kulk\u0105 w skrajn\u0105 przegr\u00f3dk\u0119 w Plinko.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -60,6 +60,8 @@ public final class TrapContent {
     public static Item dryingRackItem;
     public static Block wildCannabis;
     public static Item hammer;
+    /** The wand rack, in the order the shop shelves them. */
+    public static final Map<WandItem.Kind, Item> WANDS = new EnumMap<>(WandItem.Kind.class);
     public static Block cocaCrop;
     public static Item cocaSeeds;
     public static Item cocaLeaves;
@@ -367,8 +369,29 @@ public final class TrapContent {
         registerCoca();
         registerPoppy();
         registerDevices();
+        registerWands();
         registerItemGroup();
         registerWorldgen();
+    }
+
+    /**
+     * The five wands.
+     *
+     * EPIC rarity and a forced glint because these are the most expensive
+     * things on the market by a factor of four, and an 18,000e item that reads
+     * as a grey stick in a chest is an 18,000e item nobody believes in.
+     * Unstackable: each one is a purchase, not a supply.
+     */
+    private static void registerWands() {
+        for (WandItem.Kind kind : WandItem.Kind.values()) {
+            String path = kind.name().toLowerCase(java.util.Locale.ROOT) + "_wand";
+            WANDS.put(kind, registerItem(path, (settings, model) -> new WandItem(kind,
+                    settings.maxCount(1)
+                            .rarity(net.minecraft.util.Rarity.EPIC)
+                            .component(net.minecraft.component.DataComponentTypes
+                                    .ENCHANTMENT_GLINT_OVERRIDE, true),
+                    model)));
+        }
     }
 
     /** The long line: grow -> score -> wash -> acetylate -> use. */
@@ -697,6 +720,9 @@ public final class TrapContent {
                     entries.add(casinoBarItem);
                     entries.add(casinoCard());
                     entries.add(hammer);
+                    for (Item wand : WANDS.values()) {
+                        entries.add(wand);
+                    }
                 })
                 .build();
         PolymerItemGroupUtils.registerPolymerItemGroup(TrapCraft.id("main"), group);

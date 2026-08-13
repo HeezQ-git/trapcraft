@@ -4,7 +4,7 @@
       "id": "minecraft:emerald"
     },
     "title": "Kasa kasyna",
-    "description": "Wygraj coś na wszystkich czterech automatach.",
+    "description": "Wygraj co\u015b na wszystkich czterech automatach.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

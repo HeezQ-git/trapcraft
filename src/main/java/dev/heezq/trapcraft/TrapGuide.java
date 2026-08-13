@@ -1146,6 +1146,7 @@ public final class TrapGuide {
         ledger(pages);
         contracts(pages);
         market(pages);
+        wands(pages);
         street(pages);
         return book("Poradnik uliczny", pages);
     }
@@ -1564,6 +1565,74 @@ public final class TrapGuide {
 
     }
 
+
+    /**
+     * The wand rack.
+     *
+     * Every number here comes off WandItem, because the whole reason anybody
+     * reads this chapter is to decide whether eighteen thousand emeralds is
+     * worth it, and a book that quotes a range the wand no longer has is worse
+     * than no book.
+     */
+    private static void wands(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("6. RÓŻDŻKI\n\n"))
+                .append(body("Najdroższa półka na rynku.\n\n"))
+                .append(body("Pięć sztuk. Każda robi coś, czego nie robi "
+                        + "żadne narzędzie w grze.\n\n"))
+                .append(hint("Na to właśnie zbierasz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6a. PĘDU\n\n"))
+                .append(body("PPM rzuca cię tam, gdzie patrzysz.\n\n"))
+                .append(body("Shift+PPM to przeskok o "
+                        + WandItem.BLINK_RANGE + " bloków.\n\n"))
+                .append(hint("Po skoku " + WandItem.SOFT_LANDING / 20
+                        + "s wolnego spadania - nie zabijesz się."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. ŻNIW\n\n"))
+                .append(body("Machnij nią stojąc na polu.\n\n"))
+                .append(body("Zbiera wszystko dojrzałe w promieniu "
+                        + WandItem.HARVEST_RADIUS + " i zostawia "
+                        + "zasadzone.\n\n"))
+                .append(hint("Nasze rośliny też."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. ŻYŁY\n\n"))
+                .append(body("Podświetla rudy w promieniu "
+                        + WandItem.PROSPECT_RADIUS + " bloków.\n\n"))
+                .append(body("Przez kamień.\n\n"))
+                .append(hint("Widzisz je tylko ty."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6d. BUDOWNICZEGO\n\n"))
+                .append(body("PPM w ścianę dokłada do "
+                        + WandItem.BUILDER_REACH + " takich samych "
+                        + "bloków w bok.\n\n"))
+                .append(body("Bierze je z twojego plecaka."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6e. BURZY\n\n"))
+                .append(body("Piorun tam, gdzie patrzysz. Zasięg "
+                        + WandItem.STORM_RANGE + " bloków.\n\n"))
+                .append(body(Math.round(WandItem.STORM_DAMAGE)
+                        + " obrażeń wszystkiemu obok.\n\n"))
+                .append(hint("Nie podpala. Graczy nie tyka."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6f. SKĄD JE WZIĄĆ\n\n"))
+                .append(body("Kup gotową na półce RÓŻDŻKI.\n\n"))
+                .append(item("__ Amet Rdz\n__ Pręt Amet\nPręt __ __\n\n"))
+                .append(hint("Rdzeń: pręt bryzy, jajo sniffera, "
+                        + "muszla echa, kompas lub gwiazda."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6g. UWAGA\n\n"))
+                .append(warn("Sklep nie odkupuje różdżek.\n\n"))
+                .append(body("Za żadne pieniądze.\n\n"))
+                .append(hint("Kupujesz ją raz i jest twoja."))));
+    }
 
     private static void street(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()

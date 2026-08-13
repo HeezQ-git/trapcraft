@@ -4,7 +4,7 @@
       "id": "minecraft:player_head"
     },
     "title": "Siatka",
-    "description": "Wyślij kogoś na ulicę, żeby sprzedawał za ciebie.",
+    "description": "Wy\u015blij kogo\u015b na ulic\u0119, \u017ceby sprzedawa\u0142 za ciebie.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

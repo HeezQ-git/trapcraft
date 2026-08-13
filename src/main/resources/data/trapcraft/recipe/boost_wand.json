@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    " AC",
+    " RA",
+    "R  "
+  ],
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:breeze_rod",
+    "R": "minecraft:blaze_rod"
+  },
+  "result": {
+    "id": "trapcraft:boost_wand",
+    "count": 1
+  }
+}

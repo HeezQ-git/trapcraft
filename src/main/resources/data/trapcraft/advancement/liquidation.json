@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:hopper"
     },
-    "title": "Wyprzedaż",
-    "description": "Sprzedaj na ladzie towar za 500 szmaragdów w jednej transakcji.",
+    "title": "Wyprzeda\u017c",
+    "description": "Sprzedaj na ladzie towar za 500 szmaragd\u00f3w w jednej transakcji.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:emerald_block"
     },
-    "title": "Ruszyłeś rynek",
-    "description": "Podbij cenę jednego przedmiotu o jedną piątą, w pojedynkę.",
+    "title": "Ruszy\u0142e\u015b rynek",
+    "description": "Podbij cen\u0119 jednego przedmiotu o jedn\u0105 pi\u0105t\u0105, w pojedynk\u0119.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

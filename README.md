@@ -185,6 +185,39 @@ from the other, and the spread that used to evaporate is split between them.
 Prices follow the market automatically, so a stall is never mispriced and
 there is no price editor to fill in — the only decision is what to stock.
 
+## Wands
+
+The far end of the market, and the only shelf on it that answers "what am I
+saving *for*". Five items, 4,500e to 18,000e, when a fat contract pays a couple
+of hundred. All five are one class (`WandItem`) and one model recoloured five
+ways; a right-click is the whole interface, with sneak as the second verb where
+there is one.
+
+| Wand | Right-click | Cooldown | Shelf |
+|------|-------------|----------|-------|
+| Rush | Throws you where you're looking, then 6s of slow falling. Sneak blinks 12 blocks | 2s / 5s | 4,500e |
+| Reaping | Harvests and replants everything ripe in 9×9 around you, into your bag | 3s | 7,000e |
+| Seams | Lights up every ore within 10 blocks, through stone, for your eyes only | 10s | 9,000e |
+| Masons | Extends the face you clicked by up to 8 blocks, out of your inventory | 1.5s | 13,000e |
+| Storms | Lightning where you're looking, 12 damage, no fire, never players | 8s | 18,000e |
+
+Three things they get right that are easy to get wrong:
+
+- **The shop will not buy them back at any price** (`TrapScrap.refusal`, and
+  `TrapMarket.sellPrice` returns 0). Each is craftable from one endgame drop —
+  a nether star, a recovery compass — and a counter paying half of 18,000e for
+  a wand made from a 1,400e star is a crafting table with a mint attached.
+- **Reaping goes through each crop's own `harvest()`**, never
+  `getDroppedStacks`. Breaking one of this mod's plants runs the loot table and
+  returns a *seed*; the buds only come off a right-click. Same trap the crew
+  fell into.
+- **Blink walks the player's hitbox out in half blocks** rather than raycasting.
+  A ray finds the wall's face, which is precisely where you must not land.
+
+Crafting is the other route and is paid in effort rather than emeralds: two
+blaze rods, two amethyst shards, and the one ingredient that decides which wand
+it is (breeze rod, sniffer egg, echo shard, recovery compass, nether star).
+
 ## The crew
 
 `/crew hire` takes somebody on where you are standing; `/crew` opens the board.

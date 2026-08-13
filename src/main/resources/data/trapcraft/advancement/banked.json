@@ -4,7 +4,7 @@
       "id": "trapcraft:wallet"
     },
     "title": "W portfelu",
-    "description": "Noś portfel zamiast dwudziestu stacków szmaragdów.",
+    "description": "No\u015b portfel zamiast dwudziestu stack\u00f3w szmaragd\u00f3w.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

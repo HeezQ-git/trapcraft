@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:crossbow"
     },
-    "title": "Znaleźli",
-    "description": "Pozwól, żeby nalot wyniósł twój towar.",
+    "title": "Znale\u017ali",
+    "description": "Pozw\u00f3l, \u017ceby nalot wyni\u00f3s\u0142 tw\u00f3j towar.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

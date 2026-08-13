@@ -4,7 +4,7 @@
       "id": "trapcraft:shop_till"
     },
     "title": "Sklepikarz",
-    "description": "Otwórz sklep, w którym miasto może robić zakupy.",
+    "description": "Otw\u00f3rz sklep, w kt\u00f3rym miasto mo\u017ce robi\u0107 zakupy.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:heroin"
     },
-    "title": "Długa droga",
-    "description": "Trzy maszyny, a i tak można wszystko stracić.",
+    "title": "D\u0142uga droga",
+    "description": "Trzy maszyny, a i tak mo\u017cna wszystko straci\u0107.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

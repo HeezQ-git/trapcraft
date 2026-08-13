@@ -118,10 +118,19 @@ public final class ShopStock {
      */
     public static final Category FITTINGS = new Category("fittings", "Dachy i stolarka",
             "mcwroofs:oak_planks_upper_lower_roof", Formatting.YELLOW, "Dachy, okna, barierki");
+    /**
+     * The wands, and the fourteenth of fifteen shelves.
+     *
+     * The far end of the market on purpose: everything else here is something
+     * you could have grown, mined or killed for, and the shelf that isn't is
+     * what the emeralds are ultimately FOR. Nothing else costs five figures.
+     */
+    public static final Category MAGIC = new Category("magic", "Różdżki",
+            "trapcraft:storm_wand", Formatting.LIGHT_PURPLE, "Drogo. Bardzo drogo");
 
     public static final List<Category> CATEGORIES =
             List.of(BUILDING, FITTINGS, WOOD, DECOR, FURNITURE, GARDEN, FARMING, FOOD,
-                    MATERIALS, NETHER, UTILITY, ENCHANTS, RARE);
+                    MATERIALS, NETHER, UTILITY, ENCHANTS, RARE, MAGIC);
 
     /**
      * Items the market must never trade, at any price.
@@ -523,6 +532,29 @@ public final class ShopStock {
         utility();
         enchantments();
         theGoodStuff();
+        wands();
+    }
+
+    /**
+     * The wand rack, priced as the thing you are saving for.
+     *
+     * A fat contract pays a couple of hundred, so the cheap one is a good month
+     * and the storm wand is a season. That is deliberate: every other shelf can
+     * be undercut by going and getting the stuff yourself, and this one is the
+     * only place emeralds buy something emeralds are the only route to.
+     *
+     * The shop does not buy them back at any price -- see TrapScrap.refusal.
+     * Each of these can be crafted from a nether star or a recovery compass,
+     * and a counter that paid half of eighteen thousand for one would be a
+     * crafting table with a mint attached.
+     */
+    private static void wands() {
+        Category c = MAGIC;
+        add(c, "trapcraft:boost_wand", 1, 4500);
+        add(c, "trapcraft:harvest_wand", 1, 7000);
+        add(c, "trapcraft:prospect_wand", 1, 9000);
+        add(c, "trapcraft:builder_wand", 1, 13000);
+        add(c, "trapcraft:storm_wand", 1, 18000);
     }
 
     /**

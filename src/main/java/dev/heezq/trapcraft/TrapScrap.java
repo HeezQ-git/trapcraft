@@ -45,6 +45,13 @@ public final class TrapScrap {
         if (stack.isOf(TrapContent.casinoCard)) {
             return "to całe kasyno";
         }
+        // The wands are the one thing the market sells and will not take back.
+        // Every one of them can be crafted from a nether star or a recovery
+        // compass, and buying that at 1,400e to sell the wand made from it at
+        // half of eighteen thousand is a crafting table with a mint attached.
+        if (stack.getItem() instanceof WandItem) {
+            return "różdżki nie wracają na półkę";
+        }
         // A shulker box or bundle with something inside would sell its contents
         // invisibly at the price of the empty container. Refuse rather than
         // quietly eat whatever is in it.

@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:poppy_seeds"
     },
-    "title": "Pełne słońce",
-    "description": "Zdobądź nasiona maku. W piwnicy nie urosną.",
+    "title": "Pe\u0142ne s\u0142o\u0144ce",
+    "description": "Zdob\u0105d\u017a nasiona maku. W piwnicy nie urosn\u0105.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

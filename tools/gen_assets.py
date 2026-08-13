@@ -432,102 +432,104 @@ def _unused_gaussian_blur() -> None:
 
 def lang() -> None:
     entries = {
-        "block.trapcraft.drying_rack": "Drying Rack",
-        "block.trapcraft.wild_cannabis": "Wild Cannabis",
-        "item.trapcraft.miners_hammer": "Miner's Hammer",
-        "block.trapcraft.coca_crop": "Coca Bush",
-        "item.trapcraft.coca_seeds": "Coca Seeds",
-        "item.trapcraft.coca_leaves": "Coca Leaves",
-        "item.trapcraft.coca_paste": "Coca Paste",
-        "item.trapcraft.coca_powder": "Powder",
-        "block.trapcraft.leaf_press": "Leaf Press",
-        "item.trapcraft.leaf_press": "Leaf Press",
-        "block.trapcraft.refiner": "Refiner",
-        "item.trapcraft.refiner": "Refiner",
-        "effect.trapcraft.wired": "Wired",
+        "block.trapcraft.drying_rack": "Suszarka",
+        "block.trapcraft.wild_cannabis": "Dzikie konopie",
+        "item.trapcraft.miners_hammer": "Młot górniczy",
+        "block.trapcraft.coca_crop": "Krzak koki",
+        "item.trapcraft.coca_seeds": "Nasiona koki",
+        "item.trapcraft.coca_leaves": "Liście koki",
+        "item.trapcraft.coca_paste": "Pasta z koki",
+        "item.trapcraft.coca_powder": "Proszek",
+        "block.trapcraft.leaf_press": "Prasa do liści",
+        "item.trapcraft.leaf_press": "Prasa do liści",
+        "block.trapcraft.refiner": "Rafineria",
+        "item.trapcraft.refiner": "Rafineria",
+        "effect.trapcraft.wired": "Nakręcony",
         "block.trapcraft.bong": "Bong",
         "item.trapcraft.bong": "Bong",
         "block.trapcraft.gravity_bong": "T\u0142ok",
         "item.trapcraft.gravity_bong": "T\u0142ok",
-        "item.trapcraft.drying_rack": "Drying Rack",
-        "block.trapcraft.mixing_station": "Mixing Station",
-        "item.trapcraft.mixing_station": "Mixing Station",
+        "item.trapcraft.drying_rack": "Suszarka",
+        "block.trapcraft.mixing_station": "Mieszalnik",
+        "item.trapcraft.mixing_station": "Mieszalnik",
         # Both are normally renamed per-blend by the component, so these only
         # show on a /give with no mix attached.
-        "item.trapcraft.blend_bud": "Blend Bud",
-        "item.trapcraft.blend_joint": "Blend Joint",
-        "item.trapcraft.nerve_tonic": "Nerve Tonic",
-        "item.trapcraft.ledger": "The Ledger",
-        "item.trapcraft.wallet": "Wallet",
+        "item.trapcraft.blend_bud": "Susz mieszany",
+        "item.trapcraft.blend_joint": "Skręt mieszany",
+        "item.trapcraft.nerve_tonic": "Lek na nerwy",
+        "item.trapcraft.ledger": "Spis skrzyń",
+        "item.trapcraft.wallet": "Portfel",
         # Renamed per-casino by the component; this only shows on a
         # freshly crafted, unsigned one.
-        "item.trapcraft.casino_card": "Casino Licence",
-        "block.trapcraft.roulette": "Roulette Table",
-        "block.trapcraft.plinko": "The Drop",
-        "block.trapcraft.climb": "The Climb",
-        "block.trapcraft.toss": "Coin Toss",
-        "item.trapcraft.toss": "Coin Toss",
+        "item.trapcraft.casino_card": "Licencja kasyna",
+        "block.trapcraft.roulette": "Stół do ruletki",
+        "block.trapcraft.plinko": "Plinko",
+        "block.trapcraft.climb": "Wspinaczka",
+        "block.trapcraft.toss": "Rzut monetą",
+        "item.trapcraft.toss": "Rzut monetą",
         "block.trapcraft.blackjack": "Blackjack",
-        "block.trapcraft.scratch": "Scratchers",
-        "block.trapcraft.casino_bar": "The Bar",
-        "item.trapcraft.casino_bar": "The Bar",
-        "item.trapcraft.scratch": "Scratchers",
+        "block.trapcraft.scratch": "Zdrapki",
+        "block.trapcraft.casino_bar": "Bar",
+        "item.trapcraft.casino_bar": "Bar",
+        "item.trapcraft.scratch": "Zdrapki",
         "item.trapcraft.blackjack": "Blackjack",
-        "item.trapcraft.climb": "The Climb",
-        "item.trapcraft.plinko": "The Drop",
-        "item.trapcraft.roulette": "Roulette Table",
-        "item.trapcraft.burner_phone": "Burner Phone",
-        "block.trapcraft.nightclub": "Nightclub Booth",
-        "item.trapcraft.nightclub": "Nightclub Booth",
-        "block.trapcraft.market_stall": "Market Stall",
-        "item.trapcraft.market_stall": "Market Stall",
-        "block.trapcraft.mailbox": "Mailbox",
-        "item.trapcraft.mailbox": "Mailbox",
-        "block.trapcraft.city_vault": "City Vault",
-        "item.trapcraft.city_vault": "City Vault",
-        "block.trapcraft.hospital": "Hospital",
-        "item.trapcraft.hospital": "Hospital",
+        "item.trapcraft.climb": "Wspinaczka",
+        "item.trapcraft.plinko": "Plinko",
+        "item.trapcraft.roulette": "Stół do ruletki",
+        "item.trapcraft.burner_phone": "Telefon na kartę",
+        "block.trapcraft.nightclub": "Budka klubowa",
+        "item.trapcraft.nightclub": "Budka klubowa",
+        "block.trapcraft.market_stall": "Stragan",
+        "item.trapcraft.market_stall": "Stragan",
+        "block.trapcraft.mailbox": "Skrzynka pocztowa",
+        "item.trapcraft.mailbox": "Skrzynka pocztowa",
+        "block.trapcraft.city_vault": "Skarbiec miasta",
+        "item.trapcraft.city_vault": "Skarbiec miasta",
+        "block.trapcraft.hospital": "Szpital",
+        "item.trapcraft.hospital": "Szpital",
         # "Shop Shelf", not "Market Shelf". Three things called market -- the
         # counter, the stall and this -- meant the word had stopped narrowing
         # anything down. The ID stays market_shelf: every placed block on the
         # live world is that ID, and renaming it orphans the lot.
-        "block.trapcraft.market_shelf": "Shop Shelf",
-        "item.trapcraft.market_shelf": "Shop Shelf",
-        "item.trapcraft.dirty_emerald": "Dirty Emerald",
-        "block.trapcraft.dirty_emerald_block": "Block of Dirty Emeralds",
-        "item.trapcraft.dirty_emerald_block": "Block of Dirty Emeralds",
-        "block.trapcraft.shop_till": "Shop Till",
-        "item.trapcraft.shop_till": "Shop Till",
-        "block.trapcraft.laundry": "Laundry Drum",
-        "item.trapcraft.laundry": "Laundry Drum",
-        "block.trapcraft.slot_machine": "Lucky Streak",
-        "item.trapcraft.slot_machine": "Lucky Streak",
-        "effect.trapcraft.baked": "Baked",
-        "effect.trapcraft.tolerance": "Tolerance",
-        "block.trapcraft.poppy_crop": "Opium Poppy",
-        "item.trapcraft.poppy_seeds": "Poppy Seeds",
-        "item.trapcraft.poppy_pod": "Poppy Pod",
-        "item.trapcraft.raw_opium": "Raw Opium",
-        "item.trapcraft.morphine_base": "Morphine Base",
+        "block.trapcraft.market_shelf": "Półka sklepowa",
+        "item.trapcraft.market_shelf": "Półka sklepowa",
+        "item.trapcraft.dirty_emerald": "Brudny szmaragd",
+        "block.trapcraft.dirty_emerald_block": "Blok brudnych szmaragdów",
+        "item.trapcraft.dirty_emerald_block": "Blok brudnych szmaragdów",
+        "block.trapcraft.shop_till": "Kasa sklepowa",
+        "item.trapcraft.shop_till": "Kasa sklepowa",
+        "block.trapcraft.laundry": "Bęben pralniczy",
+        "item.trapcraft.laundry": "Bęben pralniczy",
+        "block.trapcraft.slot_machine": "Jednoręki bandyta",
+        "item.trapcraft.slot_machine": "Jednoręki bandyta",
+        "effect.trapcraft.baked": "Naćpany",
+        "effect.trapcraft.tolerance": "Tolerancja",
+        "block.trapcraft.poppy_crop": "Mak lekarski",
+        "item.trapcraft.poppy_seeds": "Nasiona maku",
+        "item.trapcraft.poppy_pod": "Makówka",
+        "item.trapcraft.raw_opium": "Surowe opium",
+        "item.trapcraft.morphine_base": "Baza morfinowa",
         # Renamed per-purity by the component, like powder; this is the bare
         # name a /give with no grade on it shows.
-        "item.trapcraft.heroin": "Dope",
-        "block.trapcraft.scoring_table": "Scoring Table",
-        "item.trapcraft.scoring_table": "Scoring Table",
-        "block.trapcraft.wash_pot": "Wash Pot",
-        "item.trapcraft.wash_pot": "Wash Pot",
+        "item.trapcraft.heroin": "Heroina",
+        "block.trapcraft.scoring_table": "Stół do nacinania",
+        "item.trapcraft.scoring_table": "Stół do nacinania",
+        "block.trapcraft.wash_pot": "Garnek do gotowania",
+        "item.trapcraft.wash_pot": "Garnek do gotowania",
         "block.trapcraft.acetylator": "Acetylator",
         "item.trapcraft.acetylator": "Acetylator",
-        "effect.trapcraft.nod": "Nod",
-        "effect.trapcraft.withdrawal": "Withdrawal",
-        "entity.minecraft.villager.trapcraft.dealer": "Dealer",
+        "effect.trapcraft.nod": "Odlot",
+        "effect.trapcraft.withdrawal": "Odstawienie",
+        "entity.minecraft.villager.trapcraft.dealer": "Diler",
     }
     for strain, nice in STRAINS.items():
-        entries[f"block.trapcraft.cannabis_crop_{strain}"] = f"{nice} Plant"
-        entries[f"item.trapcraft.seeds_{strain}"] = f"{nice} Seeds"
-        entries[f"item.trapcraft.raw_bud_{strain}"] = f"Fresh {nice} Bud"
-        entries[f"item.trapcraft.dried_bud_{strain}"] = f"Cured {nice} Bud"
-        entries[f"item.trapcraft.joint_{strain}"] = f"{nice} Joint"
+        entries[f"block.trapcraft.cannabis_crop_{strain}"] = f"Krzak {nice}"
+        entries[f"item.trapcraft.seeds_{strain}"] = f"Nasiona {nice}"
+        entries[f"item.trapcraft.raw_bud_{strain}"] = f"Świeża szyszka {nice}"
+        entries[f"item.trapcraft.dried_bud_{strain}"] = f"Susz {nice}"
+        entries[f"item.trapcraft.joint_{strain}"] = f"Skręt {nice}"
+    for name, (nice, _, _) in WANDS.items():
+        entries[f"item.trapcraft.{name}"] = nice
     put(f"assets/{NS}/lang/en_us.json", dict(sorted(entries.items())))
 
 
@@ -1789,110 +1791,110 @@ def has(*items) -> dict:
 
 
 def advancements() -> None:
-    award("root", "Everybody Eats", "Get hold of some seeds and start something.",
+    award("root", "Każdy musi jeść", "Zdobądź nasiona i zacznij działać.",
           f"{NS}:seeds_kush", None, trigger=has(f"{NS}:seeds_kush", f"{NS}:seeds_haze",
                                                 f"{NS}:seeds_purp", f"{NS}:seeds_diesel",
                                                 f"{NS}:seeds_sunset", f"{NS}:seeds_midnight"))
 
-    award("cured", "Patience", "Dry a bud properly instead of smoking it wet.",
+    award("cured", "Cierpliwość", "Wysusz szyszkę porządnie, zamiast palić ją na mokro.",
           f"{NS}:dried_bud_kush", "root",
           trigger=has(*[f"{NS}:dried_bud_{s}" for s in
                         ("kush", "haze", "purp", "diesel", "sunset", "midnight")]))
-    award("rolled", "Rolled", "Turn a bud into something you can actually sell.",
+    award("rolled", "Zwinięte", "Zamień szyszkę w coś, co da się realnie sprzedać.",
           f"{NS}:joint_kush", "cured",
           trigger=has(*[f"{NS}:joint_{s}" for s in
                         ("kush", "haze", "purp", "diesel", "sunset", "midnight")]))
-    award("blended", "House Blend", "Put two strains through the mixing station.",
+    award("blended", "Mieszanka firmowa", "Zmieszaj dwie odmiany w mieszalniku.",
           f"{NS}:blend_bud", "rolled", trigger=has(f"{NS}:blend_bud", f"{NS}:blend_joint"))
-    award("named_blend", "By Name", "Make a blend somebody has already named.",
+    award("named_blend", "Z nazwy", "Zrób mieszankę, która ma już swoją nazwę.",
           f"{NS}:blend_joint", "blended", frame="goal")
 
-    award("refined", "Refined", "Take the coca line all the way to powder.",
+    award("refined", "Oczyszczone", "Przejdź całą linię koki aż do proszku.",
           f"{NS}:coca_powder", "root", trigger=has(f"{NS}:coca_powder"))
 
     # The long line. Hung off `refined` rather than off root, because the poppy
     # is the thing you go looking for once powder has stopped being exciting --
     # and the tree should say so.
-    award("poppy", "Full Daylight", "Get hold of poppy seed. It won't grow in a cellar.",
+    award("poppy", "Pełne słońce", "Zdobądź nasiona maku. W piwnicy nie urosną.",
           f"{NS}:poppy_seeds", "refined", trigger=has(f"{NS}:poppy_seeds"))
-    award("opium", "Weeping", "Score a batch of pods and collect what runs out.",
+    award("opium", "Nacinanie", "Natnij partię makówek i zbierz to, co z nich wypłynie.",
           f"{NS}:raw_opium", "poppy", trigger=has(f"{NS}:raw_opium"))
-    award("base", "Over A Fire", "Cook opium down to base. The pot brings no fire of its own.",
+    award("base", "Nad ogniem", "Wygotuj opium do bazy morfinowej. Garnek sam ognia nie da.",
           f"{NS}:morphine_base", "opium", trigger=has(f"{NS}:morphine_base"))
-    award("dope", "The Long Line", "Three machines, and it can still come to nothing.",
+    award("dope", "Długa droga", "Trzy maszyny, a i tak można wszystko stracić.",
           f"{NS}:heroin", "base", frame="goal", trigger=has(f"{NS}:heroin"))
     # No vanilla criterion can see "the acetylator hit peak and you were there",
     # so this one is granted from code -- see TrapAwards.
-    award("pure_dope", "Timed It", "Pull the acetylator at peak for a Pure batch.",
+    award("pure_dope", "W punkt", "Wyjmij towar z acetylatora dokładnie na szczycie czystości.",
           f"{NS}:heroin", "dope", frame="challenge")
     # Under root, not under dope. The habit is what all three lines feed and
     # you can earn this on weed alone -- filing it under the poppy branch would
     # hang it off an advancement the player might never take.
-    award("hooked", "Hooked", "Let a meter get all the way to withdrawal.",
+    award("hooked", "Uzależniony", "Doprowadź licznik nałogu aż do odstawienia.",
           f"{NS}:nerve_tonic", "root", frame="goal", hidden=True)
-    award("clean_sheet", "Cold Turkey", "Ride a full habit all the way back down to nothing.",
+    award("clean_sheet", "Na czysto", "Zbij pełny licznik nałogu z powrotem do zera.",
           "minecraft:milk_bucket", "hooked", frame="challenge")
 
-    award("open", "Open For Business", "Set up a market stall.",
+    award("open", "Otwarte", "Postaw własny stragan.",
           f"{NS}:market_stall", "root", trigger=has(f"{NS}:market_stall"))
-    award("address", "An Address", "Put a mailbox on a room somebody could live in.",
+    award("address", "Adres", "Postaw skrzynkę pocztową w pokoju, w którym da się mieszkać.",
           f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
-    award("founded", "Founded", "Put the city vault down and start taxing everybody.",
+    award("founded", "Miasto założone", "Postaw skarbiec miasta i zacznij ściągać podatki.",
           f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
-    award("ward", "Somewhere To Get Better",
-          "Open a hospital, so a bite stops being the end of somebody.",
+    award("ward", "Miejsce do leczenia",
+          "Otwórz szpital, żeby ugryzienie przestało być wyrokiem.",
           f"{NS}:hospital", "founded", trigger=has(f"{NS}:hospital"), frame="goal")
-    award("shopkeeper", "Shopkeeper", "Open a shop the town can buy from.",
+    award("shopkeeper", "Sklepikarz", "Otwórz sklep, w którym miasto może robić zakupy.",
           f"{NS}:shop_till", "open", trigger=has(f"{NS}:shop_till"))
-    award("dirty", "Dirty Money", "Take payment nobody can bank.",
+    award("dirty", "Brudna kasa", "Przyjmij zapłatę, której żaden bank nie przyjmie.",
           f"{NS}:dirty_emerald", "root", trigger=has(f"{NS}:dirty_emerald"))
-    award("clean", "Through The Books", "Wash a drum of it.",
+    award("clean", "Nic tu nie ma", "Przetrwaj nalot, nie tracąc ani grama towaru.",
           f"{NS}:laundry", "dirty", frame="goal", trigger=has(f"{NS}:laundry"))
-    award("banked", "Banked", "Carry a wallet instead of twenty stacks.",
+    award("banked", "W portfelu", "Noś portfel zamiast dwudziestu stacków szmaragdów.",
           f"{NS}:wallet", "open", trigger=has(f"{NS}:wallet"))
-    award("liquidation", "Liquidation", "Clear 500 emeralds at the counter in one go.",
+    award("liquidation", "Wyprzedaż", "Sprzedaj na ladzie towar za 500 szmaragdów w jednej transakcji.",
           "minecraft:hopper", "open", frame="goal")
-    award("mover", "Moved The Market", "Push one item's price by a fifth on your own.",
+    award("mover", "Ruszyłeś rynek", "Podbij cenę jednego przedmiotu o jedną piątą, w pojedynkę.",
           "minecraft:emerald_block", "liquidation", frame="challenge")
 
-    award("floor", "The Floor", "Get a machine of your own on the floor.",
+    award("floor", "Własna sala", "Postaw pierwszy automat na swojej sali.",
           f"{NS}:slot_machine", "root",
           trigger=has(f"{NS}:slot_machine", f"{NS}:roulette", f"{NS}:plinko", f"{NS}:climb"))
-    award("jackpot", "Jackpot", "Take ten times your stake off a machine.",
+    award("jackpot", "Kumulacja", "Wygraj z automatu dziesięciokrotność stawki.",
           "minecraft:nether_star", "floor", frame="goal")
-    award("nerve", "Nerve", "Walk away from the sixth rung of The Climb.",
+    award("nerve", "Zimna krew", "Odejdź z wygraną z szóstego szczebla Wspinaczki.",
           "minecraft:gold_ingot", "floor", frame="goal")
-    award("edge", "Edge Case", "Land the ball in an outside slot on The Drop.",
+    award("edge", "Skrajny przypadek", "Trafi kulką w skrajną przegródkę w Plinko.",
           "minecraft:snowball", "floor", frame="goal")
-    award("whole_floor", "House Money", "Win something on all four machines.",
+    award("whole_floor", "Kasa kasyna", "Wygraj coś na wszystkich czterech automatach.",
           "minecraft:emerald", "floor", frame="challenge")
 
-    award("followed", "Followed Home",
-          "Deal in person once too often and find out who was watching.",
+    award("followed", "Ktoś cię śledził",
+          "Sprzedaj z ręki raz za dużo i przekonaj się, kto patrzył.",
           "minecraft:crossbow", "root", frame="goal")
-    award("licence", "Licensed", "Get your hands on a casino licence.",
+    award("licence", "Z licencją", "Zdobądź licencję kasyna.",
           f"{NS}:casino_card", "floor", trigger=has(f"{NS}:casino_card"))
-    award("broke_the_bank", "Broke The Bank",
-          "Win more off one machine than its casino had in the vault.",
+    award("broke_the_bank", "Rozbity bank",
+          "Wygraj z automatu więcej, niż kasyno miało w skarbcu.",
           "minecraft:gold_block", "licence", frame="challenge")
 
-    award("rim", "On The Rim", "Call the edge on the coin toss and hit it.",
+    award("rim", "Na kancie", "Obstaw kant przy rzucie monetą i trafi.",
           "minecraft:nether_star", "floor", frame="challenge")
-    award("natural", "Natural", "Get dealt twenty-one on two cards.",
+    award("natural", "Naturalne 21", "Dostań dwadzieścia jeden na dwóch pierwszych kartach.",
           "minecraft:paper", "floor", frame="goal")
 
-    award("network", "The Network", "Put somebody on the street selling for you.",
+    award("network", "Siatka", "Wyślij kogoś na ulicę, żeby sprzedawał za ciebie.",
           "minecraft:player_head", "root", frame="goal")
-    award("kingpin", "Kingpin", "Bring a dealer up to level five.",
+    award("kingpin", "Szef szefów", "Wyszkol dilera do piątego poziomu.",
           "minecraft:golden_helmet", "network", frame="challenge")
 
-    award("crew", "Payroll", "Take somebody on. Wages start immediately.",
+    award("crew", "Lista płac", "Zatrudnij pierwszą osobę. Pensja leci od razu.",
           "minecraft:villager_spawn_egg", "root", frame="goal")
-    award("foreman", "Foreman", "Teach one hand everything there is to teach.",
+    award("foreman", "Brygadzista", "Naucz jednego robotnika wszystkiego, czego się da.",
           "minecraft:golden_hoe", "crew", frame="challenge")
-    award("raided", "They Found It", "Have a raid walk out with your product.",
+    award("raided", "Znaleźli", "Pozwól, żeby nalot wyniósł twój towar.",
           "minecraft:crossbow", "root", frame="goal")
-    award("clean", "Nothing To See", "Sit through a raid without losing a gram.",
+    award("clean", "Nic tu nie ma", "Przetrwaj nalot, nie tracąc ani grama towaru.",
           "minecraft:barrier", "raided", frame="challenge")
 
 
@@ -2233,6 +2235,73 @@ def ledger_assets() -> None:
         },
         "result": {"id": f"{NS}:ledger", "count": 1},
     })
+
+
+# The wand rack. Every entry is (english name, gem texture suffix, the one
+# ingredient that makes it that wand). The shaft, the grip and the amethyst are
+# the same on all five -- what you are really buying is the thing in the head,
+# which is exactly what the recipe should read like.
+WANDS = {
+    "boost_wand": ("Różdżka Pędu", "boost", "minecraft:breeze_rod"),
+    "harvest_wand": ("Różdżka Żniw", "harvest", "minecraft:sniffer_egg"),
+    "prospect_wand": ("Różdżka Żył", "prospect", "minecraft:echo_shard"),
+    "builder_wand": ("Różdżka Murarzy", "builder", "minecraft:recovery_compass"),
+    "storm_wand": ("Różdżka Burz", "storm", "minecraft:nether_star"),
+}
+
+
+def wand_model(gem: str) -> dict:
+    """A wand: turned shaft, wrapped grip, a cut stone standing proud of it.
+
+    One shape for all five. The gem is the only element that changes texture,
+    and it is deliberately the biggest thing in the silhouette -- at 16px in a
+    hotbar a stick is a stick, and the stone is the only part that can carry
+    which wand this is.
+    """
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "shaft": f"{NS}:item/wand_shaft",
+            "grip": f"{NS}:item/wand_grip",
+            "gem": f"{NS}:item/wand_gem_{gem}",
+            "particle": f"{NS}:item/wand_gem_{gem}",
+        },
+        # Stood up and turned a little further than vanilla's 225: the gem is
+        # the whole read, and at the default angle the shaft crosses it.
+        "display": held(1.05, gui_rotation=(25, 200, 0)),
+        "elements": [
+            box([7, 0, 7], [9, 9.5, 9], "shaft"),           # shaft
+            box([6.6, 1, 6.6], [9.4, 4, 9.4], "grip"),      # where you hold it
+            box([6.6, 9.5, 6.6], [9.4, 10.5, 9.4], "grip"), # collar under the stone
+            box([5.5, 10.5, 5.5], [10.5, 15, 10.5], "gem"), # the stone
+        ],
+    }
+
+
+def wand_assets() -> None:
+    for name, (_, gem, core) in WANDS.items():
+        put(f"assets/{NS}/models/block/{name}.json", wand_model(gem))
+        put(f"assets/{NS}/models/item/{name}.json", {"parent": f"{NS}:block/{name}"})
+        put(f"assets/{NS}/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+        })
+
+        # Blaze rods for the shaft, amethyst to focus it, and one thing that
+        # only comes off something that fought back. The market sells these
+        # finished for four to eighteen thousand; this is the other route, and
+        # it is deliberately paid for in effort rather than emeralds.
+        put(f"data/{NS}/recipe/{name}.json", {
+            "type": "minecraft:crafting_shaped",
+            "category": "equipment",
+            "pattern": [" AC", " RA", "R  "],
+            "key": {
+                "A": "minecraft:amethyst_shard",
+                "C": core,
+                "R": "minecraft:blaze_rod",
+            },
+            "result": {"id": f"{NS}:{name}", "count": 1},
+        })
 
 
 def phone_model() -> dict:
@@ -2896,6 +2965,7 @@ def main() -> None:
                   "P": "#minecraft:planks", "W": "minecraft:red_wool"},
                  scratch_furniture())
     advancements()
+    wand_assets()
     phone_assets()
     stall_assets()
     club_assets()

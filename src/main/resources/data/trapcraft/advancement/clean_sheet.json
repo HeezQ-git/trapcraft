@@ -4,7 +4,7 @@
       "id": "minecraft:milk_bucket"
     },
     "title": "Na czysto",
-    "description": "Zbij pełny licznik nałogu z powrotem do zera.",
+    "description": "Zbij pe\u0142ny licznik na\u0142ogu z powrotem do zera.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

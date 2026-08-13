@@ -4,7 +4,7 @@
       "id": "trapcraft:mailbox"
     },
     "title": "Adres",
-    "description": "Postaw skrzynkę pocztową w pokoju, w którym da się mieszkać.",
+    "description": "Postaw skrzynk\u0119 pocztow\u0105 w pokoju, w kt\u00f3rym da si\u0119 mieszka\u0107.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

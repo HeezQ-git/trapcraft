@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:joint_kush"
     },
-    "title": "Zwinięte",
-    "description": "Zamień szyszkę w coś, co da się realnie sprzedać.",
+    "title": "Zwini\u0119te",
+    "description": "Zamie\u0144 szyszk\u0119 w co\u015b, co da si\u0119 realnie sprzeda\u0107.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

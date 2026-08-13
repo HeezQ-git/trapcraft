@@ -4,7 +4,7 @@
       "id": "trapcraft:market_stall"
     },
     "title": "Otwarte",
-    "description": "Postaw własny stragan.",
+    "description": "Postaw w\u0142asny stragan.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

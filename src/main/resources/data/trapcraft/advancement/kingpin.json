@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:golden_helmet"
     },
-    "title": "Szef szefów",
-    "description": "Wyszkol dilera do piątego poziomu.",
+    "title": "Szef szef\u00f3w",
+    "description": "Wyszkol dilera do pi\u0105tego poziomu.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

@@ -4,7 +4,7 @@
       "id": "minecraft:gold_ingot"
     },
     "title": "Zimna krew",
-    "description": "Odejdź z wygraną z szóstego szczebla Wspinaczki.",
+    "description": "Odejd\u017a z wygran\u0105 z sz\u00f3stego szczebla Wspinaczki.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

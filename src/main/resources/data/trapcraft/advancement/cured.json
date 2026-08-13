@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:dried_bud_kush"
     },
-    "title": "Cierpliwość",
-    "description": "Wysusz szyszkę porządnie, zamiast palić ją na mokro.",
+    "title": "Cierpliwo\u015b\u0107",
+    "description": "Wysusz szyszk\u0119 porz\u0105dnie, zamiast pali\u0107 j\u0105 na mokro.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
