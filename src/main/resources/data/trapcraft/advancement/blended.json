@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:blend_bud"
     },
-    "title": "House Blend",
-    "description": "Put two strains through the mixing station.",
+    "title": "Mieszanka firmowa",
+    "description": "Zmieszaj dwie odmiany w mieszalniku.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:nether_star"
     },
-    "title": "Jackpot",
-    "description": "Take ten times your stake off a machine.",
+    "title": "Kumulacja",
+    "description": "Wygraj z automatu dziesięciokrotność stawki.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

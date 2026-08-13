@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -20,15 +19,18 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
  * Water pipe. The middle rung of the three ways to smoke:
@@ -38,7 +40,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * of the usual, so the stronger hit genuinely burns through your ceiling faster
  * rather than being strictly better than a joint.
  */
-public class BongBlock extends Block implements PolymerTexturedBlock {
+public class BongBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<BongBlock> CODEC = createCodec(BongBlock::new);
 
     public static final BooleanProperty WATER = BooleanProperty.of("water");
@@ -52,39 +54,51 @@ public class BongBlock extends Block implements PolymerTexturedBlock {
     public static final float POTENCY = 1.5F;
     public static final int EXTRA_TOLERANCE = 1;
 
-    private final BlockState dryState;
-    private final BlockState wetState;
-    private final BlockState loadedState;
+    private final Map<Direction, BlockState> dryCarriers;
+    private final Map<Direction, BlockState> wetCarriers;
+    private final Map<Direction, BlockState> loadedCarriers;
 
     public BongBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(WATER, false).with(LOADED, false)
                 .with(STRAIN, Strain.KUSH).with(GRADE, Quality.MIDS.index()));
 
-        this.dryState = request("bong_dry");
-        this.wetState = request("bong_wet");
-        this.loadedState = request("bong_loaded");
+        this.dryCarriers = request("bong_dry");
+        this.wetCarriers = request("bong_wet");
+        this.loadedCarriers = request("bong_loaded");
     }
 
-    private static BlockState request(String name) {
-        return TrapPolymer.requestOrFallback(
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                () -> Blocks.GLASS.getDefaultState(), name);
+    private static Map<Direction, BlockState> request(String name) {
+        return carriers(TrapPolymer.NON_SOLID, name,
+                () -> Blocks.GLASS.getDefaultState());
     }
 
     @Override
     protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos,
                                          ShapeContext context) {
-        return SHAPE;
+        return SHAPES.get(state.get(FACING));
     }
 
-    /** Beaker foot, tube, and the downstem poking out to one side. */
-    private static final VoxelShape SHAPE = VoxelShapes.union(
-            createCuboidShape(4, 0, 4, 12, 3, 12),
-            createCuboidShape(5.5, 3, 5.5, 10.5, 13.5, 10.5),
-            createCuboidShape(11, 5, 6.5, 15, 9.5, 9.5));
+    /**
+     * Beaker foot, tube, and the downstem poking out to one side.
+     *
+     * The downstem is why this block gets a shape per angle rather than one
+     * shape: turn the model without turning the outline and you get a bong you
+     * can see sticking out to the right and have to click on the left.
+     */
+    private static final Map<Direction, VoxelShape> SHAPES = shapes();
+
+    private static Map<Direction, VoxelShape> shapes() {
+        Map<Direction, VoxelShape> byFacing = new EnumMap<>(Direction.class);
+        for (Direction facing : Direction.Type.HORIZONTAL) {
+            byFacing.put(facing, VoxelShapes.union(
+                    turnBox(facing, 4, 0, 4, 12, 3, 12),
+                    turnBox(facing, 5.5, 3, 5.5, 10.5, 13.5, 10.5),
+                    turnBox(facing, 11, 5, 6.5, 15, 9.5, 9.5)));
+        }
+        return byFacing;
+    }
 
     @Override
     protected MapCodec<? extends Block> getCodec() {
@@ -93,6 +107,7 @@ public class BongBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(WATER, LOADED, STRAIN, GRADE);
     }
 
@@ -175,8 +190,8 @@ public class BongBlock extends Block implements PolymerTexturedBlock {
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
         if (state.get(LOADED)) {
-            return loadedState;
+            return loadedCarriers.get(state.get(FACING));
         }
-        return state.get(WATER) ? wetState : dryState;
+        return (state.get(WATER) ? wetCarriers : dryCarriers).get(state.get(FACING));
     }
 }

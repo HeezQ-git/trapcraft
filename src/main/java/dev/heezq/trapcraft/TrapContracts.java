@@ -111,7 +111,7 @@ public final class TrapContracts {
      * it is a slot machine, not a job list.
      */
     public static List<Contract> board(ServerWorld world, ServerPlayerEntity player, int rep) {
-        long day = world.getTimeOfDay() / 24000L;
+        long day = TrapMarket.today(world.getServer());
         Random random = Random.create(day * 8191L + world.getSeed());
 
         BlockPos anchor = anchorFor(player, day);
@@ -256,7 +256,7 @@ public final class TrapContracts {
                 Optional.of(GlobalPos.create(player.getWorld().getRegistryKey(),
                         live.destination())), false));
         compass.set(DataComponentTypes.CUSTOM_NAME,
-                Text.literal("Drop-off").formatted(Formatting.GOLD)
+                Text.literal("Punkt odbioru").formatted(Formatting.GOLD)
                         .styled(style -> style.withItalic(false)));
         player.getInventory().offerOrDrop(compass);
 
@@ -267,7 +267,7 @@ public final class TrapContracts {
                 SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundCategory.PLAYERS, 0.8F, 1.3F);
         world.spawnParticles(ParticleTypes.WAX_OFF, player.getX(), player.getEyeY(), player.getZ(),
                 10, 0.3, 0.3, 0.3, 0.02);
-        player.sendMessage(Text.literal("Job on. Clock's running.")
+        player.sendMessage(Text.literal("Zlecenie przyjęte. Czas leci.")
                 .formatted(Formatting.GOLD), false);
         // The compass points at it, but a waypoint survives you putting the
         // compass down and shows on the world map as well.
@@ -326,7 +326,7 @@ public final class TrapContracts {
         ServerWorld world = player.getWorld();
         world.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 1.0F, 0.5F);
-        player.sendMessage(Text.literal("You missed the drop. They won't forget it.")
+        player.sendMessage(Text.literal("Nie zdążyłeś na odbiór. Zapamiętają to.")
                 .formatted(Formatting.RED), false);
     }
 
@@ -422,7 +422,7 @@ public final class TrapContracts {
                 world.getRegistryManager().getOrThrow(
                                 net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
                         .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
-        contact.setCustomName(Text.literal("Buyer  ·  " + contract.quantity() + "x "
+        contact.setCustomName(Text.literal("Odbiorca  ·  " + contract.quantity() + "x "
                         + contract.productName())
                 .formatted(Formatting.GOLD, Formatting.BOLD));
         contact.setCustomNameVisible(true);
@@ -433,9 +433,9 @@ public final class TrapContracts {
 
         world.playSound(null, spot, SoundEvents.ENTITY_VILLAGER_AMBIENT,
                 SoundCategory.NEUTRAL, 1.0F, 0.9F);
-        player.sendMessage(Text.literal("Your buyer's here. ")
+        player.sendMessage(Text.literal("Twój odbiorca jest na miejscu. ")
                         .formatted(Formatting.GOLD, Formatting.BOLD)
-                        .append(Text.literal("Glowing one. Right-click to hand it over.")
+                        .append(Text.literal("Ten świecący. Kliknij PPM, żeby przekazać towar.")
                                 .formatted(Formatting.GRAY)), false);
         return contact;
     }
@@ -471,7 +471,7 @@ public final class TrapContracts {
         ItemStack phone = findPhone(player);
         Contract contract = phone == null ? null : phone.get(TrapComponents.contract);
         if (contract == null) {
-            player.sendMessage(Text.literal("They're waiting on somebody else.")
+            player.sendMessage(Text.literal("Czeka na kogoś innego.")
                     .formatted(Formatting.GRAY), true);
             return;
         }
@@ -483,7 +483,7 @@ public final class TrapContracts {
                         .append(Text.literal(", " + contract.formValue().label.toLowerCase(
                                         java.util.Locale.ROOT) + ", "
                                         + contract.gradeName() + " or better. "
-                                        + "You've got " + carrying + ".")
+                                        + "Masz " + carrying + ".")
                                 .formatted(Formatting.GRAY)),
                 false);
         player.getWorld().playSound(null, player.getBlockPos(),
@@ -534,9 +534,9 @@ public final class TrapContracts {
             return false;
         }
         if (carrying < contract.quantity()) {
-            player.sendMessage(Text.literal("They want " + contract.quantity() + " "
+            player.sendMessage(Text.literal("Chce " + contract.quantity() + " "
                             + contract.formValue().label.toLowerCase(java.util.Locale.ROOT)
-                            + ", you've got " + carrying + ".")
+                            + ", a masz " + carrying + ".")
                     .formatted(Formatting.RED), true);
             return true;
         }
@@ -566,7 +566,7 @@ public final class TrapContracts {
         player.sendMessage(Text.literal("Paid. " + paid + " emeralds, +"
                         + contract.rep() + " rep.").formatted(Formatting.GREEN)
                 .append(Text.literal(heatTier > 0
-                                ? "  (+" + (paid - contract.payout()) + " for running hot)"
+                                ? "  (+" + (paid - contract.payout()) + " za wysoką uwagę policji)"
                                 : "  (cold run, no premium)")
                         .formatted(Formatting.DARK_GRAY)), false);
         // A drop is the biggest handover in the mod and the one with a paper
@@ -661,6 +661,18 @@ public final class TrapContracts {
      * with no migration and no reset of a name people earned.
      */
     public static int repOf(ItemStack phone) {
+        // No phone, no name.
+        //
+        // {@link #findPhone} returns null for anybody not carrying one, and
+        // six call sites hand its result straight in here -- one of them the
+        // dealer round, which runs off the server tick for every boss who is
+        // online. So a player who left their phone in a chest was a
+        // NullPointerException in the tick loop: the server wrote a crash
+        // report and came back up every two minutes for as long as they had a
+        // dealer on the books. Four times before anybody read the report.
+        if (phone == null) {
+            return 0;
+        }
         Integer value = phone.get(TrapComponents.rep);
         return value == null ? 0 : TrapMath.standing(value);
     }

@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:hopper"
     },
-    "title": "Liquidation",
-    "description": "Clear 500 emeralds at the counter in one go.",
+    "title": "Wyprzedaż",
+    "description": "Sprzedaj na ladzie towar za 500 szmaragdów w jednej transakcji.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

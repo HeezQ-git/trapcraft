@@ -1,7 +1,6 @@
 package dev.heezq.trapcraft;
 
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
 import net.minecraft.block.Block;
@@ -20,13 +19,14 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 /**
  * The Drop: a tall board of pegs with nine slots along the bottom.
@@ -39,37 +39,39 @@ import xyz.nucleoid.packettweaker.PacketContext;
  *
  * The game is in {@link PlinkoScreenHandler}; this is the cabinet.
  */
-public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
+public class PlinkoBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
     public static final EnumProperty<DoubleBlockHalf> HALF = Properties.DOUBLE_BLOCK_HALF;
 
-    private final BlockState lowerCarrier;
-    private final BlockState upperCarrier;
+    private final Map<Direction, BlockState> lowerCarriers;
+    private final Map<Direction, BlockState> upperCarriers;
 
     public PlinkoBlock(Settings settings) {
         super(settings);
-        // TRANSPARENT_BLOCK: the board is a frame with gaps in it, and a
+        // A see-through carrier: the board is a frame with gaps in it, and a
         // carrier that claims to be a solid cube makes the client cull the
         // faces of whatever is behind and below -- the roulette table shipped
         // exactly that bug and showed the caves under the floor.
-        this.lowerCarrier = TrapPolymer.requestOrFallback(
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_lower")),
-                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_lower");
-        this.upperCarrier = TrapPolymer.requestOrFallback(
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/plinko_upper")),
-                () -> Blocks.BLUE_TERRACOTTA.getDefaultState(), "plinko_upper");
+        //
+        // Eight states, four per half. A board is all face: point it at the
+        // wall and the whole block is a plank.
+        this.lowerCarriers = carriers(TrapPolymer.NON_SOLID, "plinko_lower",
+                () -> Blocks.BLUE_TERRACOTTA.getDefaultState());
+        this.upperCarriers = carriers(TrapPolymer.NON_SOLID, "plinko_upper",
+                () -> Blocks.BLUE_TERRACOTTA.getDefaultState());
         setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(HALF);
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(HALF) == DoubleBlockHalf.UPPER ? upperCarrier : lowerCarrier;
+        Map<Direction, BlockState> half =
+                state.get(HALF) == DoubleBlockHalf.UPPER ? upperCarriers : lowerCarriers;
+        return half.get(state.get(FACING));
     }
 
     @Override
@@ -86,7 +88,7 @@ public class PlinkoBlock extends Block implements PolymerBlock, PolymerTexturedB
                 || !context.getWorld().getBlockState(pos.up()).isReplaceable()) {
             return null;   // no headroom: refuse rather than place half a board
         }
-        return getDefaultState();
+        return super.getPlacementState(context);
     }
 
     @Override

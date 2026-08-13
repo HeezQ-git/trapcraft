@@ -387,8 +387,8 @@ public final class TrapFloor {
                 continue;
             }
             TrapHouse.settled(house);
-            player.sendMessage(Text.literal("Somebody's here about the money "
-                            + house.name + " owes.")
+            player.sendMessage(Text.literal("Ktoś przyszedł po pieniądze, które "
+                            + house.name + " jest winne.")
                     .formatted(Formatting.RED, Formatting.BOLD), false);
             TrapStickup.jump(player, TrapMath.stickupSquad(
                     TrapContracts.repOf(TrapContracts.findPhone(player)),
@@ -498,7 +498,7 @@ public final class TrapFloor {
                 return ActionResult.SUCCESS;
             }
             if (TrapHouse.broken(server, seat)) {
-                gambler.sendMessage(Text.literal("Out of order. It wants a hammer.")
+                gambler.sendMessage(Text.literal("Zepsute. Potrzebny młot.")
                         .formatted(Formatting.RED), true);
                 world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
                         SoundCategory.BLOCKS, 0.6F, 0.5F);
@@ -506,7 +506,7 @@ public final class TrapFloor {
             }
             UUID on = occupant(server, seat);
             if (on != null && !on.equals(gambler.getUuid())) {
-                gambler.sendMessage(Text.literal(who(server, on) + " is on that one.")
+                gambler.sendMessage(Text.literal(who(server, on) + " gra na tym automacie.")
                         .formatted(Formatting.GRAY), true);
                 world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
                         SoundCategory.BLOCKS, 0.6F, 0.6F);
@@ -566,20 +566,20 @@ public final class TrapFloor {
     private static void mend(ServerWorld world, BlockPos pos, ServerPlayerEntity mender) {
         int worn = TrapHouse.wearAt(world, pos);
         if (worn <= 0) {
-            mender.sendMessage(Text.literal("Nothing wrong with it.")
+            mender.sendMessage(Text.literal("Nic mu nie jest.")
                     .formatted(Formatting.GRAY), true);
             return;
         }
         int cost = TrapHouse.repair(world, pos);
         if (cost < 0) {
-            mender.sendMessage(Text.literal("The vault can't cover the parts. It stays broken.")
+            mender.sendMessage(Text.literal("Skarbiec nie ma na części. Zostaje zepsute.")
                     .formatted(Formatting.RED), false);
             world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
                     SoundCategory.BLOCKS, 0.7F, 0.5F);
             return;
         }
-        mender.sendMessage(Text.literal("Put right.").formatted(Formatting.GREEN)
-                .append(Text.literal("  " + worn + " points of wear, " + cost + "e of parts.")
+        mender.sendMessage(Text.literal("Naprawione.").formatted(Formatting.GREEN)
+                .append(Text.literal("  zużycie " + worn + ", części za " + cost + "e.")
                         .formatted(Formatting.DARK_GRAY)), false);
         world.playSound(null, pos, SoundEvents.BLOCK_ANVIL_USE,
                 SoundCategory.BLOCKS, 0.7F, 1.3F);
@@ -594,7 +594,7 @@ public final class TrapFloor {
         }
         return world.getEntity(id) instanceof VillagerEntity punter
                 && punter.getCustomName() != null
-                ? punter.getCustomName().getString() : "Somebody";
+                ? punter.getCustomName().getString() : "Ktoś";
     }
 
     // --- somebody walks in ----------------------------------------------------
@@ -928,7 +928,7 @@ public final class TrapFloor {
      */
     private static String plainName(VillagerEntity body) {
         if (body.getCustomName() == null) {
-            return "Somebody";
+            return "Ktoś";
         }
         String shown = body.getCustomName().getString();
         int cut = shown.indexOf("  ·  ");
@@ -1115,19 +1115,19 @@ public final class TrapFloor {
                 world.spawnParticles(ParticleTypes.LARGE_SMOKE,
                         pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
                         25, 0.35, 0.35, 0.35, 0.02);
-                tellOwner(world, house, Text.literal("A machine's gone down at "
+                tellOwner(world, house, Text.literal("Automat padł na "
                                 + pos.getX() + ", " + pos.getZ()
-                                + ". It wants a hammer.")
+                                + ". Potrzebny młot.")
                         .formatted(Formatting.RED));
             } else if (TrapHouse.wearAt(world, pos) == TrapMath.JAM_FROM) {
                 // One word, once, at the exact point it starts costing money.
                 // Wear has been climbing on every cabinet since this mod
                 // shipped with nothing anywhere showing it, which is how a
                 // maintenance system stays invisible for months.
-                tellOwner(world, house, Text.literal("A cabinet's getting shabby at "
+                tellOwner(world, house, Text.literal("Automat się sypie na "
                                 + pos.getX() + ", " + pos.getZ() + ". ")
                         .formatted(Formatting.YELLOW)
-                        .append(Text.literal("It's started turning punters away.")
+                        .append(Text.literal("Zaczyna odstraszać graczy.")
                                 .formatted(Formatting.GRAY)));
             }
         }
@@ -1270,8 +1270,10 @@ public final class TrapFloor {
         TrapHomes.stayIn(body, world.getTime() + NIGHT_OFF
                 + world.getRandom().nextInt(NIGHT_OFF));
         body.setCustomName(Text.literal(punter.name).formatted(Formatting.AQUA));
-        // And they go home, rather than standing in the doorway forever.
-        TrapHomes.sendHome(world, body);
+        // And they go home, rather than standing in the doorway forever -- put
+        // there rather than walked, because a casino floor is indoors and a
+        // walk home from inside one is a path nobody ever finishes.
+        TrapHomes.putHome(world, body);
     }
 
     /**
@@ -1401,28 +1403,28 @@ public final class TrapFloor {
         }
         float chance = Math.min(1.0f, ARRIVAL_CHANCE * busy * bestPull());
         int every = Math.round(ARRIVAL_TICKS / 20.0f / chance);
-        net.minecraft.text.MutableText out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal(wired + " machines wired, " + loaded
-                        + " loaded, " + free + " free").formatted(Formatting.GRAY))
-                .append(Text.literal("\n  " + PUNTERS.size() + " out of a town of "
-                                + TrapHomes.population() + ", room for "
-                                + room(server) + " at this hour" + (walking > 0
-                                ? ", " + walking + " still walking over" : "")
-                                + ", " + SEATS.size() + " seats taken")
+        net.minecraft.text.MutableText out = Text.literal("Sala  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("podłączonych: " + wired + ", z kasą: " + loaded
+                        + ", wolnych: " + free).formatted(Formatting.GRAY))
+                .append(Text.literal("\n  na mieście: " + PUNTERS.size() + " z "
+                                + TrapHomes.population() + " mieszkańców, limit o tej porze: "
+                                + room(server) + (walking > 0
+                                ? ", w drodze: " + walking : "")
+                                + ", zajętych miejsc: " + SEATS.size())
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  " + (busy >= 1.4f ? "Busy -- the night crowd."
-                                : busy >= 0.8f ? "Filling up."
-                                : "Quiet. They're all at work.")
+                .append(Text.literal("\n  " + (busy >= 1.4f ? "Tłoczno -- nocny tłum."
+                                : busy >= 0.8f ? "Zapełnia się."
+                                : "Pusto. Wszyscy w pracy.")
                         + "  (" + String.format("%.2f", busy) + "x)")
                         .formatted(busy >= 1.4f ? Formatting.GREEN
                                 : busy >= 0.8f ? Formatting.WHITE : Formatting.DARK_GRAY))
-                .append(Text.literal("\n  One turns up about every " + every
-                                + "s, if a wired machine is loaded and its vault isn't empty")
+                .append(Text.literal("\n  Ktoś wchodzi mniej więcej co " + every
+                                + "s, o ile podłączony automat ma pokrycie w skarbcu")
                         .formatted(Formatting.DARK_GRAY));
         for (TrapHouse.House house : TrapHouse.all()) {
-            out.append(Text.literal("\n  " + house.name + "  name "
-                            + house.rep + ", regulars " + house.addiction
-                            + ", worn " + TrapHouse.averageWear(house)
+            out.append(Text.literal("\n  " + house.name + "  reputacja "
+                            + house.rep + ", bywalcy " + house.addiction
+                            + ", zużycie " + TrapHouse.averageWear(house)
                             + ", bar " + TrapHouse.barStock(house) + "  ->  "
                             + String.format("%.2f", house.pull()) + "x"
                             + (house.pitBoss ? "  [boss]" : "")
@@ -1439,12 +1441,12 @@ public final class TrapFloor {
         maybeArrive(source.getServer(), true);
         boolean came = PUNTERS.size() > before;
         source.sendFeedback(() -> Text.literal(came
-                        ? "Somebody's on their way."
+                        ? "Ktoś jest już w drodze."
                         : TrapHomes.population() == 0
-                        ? "Nobody came -- there is nobody living within " + RESIDENT_RANGE
-                        + " blocks. A casino's customers are its neighbours."
-                        : "Nobody came -- no wired machine is loaded, free and behind a "
-                        + "vault with money in it, or everybody nearby is already out.")
+                        ? "Nikt nie przyszedł -- w promieniu " + RESIDENT_RANGE
+                        + " bloków nikt nie mieszka. Klienci kasyna to sąsiedzi."
+                        : "Nikt nie przyszedł -- żaden podłączony automat nie jest wolny "
+                        + "i pokryty kasą, albo wszyscy w okolicy już wyszli.")
                 .formatted(came ? Formatting.GREEN : Formatting.RED), false);
         return came ? 1 : 0;
     }

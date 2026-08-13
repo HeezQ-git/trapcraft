@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:crossbow"
     },
-    "title": "Followed Home",
-    "description": "Deal in person once too often and find out who was watching.",
+    "title": "Ktoś cię śledził",
+    "description": "Sprzedaj z ręki raz za dużo i przekonaj się, kto patrzył.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

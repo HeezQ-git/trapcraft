@@ -87,19 +87,19 @@ public class ContractScreenHandler extends ScreenHandler {
                     field("Wants", job.formValue().label,
                             job.formValue() == Contract.Form.EITHER
                                     ? Formatting.WHITE : Formatting.YELLOW),
-                    field("Grade", job.gradeName() + " or better",
+                    field("Klasa", job.gradeName() + " or better",
                             job.gradeColour()),
-                    field("Distance", distance + " blocks", Formatting.WHITE),
-                    field("Deadline", String.format("%d:%02d", seconds / 60, seconds % 60),
+                    field("Odległość", distance + " blocks", Formatting.WHITE),
+                    field("Termin", String.format("%d:%02d", seconds / 60, seconds % 60),
                             seconds <= 300 ? Formatting.RED : Formatting.WHITE),
                     rule(),
                     // The cold price. Running hot adds to it at the drop, not
                     // here -- see the note in TrapContracts.board.
-                    field("Pays", job.payout() + " emeralds, more if you're hot",
+                    field("Zapłata", job.payout() + " szmaragdów, więcej przy wysokiej uwadze policji",
                             Formatting.GREEN),
                     field("Rep", "+" + job.rep(), Formatting.GREEN),
                     Text.empty(),
-                    plain("▸ Click to take it").formatted(Formatting.DARK_AQUA))));
+                    plain("▸ Kliknij, żeby przyjąć").formatted(Formatting.DARK_AQUA))));
             display.setStack(slot, paper);
         }
     }

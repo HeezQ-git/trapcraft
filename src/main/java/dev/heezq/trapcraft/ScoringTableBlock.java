@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -20,12 +19,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Step one of the long line: pods in, latex out.
@@ -41,7 +44,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * mostly lives -- not in any single step being fiddly, but in the field behind
  * it having to be about twice the size.
  */
-public class ScoringTableBlock extends Block implements PolymerTexturedBlock {
+public class ScoringTableBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<ScoringTableBlock> CODEC = createCodec(ScoringTableBlock::new);
 
     public static final BooleanProperty LOADED = BooleanProperty.of("loaded");
@@ -53,24 +56,21 @@ public class ScoringTableBlock extends Block implements PolymerTexturedBlock {
     /** 35s a step, 140s the batch. Half again on the leaf press. */
     private static final int STEP_TICKS = 700;
 
-    private final BlockState emptyState;
-    private final BlockState[] workingStates = new BlockState[DONE + 1];
+    private final Map<Direction, BlockState> emptyCarriers;
+    private final List<Map<Direction, BlockState>> workingCarriers = new ArrayList<>();
 
     public ScoringTableBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(LOADED, false).with(PROGRESS, 0));
 
-        this.emptyState = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/scoring_table_empty")),
-                () -> Blocks.OAK_PLANKS.getDefaultState(), "scoring_table_empty");
+        // Four carriers per model rather than one: a machine with a door
+        // and a dial on the front is worth turning to face the room.
+        this.emptyCarriers = carriers(BlockModelType.FULL_BLOCK, "scoring_table_empty",
+                () -> Blocks.OAK_PLANKS.getDefaultState());
         for (int step = 0; step <= DONE; step++) {
-            String name = "scoring_table_" + step;
-            this.workingStates[step] = TrapPolymer.requestOrFallback(
-                    BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                    () -> Blocks.OAK_PLANKS.getDefaultState(), name);
+            this.workingCarriers.add(carriers(BlockModelType.FULL_BLOCK,
+                    "scoring_table_" + step, () -> Blocks.OAK_PLANKS.getDefaultState()));
         }
     }
 
@@ -81,6 +81,7 @@ public class ScoringTableBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(LOADED, PROGRESS);
     }
 
@@ -183,6 +184,8 @@ public class ScoringTableBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(LOADED) ? workingStates[state.get(PROGRESS)] : emptyState;
+        return (state.get(LOADED)
+                ? workingCarriers.get(state.get(PROGRESS))
+                : emptyCarriers).get(state.get(FACING));
     }
 }

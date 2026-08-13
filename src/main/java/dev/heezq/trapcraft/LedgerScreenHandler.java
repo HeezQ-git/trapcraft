@@ -76,7 +76,7 @@ public class LedgerScreenHandler extends ScreenHandler {
                                     + "  ·  nearest " + describeNearest(positions))
                             .formatted(Formatting.DARK_GRAY)
                             .styled(style -> style.withItalic(false)),
-                    Text.literal("Click to trace")
+                    Text.literal("Kliknij, żeby namierzyć")
                             .formatted(Formatting.DARK_AQUA)
                             .styled(style -> style.withItalic(false)))));
 

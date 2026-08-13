@@ -149,34 +149,47 @@ public final class TrapMarket {
         boolean pinned = index >= TrapMath.INDEX_MAX - 0.001f
                 || index <= TrapMath.INDEX_MIN + 0.001f;
 
-        String mood = percent > 25 ? "Everything's dear."
-                : percent < -15 ? "Money's tight, so prices are soft."
-                : "Prices are about normal.";
+        String mood = percent > 25 ? "Wszystko jest drogie."
+                : percent < -15 ? "Pieniądza mało, więc ceny są niskie."
+                : "Ceny mniej więcej normalne.";
 
-        Text line = Text.literal("Market  ").formatted(Formatting.GOLD, Formatting.BOLD)
+        Text line = Text.literal("Rynek  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(mood).formatted(Formatting.GRAY))
-                .append(Text.literal("\n  Everything costs ").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  Wszystko kosztuje ").formatted(Formatting.DARK_GRAY))
                 .append(Text.literal((percent >= 0 ? "+" : "") + percent + "%")
                         .formatted(percent > 0 ? Formatting.RED
                                 : percent < 0 ? Formatting.GREEN : Formatting.WHITE))
-                .append(Text.literal(pinned ? "  (at the limit)" : "")
+                .append(Text.literal(pinned ? "  (przy limicie)" : "")
                         .formatted(Formatting.RED))
-                .append(Text.literal("\n  " + Math.round(supply) + "e about, against "
-                                + Math.round(baseline) + "e of normal")
+                .append(Text.literal("\n  w obiegu " + Math.round(supply) + "e, przy normie "
+                                + Math.round(baseline) + "e")
                         .formatted(Formatting.DARK_GRAY))
                 .append(Text.literal("\n  " + (supply > baseline
-                                ? "Easing back as the new normal sets in."
+                                ? "Powoli wraca do normy."
                                 : supply < baseline
-                                ? "Climbing back as the money drains away."
-                                : "Settled."))
+                                ? "Odbija w górę, bo pieniądz znika z obiegu."
+                                : "Stabilnie."))
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  " + PRESSURE.size() + " lines still moving from trade")
+                .append(Text.literal("\n  pozycji wciąż ruszonych handlem: " + PRESSURE.size())
                         .formatted(Formatting.DARK_GRAY));
         source.sendFeedback(() -> line, false);
     }
 
+    /**
+     * What day the economy thinks it is. The only definition of "day" in the mod.
+     *
+     * getTime(), NOT getTimeOfDay(). getTimeOfDay is the clock in the sky, and
+     * `/time set day` rewinds it: this world sat at day 1 with 250 days of
+     * gametime behind it, which showed up as a seven-day deposit reading "121
+     * day(s) to go" and nothing else looking wrong. Rent, tax, wages and
+     * maturity all hang off this number, so it has to be one that only ever
+     * goes forward. Every caller that wants a day number comes through here --
+     * a second copy of this line somewhere else is the same bug again.
+     * getTimeOfDay is still right for "is it dark out"; that's a different
+     * question and stays where it is.
+     */
     public static long today(MinecraftServer server) {
-        return server.getOverworld().getTimeOfDay() / 24000L;
+        return server.getOverworld().getTime() / 24000L;
     }
 
     /** The current cost multiplier from the money supply. */
@@ -262,8 +275,8 @@ public final class TrapMarket {
         }
         Text line = Text.literal("Market  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(up
-                                ? "Somebody just got paid. Prices are climbing."
-                                : "A lot of money just left the room. Prices are easing.")
+                                ? "Ktoś właśnie dostał wypłatę. Ceny rosną."
+                                : "Dużo pieniędzy właśnie zniknęło. Ceny spadają.")
                         .formatted(Formatting.GRAY));
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             player.sendMessage(line, true);
@@ -498,19 +511,19 @@ public final class TrapMarket {
         }
 
         float index = index();
-        String mood = index > 1.25f ? "Everything's dear today."
-                : index < 0.85f ? "Money's tight, so prices are soft."
-                : "Prices are about where you left them.";
+        String mood = index > 1.25f ? "Dziś wszystko jest drogie."
+                : index < 0.85f ? "Pieniądza mało, więc ceny są niskie."
+                : "Ceny mniej więcej takie jak wczoraj.";
 
-        Text line = Text.literal("").append(Text.literal("Market  ")
+        Text line = Text.literal("").append(Text.literal("Rynek  ")
                         .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(Text.literal(mood + " ").formatted(Formatting.GRAY))
                 .append(Text.literal(name(best)).formatted(Formatting.WHITE))
-                .append(Text.literal(" up " + movement(server, best) + "%")
+                .append(Text.literal(" w górę o " + movement(server, best) + "%")
                         .formatted(Formatting.GREEN))
                 .append(Text.literal(", ").formatted(Formatting.GRAY))
                 .append(Text.literal(name(worst)).formatted(Formatting.WHITE))
-                .append(Text.literal(" down " + Math.abs(movement(server, worst)) + "%")
+                .append(Text.literal(" w dół o " + Math.abs(movement(server, worst)) + "%")
                         .formatted(Formatting.RED))
                 .append(Text.literal(".").formatted(Formatting.GRAY));
 

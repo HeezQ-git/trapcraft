@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:nether_star"
     },
-    "title": "On The Rim",
-    "description": "Call the edge on the coin toss and hit it.",
+    "title": "Na kancie",
+    "description": "Obstaw kant przy rzucie monetą i trafi.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

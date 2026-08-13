@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:wallet"
     },
-    "title": "Banked",
-    "description": "Carry a wallet instead of twenty stacks.",
+    "title": "W portfelu",
+    "description": "Noś portfel zamiast dwudziestu stacków szmaragdów.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

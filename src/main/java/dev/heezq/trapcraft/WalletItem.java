@@ -156,7 +156,7 @@ public class WalletItem extends Item implements PolymerItem {
                 SoundCategory.PLAYERS, 0.7F, 1.4F);
         owner.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new WalletScreenHandler(syncId, inventory, held),
-                Text.literal("Wallet").formatted(Formatting.GREEN, Formatting.BOLD)));
+                Text.literal("Portfel").formatted(Formatting.GREEN, Formatting.BOLD)));
         return ActionResult.SUCCESS;
     }
 }

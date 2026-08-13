@@ -58,13 +58,13 @@ public final class TrapCity {
      * decorate and still cheap to eat in.
      */
     public enum Duty {
-        ESSENTIALS("Essentials", "Food, seeds, and what grows", 5, 2, 12),
-        MATERIALS("Materials", "Building blocks and timber", 8, 4, 16),
-        LUXURY("Luxury", "Decoration, tools, enchantments, the rare stuff", 12, 6, 22),
-        INCOME("Income", "Anything you are paid -- the counter, contracts, the pawn desk",
+        ESSENTIALS("Podstawowe", "Jedzenie, nasiona i plony", 5, 2, 12),
+        MATERIALS("Materiały", "Bloki budowlane i drewno", 8, 4, 16),
+        LUXURY("Luksus", "Ozdoby, narzędzia, zaklęcia, rzadkie rzeczy", 12, 6, 22),
+        INCOME("Dochód", "Wszystko, co ci płacą: lada, zlecenia, lombard",
                 10, 4, 20),
-        GAMING("Gaming", "Every stake laid on a casino floor", 6, 2, 14),
-        RENT("Rent", "What a tenant pays their landlord", 6, 2, 14);
+        GAMING("Hazard", "Każdy zakład postawiony w kasynie", 6, 2, 14),
+        RENT("Czynsz", "To, co lokator płaci właścicielowi", 6, 2, 14);
 
         private final String display;
         private final String blurb;
@@ -115,13 +115,13 @@ public final class TrapCity {
      * the exchange is what a market town does to a market.
      */
     public enum Work {
-        WATCH("The Watch", "Patrols come round half as often", 4000),
-        ROADS("Paved Roads", "Houses near the vault grade one higher", 6000),
-        LAMPS("Street Lamps", "Townspeople go shopping far more", 3000),
-        EXCHANGE("The Exchange", "The counter pays better for everything", 8000),
-        CLINIC("The Clinic", "Tenants put up with more before they leave", 5000),
-        TRAM("The Tramway", "More people out shopping at once", 7000),
-        SCHOOL("The School", "Everybody in the city is paid better", 12000);
+        WATCH("Straż miejska", "Patrole przychodzą dwa razy rzadziej", 4000),
+        ROADS("Brukowane drogi", "Domy przy skarbcu dostają klasę wyżej", 6000),
+        LAMPS("Latarnie", "Mieszkańcy dużo częściej chodzą na zakupy", 3000),
+        EXCHANGE("Giełda", "Lada płaci lepiej za wszystko", 8000),
+        CLINIC("Przychodnia", "Lokatorzy dłużej znoszą złe warunki", 5000),
+        TRAM("Tramwaje", "Więcej ludzi naraz robi zakupy", 7000),
+        SCHOOL("Szkoła", "Wszyscy w mieście zarabiają więcej", 12000);
 
         private final String display;
         private final String blurb;
@@ -161,33 +161,78 @@ public final class TrapCity {
     /** What the school does to every wage in the city. */
     public static final float SCHOOL_WAGE = 1.25f;
 
-    private static final java.util.Set<Work> BUILT = java.util.EnumSet.noneOf(Work.class);
+    private static final java.util.Map<Work, Integer> BUILT =
+            new java.util.EnumMap<>(Work.class);
 
+    /**
+     * How many times this work has been paid for. Nought to {@link #TOP_TIER}.
+     *
+     * A work used to be a thing you either had or did not, which made the
+     * whole board a shopping list you finish. Twenty-eight thousand emeralds
+     * of it, once, and then the city is done forever while its founders sit on
+     * more than that each. Levels are the same content charging what it is
+     * worth to somebody who already owns everything.
+     */
+    public static int level(Work work) {
+        return BUILT.getOrDefault(work, 0);
+    }
+
+    /**
+     * Has the city got one at all?
+     *
+     * Kept exactly as it was, deliberately. Eleven places ask this question --
+     * the clinic's discount, the school's wages, the watch's patrols -- and
+     * every one of them means "is there one", not "how many". Changing what
+     * this returns would switch off every public work in the mod at once, in
+     * eleven files, silently.
+     */
     public static boolean built(Work work) {
-        return BUILT.contains(work);
+        return level(work) >= 1;
+    }
+
+    /** Levels a work can be taken to. Three is a long enough ladder. */
+    public static final int TOP_TIER = 3;
+    /** What each tier multiplies the last one's price by. */
+    private static final double TIER_STEP = 2.5;
+
+    /** What the next level of this work costs, or -1 if it is finished. */
+    public static int nextCost(Work work) {
+        int level = level(work);
+        if (level >= TOP_TIER) {
+            return -1;
+        }
+        return (int) Math.round(work.cost() * Math.pow(TIER_STEP, level));
+    }
+
+    /** "The Clinic II", or just "The Clinic" for the first one. */
+    public static String titleOf(Work work) {
+        int level = level(work);
+        return work.display() + (level <= 1 ? "" : level == 2 ? " II" : " III");
     }
 
     /** @return why it didn't happen, or null if it did */
     public static String build(ServerPlayerEntity who, Work work) {
         if (!founded()) {
-            return "There's no city to build it in.";
+            return "Nie ma miasta, w którym można to zbudować.";
         }
-        if (BUILT.contains(work)) {
-            return "Already built.";
+        int cost = nextCost(work);
+        if (cost < 0) {
+            return work.display() + " jest ukończone -- nie ma poziomu " + (TOP_TIER + 1)
+                    + "th one to build.";
         }
-        if (treasury < work.cost()) {
-            return work.display() + " costs " + work.cost() + "e and the purse holds "
-                    + treasury + "e.";
+        if (treasury < cost) {
+            return (level(work) == 0 ? work.display() : "Kolejny poziom: " + work.display())
+                    + " kosztuje " + cost + "e, a w kasie jest " + treasury + "e.";
         }
-        treasury -= work.cost();
-        BUILT.add(work);
+        treasury -= cost;
+        BUILT.merge(work, 1, Integer::sum);
         save();
-        announce(who.getServer(), Text.literal(work.display().toUpperCase(java.util.Locale.ROOT))
+        announce(who.getServer(), Text.literal(titleOf(work).toUpperCase(java.util.Locale.ROOT))
                 .formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("\n  " + who.getGameProfile().getName() + " spent "
-                        + work.cost() + "e of the city's money. " + work.blurb() + ".")
+                .append(Text.literal("\n  " + who.getGameProfile().getName() + " wydał "
+                        + cost + "e z kasy miasta. " + work.blurb() + ".")
                         .formatted(Formatting.GRAY))
-                .append(Text.literal("\n  " + treasury + "e left in the purse.")
+                .append(Text.literal("\n  W kasie zostało " + treasury + "e.")
                         .formatted(Formatting.DARK_GRAY)));
         return null;
     }
@@ -208,10 +253,10 @@ public final class TrapCity {
      * ends up reading as a history of the server.
      */
     public enum Act {
-        LEVY("The Levy", "Every rate up while the purse is empty", 3),
-        CRACKDOWN("The Crackdown", "Patrols come round far more often", 0),
-        STANDARDS("Housing Standards", "A grade one is no longer fit to let", 0),
-        DRIVE("The Revenue Drive", "The office takes a harder share of what it finds", 0);
+        LEVY("Danina", "Wszystkie stawki w górę, dopóki kasa jest pusta", 3),
+        CRACKDOWN("Obława", "Patrole przychodzą dużo częściej", 0),
+        STANDARDS("Normy mieszkaniowe", "Domu klasy 1 nie wolno już wynajmować", 0),
+        DRIVE("Akcja skarbówki", "Urząd zabiera większą część tego, co wykryje", 0);
 
         private final String display;
         private final String blurb;
@@ -290,9 +335,10 @@ public final class TrapCity {
             // a Minecraft day.
             if (server.getTicks() % 200 == 0) {
                 budget(server);
-                long day = server.getOverworld().getTimeOfDay() / 24000L;
+                long day = TrapMarket.today(server);
                 if (day != lastLogged) {
                     lastLogged = day;
+                    rates(server);
                     logDay(server, day);
                 }
             }
@@ -317,7 +363,7 @@ public final class TrapCity {
     public static String found(ServerWorld world, BlockPos pos, ServerPlayerEntity who) {
         String dimension = world.getRegistryKey().getValue().toString();
         if (founded() && !(vaultAt.equals(pos) && dimension.equals(vaultWorld))) {
-            return "The city already has a vault, at " + vaultAt.getX() + " "
+            return "Miasto ma już skarbiec, na " + vaultAt.getX() + " "
                     + vaultAt.getY() + " " + vaultAt.getZ() + ".";
         }
         boolean first = !founded();
@@ -325,13 +371,13 @@ public final class TrapCity {
         vaultAt = pos.toImmutable();
         save();
         if (first) {
-            announce(who.getServer(), Text.literal("THE CITY IS OPEN")
+            announce(who.getServer(), Text.literal("MIASTO ZAŁOŻONE")
                     .formatted(Formatting.GOLD, Formatting.BOLD)
                     .append(Text.literal("\n  " + who.getGameProfile().getName()
-                            + " put the vault up. Trade is taxed from now on, and houses "
-                            + "can be registered.").formatted(Formatting.GRAY))
+                            + " postawił skarbiec. Od teraz handel jest opodatkowany, "
+                            + "a domy można rejestrować.").formatted(Formatting.GRAY))
                     .append(Text.literal("\n  /city").formatted(Formatting.GREEN))
-                    .append(Text.literal("  for the books.").formatted(Formatting.DARK_GRAY)));
+                    .append(Text.literal("  pokazuje rachunki.").formatted(Formatting.DARK_GRAY)));
         }
         return null;
     }
@@ -345,11 +391,11 @@ public final class TrapCity {
         vaultAt = null;
         vaultWorld = null;
         save();
-        announce(world.getServer(), Text.literal("The city vault is down. ")
+        announce(world.getServer(), Text.literal("Skarbiec miasta zniknął. ")
                 .formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal("Nothing is being taxed and no house can be "
-                        + "registered until one is stood up again. The "
-                        + treasury + "e is safe.").formatted(Formatting.GRAY)));
+                .append(Text.literal("Nic nie jest opodatkowane i nie da się "
+                        + "zarejestrować domu, dopóki go nie postawisz. "
+                        + treasury + "e jest bezpieczne.").formatted(Formatting.GRAY)));
     }
 
     // --- the money ------------------------------------------------------------
@@ -431,14 +477,79 @@ public final class TrapCity {
         save();
     }
 
+    /**
+     * The city pays a bill nobody chose to pay.
+     *
+     * Kept apart from {@link #withdraw} because that one is a person at the
+     * counter taking money out, announced to the server, and this is a
+     * standing cost the council cannot decline -- a ward full of people the
+     * doctors are treating. Fails closed and says so: an unpaid bill has to be
+     * the caller's problem, or the treasury quietly goes negative and the
+     * first anybody knows is a purse that will not fund a public work.
+     *
+     * @return false if the purse could not cover it, and nothing was taken
+     */
+    public static boolean spend(int amount) {
+        if (amount <= 0) {
+            return true;
+        }
+        if (!founded() || treasury < amount) {
+            return false;
+        }
+        treasury -= amount;
+        save();
+        return true;
+    }
+
     /** Anybody may spend it, and everybody hears about it. */
+    /**
+     * Somebody puts their own money into the city's.
+     *
+     * The vault has been a one-way tap since it was built: {@link #withdraw}
+     * hands the treasury out, {@link #donate} grants a casino its float, and
+     * the only two things that ever put anything IN are duties skimmed off
+     * transactions other people made. So the twenty-eight thousand emeralds of
+     * unbuilt public works sat behind a purse that fills at four percent of
+     * somebody else's payday, while the people who wanted them sat on more
+     * than that each and had no way to hand it over.
+     *
+     * Through {@link TrapMarket#take}, so the emeralds leave circulation the
+     * way every other payment does rather than teleporting between two
+     * counters. See the note on TrapMarket.take about checking wealth first.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String payIn(ServerPlayerEntity who, int amount) {
+        if (!founded()) {
+            return "Nie ma miasta, któremu można to dać.";
+        }
+        if (amount <= 0) {
+            return "Nothing to give.";
+        }
+        int held = TrapMarket.wealthOf(who);
+        if (held < amount) {
+            return "Masz przy sobie " + held + "e, a nie " + amount + "e.";
+        }
+        TrapMarket.take(who, amount);
+        treasury += amount;
+        TrapLedger.record(who, TrapLedger.Source.TAX, -amount);
+        save();
+        announce(who.getServer(), Text.literal(who.getGameProfile().getName())
+                .formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(" wpłacił " + amount + "e do kasy miasta. ")
+                        .formatted(Formatting.GRAY))
+                .append(Text.literal("Teraz jest w niej " + treasury + "e.")
+                        .formatted(Formatting.DARK_GRAY)));
+        return null;
+    }
+
     public static String withdraw(ServerPlayerEntity who, int amount) {
         if (!founded()) {
-            return "There's no vault to take it from.";
+            return "Nie ma skarbca, z którego można wziąć.";
         }
         int wanted = (int) Math.min(amount, Math.min(treasury, Integer.MAX_VALUE));
         if (wanted <= 0) {
-            return "The purse is empty.";
+            return "Kasa miasta jest pusta.";
         }
         treasury -= wanted;
         TrapMarket.handOver(who, wanted);
@@ -446,11 +557,113 @@ public final class TrapCity {
         save();
         announce(who.getServer(), Text.literal(who.getGameProfile().getName())
                 .formatted(Formatting.WHITE)
-                .append(Text.literal(" took ").formatted(Formatting.GRAY))
+                .append(Text.literal(" wypłacił ").formatted(Formatting.GRAY))
                 .append(Text.literal(wanted + "e").formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(Text.literal(" out of the city purse. " + treasury + "e left.")
+                .append(Text.literal(" z kasy miasta. Zostało " + treasury + "e.")
                         .formatted(Formatting.GRAY)));
         return null;
+    }
+
+    /**
+     * Straight out of the purse and into a casino's float.
+     *
+     * The same rule as {@link #withdraw}, because it is the same purse:
+     * anybody may, everybody is told. A donation is a grant, not a loan and
+     * not a stake -- the city gets nothing back and no note is written,
+     * because a town that wants its money back can walk over and gamble.
+     *
+     * Nothing is minted. Both ends of this are counted as money in the world
+     * already, so it neither goes through {@link TrapMarket} nor near
+     * {@link TrapLedger}: no player is a penny better or worse off for it,
+     * and a player ledger that logged it would be logging somebody else's
+     * emeralds under their name.
+     */
+    public static String donate(ServerPlayerEntity who, TrapHouse.House house, int amount) {
+        if (!founded()) {
+            return "Nie ma skarbca, z którego można dać.";
+        }
+        if (house == null) {
+            return "Tego kasyna już nie ma.";
+        }
+        int given = (int) Math.min(Math.max(amount, 0),
+                Math.min(treasury, Integer.MAX_VALUE));
+        if (given <= 0) {
+            return treasury <= 0 ? "Kasa miasta jest pusta." : "Najpierw ustaw kwotę.";
+        }
+        treasury -= given;
+        TrapHouse.endow(house, given);
+        save();
+        announce(who.getServer(), Text.literal(who.getGameProfile().getName())
+                .formatted(Formatting.WHITE)
+                .append(Text.literal(" przekazał ").formatted(Formatting.GRAY))
+                .append(Text.literal(given + "e").formatted(Formatting.GOLD, Formatting.BOLD))
+                .append(Text.literal(" z kasy miasta dla ").formatted(Formatting.GRAY))
+                .append(Text.literal(house.name).formatted(Formatting.LIGHT_PURPLE))
+                .append(Text.literal(". Zostało " + treasury + "e.").formatted(Formatting.GRAY)));
+        return null;
+    }
+
+    /** What a landlord pays the city each day, per grade of house they let. */
+    public static final int HOUSE_RATE = 15;
+    /** And per shop counter they keep. */
+    public static final int SHOP_RATE = 60;
+
+    /**
+     * What it costs to own things, charged daily.
+     *
+     * A shop and a let house were the only two businesses in this mod that
+     * were pure income: rent and takings arrive, and nothing ever leaves. A
+     * casino pays upkeep out of its own vault and a crew wants wages, but a
+     * landlord with nine houses simply got richer every morning forever, which
+     * is how a server ends up with fifty thousand emeralds and a shopping list
+     * of nothing.
+     *
+     * Scaled by grade, because the thing being taxed is the value of what you
+     * hold. It goes into the purse the public works come out of, which closes
+     * the loop: the rates fund the works, and the works are what make the
+     * houses worth holding.
+     *
+     * Only the online, and only ever one day of it. Somebody who was away for
+     * a week owes a day, exactly like a tenant whose chunk was asleep -- the
+     * alternative is logging in to a bill you cannot pay and a debt that never
+     * clears.
+     */
+    private static void rates(MinecraftServer server) {
+        if (!founded()) {
+            return;
+        }
+        for (ServerPlayerEntity who : server.getPlayerManager().getPlayerList()) {
+            int owed = 0;
+            for (TrapHomes.Home home : TrapHomes.all()) {
+                if (who.getUuid().equals(home.owner()) && home.tenant() != null) {
+                    owed += HOUSE_RATE * Math.max(1, home.tier());
+                }
+            }
+            for (TrapShops.Shop shop : TrapShops.shops()) {
+                if (who.getUuid().equals(shop.owner())) {
+                    owed += SHOP_RATE;
+                }
+            }
+            if (owed <= 0) {
+                continue;
+            }
+            if (TrapMarket.wealthOf(who) < owed) {
+                who.sendMessage(Text.literal("Opłaty miejskie: ").formatted(Formatting.DARK_GRAY)
+                        .append(Text.literal("Do zapłaty " + owed + "e, a tyle nie masz. ")
+                                .formatted(Formatting.RED))
+                        .append(Text.literal("Dziś nic się nie dzieje.")
+                                .formatted(Formatting.DARK_GRAY)), false);
+                continue;
+            }
+            TrapMarket.take(who, owed);
+            treasury += owed;
+            TrapLedger.record(who, TrapLedger.Source.TAX, -owed);
+            who.sendMessage(Text.literal("Opłaty miejskie: ").formatted(Formatting.DARK_GRAY)
+                    .append(Text.literal("-" + owed + "e").formatted(Formatting.RED))
+                    .append(Text.literal("  za to, co posiadasz").formatted(Formatting.DARK_GRAY)),
+                    true);
+        }
+        save();
     }
 
     // --- the budget -----------------------------------------------------------
@@ -470,7 +683,7 @@ public final class TrapCity {
             return;
         }
         ServerWorld overworld = server.getOverworld();
-        long day = overworld.getTimeOfDay() / 24000L;
+        long day = TrapMarket.today(server);
         if (lastBudget < 0) {
             lastBudget = day;
             save();
@@ -491,7 +704,7 @@ public final class TrapCity {
             why = "The purse is full. Rates down.";
             move = -1;
         } else {
-            why = "The books are balanced. Small adjustments.";
+            why = "Rachunki się zgadzają. Drobne korekty.";
             move = 0;
         }
 
@@ -503,15 +716,15 @@ public final class TrapCity {
             int now = Math.max(duty.floor(), Math.min(duty.ceiling(), was + step));
             RATES.put(duty, now);
             table.append("\n  ").append(duty.display()).append("  ").append(now).append('%')
-                    .append(now == was ? "" : now > was ? "  (up from " + was + "%)"
-                            : "  (down from " + was + "%)");
+                    .append(now == was ? "" : now > was ? "  (wzrost z " + was + "%)"
+                            : "  (spadek z " + was + "%)");
         }
         save();
-        announce(server, Text.literal("THE BUDGET").formatted(Formatting.GOLD, Formatting.BOLD)
+        announce(server, Text.literal("BUDŻET MIASTA").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal("\n  " + why).formatted(Formatting.GRAY))
                 .append(Text.literal(table.toString()).formatted(Formatting.WHITE))
                 .append(Text.literal("\n  /city").formatted(Formatting.GREEN))
-                .append(Text.literal("  for the whole table.").formatted(Formatting.DARK_GRAY)));
+                .append(Text.literal("  pokazuje całą tabelę.").formatted(Formatting.DARK_GRAY)));
     }
 
     /**
@@ -539,22 +752,22 @@ public final class TrapCity {
             if (now) {
                 ACTS.add(act);
                 PASSED.put(act, day);
-                announce(server, Text.literal("PASSED  ").formatted(Formatting.RED,
+                announce(server, Text.literal("UCHWALONO  ").formatted(Formatting.RED,
                                 Formatting.BOLD)
                         .append(Text.literal(act.display()).formatted(Formatting.WHITE,
                                 Formatting.BOLD))
                         .append(Text.literal("\n  " + act.blurb() + ".")
                                 .formatted(Formatting.GRAY))
                         .append(Text.literal("\n  /law").formatted(Formatting.GREEN))
-                        .append(Text.literal("  for the constitution.")
+                        .append(Text.literal("  pokazuje prawo miasta.")
                                 .formatted(Formatting.DARK_GRAY)));
             } else {
                 ACTS.remove(act);
                 PASSED.remove(act);
-                announce(server, Text.literal("REPEALED  ").formatted(Formatting.GREEN,
+                announce(server, Text.literal("UCHYLONO  ").formatted(Formatting.GREEN,
                                 Formatting.BOLD)
                         .append(Text.literal(act.display()).formatted(Formatting.WHITE))
-                        .append(Text.literal(". The reason for it has gone.")
+                        .append(Text.literal(". Powód ustał.")
                                 .formatted(Formatting.GRAY)));
             }
         }
@@ -636,7 +849,7 @@ public final class TrapCity {
                 acts.append(acts.isEmpty() ? "" : "|").append(act.name());
             }
             StringBuilder works = new StringBuilder();
-            for (Work work : BUILT) {
+            for (Work work : BUILT.keySet()) {
                 works.append(works.isEmpty() ? "" : "|").append(work.name());
             }
             row.append(acts.isEmpty() ? "-" : acts).append(',')
@@ -661,7 +874,15 @@ public final class TrapCity {
                     // shops are starving.
                     .append(TrapPayroll.purse()).append(',')
                     .append(TrapPayroll.wagesPaid()).append(',')
-                    .append(TrapPayroll.incomeTax()).append('\n');
+                    .append(TrapPayroll.incomeTax()).append(',')
+                    // The ward is the one thing that takes money out of the
+                    // purse without a player deciding to. A treasury sliding
+                    // down for no reason anybody chose is exactly what this
+                    // file exists to explain.
+                    .append(TrapHospitals.all().size()).append(',')
+                    .append(TrapHospitals.beds()).append(',')
+                    .append(TrapHospitals.patients().size()).append(',')
+                    .append(TrapHospitals.spent()).append('\n');
             Files.writeString(logFile, row.toString(), java.nio.charset.StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE,
                     java.nio.file.StandardOpenOption.APPEND);
@@ -708,23 +929,23 @@ public final class TrapCity {
 
     private static void books(ServerPlayerEntity who) {
         if (!founded()) {
-            who.sendMessage(Text.literal("There's no city yet. ").formatted(Formatting.GRAY)
-                    .append(Text.literal("Craft a city vault and put it down.")
+            who.sendMessage(Text.literal("Nie ma jeszcze miasta. ").formatted(Formatting.GRAY)
+                    .append(Text.literal("Zrób skarbiec miasta i postaw go.")
                             .formatted(Formatting.WHITE)), false);
             return;
         }
-        who.sendMessage(Text.literal("The City").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("   purse ").formatted(Formatting.DARK_GRAY))
+        who.sendMessage(Text.literal("Miasto").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("   kasa ").formatted(Formatting.DARK_GRAY))
                 .append(Text.literal(treasury + "e").formatted(Formatting.GREEN,
                         Formatting.BOLD))
-                .append(Text.literal("   vault at " + vaultAt.getX() + " " + vaultAt.getY()
+                .append(Text.literal("   skarbiec na " + vaultAt.getX() + " " + vaultAt.getY()
                         + " " + vaultAt.getZ()).formatted(Formatting.DARK_GRAY)), false);
-        who.sendMessage(Text.literal("  The town has ").formatted(Formatting.DARK_GRAY)
+        who.sendMessage(Text.literal("  Mieszkańcy mają jeszcze ").formatted(Formatting.DARK_GRAY)
                 .append(Text.literal(TrapPayroll.purse() + "e").formatted(Formatting.AQUA,
                         Formatting.BOLD))
-                .append(Text.literal(" of its own wages left to spend. ")
+                .append(Text.literal(" z własnych pensji do wydania. ")
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal(TrapPayroll.purse() > 0 ? "" : "Nobody's shopping.")
+                .append(Text.literal(TrapPayroll.purse() > 0 ? "" : "Nikt nie robi zakupów.")
                         .formatted(Formatting.RED)), false);
         for (Duty duty : Duty.values()) {
             who.sendMessage(Text.literal("  " + duty.display()).formatted(Formatting.WHITE)
@@ -734,12 +955,24 @@ public final class TrapCity {
                     .append(Text.literal("  raised " + takenBy(duty) + "e")
                             .formatted(Formatting.DARK_GRAY)), false);
         }
-        who.sendMessage(Text.literal("  Nothing sold to customers or dealers is taxed.")
+        who.sendMessage(Text.literal("  Sprzedaż klientom z ulicy i dilerom nie jest opodatkowana.")
                 .formatted(Formatting.DARK_GRAY), false);
+        // The one standing outgoing. Printed whether or not there is a
+        // hospital, because "no beds at all" is the reading that matters.
+        int ill = TrapHospitals.patients().size();
+        who.sendMessage(Text.literal("  Szpitale").formatted(Formatting.WHITE)
+                .append(Text.literal("  " + TrapHospitals.all().size() + ", "
+                        + TrapHospitals.beds() + " łóżek")
+                        .formatted(TrapHospitals.beds() > 0 ? Formatting.GREEN : Formatting.RED))
+                .append(Text.literal(ill == 0 ? "  nikt nie choruje"
+                                : "  chorych: " + ill + ", po " + TrapHospitals.bill() + "e dziennie")
+                        .formatted(ill == 0 ? Formatting.DARK_GRAY : Formatting.YELLOW))
+                .append(Text.literal("  wypłacono " + TrapHospitals.spent() + "e")
+                        .formatted(Formatting.DARK_GRAY)), false);
         for (Work work : Work.values()) {
             who.sendMessage(Text.literal("  " + work.display())
                     .formatted(built(work) ? Formatting.GREEN : Formatting.DARK_GRAY)
-                    .append(Text.literal(built(work) ? "  built" : "  " + work.cost() + "e")
+                    .append(Text.literal(built(work) ? "  zbudowane" : "  " + work.cost() + "e")
                             .formatted(built(work) ? Formatting.GREEN : Formatting.GOLD))
                     .append(Text.literal("  " + work.blurb()).formatted(Formatting.DARK_GRAY)),
                     false);
@@ -761,7 +994,7 @@ public final class TrapCity {
      */
     private static void history(ServerPlayerEntity who) {
         if (logFile == null || !Files.exists(logFile)) {
-            who.sendMessage(Text.literal("No books yet. The city writes a row a day.")
+            who.sendMessage(Text.literal("Nie ma jeszcze rachunków. Miasto zapisuje jeden wiersz dziennie.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -769,12 +1002,12 @@ public final class TrapCity {
         try {
             rows = Files.readAllLines(logFile);
         } catch (Exception failure) {
-            who.sendMessage(Text.literal("Couldn't read the books: " + failure)
+            who.sendMessage(Text.literal("Nie udało się odczytać rachunków: " + failure)
                     .formatted(Formatting.RED), false);
             return;
         }
         if (rows.size() < 2) {
-            who.sendMessage(Text.literal("The books have one day in them. Come back tomorrow.")
+            who.sendMessage(Text.literal("Rachunki mają jeden dzień. Wróć jutro.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -786,11 +1019,11 @@ public final class TrapCity {
             peak = Math.max(peak, Math.abs(number(head, row, "town_purse")));
         }
 
-        who.sendMessage(Text.literal("The Books").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("   last " + recent.size() + " days")
+        who.sendMessage(Text.literal("Rachunki").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("   ostatnie " + recent.size() + " dni")
                         .formatted(Formatting.DARK_GRAY)), false);
         who.sendMessage(Text.literal(String.format("  %-5s %-6s %-8s %-8s %-7s %s",
-                        "day", "people", "vault", "purse", "tax", "index"))
+                        "dzień", "ludzi", "skarb", "kasa", "podatki", "indeks"))
                 .formatted(Formatting.DARK_GRAY), false);
         for (String row : recent) {
             long purse = number(head, row, "town_purse");
@@ -803,9 +1036,9 @@ public final class TrapCity {
                     .append(Text.literal("█".repeat(Math.max(0, Math.min(10, bars))))
                             .formatted(Formatting.GREEN)), false);
         }
-        who.sendMessage(Text.literal("  Bars are the town purse. Empty means nobody's shopping.")
+        who.sendMessage(Text.literal("  Słupki to kasa mieszkańców. Pusto = nikt nie kupuje.")
                 .formatted(Formatting.DARK_GRAY), false);
-        who.sendMessage(Text.literal("  tax and wages are running totals, not per-day.")
+        who.sendMessage(Text.literal("  podatki i pensje to sumy narastające, nie dzienne.")
                 .formatted(Formatting.DARK_GRAY), false);
     }
 
@@ -831,7 +1064,12 @@ public final class TrapCity {
                 .append("casino_balance,casino_handle,casino_net,worst_wear,")
                 .append("crew,crew_payroll,dealers,heat,market_index,supply,")
                 .append("declared,undeclared,washed,owed,")
-                .append("town_purse,wages,income_tax\n");
+                .append("town_purse,wages,income_tax,")
+                // On the END, like every column before them. A row written
+                // yesterday has no ward figures and reads as "-" for them;
+                // slotting these in beside the other city columns would have
+                // every field after them read under the wrong heading.
+                .append("wards,ward_beds,ill,ward_spend\n");
         return out.toString();
     }
 
@@ -959,7 +1197,10 @@ public final class TrapCity {
                     }
                     case "built" -> {
                         try {
-                            BUILT.add(Work.valueOf(parts[1]));
+                            // Length-guarded: a line written before works had
+                            // levels is one that was built once.
+                            BUILT.put(Work.valueOf(parts[1]),
+                                    parts.length > 2 ? Integer.parseInt(parts[2]) : 1);
                         } catch (IllegalArgumentException gone) {
                             // A public work this version no longer has. The
                             // city keeps the money it spent and forgets it.
@@ -995,8 +1236,9 @@ public final class TrapCity {
                         .append(vaultAt.getX()).append(' ').append(vaultAt.getY())
                         .append(' ').append(vaultAt.getZ()).append('\n');
             }
-            for (Work work : BUILT) {
-                out.append("built ").append(work.name()).append('\n');
+            for (Work work : BUILT.keySet()) {
+                out.append("built ").append(work.name()).append(' ')
+                        .append(BUILT.get(work)).append('\n');
             }
             for (Act act : ACTS) {
                 out.append("act ").append(act.name()).append(' ')

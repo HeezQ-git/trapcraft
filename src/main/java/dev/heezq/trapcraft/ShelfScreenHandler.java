@@ -27,8 +27,8 @@ import java.util.List;
  * Somebody else's kiosk, from the customer's side of the counter.
  *
  * A shelf is the shop WINDOW and the till is the back office, which is also
- * what the two of them look like. The owner clicking either gets
- * {@link ShopScreen}; anybody else gets this.
+ * what the two of them look like. The owner clicking a shelf opens its stock
+ * and the till gets them {@link ShopScreen}; anybody else gets this.
  *
  * Deliberately the same shape as {@link StallScreenHandler} rather than the
  * market's catalogue: a kiosk is a room you walked into with a few things on
@@ -120,12 +120,12 @@ public class ShelfScreenHandler extends ScreenHandler {
                         .formatted(Formatting.DARK_GRAY)));
         lore.add(Text.empty());
         lore.add(line(line.duty() == TrapCity.Duty.LUXURY
-                        ? "Over a counter, so it's clean and declared."
+                        ? "Sprzedane przez ladę: czyste i zgłoszone."
                         : "Ordinary goods, at " + shop.markupName().toLowerCase(
                                 java.util.Locale.ROOT) + " prices.",
                 Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line(can ? "Click to buy one." : "You can't cover it.",
+        lore.add(line(can ? "Kliknij, żeby kupić jedną sztukę." : "Nie stać cię.",
                 can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -134,12 +134,12 @@ public class ShelfScreenHandler extends ScreenHandler {
     private ItemStack empty() {
         ItemStack tag = new ItemStack(Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Shelves are bare").formatted(Formatting.GRAY, Formatting.BOLD));
+                plain("Półki są puste").formatted(Formatting.GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Nothing stocked, or nothing here anybody", Formatting.GRAY),
+                line("Brak towaru albo nic, czego ktokolwiek", Formatting.GRAY),
                 line("would put a price on.", Formatting.GRAY),
                 Text.empty(),
-                line("Come back when they've restocked.", Formatting.DARK_GRAY))));
+                line("Wróć, kiedy uzupełnią zapas.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -149,20 +149,20 @@ public class ShelfScreenHandler extends ScreenHandler {
                 plain(shop.name()).formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(shop.ownerName() + "'s, " + lines + " line"
-                        + (lines == 1 ? "" : "s") + " on the shelves", Formatting.GRAY),
+                        + " na półkach", Formatting.GRAY),
                 Text.empty(),
-                line("You pay what the town pays, duty and all.", Formatting.WHITE),
-                line("Their prices are " + shop.markupName().toLowerCase(
+                line("Płacisz tyle co mieszkańcy, z podatkiem.", Formatting.WHITE),
+                line("Ceny w tym sklepie: " + shop.markupName().toLowerCase(
                         java.util.Locale.ROOT) + ".", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("/shops to find the others.", Formatting.DARK_GRAY))));
+                line("/shops pokazuje pozostałe sklepy.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack purse() {
         ItemStack tag = new ItemStack(Items.EMERALD);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(TrapMarket.wealthOf(shopper) + "e on you")
+                plain("masz przy sobie " + TrapMarket.wealthOf(shopper) + "e")
                         .formatted(Formatting.GREEN, Formatting.BOLD));
         return tag;
     }

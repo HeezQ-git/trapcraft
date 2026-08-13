@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:player_head"
     },
-    "title": "The Network",
-    "description": "Put somebody on the street selling for you.",
+    "title": "Siatka",
+    "description": "Wyślij kogoś na ulicę, żeby sprzedawał za ciebie.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

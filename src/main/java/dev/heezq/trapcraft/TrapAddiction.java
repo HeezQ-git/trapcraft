@@ -249,10 +249,10 @@ public final class TrapAddiction {
             // The one moment the habit announces itself. Fires once, at the
             // crossing, because a meter nobody is told about is a mechanic
             // that only ever surprises people.
-            player.sendMessage(Text.literal("You want more ")
+            player.sendMessage(Text.literal("Potrzebujesz więcej ")
                     .formatted(Formatting.GRAY)
                     .append(Text.literal(drug.display()).formatted(drug.text()))
-                    .append(Text.literal(" than you used to.").formatted(Formatting.GRAY))
+                    .append(Text.literal(" niż kiedyś.").formatted(Formatting.GRAY))
                     .append(Text.literal("   /addiction").formatted(Formatting.DARK_GRAY)), false);
         }
         save();
@@ -286,7 +286,7 @@ public final class TrapAddiction {
                 player.getX(), player.getEyeY() + 0.3, player.getZ(), 6, 0.3, 0.3, 0.3, 0.01);
         world.playSound(null, player.getBlockPos(), SoundEvents.BLOCK_BEACON_ACTIVATE,
                 SoundCategory.PLAYERS, 0.35F, 1.6F);
-        player.sendMessage(Text.literal("That's better. ").formatted(Formatting.GREEN)
+        player.sendMessage(Text.literal("Już lepiej. ").formatted(Formatting.GREEN)
                 .append(Text.literal("The " + drug.display() + " " + was.label()
                         + " lets go.").formatted(Formatting.DARK_GRAY)), true);
     }
@@ -514,9 +514,9 @@ public final class TrapAddiction {
 
     private static String nag(Band band) {
         return switch (band) {
-            case ITCH -> "You could go for some ";
-            case CRAVING -> "You keep thinking about ";
-            case SICK -> "You are in a bad way without ";
+            case ITCH -> "Przydałoby ci się trochę: ";
+            case CRAVING -> "Nie możesz przestać myśleć o: ";
+            case SICK -> "Jesteś w kiepskim stanie bez: ";
             default -> "";
         };
     }
@@ -594,11 +594,11 @@ public final class TrapAddiction {
         }
         long now = worldTime(player);
         EnumMap<Drug, Float> meters = HOOKED.get(player.getUuid());
-        MutableText out = Text.literal("What you're carrying\n")
+        MutableText out = Text.literal("Twoje nałogi\n")
                 .formatted(Formatting.DARK_GREEN, Formatting.BOLD);
 
         if (meters == null || meters.isEmpty()) {
-            out.append(Text.literal("  Nothing. You're clean.\n").formatted(Formatting.GRAY));
+            out.append(Text.literal("  Nic. Jesteś czysty.\n").formatted(Formatting.GRAY));
             streetLine(player, out);
             player.sendMessage(out, false);
             return 1;
@@ -618,10 +618,10 @@ public final class TrapAddiction {
         }
         long medicated = MEDICATED.getOrDefault(player.getUuid(), 0L) - now;
         if (medicated > 0) {
-            out.append(Text.literal("  Tonic holding it off: " + (medicated / 20) + "s\n")
+            out.append(Text.literal("  Lek wycisza objawy jeszcze: " + (medicated / 20) + "s\n")
                     .formatted(Formatting.AQUA));
         }
-        out.append(Text.literal("  Riding out the worst of it clears it twice as fast.\n")
+        out.append(Text.literal("  Przetrzymanie najgorszego zbija licznik dwa razy szybciej.\n")
                 .formatted(Formatting.DARK_GRAY));
         streetLine(player, out);
         player.sendMessage(out, false);
@@ -643,7 +643,7 @@ public final class TrapAddiction {
         }
         out.append(Text.literal("  " + bar(demand)).formatted(Formatting.DARK_GREEN))
                 .append(Text.literal(" " + Math.round(demand) + "%  ").formatted(Formatting.WHITE))
-                .append(Text.literal("the street wants what you sell\n")
+                .append(Text.literal("ulica chce tego, co sprzedajesz\n")
                         .formatted(Formatting.GRAY));
     }
 

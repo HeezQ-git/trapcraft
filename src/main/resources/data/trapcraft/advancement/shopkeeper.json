@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:shop_till"
     },
-    "title": "Shopkeeper",
-    "description": "Open a shop the town can buy from.",
+    "title": "Sklepikarz",
+    "description": "Otwórz sklep, w którym miasto może robić zakupy.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

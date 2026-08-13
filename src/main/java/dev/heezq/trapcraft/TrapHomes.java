@@ -497,13 +497,13 @@ public final class TrapHomes {
      */
     public static String found(ServerPlayerEntity owner, ServerWorld world, BlockPos pos) {
         if (atMailbox(world, pos) != null) {
-            return "That box already belongs to a house.";
+            return "Ta skrzynka należy już do innego domu.";
         }
         // No city, no register. There is nobody to file the deed with, nowhere
         // for the rates to go, and no purse to pay for the road outside.
         if (!TrapCity.founded()) {
-            return "There's no city yet -- nobody to register a house with. "
-                    + "Somebody has to put a city vault down first.";
+            return "Nie ma jeszcze miasta -- nie ma kto zarejestrować domu. "
+                    + "Ktoś musi najpierw postawić skarbiec miasta.";
         }
         Ground ground = new Ground(world, null);
         HomeSurvey.Rooms rooms = HomeSurvey.survey(ground, pos.getX(), pos.getY(), pos.getZ());
@@ -514,30 +514,30 @@ public final class TrapHomes {
             // actually happens.
             Home into = ground.clashed;
             return into == null
-                    ? "This runs into a place that's already on the register."
-                    : "This runs into " + into.name
-                    + (into.owner.equals(owner.getUuid()) ? " -- your own."
-                    : ", " + into.ownerName + "'s.")
-                    + " Two houses can't share ground.";
+                    ? "Ten pokój nachodzi na dom już zapisany w rejestrze."
+                    : "Ten pokój nachodzi na " + into.name
+                    + (into.owner.equals(owner.getUuid()) ? " -- twój własny."
+                    : ", właściciel: " + into.ownerName + ".")
+                    + " Dwa domy nie mogą dzielić tego samego miejsca.";
         }
         if (!rooms.sealed()) {
-            return "This isn't sealed. Walls, a floor, a ceiling, and a door -- "
-                    + "then try again.";
+            return "Nie jest szczelny. Ściany, podłoga, sufit i drzwi -- "
+                    + "potem spróbuj ponownie.";
         }
         int floor = rooms.floor();
         if (floor < HomeSurvey.MIN_FLOOR) {
-            return "That's " + floor + " blocks of floor. Nobody will live in less than "
-                    + HomeSurvey.MIN_FLOOR + ".";
+            return "Masz " + floor + " kratek podłogi. Nikt nie zamieszka w czymś "
+                    + "mniejszym niż " + HomeSurvey.MIN_FLOOR + ".";
         }
         if (rooms.exits().isEmpty()) {
-            return "There's no way in. A door to the outside, please.";
+            return "Nie ma wejścia. Potrzebne drzwi na zewnątrz.";
         }
 
         int[] box = HomeSurvey.bounds(rooms.claimed());
         String dimension = world.getRegistryKey().getValue().toString();
         for (Home other : HOMES) {
             if (other.dimension.equals(dimension) && HomeSurvey.overlaps(box, other.box)) {
-                return "That overlaps " + other.name + ". Two houses can't share ground.";
+                return "To nachodzi na " + other.name + ". Dwa domy nie mogą dzielić miejsca.";
             }
         }
 
@@ -697,7 +697,7 @@ public final class TrapHomes {
         long lastSeen = home.lastRent;
         home.lastRent = day;
         if (lastSeen >= 0 && HomeSurvey.quitting(seedOf(home), lastSeen)) {
-            moveOut(server, world, home, "gave their notice and moved on");
+            moveOut(server, world, home, "wypowiedział i się wyprowadził");
             return;
         }
 
@@ -722,9 +722,9 @@ public final class TrapHomes {
 
         if (home.mood <= 0) {
             moveOut(server, world, home, heat >= 0
-                    ? "couldn't stand what's growing next door"
-                    : home.tier <= 0 ? "the place fell down round them"
-                    : "had enough of the state of the place");
+                    ? "nie zniósł tego, co rośnie po sąsiedzku"
+                    : home.tier <= 0 ? "dom rozpadł mu się nad głową"
+                    : "miał dość stanu tego domu");
             return;
         }
 
@@ -735,12 +735,12 @@ public final class TrapHomes {
         // remembered. They pay today's rent on their way out, because notice
         // is a day you have still paid for.
         if (HomeSurvey.quitting(seedOf(home), day)) {
-            home.write("Sorry -- I'm moving on. Gone tomorrow.");
+            home.write("Przykro mi, wyprowadzam się. Jutro mnie nie ma.");
             ServerPlayerEntity landlord = server.getPlayerManager().getPlayer(home.owner);
             if (landlord != null) {
-                landlord.sendMessage(Text.literal(home.tenant + " is leaving " + home.name + ". ")
+                landlord.sendMessage(Text.literal(home.tenant + " wyprowadza się z " + home.name + ". ")
                         .formatted(Formatting.YELLOW, Formatting.BOLD)
-                        .append(Text.literal("A day's notice. It's empty tomorrow.")
+                        .append(Text.literal("Dzień wypowiedzenia. Jutro będzie pusto.")
                                 .formatted(Formatting.GRAY)), false);
             }
         }
@@ -786,12 +786,12 @@ public final class TrapHomes {
             TrapCity.receive(owed, duty);
             ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
             if (owner != null) {
-                owner.sendMessage(Text.literal("Rent from " + home.name + ": ")
+                owner.sendMessage(Text.literal("Czynsz z " + home.name + ": ")
                         .formatted(Formatting.DARK_GRAY)
                         .append(Text.literal("+" + rent + "e").formatted(Formatting.GREEN))
-                        .append(Text.literal(owed > 0 ? "   " + owed + "e duty" : "")
+                        .append(Text.literal(owed > 0 ? "   " + owed + "e podatku" : "")
                                 .formatted(Formatting.DARK_GRAY))
-                        .append(Text.literal(away > 0 ? "   " + away + " ill" : "")
+                        .append(Text.literal(away > 0 ? "   chorych: " + away : "")
                                 .formatted(Formatting.RED)), true);
             }
         }
@@ -846,15 +846,15 @@ public final class TrapHomes {
         int each;
         if (roll < 5) {
             item = TrapContent.joint(strain);
-            label = strain.display() + " Joint";
+            label = "Skręt " + strain.display();
             each = 22 + random.nextInt(14);
         } else if (roll < 8) {
             item = TrapContent.driedBud(strain);
-            label = "Cured " + strain.display();
+            label = "Susz " + strain.display();
             each = 15 + random.nextInt(10);
         } else {
             item = TrapContent.cocaPowder;
-            label = "Powder";
+            label = "Proszek";
             each = 48 + random.nextInt(30);
         }
         int count = 1 + random.nextInt(4);
@@ -883,27 +883,27 @@ public final class TrapHomes {
             }
             world.playSound(null, who.getBlockPos(), SoundEvents.ENTITY_VILLAGER_YES,
                     SoundCategory.NEUTRAL, 0.9F, 1.1F);
-            who.sendMessage(Text.literal("Sold. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                    .append(Text.literal(wants.count() + "x " + wants.label() + " to "
-                            + home.tenant + " for ").formatted(Formatting.GRAY))
-                    .append(Text.literal(wants.price() + "e dirty")
+            who.sendMessage(Text.literal("Sprzedano. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                    .append(Text.literal(wants.count() + "x " + wants.label() + " dla "
+                            + home.tenant + " za ").formatted(Formatting.GRAY))
+                    .append(Text.literal(wants.price() + "e brudnych")
                             .formatted(Formatting.DARK_GREEN)), false);
             return;
         }
 
         if (wants == null) {
             who.sendMessage(Text.literal(home.tenant).formatted(Formatting.AQUA)
-                    .append(Text.literal(" isn't after anything today.")
+                    .append(Text.literal(" dzisiaj niczego nie potrzebuje.")
                             .formatted(Formatting.GRAY)), false);
             return;
         }
         who.sendMessage(Text.literal(home.tenant).formatted(Formatting.AQUA, Formatting.BOLD)
-                .append(Text.literal(" wants ").formatted(Formatting.GRAY))
+                .append(Text.literal(" chce ").formatted(Formatting.GRAY))
                 .append(Text.literal(wants.count() + "x " + wants.label())
                         .formatted(Formatting.WHITE))
-                .append(Text.literal("  and will pay ").formatted(Formatting.GRAY))
+                .append(Text.literal("  i zapłaci ").formatted(Formatting.GRAY))
                 .append(Text.literal(wants.price() + "e").formatted(Formatting.GREEN))
-                .append(Text.literal("\n  Hold it and click them again. They pay dirty.")
+                .append(Text.literal("\n  Weź to do ręki i kliknij go znowu. Płaci brudną kasą.")
                         .formatted(Formatting.DARK_GRAY)), false);
         world.playSound(null, who.getBlockPos(), SoundEvents.ENTITY_VILLAGER_AMBIENT,
                 SoundCategory.NEUTRAL, 0.7F, 1.0F);
@@ -961,7 +961,7 @@ public final class TrapHomes {
     public static String sellTo(ServerPlayerEntity seller, Home home) {
         Craving wants = home.craving;
         if (wants == null) {
-            return home.tenant + " isn't after anything today.";
+            return home.tenant + " dzisiaj niczego nie potrzebuje.";
         }
         int held = 0;
         for (int slot = 0; slot < seller.getInventory().size(); slot++) {
@@ -971,7 +971,7 @@ public final class TrapHomes {
         }
         if (held < wants.count()) {
             return home.tenant + " wants " + wants.count() + "x " + wants.label()
-                    + " for " + wants.price() + "e. You've " + held + ".";
+                    + " za " + wants.price() + "e. Masz " + held + ".";
         }
         int owed = wants.count();
         for (int slot = 0; slot < seller.getInventory().size() && owed > 0; slot++) {
@@ -1027,19 +1027,19 @@ public final class TrapHomes {
         home.mood = HomeSurvey.MOOD_START;
         home.lastRent = day;
         home.letters.clear();
-        home.write(home.tenant + " has moved in. Rent starts tomorrow.");
+        home.write(home.tenant + " wprowadził się. Czynsz leci od jutra.");
         keepBodies(world, home);
         save();
         ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(home.owner);
         if (owner != null) {
-            owner.sendMessage(Text.literal("Somebody's moved into " + home.name + ". ")
+            owner.sendMessage(Text.literal("Ktoś wprowadził się do " + home.name + ". ")
                     .formatted(Formatting.GREEN, Formatting.BOLD)
                     .append(Text.literal((home.heads > 1
-                            ? home.tenant + " and " + (home.heads - 1) + " more pay "
-                            : home.tenant + " pays ")
+                            ? home.tenant + " i jeszcze " + (home.heads - 1) + " osób płaci "
+                            : home.tenant + " płaci ")
                             + HomeSurvey.RENT[Math.min(home.tier, HomeSurvey.RENT.length - 1)]
                             * home.heads
-                            + "e a day into the mailbox, less if they're unhappy.")
+                            + "e dziennie do skrzynki, mniej gdy są niezadowoleni.")
                             .formatted(Formatting.GRAY)), false);
         }
     }
@@ -1049,7 +1049,7 @@ public final class TrapHomes {
                         String why) {
         String who = home.tenant;
         evict(world, home);
-        home.write(who + " has gone. They " + why + ".");
+        home.write(who + " odszedł. Powód: " + why + ".");
         save();
         ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
         if (owner != null) {
@@ -1070,14 +1070,14 @@ public final class TrapHomes {
      */
     private static void complain(Home home, Readout now, int heat, int was) {
         if (heat >= 0) {
-            home.write("There's something growing next door. I can smell it.");
+            home.write("Obok coś rośnie. Czuć to w powietrzu.");
         } else if (!now.sealed()) {
-            home.write("The roof is open to the sky.");
+            home.write("Dach jest dziurawy, widać niebo.");
         } else if (now.dark() > 0) {
-            home.write("The light on the landing has gone. " + now.dark()
+            home.write("Zgasło światło na korytarzu. Ciemnych kratek: " + now.dark()
                     + " dark " + (now.dark() == 1 ? "corner" : "corners") + ".");
         } else if (home.mood > was && home.mood >= HomeSurvey.MOOD_MAX) {
-            home.write("Lovely here. Thank you.");
+            home.write("Przyjemnie tu. Dziękuję.");
         }
     }
 
@@ -1151,7 +1151,13 @@ public final class TrapHomes {
         // at all, so the census above cannot see them, and a house that kept
         // spawning to its full household would put a second copy of a patient
         // on its own doorstep every pass.
-        int athome = Math.max(0, home.heads - TrapHospitals.awayFrom(home.id));
+        //
+        // Anybody on shift is counted out for the same reason and by the same
+        // arithmetic -- see AT_WORK. Their body was discarded when they clocked
+        // on, so a house that kept spawning to its full household would stand a
+        // second copy of somebody at home while they are at work.
+        int athome = Math.max(0, home.heads - TrapHospitals.awayFrom(home.id)
+                - atWork(world, home.id));
 
         // Fewer beds than there were, or a grade that slipped: the household
         // shrinks. Discarded from the end so the head of it is the last to go,
@@ -1253,6 +1259,60 @@ public final class TrapHomes {
     }
 
     /**
+     * Houses with somebody out at a job, and the tick they are due back.
+     *
+     * A shift is the one errand nobody should be watching. The others end at
+     * something -- a purchase, a spin, a bed -- and this one ends at a person
+     * standing in somebody's shop with a villager Brain that will spend the
+     * afternoon strolling out of the back of it and losing itself in the
+     * building. So for the length of a shift the body simply GOES: they are at
+     * work, and somebody at work is not anywhere you can see them.
+     *
+     * Counted rather than kept, the way {@link TrapHospitals#awayFrom} counts
+     * patients -- the census takes them off the household, so nothing spawns a
+     * replacement while they are out and the first pass after the shift ends
+     * puts them back on their own doorstep.
+     *
+     * ponytail: a list the size of the shift crowd, not saved. A restart is
+     * everybody home from work early, which reads as a shift ending rather
+     * than as a bug, and entries are dropped as they expire.
+     */
+    private record Shift(UUID home, long until) {
+    }
+
+    private static final List<Shift> AT_WORK = new ArrayList<>();
+
+    /**
+     * Somebody clocks on, and their body is gone until the shift is over.
+     *
+     * @return false if this is nobody on the register -- somebody passing
+     *         through town has no house to be away from and no doorstep to
+     *         turn up on, so whoever brought them keeps them
+     */
+    public static boolean goToWork(net.minecraft.entity.passive.VillagerEntity body,
+                                   long until) {
+        Home home = homeOf(body);
+        if (home == null) {
+            return false;
+        }
+        AT_WORK.add(new Shift(home.id, until));
+        body.discard();
+        return true;
+    }
+
+    /** How many of this house are at work, dropping the shifts that have ended. */
+    private static int atWork(ServerWorld world, UUID home) {
+        AT_WORK.removeIf(shift -> shift.until() <= world.getTime());
+        int out = 0;
+        for (Shift shift : AT_WORK) {
+            if (shift.home().equals(home)) {
+                out++;
+            }
+        }
+        return out;
+    }
+
+    /**
      * The nearest resident who is free to be asked, or nobody.
      *
      * Nearest rather than first-found, which is what the entity list happens
@@ -1309,11 +1369,39 @@ public final class TrapHomes {
             walkTo(body, home.anchor);
             return;
         }
-        BlockPos doorstep = TrapSpawn.near(world, home.anchor.up());
-        if (doorstep != null) {
-            body.refreshPositionAndAngles(doorstep,
-                    world.getRandom().nextFloat() * 360f, 0f);
+        putHome(world, body);
+    }
+
+    /**
+     * Put them on their own doorstep, wherever they happen to be standing.
+     *
+     * For the end of an ERRAND, which by construction finishes indoors: a
+     * till, a slot machine, a bar. {@link #sendHome} walks anybody inside
+     * forty blocks, and a walk that starts in the middle of somebody's shop is
+     * a villager asked to path back out of a room it only got into by being
+     * stood at the counter. The target is handed out again every pass, never
+     * reached, and the person spends the rest of the week strolling round a
+     * building they do not live in -- which from the street is the whole town
+     * lost indoors.
+     *
+     * The poof is not decoration. A body that vanishes off a shop floor with
+     * no mark reads as a despawn bug; the same body with a puff of smoke reads
+     * as somebody who has gone home, which is what happened.
+     */
+    public static void putHome(ServerWorld world,
+                               net.minecraft.entity.passive.VillagerEntity body) {
+        Home home = homeOf(body);
+        if (home == null) {
+            return;
         }
+        BlockPos doorstep = TrapSpawn.near(world, home.anchor.up());
+        if (doorstep == null) {
+            return;
+        }
+        world.spawnParticles(net.minecraft.particle.ParticleTypes.POOF,
+                body.getX(), body.getY() + 0.6, body.getZ(), 4, 0.2, 0.3, 0.2, 0.01);
+        body.refreshPositionAndAngles(doorstep,
+                world.getRandom().nextFloat() * 360f, 0f);
     }
 
     /**
@@ -1385,8 +1473,8 @@ public final class TrapHomes {
         boolean better = home.tier > was;
         owner.sendMessage(Text.literal(home.name + ": ").formatted(Formatting.GRAY)
                 .append(home.tier == 0
-                        ? Text.literal("not fit to live in any more.").formatted(Formatting.RED)
-                        : Text.literal((better ? "up" : "down") + " to grade " + home.tier)
+                        ? Text.literal("nie nadaje się już do mieszkania.").formatted(Formatting.RED)
+                        : Text.literal((better ? "w górę" : "w dół") + " do klasy " + home.tier)
                         .formatted(better ? Formatting.GREEN : Formatting.RED)), false);
     }
 
@@ -1843,19 +1931,19 @@ public final class TrapHomes {
     public static String demolish(ServerPlayerEntity who, ServerWorld world, BlockPos where) {
         Home home = covering(world, where);
         if (home == null) {
-            return "You're not stood in a house.";
+            return "Nie stoisz w żadnym domu.";
         }
         if (!home.owner.equals(who.getUuid()) && !who.hasPermissionLevel(2)) {
-            return "That's " + home.ownerName + "'s. Not yours to knock down.";
+            return "To dom gracza " + home.ownerName + ". Nie tobie go burzyć.";
         }
         String tenant = home.tenant;
         evict(world, home);
         HOMES.remove(home);
         save();
-        who.sendMessage(Text.literal("Off the register. ").formatted(Formatting.YELLOW)
-                .append(Text.literal(home.name + " is just a room again."
+        who.sendMessage(Text.literal("Skreślone z rejestru. ").formatted(Formatting.YELLOW)
+                .append(Text.literal(home.name + " to znowu zwykły pokój."
                                 + (tenant == null ? ""
-                                : " " + tenant + " has been put out."))
+                                : " " + tenant + " został wyrzucony."))
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -1909,11 +1997,11 @@ public final class TrapHomes {
             }
         }
         if (nearest == null) {
-            return "Nobody here who shouldn't be. Stand next to them.";
+            return "Nie ma tu nikogo takiego. Stań obok tej osoby.";
         }
         String name = nearest.getCustomName().getString();
         nearest.discard();
-        return name + " has been put out. Their house wasn't on the register.";
+        return name + " został wyrzucony. Jego dom nie był w rejestrze.";
     }
 
     /**
@@ -2062,21 +2150,21 @@ public final class TrapHomes {
 
     private static void directory(ServerPlayerEntity who) {
         if (HOMES.isEmpty()) {
-            who.sendMessage(Text.literal("Nobody's built anything worth living in yet.")
+            who.sendMessage(Text.literal("Nikt jeszcze nie zbudował niczego nadającego się do mieszkania.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        who.sendMessage(Text.literal("The Register").formatted(Formatting.GOLD, Formatting.BOLD),
+        who.sendMessage(Text.literal("Rejestr domów").formatted(Formatting.GOLD, Formatting.BOLD),
                 false);
         for (Home home : HOMES) {
             who.sendMessage(Text.literal("  " + home.name).formatted(Formatting.WHITE)
                     .append(Text.literal("  " + home.ownerName).formatted(Formatting.DARK_GRAY))
-                    .append(Text.literal(home.tier == 0 ? "  condemned"
-                                    : "  grade " + home.tier)
+                    .append(Text.literal(home.tier == 0 ? "  do rozbiórki"
+                                    : "  klasa " + home.tier)
                             .formatted(home.tier == 0 ? Formatting.RED : Formatting.GREEN))
-                    .append(Text.literal(home.tenant == null ? "  empty"
+                    .append(Text.literal(home.tenant == null ? "  pusty"
                                     : "  " + home.tenant + " (" + home.mood + ")"
-                                    + (leaving(home) ? " leaving" : ""))
+                                    + (leaving(home) ? " wyprowadza się" : ""))
                             .formatted(home.tenant == null ? Formatting.DARK_GRAY
                                     : leaving(home) || home.mood < HomeSurvey.MOOD_LEAVING
                                     ? Formatting.RED : Formatting.AQUA))

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "WLW",
+    "NDN",
+    "WLW"
+  ],
+  "key": {
+    "W": "#minecraft:wool",
+    "L": "minecraft:redstone_lamp",
+    "N": "minecraft:note_block",
+    "D": "minecraft:diamond_block"
+  },
+  "result": {
+    "id": "trapcraft:nightclub",
+    "count": 1
+  }
+}

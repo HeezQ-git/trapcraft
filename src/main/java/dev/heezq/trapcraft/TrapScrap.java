@@ -32,18 +32,18 @@ public final class TrapScrap {
             return null;
         }
         if (stack.isOf(Items.EMERALD) || stack.isOf(Items.EMERALD_BLOCK)) {
-            return "that IS the money";
+            return "to SĄ pieniądze";
         }
         if (stack.isOf(TrapContent.wallet)) {
-            return "there's money in that";
+            return "w środku są pieniądze";
         }
         if (stack.isOf(TrapContent.burnerPhone)) {
-            return "your contacts are on that";
+            return "masz tam swoje kontakty";
         }
         // Whoever holds the card owns the casino, so a stall that bought one
         // for scrap would have bought the business -- and then thrown it away.
         if (stack.isOf(TrapContent.casinoCard)) {
-            return "that's a whole casino";
+            return "to całe kasyno";
         }
         // A shulker box or bundle with something inside would sell its contents
         // invisibly at the price of the empty container. Refuse rather than

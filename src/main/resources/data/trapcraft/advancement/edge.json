@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:snowball"
     },
-    "title": "Edge Case",
-    "description": "Land the ball in an outside slot on The Drop.",
+    "title": "Skrajny przypadek",
+    "description": "Trafi kulką w skrajną przegródkę w Plinko.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -84,30 +84,30 @@ public final class ShopStock {
         }
     }
 
-    public static final Category BUILDING = new Category("building", "Building",
-            "minecraft:bricks", Formatting.GOLD, "Stone, brick and glass");
-    public static final Category WOOD = new Category("wood", "Timber & Nature",
-            "minecraft:oak_log", Formatting.DARK_GREEN, "Logs, leaves, growing things");
-    public static final Category DECOR = new Category("decor", "Decoration",
-            "minecraft:cyan_terracotta", Formatting.LIGHT_PURPLE, "Colour and trim");
-    public static final Category GARDEN = new Category("garden", "The Garden",
-            "minecraft:peony", Formatting.LIGHT_PURPLE, "Flowers, pots, lanterns");
-    public static final Category FARMING = new Category("farming", "Seeds & Crops",
-            "minecraft:wheat_seeds", Formatting.GREEN, "Everything that grows");
-    public static final Category FOOD = new Category("food", "Kitchen",
-            "minecraft:cooked_beef", Formatting.RED, "Something to eat");
-    public static final Category MATERIALS = new Category("materials", "Materials",
-            "minecraft:iron_ingot", Formatting.AQUA, "Ore, ingots, drops");
-    public static final Category UTILITY = new Category("utility", "Utility",
-            "minecraft:redstone", Formatting.YELLOW, "Redstone and hardware");
-    public static final Category ENCHANTS = new Category("enchants", "Enchantments",
-            "minecraft:enchanted_book", Formatting.LIGHT_PURPLE, "Books, bought not ground for");
-    public static final Category NETHER = new Category("nether", "The Nether",
-            "minecraft:netherrack", Formatting.DARK_RED, "Everything from down there");
-    public static final Category RARE = new Category("rare", "The Good Stuff",
-            "minecraft:nether_star", Formatting.DARK_PURPLE, "If you can afford it");
-    public static final Category FURNITURE = new Category("furniture", "Furniture",
-            "mcwfurnitures:oak_chair", Formatting.GOLD, "Chairs, tables, cupboards");
+    public static final Category BUILDING = new Category("building", "Budowlane",
+            "minecraft:bricks", Formatting.GOLD, "Kamień, cegła i szkło");
+    public static final Category WOOD = new Category("wood", "Drewno i natura",
+            "minecraft:oak_log", Formatting.DARK_GREEN, "Kłody, liście, rośliny");
+    public static final Category DECOR = new Category("decor", "Ozdoby",
+            "minecraft:cyan_terracotta", Formatting.LIGHT_PURPLE, "Kolory i wykończenia");
+    public static final Category GARDEN = new Category("garden", "Ogród",
+            "minecraft:peony", Formatting.LIGHT_PURPLE, "Kwiaty, donice, latarnie");
+    public static final Category FARMING = new Category("farming", "Nasiona i plony",
+            "minecraft:wheat_seeds", Formatting.GREEN, "Wszystko, co rośnie");
+    public static final Category FOOD = new Category("food", "Kuchnia",
+            "minecraft:cooked_beef", Formatting.RED, "Coś do jedzenia");
+    public static final Category MATERIALS = new Category("materials", "Surowce",
+            "minecraft:iron_ingot", Formatting.AQUA, "Rudy, sztabki, łupy");
+    public static final Category UTILITY = new Category("utility", "Techniczne",
+            "minecraft:redstone", Formatting.YELLOW, "Redstone i mechanizmy");
+    public static final Category ENCHANTS = new Category("enchants", "Zaklęcia",
+            "minecraft:enchanted_book", Formatting.LIGHT_PURPLE, "Księgi na sprzedaż, bez grindu");
+    public static final Category NETHER = new Category("nether", "Nether",
+            "minecraft:netherrack", Formatting.DARK_RED, "Wszystko z dołu");
+    public static final Category RARE = new Category("rare", "Rzadkie skarby",
+            "minecraft:nether_star", Formatting.DARK_PURPLE, "Jeśli cię na to stać");
+    public static final Category FURNITURE = new Category("furniture", "Meble",
+            "mcwfurnitures:oak_chair", Formatting.GOLD, "Krzesła, stoły, szafki");
     /**
      * Roofs, windows, rails and trim -- Macaw's building mods.
      *
@@ -116,8 +116,8 @@ public final class ShopStock {
      * between them, and tipped into Building they would bury the stone under
      * thirty pages of window frames.
      */
-    public static final Category FITTINGS = new Category("fittings", "Roofs & Fittings",
-            "mcwroofs:oak_planks_upper_lower_roof", Formatting.YELLOW, "Roofs, windows, rails");
+    public static final Category FITTINGS = new Category("fittings", "Dachy i stolarka",
+            "mcwroofs:oak_planks_upper_lower_roof", Formatting.YELLOW, "Dachy, okna, barierki");
 
     public static final List<Category> CATEGORIES =
             List.of(BUILDING, FITTINGS, WOOD, DECOR, FURNITURE, GARDEN, FARMING, FOOD,
@@ -172,6 +172,17 @@ public final class ShopStock {
     private static void book(String enchantment, int level, int base) {
         DECLARED.put("minecraft:enchanted_book#" + enchantment + "#" + level,
                 new Object[]{ENCHANTS, 1, base, enchantment, level});
+    }
+
+    /**
+     * An armour trim template, priced by how far you'd have to go for it.
+     *
+     * Eighteen of them share one id shape, and the shape is most of the id.
+     * Duplicating one costs seven diamonds, so nothing here is worth listing
+     * above that -- the smithing table is the competition.
+     */
+    private static void trim(String pattern, int base) {
+        add(RARE, "minecraft:" + pattern + "_armor_trim_smithing_template", 1, base);
     }
 
     private static Item resolve(String id, Item fallback) {
@@ -1397,6 +1408,55 @@ public final class ShopStock {
         add(c, "minecraft:wither_skeleton_skull", 1, 420);
         add(c, "minecraft:dragon_head", 1, 1100);
         add(c, "minecraft:end_crystal", 2, 210);
+
+        // The tools the shelf forgot. It sold a netherite pickaxe, a netherite
+        // axe and a netherite sword, and left you digging gravel with diamond.
+        // Priced against the ingot, which is the whole cost of the upgrade:
+        // nobody buys a netherite shovel who couldn't have made one.
+        add(c, "minecraft:netherite_shovel", 1, 1200);
+        add(c, "minecraft:netherite_hoe", 1, 1180);
+        // Their diamond halves, to match the pickaxe and sword already here.
+        add(c, "minecraft:diamond_axe", 1, 190);
+        add(c, "minecraft:diamond_shovel", 1, 90);
+        add(c, "minecraft:diamond_hoe", 1, 150);
+        add(c, "minecraft:diamond_horse_armor", 1, 480);
+
+        // Only the market sells these two. A sniffer egg is a dig site you
+        // didn't have to find, and reinforced deepslate cannot be mined at
+        // all -- there is no price it undercuts, so the price is the flex.
+        add(c, "minecraft:sniffer_egg", 1, 600);
+        add(c, "minecraft:reinforced_deepslate", 1, 900);
+
+        // Armour trims. The cheap ones are a hole in the ground you already
+        // walked past; silence is thirty ancient city chests.
+        trim("sentry", 70);
+        trim("dune", 70);
+        trim("coast", 70);
+        trim("wild", 90);
+        trim("snout", 180);
+        trim("rib", 200);
+        trim("tide", 220);
+        trim("wayfinder", 240);
+        trim("raiser", 240);
+        trim("shaper", 240);
+        trim("host", 240);
+        trim("eye", 260);
+        trim("spire", 300);
+        trim("flow", 320);
+        trim("bolt", 320);
+        trim("ward", 380);
+        trim("vex", 520);
+        trim("silence", 800);
+
+        // The jukebox set. Pigstep and the rest of the deep cuts are already
+        // up there at four hundred; these are the ones a creeper hands you for
+        // the price of aiming a skeleton, so they're priced like a night out.
+        for (String disc : new String[]{"13", "cat", "blocks", "chirp", "far", "mall",
+                "mellohi", "stal", "strad", "ward", "wait", "11"}) {
+            add(c, "minecraft:music_disc_" + disc, 1, 150);
+        }
+        add(c, "minecraft:music_disc_precipice", 1, 420);
+        add(c, "minecraft:music_disc_creator_music_box", 1, 440);
     }
 
     private ShopStock() {

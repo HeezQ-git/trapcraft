@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:golden_helmet"
     },
-    "title": "Kingpin",
-    "description": "Bring a dealer up to level five.",
+    "title": "Szef szefów",
+    "description": "Wyszkol dilera do piątego poziomu.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

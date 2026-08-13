@@ -186,7 +186,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         int paths = TrapMath.plinkoPaths(slot);
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Lands here " + paths + " times in 256.", Formatting.GRAY),
-                line("Pays " + multiplier(pays) + " of the stake.", Formatting.DARK_GRAY))));
+                line("Płaci " + multiplier(pays) + " stawki.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -198,11 +198,11 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake: ").formatted(Formatting.GRAY)
+                plain("Stawka: ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Click to change.", Formatting.DARK_GRAY))));
+                line("Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -214,9 +214,9 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
 
         List<Text> lore = new ArrayList<>();
         lore.add(line("Nothing is decided in advance here.", Formatting.WHITE));
-        lore.add(line("Eight coin flips, and you watch.", Formatting.GRAY));
+        lore.add(line("Osiem rzutów monetą, a ty patrzysz.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("The middle is likely and pays least.", Formatting.DARK_GRAY));
+        lore.add(line("Środek wypada najczęściej i płaci najmniej.", Formatting.DARK_GRAY));
         lore.add(line("The edges land once in 256 each.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(line("The house keeps about "
@@ -237,7 +237,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
@@ -271,14 +271,14 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         int stake = STAKES[stakeChoice];
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_DROP)) {
             deny();
-            player.sendMessage(plain("The house won't take that -- the outside slots pay "
-                    + TrapHouse.TOP_DROP + "x and the vault is too thin for it.")
+            player.sendMessage(plain("Kasyno tego nie przyjmie -- skrajne przegródki płacą "
+                    + TrapHouse.TOP_DROP + "x, a skarbiec jest za chudy.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
-            player.sendMessage(plain("You can't cover a " + stake + "e drop.")
+            player.sendMessage(plain("Nie stać cię na rzut za " + stake + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -380,7 +380,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     private void announce() {
         int stake = STAKES[stakeChoice];
         int net = won - stake;
-        player.sendMessage(plain("It drops into ").formatted(Formatting.GRAY)
+        player.sendMessage(plain("Wpada do ").formatted(Formatting.GRAY)
                 .append(plain(multiplier(TrapMath.PLINKO_PAYS[landed]))
                         .formatted(net >= 0 ? Formatting.GOLD : Formatting.RED, Formatting.BOLD))
                 .append(plain(".   ").formatted(Formatting.GRAY))

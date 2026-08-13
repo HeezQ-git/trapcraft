@@ -298,11 +298,11 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     private ItemStack stakeTag() {
         ItemStack tag = new ItemStack(Items.EMERALD, Math.max(1, STAKES[stakeChoice] / 8));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake ").formatted(Formatting.GRAY)
+                plain("Stawka ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Click to change.", Formatting.YELLOW))));
+                line("Kliknij, żeby zmienić.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -318,9 +318,9 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
                 plain(TrapMath.slotCabinet(size)).formatted(Formatting.AQUA, Formatting.BOLD)
                         .append(plain("   " + size + "x" + size).formatted(Formatting.WHITE)));
         List<Text> lore = new ArrayList<>();
-        lore.add(line(faces() + " symbols on the reels.", Formatting.GRAY));
+        lore.add(line("Symboli na bębnach: " + faces() + ".", Formatting.GRAY));
         lore.add(line(Math.round(TrapMath.slotWinRate(size) * 100)
-                + " spins in 100 pay. House keeps "
+                + " zakręceń na 100 wypłaca. Kasyno bierze "
                 + Math.round((1 - TrapMath.slotRtp(size)) * 100) + "%.", Formatting.GRAY));
         lore.add(Text.empty());
         // Said plainly, because the obvious guess -- that a big window is just
@@ -328,13 +328,13 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         // pays more often per emerald in the sense that its top prize is
         // reachable, and less often in the sense that most spins are nothing.
         lore.add(line(switch (size) {
-            case 2 -> "Two seconds a spin. Pairs pay.";
-            case 3 -> "Quick. Lines and the odd shape.";
-            case 4 -> "Room for blocks and fours.";
-            default -> "The full board. Everything is on it.";
+            case 2 -> "Dwie sekundy na zakręcenie. Płacą pary.";
+            case 3 -> "Szybko. Linie i pojedyncze kształty.";
+            case 4 -> "Mieści kwadraty i czwórki.";
+            default -> "Pełna plansza. Wszystkie układy.";
         }, Formatting.WHITE));
         lore.add(Text.empty());
-        lore.add(line("Click for the next cabinet.", Formatting.YELLOW));
+        lore.add(line("Kliknij, żeby zmienić rozmiar planszy.", Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -342,7 +342,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     private ItemStack leverTag() {
         ItemStack tag = new ItemStack(spinning > 0 ? Items.REDSTONE_TORCH : Items.LEVER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(spinning > 0 ? "Spinning" : "PULL")
+                plain(spinning > 0 ? "Kręci się" : "POCIĄGNIJ")
                         .formatted(spinning > 0 ? Formatting.GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
@@ -352,16 +352,16 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             lore.add(row);
         }
         lore.add(Text.empty());
-        lore.add(line("Rows, columns and EVERY diagonal.", Formatting.GRAY));
-        lore.add(line("Separate wins add up.", Formatting.WHITE));
-        lore.add(line("Winning symbols glow.", Formatting.GRAY));
+        lore.add(line("Wiersze, kolumny i KAŻDA przekątna.", Formatting.GRAY));
+        lore.add(line("Osobne układy sumują się.", Formatting.WHITE));
+        lore.add(line("Wygrywające symbole świecą.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("About " + Math.round(TrapMath.slotWinRate(size) * 100)
-                + " spins in 100 pay, and a", Formatting.DARK_GRAY));
-        lore.add(line("win never returns less than the stake.", Formatting.DARK_GRAY));
-        lore.add(line("The house keeps about "
+        lore.add(line("Około " + Math.round(TrapMath.slotWinRate(size) * 100)
+                + " zakręceń na 100 wypłaca, a wygrana", Formatting.DARK_GRAY));
+        lore.add(line("nigdy nie jest mniejsza od stawki.", Formatting.DARK_GRAY));
+        lore.add(line("Kasyno zatrzymuje około "
                 + Math.round((1 - TrapMath.slotRtp(size)) * 100)
-                + "% over time.", Formatting.DARK_GRAY));
+                + "% w dłuższej perspektywie.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -434,7 +434,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse ").formatted(Formatting.GRAY)
+                plain("Kasa ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
@@ -479,14 +479,14 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         // out of reach of any casino anybody will actually build.
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)) {
             beep(0.5F);
-            player.sendMessage(plain("The house won't take a " + stake
-                    + "e spin -- there isn't the money behind it.")
+            player.sendMessage(plain("Kasyno nie przyjmie zakręcenia za " + stake
+                    + "e -- nie ma na to pokrycia.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < stake) {
             beep(0.5F);
-            player.sendMessage(plain("You can't cover a " + stake + "e spin.")
+            player.sendMessage(plain("Nie stać cię na zakręcenie za " + stake + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -650,7 +650,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             // Name what won. "Paid out 12e" tells you nothing; "Star + 3 in a
             // row" tells you the shapes are real and worth looking for.
             String named = ways.isEmpty() ? "" : String.join(" + ", ways);
-            player.sendMessage(plain(jackpot ? "JACKPOT.  " : "Paid out.  ")
+            player.sendMessage(plain(jackpot ? "KUMULACJA!  " : "Wypłata.  ")
                             .formatted(jackpot ? Formatting.GOLD : Formatting.GREEN,
                                     Formatting.BOLD)
                             .append(plain("+" + lastWon + "e").formatted(Formatting.GREEN))

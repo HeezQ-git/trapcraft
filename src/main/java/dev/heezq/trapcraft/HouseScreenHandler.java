@@ -114,15 +114,15 @@ public class HouseScreenHandler extends ScreenHandler {
 
         ItemStack deposit = new ItemStack(loose > 0 ? Items.HOPPER : Items.GRAY_DYE);
         deposit.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Put everything in").formatted(Formatting.YELLOW, Formatting.BOLD));
+                plain("Wpłać wszystko").formatted(Formatting.YELLOW, Formatting.BOLD));
         deposit.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(loose > 0
-                                ? "Sweeps all " + loose + "e into the vault."
-                                : "Nothing on you to put in.",
+                                ? "Wrzuca wszystkie " + loose + "e do skarbca."
+                                : "Nie masz przy sobie pieniędzy.",
                         loose > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
-                line("Wallets and blocks count.", Formatting.DARK_GRAY),
+                line("Portfel i bloki też się liczą.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("A fat vault is a high table limit.", Formatting.WHITE))));
+                line("Pełny skarbiec = wysoki limit stołu.", Formatting.WHITE))));
         display.setStack(DEPOSIT_SLOT, deposit);
 
         for (int i = 0; i < STEPS.length; i++) {
@@ -131,25 +131,25 @@ public class HouseScreenHandler extends ScreenHandler {
             ItemStack button = new ItemStack(can ? Items.EMERALD : Items.GRAY_DYE);
             button.setCount(Math.min(64, Math.max(1, step / 10)));
             button.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("Take " + step + "e")
+                    plain("Wypłać " + step + "e")
                             .formatted(can ? Formatting.WHITE : Formatting.DARK_GRAY,
                                     Formatting.BOLD));
             button.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line(can ? "Click to draw it out." : "Not that much in the vault.",
+                    line(can ? "Kliknij, żeby wypłacić." : "W skarbcu nie ma tyle.",
                             can ? Formatting.GRAY : Formatting.DARK_GRAY),
-                    line("Shift-click for " + step * 10 + "e.", Formatting.DARK_GRAY))));
+                    line("Shift+LPM wypłaca " + step * 10 + "e.", Formatting.DARK_GRAY))));
             display.setStack(STEP_SLOTS[i], button);
         }
 
         ItemStack all = new ItemStack(vault > 0 ? Items.CHEST : Items.GRAY_DYE);
         all.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Clear the vault").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Opróżnij skarbiec").formatted(Formatting.GOLD, Formatting.BOLD));
         all.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(vault > 0 ? "Takes the whole " + vault + "e." : "Already empty.",
+                line(vault > 0 ? "Zabiera całe " + vault + "e." : "Już jest pusty.",
                         vault > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Your machines stop taking bets", Formatting.RED),
-                line("until there's money behind them.", Formatting.RED))));
+                line("Automaty przestaną przyjmować zakłady,", Formatting.RED),
+                line("dopóki nie będzie za nimi kasy.", Formatting.RED))));
         display.setStack(TAKE_ALL_SLOT, all);
 
         sendContentUpdates();
@@ -161,24 +161,24 @@ public class HouseScreenHandler extends ScreenHandler {
                 plain(house.name).formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Opened by " + house.founder, Formatting.DARK_GRAY),
+                line("Otworzył: " + house.founder, Formatting.DARK_GRAY),
                 Text.empty(),
-                bar("Name", house.rep, Formatting.GOLD),
-                line("  Different games, a full vault, and a", Formatting.DARK_GRAY),
-                line("  machine free when somebody walks in.", Formatting.DARK_GRAY),
-                line("  A queue at the door costs you most.", Formatting.RED),
-                bar("Regulars", house.addiction, Formatting.LIGHT_PURPLE),
-                line("  Held up by trade. Gone in half an hour", Formatting.DARK_GRAY),
-                line("  of quiet. Nobody keeps it at 100.", Formatting.DARK_GRAY),
+                bar("Reputacja", house.rep, Formatting.GOLD),
+                line("  Rośnie od różnych gier, pełnego skarbca", Formatting.DARK_GRAY),
+                line("  i wolnego automatu dla wchodzącego.", Formatting.DARK_GRAY),
+                line("  Najbardziej szkodzi kolejka przy drzwiach.", Formatting.RED),
+                bar("Bywalcy", house.addiction, Formatting.LIGHT_PURPLE),
+                line("  Rośnie, gdy ktoś gra. Znika po pół", Formatting.DARK_GRAY),
+                line("  godziny pustki. Nikt nie ma 100.", Formatting.DARK_GRAY),
                 Text.empty(),
-                plain("Draws ").formatted(Formatting.GRAY)
+                plain("Przyciąga ").formatted(Formatting.GRAY)
                         .append(plain(String.format("%.2fx", house.pull()))
                                 .formatted(Formatting.WHITE, Formatting.BOLD))
-                        .append(plain(" the trade of an unknown floor.")
+                        .append(plain(" ruchu nieznanego kasyna.")
                                 .formatted(Formatting.GRAY)),
                 Text.empty(),
-                line("Rename the card in an anvil and the", Formatting.GRAY),
-                line("house takes the new name.", Formatting.GRAY))));
+                line("Zmień nazwę licencji na kowadle,", Formatting.GRAY),
+                line("a kasyno przyjmie nową nazwę.", Formatting.GRAY))));
         return tag;
     }
 
@@ -194,46 +194,46 @@ public class HouseScreenHandler extends ScreenHandler {
     private ItemStack vault(TrapHouse.House house) {
         ItemStack tag = new ItemStack(house.balance > 0 ? Items.EMERALD_BLOCK : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Vault: ").formatted(Formatting.GRAY)
+                plain("Skarbiec: ").formatted(Formatting.GRAY)
                         .append(plain(house.balance + "e")
                                 .formatted(house.balance > 0 ? Formatting.GREEN : Formatting.RED,
                                         Formatting.BOLD)));
         int machines = TrapHouse.machineCount(house);
         int upkeep = machines * TrapMath.MACHINE_UPKEEP;
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Every bet lost on your machines lands", Formatting.GRAY));
-        lore.add(line("here. Every win is paid out of it.", Formatting.GRAY));
+        lore.add(line("Każdy przegrany zakład wpada tutaj.", Formatting.GRAY));
+        lore.add(line("Każda wygrana jest z tego wypłacana.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(plain("Upkeep  ").formatted(Formatting.GRAY)
+        lore.add(plain("Utrzymanie  ").formatted(Formatting.GRAY)
                 .append(plain(upkeep + "e").formatted(Formatting.RED, Formatting.BOLD))
-                .append(plain(" every 30s").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("  " + machines + " machines, lit whether or not", Formatting.DARK_GRAY));
-        lore.add(line("  anybody is playing them.", Formatting.DARK_GRAY));
-        lore.add(plain("Protection  ").formatted(Formatting.GRAY)
+                .append(plain(" co 30s").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("  automatów: " + machines + ", świecą się", Formatting.DARK_GRAY));
+        lore.add(line("  niezależnie od tego, czy ktoś gra.", Formatting.DARK_GRAY));
+        lore.add(plain("Haracz  ").formatted(Formatting.GRAY)
                 .append(plain(Math.round(TrapMath.PROTECTION_RATE * 100) + "%")
                         .formatted(Formatting.RED, Formatting.BOLD))
-                .append(plain(" of everything played").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("  Off the vault, win or lose. Miss it", Formatting.DARK_GRAY));
-        lore.add(line("  three times and they come round.", Formatting.RED));
-        lore.add(line("  Your vault covers " + (upkeep <= 0 ? "forever"
-                        : (house.balance / upkeep / 2) + " min") + " of quiet.",
+                .append(plain(" wszystkiego, co obstawiono").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("  Ze skarbca, niezależnie od wyniku.", Formatting.DARK_GRAY));
+        lore.add(line("  Trzy niezapłacone raty i przyjdą.", Formatting.RED));
+        lore.add(line("  Skarbiec wystarczy na " + (upkeep <= 0 ? "zawsze"
+                        : (house.balance / upkeep / 2) + " min") + " pustki.",
                 Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line("A full vault is also most of your name:", Formatting.WHITE));
-        lore.add(line("  " + TrapMath.FLOAT_PER_MACHINE + "e a machine is what it",
+        lore.add(line("Pełny skarbiec to też twoja reputacja:", Formatting.WHITE));
+        lore.add(line("  " + TrapMath.FLOAT_PER_MACHINE + "e na automat to poziom,",
                 Formatting.DARK_GRAY));
-        lore.add(line("  wants to see. You hold "
+        lore.add(line("  który się liczy. Masz "
                         + (machines <= 0 ? 0 : house.balance / machines) + "e.",
                 Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line("Biggest bet each game will take:", Formatting.WHITE));
-        lore.add(limit("Lucky Streak", TrapHouse.TOP_SLOT, house));
-        lore.add(limit("Roulette", TrapHouse.TOP_ROULETTE, house));
-        lore.add(limit("The Drop", TrapHouse.TOP_DROP, house));
-        lore.add(limit("The Climb", TrapHouse.TOP_CLIMB, house));
-        lore.add(limit("Coin Toss", TrapHouse.TOP_TOSS, house));
+        lore.add(line("Największy zakład, jaki przyjmie gra:", Formatting.WHITE));
+        lore.add(limit("Jednoręki bandyta", TrapHouse.TOP_SLOT, house));
+        lore.add(limit("Ruletka", TrapHouse.TOP_ROULETTE, house));
+        lore.add(limit("Plinko", TrapHouse.TOP_DROP, house));
+        lore.add(limit("Wspinaczka", TrapHouse.TOP_CLIMB, house));
+        lore.add(limit("Rzut monetą", TrapHouse.TOP_TOSS, house));
         lore.add(limit("Blackjack", TrapHouse.TOP_BLACKJACK, house));
-        lore.add(limit("Scratchers", TrapHouse.TOP_SCRATCH, house));
+        lore.add(limit("Zdrapki", TrapHouse.TOP_SCRATCH, house));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -248,16 +248,16 @@ public class HouseScreenHandler extends ScreenHandler {
         List<String> where = TrapHouse.machinesOf(house);
         ItemStack tag = new ItemStack(where.isEmpty() ? Items.GRAY_DYE : Items.LEVER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The floor: ").formatted(Formatting.GRAY)
+                plain("Sala: ").formatted(Formatting.GRAY)
                         .append(plain(where.size() + (where.size() == 1
-                                        ? " machine" : " machines"))
+                                        ? " automat" : " automatów"))
                                 .formatted(Formatting.WHITE, Formatting.BOLD)));
         List<Text> lore = new ArrayList<>();
         if (where.isEmpty()) {
-            lore.add(line("Nothing wired up yet.", Formatting.RED));
+            lore.add(line("Nic jeszcze nie podłączone.", Formatting.RED));
             lore.add(Text.empty());
-            lore.add(line("Right-click a machine holding this", Formatting.YELLOW));
-            lore.add(line("card and it starts paying into you.", Formatting.YELLOW));
+            lore.add(line("Kliknij automat PPM, trzymając tę", Formatting.YELLOW));
+            lore.add(line("licencję, a zacznie płacić do ciebie.", Formatting.YELLOW));
         } else {
             // Coordinates rather than names: two Lucky Streaks in one room are
             // told apart by where they are and by nothing else.
@@ -267,7 +267,7 @@ public class HouseScreenHandler extends ScreenHandler {
                         Formatting.DARK_GRAY));
             }
             if (where.size() > 8) {
-                lore.add(line("  ...and " + (where.size() - 8) + " more", Formatting.DARK_GRAY));
+                lore.add(line("  ...i jeszcze " + (where.size() - 8), Formatting.DARK_GRAY));
             }
             lore.add(Text.empty());
             lore.add(line("Right-click a wired machine again", Formatting.DARK_GRAY));
@@ -280,33 +280,33 @@ public class HouseScreenHandler extends ScreenHandler {
     private ItemStack bossTag(TrapHouse.House house) {
         ItemStack tag = new ItemStack(house.pitBoss ? Items.IRON_HELMET : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(house.pitBoss ? "Pit boss on the floor" : "Nobody watching")
+                plain(house.pitBoss ? "Szef sali na miejscu" : "Nikt nie pilnuje")
                         .formatted(house.pitBoss ? Formatting.AQUA : Formatting.RED,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(house.pitBoss
-                                ? TrapMath.PIT_BOSS_WAGE + "e a beat in wages."
-                                : "The staff take "
-                                + trim(TrapMath.SKIM_RATE * 100) + "% off the top.",
+                                ? TrapMath.PIT_BOSS_WAGE + "e pensji za takt."
+                                : "Obsługa podkrada "
+                                + trim(TrapMath.SKIM_RATE * 100) + "% utargu.",
                         house.pitBoss ? Formatting.GRAY : Formatting.RED),
                 line(house.pitBoss
-                                ? "Cheats get shown the door."
-                                : "About one punter in " + Math.round(1 / TrapMath.CHEAT_CHANCE)
-                                + " is counting.",
+                                ? "Oszustów wyprasza się za drzwi."
+                                : "Mniej więcej co " + Math.round(1 / TrapMath.CHEAT_CHANCE)
+                                + " gracz oszukuje.",
                         house.pitBoss ? Formatting.GRAY : Formatting.RED),
                 Text.empty(),
                 // The wage is flat and the skim is proportional, so this is a
                 // real decision and not an upgrade you always take.
-                line("A wage is the same whatever the night", Formatting.WHITE),
-                line("does. A cut isn't. Above about "
+                line("Pensja jest stała, procent nie.", Formatting.WHITE),
+                line("Powyżej mniej więcej "
                         + (TrapMath.PIT_BOSS_WAGE * 2 * 60
                         / TrapMath.SKIM_RATE / 60) + "e", Formatting.WHITE),
-                line("of trade an hour they pay for themselves.", Formatting.WHITE),
+                line("obrotu na godzinę zwraca się sam.", Formatting.WHITE),
                 Text.empty(),
                 line(house.pitBoss
-                                ? "Click to let them go."
-                                : "Click to take somebody on. "
-                                + TrapMath.PIT_BOSS_HIRE + "e up front.",
+                                ? "Kliknij, żeby go zwolnić."
+                                : "Kliknij, żeby zatrudnić. "
+                                + TrapMath.PIT_BOSS_HIRE + "e z góry.",
                         Formatting.YELLOW))));
         return tag;
     }
@@ -317,16 +317,16 @@ public class HouseScreenHandler extends ScreenHandler {
         boolean can = house.compCooldown <= 0 && house.balance >= cost;
         ItemStack tag = new ItemStack(can ? Items.HONEY_BOTTLE : Items.GLASS_BOTTLE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stand a round").formatted(can ? Formatting.LIGHT_PURPLE
+                plain("Postaw kolejkę").formatted(can ? Formatting.LIGHT_PURPLE
                         : Formatting.DARK_GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(cost + "e out of the vault for nothing", Formatting.GRAY),
-                line("you can point at. +" + TrapMath.COMP_ADDICTION
-                        + " regulars.", Formatting.GRAY),
+                line(cost + "e ze skarbca i nic widocznego", Formatting.GRAY),
+                line("w zamian. +" + TrapMath.COMP_ADDICTION
+                        + " do stałych bywalców.", Formatting.GRAY),
                 Text.empty(),
                 line(house.compCooldown > 0
-                                ? "Another " + house.compCooldown / 2 + " min before the next."
-                                : "Click to put one on.",
+                                ? "Jeszcze " + house.compCooldown / 2 + " min do następnej."
+                                : "Kliknij, żeby postawić.",
                         house.compCooldown > 0 ? Formatting.DARK_GRAY : Formatting.YELLOW))));
         return tag;
     }
@@ -337,23 +337,23 @@ public class HouseScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(running ? Items.GLOWSTONE
                 : can ? Items.FIREWORK_ROCKET : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(running ? "RUNNING LOOSE" : "Run it loose")
+                plain(running ? "AUTOMATY NA LUZIE" : "Puść na luzie")
                         .formatted(running ? Formatting.GOLD
                                 : can ? Formatting.YELLOW : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("The machines pay over the odds for "
-                        + TrapMath.LOOSE_BEATS / 2 + " minutes.", Formatting.GRAY),
-                line("You lose money. On purpose.", Formatting.RED),
+                line("Automaty wypłacają ponad normę przez "
+                        + TrapMath.LOOSE_BEATS / 2 + " minut.", Formatting.GRAY),
+                line("Tracisz pieniądze. Celowo.", Formatting.RED),
                 Text.empty(),
-                line("+" + TrapMath.LOOSE_REP_BONUS + " to your name while it runs,",
+                line("+" + TrapMath.LOOSE_REP_BONUS + " do reputacji na czas akcji,",
                         Formatting.WHITE),
-                line("and the regulars build twice as fast.", Formatting.WHITE),
+                line("a bywalcy przybywają dwa razy szybciej.", Formatting.WHITE),
                 Text.empty(),
-                line(running ? house.looseBeats / 2 + " minutes left."
+                line(running ? "Zostało " + house.looseBeats / 2 + " minut."
                                 : house.looseCooldown > 0
-                                ? "Not for another " + house.looseCooldown / 2 + " min."
-                                : "Click to call one.",
+                                ? "Dopiero za " + house.looseCooldown / 2 + " min."
+                                : "Kliknij, żeby ogłosić.",
                         running ? Formatting.GOLD
                                 : can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
         return tag;
@@ -363,11 +363,11 @@ public class HouseScreenHandler extends ScreenHandler {
         int wear = TrapHouse.averageWear(house);
         ItemStack tag = new ItemStack(wear >= 60 ? Items.NETHERITE_SCRAP : Items.IRON_INGOT);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Condition").formatted(Formatting.GRAY, Formatting.BOLD));
+                plain("Stan techniczny").formatted(Formatting.GRAY, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(bar("Worn", wear, wear >= 60 ? Formatting.RED : Formatting.WHITE));
-        lore.add(line(wear >= 60 ? "  A shabby room, and it shows in the name."
-                        : "  Holding up.",
+        lore.add(bar("Zużycie", wear, wear >= 60 ? Formatting.RED : Formatting.WHITE));
+        lore.add(line(wear >= 60 ? "  Sala się sypie i widać to po reputacji."
+                        : "  Trzyma się nieźle.",
                 wear >= 60 ? Formatting.RED : Formatting.DARK_GRAY));
         lore.add(Text.empty());
         int broken = 0;
@@ -375,33 +375,33 @@ public class HouseScreenHandler extends ScreenHandler {
             if (TrapHouse.wearAt(where) >= TrapMath.WEAR_BROKEN) {
                 String[] parts = where.split(" ");
                 if (broken < 6) {
-                    lore.add(line("  OUT OF ORDER  " + parts[1] + ", " + parts[2]
+                    lore.add(line("  ZEPSUTY  " + parts[1] + ", " + parts[2]
                             + ", " + parts[3], Formatting.RED));
                 }
                 broken++;
             }
         }
         if (broken == 0) {
-            lore.add(line("Nothing out of order.", Formatting.GREEN));
+            lore.add(line("Nic nie jest zepsute.", Formatting.GREEN));
         } else if (broken > 6) {
-            lore.add(line("  ...and " + (broken - 6) + " more", Formatting.RED));
+            lore.add(line("  ...i jeszcze " + (broken - 6), Formatting.RED));
         }
         lore.add(Text.empty());
         int stock = TrapHouse.barStock(house);
-        lore.add(plain("Behind the bar  ").formatted(Formatting.GRAY)
-                .append(plain(stock + (stock == 1 ? " serving" : " servings"))
+        lore.add(plain("Zapas w barze  ").formatted(Formatting.GRAY)
+                .append(plain(stock + " porcji")
                         .formatted(stock > 0 ? Formatting.GREEN : Formatting.RED,
                                 Formatting.BOLD)));
         lore.add(line(stock > 0
-                        ? "  Everybody through the door gets one."
-                        : "  Nothing to hand out. They have one go",
+                        ? "  Każdy wchodzący dostaje kolejkę."
+                        : "  Nie ma czym częstować. Zagrają raz",
                 stock > 0 ? Formatting.DARK_GRAY : Formatting.RED));
         if (stock <= 0) {
-            lore.add(line("  and leave, and your name goes with them.", Formatting.RED));
+            lore.add(line("  i wyjdą, a z nimi twoja reputacja.", Formatting.RED));
         }
         lore.add(Text.empty());
-        lore.add(line("Hit a machine with a Miner's Hammer to", Formatting.YELLOW));
-        lore.add(line("put it right. The house pays for parts.", Formatting.DARK_GRAY));
+        lore.add(line("Uderz automat Miner's Hammer, żeby go", Formatting.YELLOW));
+        lore.add(line("naprawić. Części opłaca kasyno.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -415,23 +415,23 @@ public class HouseScreenHandler extends ScreenHandler {
     private ItemStack books(TrapHouse.House house) {
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The books").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Rachunki").formatted(Formatting.GOLD, Formatting.BOLD));
         long profit = house.profit();
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(house.plays + " bets taken", Formatting.GRAY),
-                line(house.handle + "e of trade through the room", Formatting.GRAY),
-                line(house.paid + "e paid out to punters", Formatting.GRAY),
-                line(house.costs + "e in upkeep and the cut", Formatting.RED),
+                line("przyjętych zakładów: " + house.plays, Formatting.GRAY),
+                line("obrót sali: " + house.handle + "e", Formatting.GRAY),
+                line("wypłacone graczom: " + house.paid + "e", Formatting.GRAY),
+                line("utrzymanie i haracz: " + house.costs + "e", Formatting.RED),
                 Text.empty(),
-                plain("Your own play  ").formatted(Formatting.DARK_GRAY)
+                plain("Twoja własna gra  ").formatted(Formatting.DARK_GRAY)
                         .append(plain((house.ownPlay >= 0 ? "+" : "")
                                         + house.ownPlay + "e")
                                 .formatted(house.ownPlay >= 0
                                         ? Formatting.GREEN : Formatting.RED)),
-                line("  Kept out of the takings. It's your", Formatting.DARK_GRAY),
-                line("  money going round in a circle.", Formatting.DARK_GRAY),
+                line("  Nie liczy się do utargu. To twoje", Formatting.DARK_GRAY),
+                line("  pieniądze krążące w kółko.", Formatting.DARK_GRAY),
                 Text.empty(),
-                plain(profit >= 0 ? "Up " : "Down ").formatted(Formatting.WHITE)
+                plain(profit >= 0 ? "Na plusie " : "Na minusie ").formatted(Formatting.WHITE)
                         .append(plain(Math.abs(profit) + "e")
                                 .formatted(profit >= 0 ? Formatting.GREEN : Formatting.RED,
                                         Formatting.BOLD))
@@ -439,13 +439,13 @@ public class HouseScreenHandler extends ScreenHandler {
                                 .formatted(Formatting.DARK_GRAY)),
                 Text.empty(),
                 line(house.handle < 2000
-                                ? "Early days. The margin is noise until"
-                                : "Gross " + Math.round(house.grossProfit() * 100.0f
-                                / Math.max(1, house.handle)) + "%, and the rest",
+                                ? "Za wcześnie. Marża to na razie szum, dopóki"
+                                : "Marża brutto " + Math.round(house.grossProfit() * 100.0f
+                                / Math.max(1, house.handle)) + "%, reszta",
                         Formatting.DARK_GRAY),
                 line(house.handle < 2000
-                                ? "a few thousand emeralds have gone through."
-                                : "goes on being open. Volume is the business.",
+                                ? "nie przejdzie kilka tysięcy szmaragdów."
+                                : "idzie na utrzymanie. Liczy się obrót.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -475,7 +475,7 @@ public class HouseScreenHandler extends ScreenHandler {
                 deny();
             } else {
                 chime(1.2F);
-                owner.sendMessage(plain("Banked ").formatted(Formatting.GRAY)
+                owner.sendMessage(plain("Wpłacono ").formatted(Formatting.GRAY)
                         .append(plain(put + "e").formatted(Formatting.GREEN))
                         .append(plain(". The vault holds ").formatted(Formatting.GRAY))
                         .append(plain(house.balance + "e")
@@ -494,7 +494,7 @@ public class HouseScreenHandler extends ScreenHandler {
         if (index == BOSS_SLOT) {
             if (house.pitBoss) {
                 TrapHouse.sackPitBoss(house);
-                owner.sendMessage(plain("Let them go. Watch your own floor.")
+                owner.sendMessage(plain("Zwolniony. Pilnuj sali sam.")
                         .formatted(Formatting.GRAY), false);
                 chime(0.8F);
             } else {
@@ -522,7 +522,7 @@ public class HouseScreenHandler extends ScreenHandler {
                 owner.getWorld().playSound(null, owner.getBlockPos(),
                         SoundEvents.ENTITY_VILLAGER_CELEBRATE,
                         SoundCategory.PLAYERS, 0.8F, 1.0F);
-                owner.sendMessage(plain("Drinks on the house.")
+                owner.sendMessage(plain("Kolejka na koszt kasyna.")
                         .formatted(Formatting.LIGHT_PURPLE), false);
             }
             CasinoCardItem.restamp(card, house);
@@ -538,8 +538,8 @@ public class HouseScreenHandler extends ScreenHandler {
                 chime(1.7F);
                 owner.getWorld().playSound(null, owner.getBlockPos(),
                         SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.7F, 1.4F);
-                owner.sendMessage(plain("Loose for the next "
-                        + TrapMath.LOOSE_BEATS / 2 + " minutes. It'll cost you.")
+                owner.sendMessage(plain("Luźne automaty przez "
+                        + TrapMath.LOOSE_BEATS / 2 + " minut. To cię będzie kosztować.")
                         .formatted(Formatting.GOLD), false);
             }
             paint();
@@ -558,10 +558,10 @@ public class HouseScreenHandler extends ScreenHandler {
         int got = TrapHouse.withdraw(owner, house, wanted);
         if (got <= 0) {
             deny();
-            owner.sendMessage(plain("The vault's empty.").formatted(Formatting.GRAY), false);
+            owner.sendMessage(plain("Skarbiec jest pusty.").formatted(Formatting.GRAY), false);
         } else {
             chime(0.9F);
-            owner.sendMessage(plain("Drew ").formatted(Formatting.GRAY)
+            owner.sendMessage(plain("Wypłacono ").formatted(Formatting.GRAY)
                     .append(plain(got + "e").formatted(Formatting.GREEN))
                     .append(plain(got < wanted ? " -- that was the lot. " : " out. ")
                             .formatted(Formatting.GRAY))

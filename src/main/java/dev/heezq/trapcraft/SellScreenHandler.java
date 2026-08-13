@@ -113,26 +113,26 @@ public class SellScreenHandler extends ScreenHandler {
         info.set(DataComponentTypes.CUSTOM_NAME,
                 plain("The Counter").formatted(Formatting.GOLD, Formatting.BOLD));
         info.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Put anything in. Shift-click works.", Formatting.GRAY),
+                line("Wrzuć cokolwiek. Shift+LPM działa.", Formatting.GRAY),
                 line("Then hit SELL.", Formatting.GRAY),
                 Text.empty(),
-                line("Listed goods fetch the market price.", Formatting.DARK_GRAY),
-                line("Everything else is valued on the spot,", Formatting.DARK_GRAY),
-                line("at " + Math.round(TrapMath.SCRAP_RATE * 100) + "% -- it's a counter, not a shop.",
+                line("Towar z listy idzie po cenie rynkowej.", Formatting.DARK_GRAY),
+                line("Reszta wyceniana jest na miejscu,", Formatting.DARK_GRAY),
+                line("po " + Math.round(TrapMath.SCRAP_RATE * 100) + "% -- to skup, nie sklep.",
                         Formatting.DARK_GRAY),
                 Text.empty(),
-                line("What it won't take comes back to you.", Formatting.WHITE))));
+                line("Czego nie weźmie, wróci do ciebie.", Formatting.WHITE))));
         footer.setStack(INFO_SLOT - TILL, info);
 
         ItemStack total = new ItemStack(worth > 0 ? Items.EMERALD : Items.GRAY_DYE);
         total.setCount(Math.max(1, Math.min(64, worth)));
         total.set(DataComponentTypes.CUSTOM_NAME,
-                plain("On the counter: ").formatted(Formatting.GRAY)
+                plain("Na ladzie: ").formatted(Formatting.GRAY)
                         .append(plain(worth + "e").formatted(Formatting.GREEN, Formatting.BOLD)));
         List<Text> breakdown = new ArrayList<>();
         for (Map.Entry<String, int[]> row : tally().entrySet()) {
             if (breakdown.size() >= 8) {
-                breakdown.add(line("  ...and more", Formatting.DARK_GRAY));
+                breakdown.add(line("  ...i więcej", Formatting.DARK_GRAY));
                 break;
             }
             breakdown.add(line("  " + row.getValue()[0] + "x " + row.getKey() + "   ",
@@ -140,28 +140,28 @@ public class SellScreenHandler extends ScreenHandler {
                     .append(plain(row.getValue()[1] + "e").formatted(Formatting.GREEN)));
         }
         if (breakdown.isEmpty()) {
-            breakdown.add(line("Nothing on it yet.", Formatting.DARK_GRAY));
+            breakdown.add(line("Jeszcze nic tu nie ma.", Formatting.DARK_GRAY));
         }
         if (wontBuy > 0) {
             breakdown.add(Text.empty());
-            breakdown.add(line(wontBuy + " thing(s) it won't take.", Formatting.RED));
+            breakdown.add(line("Nie przyjmie " + wontBuy + " rzeczy.", Formatting.RED));
         }
         total.set(DataComponentTypes.LORE, new LoreComponent(breakdown));
         footer.setStack(TOTAL_SLOT - TILL, total);
 
         ItemStack sell = new ItemStack(worth > 0 ? Items.HOPPER : Items.GRAY_DYE);
         sell.set(DataComponentTypes.CUSTOM_NAME,
-                plain(worth > 0 ? "SELL THE LOT" : "Nothing to sell")
+                plain(worth > 0 ? "SPRZEDAJ WSZYSTKO" : "Nie ma czego sprzedać")
                         .formatted(worth > 0 ? Formatting.GOLD : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         sell.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(worth > 0 ? "Click for " + worth + "e." : "Put something on the counter.",
+                line(worth > 0 ? "Kliknij po " + worth + "e." : "Połóż coś na ladzie.",
                         worth > 0 ? Formatting.GRAY : Formatting.DARK_GRAY))));
         footer.setStack(SELL_SLOT - TILL, sell);
 
         ItemStack purse = new ItemStack(Items.GOLD_NUGGET);
         purse.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(seller) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         footer.setStack(PURSE_SLOT - TILL, purse);
@@ -211,7 +211,7 @@ public class SellScreenHandler extends ScreenHandler {
             if (worth <= 0) {
                 String why = TrapScrap.refusal(stack);
                 handedBack.add(stack.getName().getString()
-                        + (why == null ? " -- nobody's buying that" : " -- " + why));
+                        + (why == null ? " -- tego nikt nie skupuje" : " -- " + why));
                 seller.getInventory().offerOrDrop(stack.copy());
                 counter.setStack(slot, ItemStack.EMPTY);
                 continue;
@@ -248,7 +248,7 @@ public class SellScreenHandler extends ScreenHandler {
             int named = 0;
             for (Map.Entry<String, int[]> row : receipt.entrySet()) {
                 if (named++ >= 6) {
-                    line.append(plain("\n  ...and " + (receipt.size() - 6) + " more")
+                    line.append(plain("\n  ...i jeszcze " + (receipt.size() - 6))
                             .formatted(Formatting.DARK_GRAY));
                     break;
                 }
@@ -261,7 +261,7 @@ public class SellScreenHandler extends ScreenHandler {
 
         if (!handedBack.isEmpty()) {
             deny();
-            MutableText line = plain("Handed back:").formatted(Formatting.GRAY);
+            MutableText line = plain("Zwrócono:").formatted(Formatting.GRAY);
             for (String refused : handedBack) {
                 line.append(plain("\n  " + refused).formatted(Formatting.RED));
             }

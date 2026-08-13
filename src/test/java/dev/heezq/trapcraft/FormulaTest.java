@@ -169,6 +169,23 @@ class FormulaTest {
     }
 
     @Test
+    void anEconomyStillGrowingReadsAsInflation() {
+        // The counterweight to the test above, and the reason BASELINE_DRAG is
+        // what it is. A supply that has stopped moving should read as normal --
+        // but one that is still climbing must keep reading hot, or the anchor
+        // catches up fast enough that permanent growth looks like a flat market
+        // and players with 90k between them are told prices are basically fine.
+        float supply = 13_000f;
+        float anchor = supply;
+        for (int beat = 0; beat < 2000; beat++) {
+            supply *= 1.0016f; // about 20% an hour, which is what ours does
+            anchor = TrapMath.baselineAfter(anchor, supply);
+        }
+        float index = TrapMath.marketIndex(supply, anchor);
+        assertTrue(index > 1.13f, "steady growth should show up in prices: " + index);
+    }
+
+    @Test
     void aShockIsFeltAndThenForgotten() {
         // A jackpot has to move the board, or the index is decoration...
         float settled = 13_000f;
@@ -1045,9 +1062,12 @@ class FormulaTest {
                         inside.add(new int[]{stake,
                                 TrapMath.punterRoundsServed(50, 2, rng)});
                         // Nobody on the door, so some of them are playing at
-                        // better than even money.
-                        rtps.add(rng.nextFloat() < TrapMath.CHEAT_CHANCE
-                                ? TrapMath.CHEAT_RETURN : 0.97f);
+                        // better than even money -- and everybody was served
+                        // product on the way in, which takes points back off
+                        // all of them. Exactly what TrapFloor.play does.
+                        rtps.add((rng.nextFloat() < TrapMath.CHEAT_CHANCE
+                                ? TrapMath.CHEAT_RETURN : 0.97f)
+                                - TrapMath.servedEdge(2));
                     }
                 }
                 // A round each, every 70 ticks.
@@ -1080,16 +1100,60 @@ class FormulaTest {
             }
         }
         long average = total / days;
-        assertTrue(average > 0, "a floor that is looked after has to come out ahead: "
+        // Measured at 4 machines, no pit boss, a 3200e float and product
+        // behind the counter: about +1600e a day, with something over a third
+        // of individual days still losing and the worst of them taking the
+        // whole float.
+        //
+        // The threshold is 400 rather than 0 for a reason worth writing down.
+        // At 0 this test passed on NOISE: a day here swings about 3400e, so
+        // forty of them put an error bar of some hundreds round the average,
+        // and the floor it was signing off was running at about +100e --
+        // which is zero. Zeroing the bar's edge drops this to 361e and trips
+        // it. It is a canary rather than a proof; the deterministic guard on
+        // the same property is whatIsBehindTheCounterIsTheEdge.
+        assertTrue(average > 400, "a floor that is looked after has to come out ahead: "
                 + average + "e a day across " + days + " of them");
-        // Measured at 4 machines, no pit boss, a 3200e float: about +100e a
-        // day on average, with a bit over half of individual days losing and
-        // the worst of them taking the whole float. The average is the part
-        // that must not regress; the spread is a known property of a thin
-        // edge played a few thousand times a day, not something this test
-        // pretends is comfortable.
-        assertTrue(losing < days, "and not lose on every single one");
+        assertTrue(losing < days * 3 / 4,
+                "and not lose on most of them: " + losing + " of " + days);
         assertTrue(worstDay < 0, "while a bad night stays possible: " + worstDay + "e");
+    }
+
+    @Test
+    void whatIsBehindTheCounterIsTheEdge() {
+        // The bar used to buy nothing but TIME: product kept a punter at the
+        // machine 60% longer than bread did, and 60% more rounds against a
+        // three percent plate is 60% more of nothing once the cut, the parts
+        // and the card counters are paid. A modelled floor of four machines
+        // with product on the shelf and nobody on the door ran at +21e a
+        // simulated day, which is zero with an error bar round it.
+        //
+        // So what the shelf buys now is the EDGE. Somebody four rounds in
+        // plays worse than they walked in playing, and that is the whole
+        // difference between a room worth opening and an expensive hobby.
+        float plate = 0.97f;
+        float[] take = new float[3];
+        for (int tier = 0; tier <= 2; tier++) {
+            take[tier] = 1 - TrapMath.punterMeasure(
+                    plate - TrapMath.servedEdge(tier), 4242L, 400_000);
+        }
+        assertEquals(0f, TrapMath.servedEdge(0), 0.0001f,
+                "somebody who was handed nothing plays the plate");
+        assertTrue(take[0] < take[1] && take[1] < take[2],
+                "product has to beat bread has to beat a dry bar: "
+                        + take[0] + " " + take[1] + " " + take[2]);
+
+        // What every round has to clear before any of it is profit: the cut
+        // on the handle, and the advantage players a floor with nobody on the
+        // door is carrying. Parts and the lights come on top of these.
+        float running = TrapMath.PROTECTION_RATE
+                + TrapMath.CHEAT_CHANCE * (TrapMath.CHEAT_RETURN - plate);
+        assertTrue(take[2] > running * 2,
+                "a stocked floor has to clear its running costs with room "
+                        + "to spare: " + take[2] + " against " + running);
+        // And it is still a casino rather than a mugging. The cabinet's own
+        // plate is honest; the punter is the thing that changed.
+        assertTrue(take[2] < 0.12f, "too big an edge to be believable: " + take[2]);
     }
 
     @Test

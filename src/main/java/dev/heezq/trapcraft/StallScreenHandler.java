@@ -116,9 +116,9 @@ public class StallScreenHandler extends ScreenHandler {
                 .append(plain("   counter " + counter + "e").formatted(Formatting.DARK_GRAY)));
         lore.add(line("You save " + (counter - price - duty) + "e a lot.", Formatting.AQUA));
         lore.add(Text.empty());
-        lore.add(line(held / entry.count() + " lots on the table", Formatting.GRAY));
+        lore.add(line("partii na straganie: " + held / entry.count(), Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line(can ? "Click to buy one." : "You can't cover it.",
+        lore.add(line(can ? "Kliknij, żeby kupić jedną." : "Nie stać cię.",
                 can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -127,12 +127,12 @@ public class StallScreenHandler extends ScreenHandler {
     private ItemStack empty() {
         ItemStack tag = new ItemStack(Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Nothing on the table").formatted(Formatting.GRAY, Formatting.BOLD));
+                plain("Stragan jest pusty").formatted(Formatting.GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("A stall sells whatever is in the chest", Formatting.GRAY),
+                line("Stragan sprzedaje to, co leży w skrzyni", Formatting.GRAY),
                 line("directly underneath it.", Formatting.GRAY),
                 Text.empty(),
-                line("Only things the market has a price for.", Formatting.DARK_GRAY))));
+                line("Tylko rzeczy, które mają cenę rynkową.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -145,19 +145,19 @@ public class StallScreenHandler extends ScreenHandler {
                         Formatting.GRAY),
                 Text.empty(),
                 line("Everything here is " + Math.round((1 - TrapMath.STALL_RATE) * 100)
-                        + "% under the market.", Formatting.WHITE),
-                line("They keep most of it; the rest is the", Formatting.DARK_GRAY),
+                        + "% poniżej ceny rynkowej.", Formatting.WHITE),
+                line("Większość zostaje u sprzedawcy, reszta", Formatting.DARK_GRAY),
                 line("pitch fee. You both do better than", Formatting.DARK_GRAY),
-                line("either of you would at the counter.", Formatting.DARK_GRAY),
+                line("niż na ladzie u NPC.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("/stalls to find the others.", Formatting.DARK_GRAY))));
+                line("/stalls pokazuje pozostałe stragany.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack purse() {
         ItemStack tag = new ItemStack(Items.EMERALD);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(TrapMarket.wealthOf(shopper) + "e on you")
+                plain("masz przy sobie " + TrapMarket.wealthOf(shopper) + "e")
                         .formatted(Formatting.GREEN, Formatting.BOLD));
         return tag;
     }

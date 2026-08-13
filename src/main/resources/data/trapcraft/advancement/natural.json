@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:paper"
     },
-    "title": "Natural",
-    "description": "Get dealt twenty-one on two cards.",
+    "title": "Naturalne 21",
+    "description": "Dostań dwadzieścia jeden na dwóch pierwszych kartach.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

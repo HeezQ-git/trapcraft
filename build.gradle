@@ -54,6 +54,10 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 21
+    // Player-facing strings are Polish and live in the source as literals, so
+    // the compiler must not fall back to the platform default charset -- that
+    // turns every diacritic into mojibake on a machine that isn't UTF-8.
+    it.options.encoding = "UTF-8"
 }
 
 java {

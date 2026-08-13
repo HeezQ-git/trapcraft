@@ -90,7 +90,7 @@ public class MarketStallBlock extends Block implements PolymerBlock, PolymerText
             if (stall != null) {
                 int takings = TrapStalls.collect(shopper, stall);
                 if (takings > 0) {
-                    shopper.sendMessage(Text.literal("Till: ").formatted(Formatting.DARK_GRAY)
+                    shopper.sendMessage(Text.literal("Utarg: ").formatted(Formatting.DARK_GRAY)
                             .append(Text.literal("+" + takings + "e").formatted(Formatting.GREEN)),
                             false);
                 }

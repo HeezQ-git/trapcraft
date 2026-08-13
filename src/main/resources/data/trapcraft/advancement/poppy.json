@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:poppy_seeds"
     },
-    "title": "Full Daylight",
-    "description": "Get hold of poppy seed. It won't grow in a cellar.",
+    "title": "Pełne słońce",
+    "description": "Zdobądź nasiona maku. W piwnicy nie urosną.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

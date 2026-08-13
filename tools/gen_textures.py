@@ -1025,6 +1025,41 @@ eeeeeeeeeeeeeeee
 
 # --- market stall ---------------------------------------------------------
 
+
+# A speaker stack with the neon on. Deliberately dark: it is the only block in
+# the mod meant to be looked at in an unlit room, and a bright one would read
+# as a jukebox sitting in a field.
+CLUB_PAL = {
+    "x": "#0d0a12",     # cabinet, outline
+    "c": "#1c1726",     # cabinet
+    "C": "#2b2438",     # cabinet, lit
+    "g": "#3a3050",     # grille
+    "n": "#c026a8",     # neon
+    "N": "#ff5ad8",     # neon, hot
+    "b": "#2b8ce0",     # neon, cold
+    "B": "#6fc4ff",     # neon, cold lit
+    "k": "#070510",     # cone, dark
+}
+
+CLUB_FRONT = """
+xxxxxxxxxxxxxxxx
+xNnnnnnnnnnnnnNx
+xnCCCCCCCCCCCCnx
+xnCggggggggggCnx
+xnCgkkkkkkkkgCnx
+xnCgkxxxxxxkgCnx
+xnCgkxNNNNxkgCnx
+xnCgkxNNNNxkgCnx
+xnCgkxxxxxxkgCnx
+xnCgkkkkkkkkgCnx
+xnCggggggggggCnx
+xnCCCCCCCCCCCCnx
+xbBBBBBBBBBBBBbx
+xcccccccccccccCx
+xcggggggggggggcx
+xxxxxxxxxxxxxxxx
+"""
+
 STALL_PAL = {
     "w": "#7a5a34",   # counter timber
     "W": "#96703f",   # timber, lit
@@ -2452,6 +2487,81 @@ TOLERANCE_ICON = """
 """
 
 
+# --- the hospital -----------------------------------------------------------
+#
+# White tile and a red cross, because that is what a hospital looks like
+# everywhere and nothing else in this mod is either. It has to be the one
+# building in a street of green awnings and brass tills you can find at a
+# glance, at night, while something is chasing you.
+
+HOSPITAL_PAL = {
+    "w": "#e6e8ec",     # tile
+    "W": "#fdfefe",     # tile, lit
+    "g": "#b9bec6",     # grout
+    "d": "#8f959e",     # shadow
+    "r": "#a82222",     # cross
+    "R": "#e04040",     # cross, lit
+    "x": "#4a4f57",     # outline
+}
+
+HOSPITAL_FACE = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xgwwwwwwwwwwwwgx
+xgwwwwwrrwwwwwgx
+xgwwwwwRRwwwwwgx
+xgwwwwwRRwwwwwgx
+xgwwrrRRRRrrwwgx
+xgwwRRRRRRRRwwgx
+xgwwrrRRRRrrwwgx
+xgwwwwwRRwwwwwgx
+xgwwwwwRRwwwwwgx
+xgwwwwwrrwwwwwgx
+xgwwwwwwwwwwwwgx
+xgddddddddddddgx
+xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+"""
+
+HOSPITAL_SIDE = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xggggggggggggggx
+xgwwwgwwwwwwwwgx
+xgwwwgwwwwwwwwgx
+xgwwwgwwwwwwwwgx
+xggggggggggggggx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgddddddddddddgx
+xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+"""
+
+HOSPITAL_TOP = """
+xxxxxxxxxxxxxxxx
+xWWWWWWWWWWWWWWx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xggggggggggggggx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xgwwwwwwgwwwwwgx
+xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+"""
+
+
 # --- the mailbox ------------------------------------------------------------
 #
 # Post box green with a brass slot and a red flag, because those three colours
@@ -3337,6 +3447,9 @@ def main() -> None:
     write(render(VAULT_FACE, VAULT_PAL), "block", "city_vault_face.png")
     write(render(VAULT_SIDE, VAULT_PAL), "block", "city_vault_side.png")
     write(render(VAULT_TOP, VAULT_PAL), "block", "city_vault_top.png")
+    write(render(HOSPITAL_FACE, HOSPITAL_PAL), "block", "hospital_face.png")
+    write(render(HOSPITAL_SIDE, HOSPITAL_PAL), "block", "hospital_side.png")
+    write(render(HOSPITAL_TOP, HOSPITAL_PAL), "block", "hospital_top.png")
     write(render(MAILBOX_BOX, MAILBOX_PAL), "block", "mailbox_box.png")
     write(render(MAILBOX_POST, MAILBOX_PAL), "block", "mailbox_post.png")
     write(render(MAILBOX_FLAG, MAILBOX_PAL), "block", "mailbox_flag.png")
@@ -3382,6 +3495,7 @@ def main() -> None:
     write(render(PHONE_SHELL, PHONE_PAL), "item", "phone_shell.png")
     write(render(PHONE_SCREEN, PHONE_PAL), "item", "phone_screen.png")
     write(render(PHONE_KEYS, PHONE_PAL), "item", "phone_keys.png")
+    write(render(CLUB_FRONT, CLUB_PAL), "block", "nightclub.png")
     write(render(STALL_COUNTER, STALL_PAL), "block", "stall_counter.png")
     write(render(STALL_AWNING, STALL_PAL), "block", "stall_awning.png")
     write(render(STALL_GOODS, STALL_PAL), "block", "stall_goods.png")

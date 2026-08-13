@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:milk_bucket"
     },
-    "title": "Cold Turkey",
-    "description": "Ride a full habit all the way back down to nothing.",
+    "title": "Na czysto",
+    "description": "Zbij pełny licznik nałogu z powrotem do zera.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

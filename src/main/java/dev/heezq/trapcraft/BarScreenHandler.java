@@ -108,62 +108,73 @@ public class BarScreenHandler extends ScreenHandler {
         if (row == 0) {
             ItemStack tag = new ItemStack(stock > 0 ? Items.BARREL : Items.GRAY_DYE);
             tag.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("The Bar").formatted(Formatting.GOLD, Formatting.BOLD));
+                    plain("Bar").formatted(Formatting.GOLD, Formatting.BOLD));
             List<Text> lore = new ArrayList<>(List.of(
-                    line(here + " on this counter", here > 0
+                    line("na tej ladzie: " + here, here > 0
                             ? Formatting.GREEN : Formatting.RED),
                     // The house figure, because a punter is served off
                     // whichever counter has the best thing on it: what keeps
                     // the room open is the total, not this shelf.
-                    line(stock + " across the house, about "
-                            + stock * TrapMath.SERVINGS_PER_ITEM + " rounds",
+                    line("w całym kasynie: " + stock + ", czyli około "
+                            + stock * TrapMath.SERVINGS_PER_ITEM + " kolejek",
                             stock > 0 ? Formatting.WHITE : Formatting.RED),
                     Text.empty(),
-                    line("Everybody through the door gets one. One", Formatting.GRAY),
-                    line("off the shelf pours about "
-                            + TrapMath.SERVINGS_PER_ITEM + " of them.", Formatting.GRAY),
-                    line("Another bar wired is another " + TrapMath.BAR_SLOTS
-                            + " stacks.", Formatting.DARK_GRAY),
-                    line("Served punters stay. Dry bar, they", Formatting.GRAY),
-                    line("have a go and leave.", Formatting.GRAY),
+                    line("Każdy wchodzący dostaje jedną. Jeden", Formatting.GRAY),
+                    line("przedmiot z półki to około "
+                            + TrapMath.SERVINGS_PER_ITEM + " porcji.", Formatting.GRAY),
+                    line("Kolejny podłączony bar to następne " + TrapMath.BAR_SLOTS
+                            + " stacków.", Formatting.DARK_GRAY),
+                    line("Obsłużeni gracze zostają. Pusty bar:", Formatting.GRAY),
+                    line("jedna gra i wychodzą.", Formatting.GRAY),
                     Text.empty(),
                     // Rounded to a whole multiple this read "worth 1x what
                     // food is", which is both wrong and an argument for not
                     // bothering. 1.6 against 1.15 is a percentage, not a
                     // multiple; the multiple is in the habit it builds.
-                    line("Product keeps them "
+                    line("Twój towar trzyma ich "
                             + Math.round((TrapMath.SERVED_PRODUCT
                             / TrapMath.SERVED_FOOD - 1) * 100) + "% longer",
                             Formatting.WHITE),
-                    line("than food, and builds "
+                    line("dłużej niż jedzenie i buduje "
                             + TrapMath.BAR_ADDICTION_PRODUCT / TrapMath.BAR_ADDICTION_FOOD
-                            + "x the habit.", Formatting.WHITE),
-                    line("That's what the farm is for.", Formatting.WHITE)));
+                            + "x mocniejszy nałóg.", Formatting.WHITE),
+                    Text.empty(),
+                    // The part that pays the bills. A floor on the plate alone
+                    // runs at about nothing; this is the difference.
+                    line("I gorzej grają. "
+                            + Math.round(TrapMath.SERVED_EDGE_PRODUCT * 100)
+                            + " punktów mniej odzyskuje", Formatting.LIGHT_PURPLE),
+                    line("gracz na towarze, a "
+                            + Math.round(TrapMath.SERVED_EDGE_FOOD * 100)
+                            + " ten na chlebie.", Formatting.LIGHT_PURPLE),
+                    line("Na trzeźwo grają najlepiej.", Formatting.LIGHT_PURPLE),
+                    Text.empty(),
+                    line("Po to właśnie jest plantacja.", Formatting.WHITE)));
             tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
             return tag;
         }
         if (row == 1) {
             ItemStack tag = new ItemStack(Items.WHEAT);
             tag.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("What goes on it").formatted(Formatting.WHITE, Formatting.BOLD));
+                    plain("Co można wstawić").formatted(Formatting.WHITE, Formatting.BOLD));
             tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line("Anything edible, and anything you grew.", Formatting.GRAY),
+                    line("Cokolwiek jadalnego i cokolwiek z uprawy.", Formatting.GRAY),
                     Text.empty(),
-                    line("Buds, joints, blends, powder  ->  best", Formatting.LIGHT_PURPLE),
-                    line("Bread, stew, cake, apples  ->  it'll do", Formatting.DARK_GRAY))));
+                    line("Susz, skręty, mieszanki, proszek  ->  najlepsze", Formatting.LIGHT_PURPLE),
+                    line("Chleb, gulasz, ciasto, jabłka  ->  ujdzie", Formatting.DARK_GRAY))));
             return tag;
         }
         ItemStack tag = new ItemStack(house.dryBar() ? Items.REDSTONE_TORCH : Items.TORCH);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(house.dryBar() ? "DRY" : "Open").formatted(
+                plain(house.dryBar() ? "PUSTY" : "Otwarty").formatted(
                         house.dryBar() ? Formatting.RED : Formatting.GREEN, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(house.dryBar()
-                                ? "Nothing behind the counter. The room is"
-                                : "Stocked. They'll stay a while.",
+                                ? "Nic za ladą. Sala się"
+                                : "Zaopatrzony. Zostaną na dłużej.",
                         house.dryBar() ? Formatting.RED : Formatting.GRAY),
-                line(house.dryBar() ? "emptying and your name with it."
-                                : "Keep it that way.",
+                line(house.dryBar() ? "wyludnia, a z nią twoja reputacja."
+                                : "Utrzymuj ten stan.",
                         house.dryBar() ? Formatting.RED : Formatting.DARK_GRAY))));
         return tag;
     }

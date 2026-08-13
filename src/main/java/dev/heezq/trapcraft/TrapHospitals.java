@@ -366,17 +366,17 @@ public final class TrapHospitals {
             bed(world, patient, ward, day);
         }
         save();
-        home.write(who + " was bitten." + (ward == null
-                ? " There's no hospital to take them to."
-                : " They're in " + ward.name + "."));
+        home.write(who + " został ugryziony." + (ward == null
+                ? " Nie ma szpitala, który by go przyjął."
+                : " Leży w " + ward.name + "."));
         tell(world.getServer(), home, Text.literal(who).formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal(" of " + home.name() + " has been bitten. ")
+                .append(Text.literal(" z " + home.name() + " został ugryziony. ")
                         .formatted(Formatting.GRAY))
                 .append(ward == null
-                        ? Text.literal("Nowhere in this city treats it -- build a hospital, "
-                                + "fast.").formatted(Formatting.RED)
-                        : Text.literal("Taken to " + ward.name + ". Back in a day, and "
-                                + "earning nothing until then.").formatted(Formatting.GRAY)));
+                        ? Text.literal("W tym mieście nie ma go gdzie leczyć -- zbuduj "
+                                + "szybko szpital.").formatted(Formatting.RED)
+                        : Text.literal("Trafił do " + ward.name + ". Wróci za dzień, "
+                                + "a do tego czasu nic nie zarabia.").formatted(Formatting.GRAY)));
     }
 
     /** Put a patient in a ward: a bed, a due date, and a body standing in it. */
@@ -738,7 +738,7 @@ public final class TrapHospitals {
             // stay does not end and the day counts against them.
             patient.due = day + STAY_DAYS;
             untreated(server, world, home, patient);
-            home.write("The ward hasn't been paid. " + patient.who + " is still in it.");
+            home.write("Oddział nie dostał zapłaty. " + patient.who + " wciąż tam leży.");
             return;
         }
         TrapPayroll.credit(fee);
@@ -769,15 +769,15 @@ public final class TrapHospitals {
         PATIENTS.remove(patient);
         clearBody(world, patient);
         save();
-        home.write(patient.who + " didn't make it. Nobody came.");
+        home.write(patient.who + " nie przeżył. Nikt nie przyszedł.");
         tell(server, home, Text.literal(patient.who).formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal(" of " + home.name() + " has died of it. "
-                        + LOST_DAYS + " days and no hospital would take them.")
+                .append(Text.literal(" z " + home.name() + " zmarł. "
+                        + LOST_DAYS + " dni i żaden szpital go nie przyjął.")
                         .formatted(Formatting.GRAY)));
         // Losing the person the letters are about ends the tenancy. Losing
         // somebody else is a household that has had a bad week.
         if (patient.who.equals(home.tenant())) {
-            TrapHomes.moveOut(server, world, home, "didn't survive the bite");
+            TrapHomes.moveOut(server, world, home, "nie przeżył ugryzienia");
         }
     }
 
@@ -795,10 +795,10 @@ public final class TrapHospitals {
                     ward.sign.getY() + 1.2, ward.sign.getZ() + 0.5, 30, 0.5, 0.6, 0.5, 0.05);
         }
         save();
-        home.write(patient.who + " is home from " + ward.name + ", and fine.");
+        home.write(patient.who + " wrócił z " + ward.name + " i czuje się dobrze.");
         TrapHomes.backFromTheWard(world, home);
         tell(server, home, Text.literal(patient.who).formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal(" is out of " + ward.name + " and back at "
+                .append(Text.literal(" wyszedł z " + ward.name + " i wrócił do "
                         + home.name() + ".").formatted(Formatting.GRAY)));
     }
 
@@ -861,22 +861,22 @@ public final class TrapHospitals {
     /** Every reason this room is not a hospital, in the order to fix them. */
     public static String fault(TrapHomes.Readout reading) {
         if (reading.clash()) {
-            return "That's inside a house that's already on the register. "
-                    + "A hospital needs a building of its own.";
+            return "To wnętrze domu już zapisanego w rejestrze. "
+                    + "Szpital potrzebuje własnego budynku.";
         }
         if (!reading.sealed()) {
-            return "This isn't sealed. Walls, a floor, a ceiling and a door -- then "
-                    + "try again.";
+            return "Nie jest szczelny. Ściany, podłoga, sufit i drzwi -- potem "
+                    + "spróbuj ponownie.";
         }
         if (reading.exits() == 0) {
-            return "There's no way in. A door to the outside, please.";
+            return "Nie ma wejścia. Potrzebne drzwi na zewnątrz.";
         }
         if (reading.floor() < MIN_FLOOR) {
-            return "That's " + reading.floor() + " squares of floor. A ward needs "
+            return "Masz " + reading.floor() + " kratek podłogi. Oddział potrzebuje "
                     + MIN_FLOOR + ".";
         }
         if (reading.beds() < MIN_BEDS) {
-            return reading.beds() == 0 ? "There isn't a bed in it."
+            return reading.beds() == 0 ? "Nie ma w środku łóżka."
                     : "One bed is a spare room. A ward needs " + MIN_BEDS + ".";
         }
         if (reading.dark() > 0) {
@@ -884,12 +884,12 @@ public final class TrapHospitals {
                     + ". Nobody operates by candlelight.";
         }
         if (reading.finished() < MIN_SHELL) {
-            return "It's " + Math.round(reading.finished() * 100) + "% built. A ward has to "
-                    + "be " + Math.round(MIN_SHELL * 100) + "%, and this one is mostly "
+            return "Wykończenie " + Math.round(reading.finished() * 100) + "%. Oddział musi "
+                    + "mieć " + Math.round(MIN_SHELL * 100) + "%, a ten jest głównie z: "
                     + reading.roughest() + ".";
         }
         if (!reading.storage()) {
-            return "Nowhere to keep the supplies. A chest or a barrel.";
+            return "Nie ma gdzie trzymać zaopatrzenia. Potrzebna skrzynia albo beczka.";
         }
         return null;
     }
@@ -901,13 +901,13 @@ public final class TrapHospitals {
      */
     public static String found(ServerPlayerEntity who, ServerWorld world, BlockPos pos) {
         if (at(world, pos) != null) {
-            return "That's already a hospital.";
+            return "To już jest szpital.";
         }
         // No city, no hospital -- there is no purse to pay the doctors out of,
         // and an unpaid ward is a building that does nothing at all.
         if (!TrapCity.founded()) {
-            return "There's no city yet -- nobody to pay the doctors. "
-                    + "Somebody has to put a city vault down first.";
+            return "Nie ma jeszcze miasta -- nie ma kto płacić lekarzom. "
+                    + "Ktoś musi najpierw postawić skarbiec miasta.";
         }
         TrapHomes.Readout reading = look(world, pos);
         String no = fault(reading);
@@ -930,11 +930,11 @@ public final class TrapHospitals {
         save();
         keepDoctor(world, ward);
         if (first) {
-            announce(who.getServer(), Text.literal("THE CITY HAS A HOSPITAL")
+            announce(who.getServer(), Text.literal("MIASTO MA SZPITAL")
                     .formatted(Formatting.GOLD, Formatting.BOLD)
-                    .append(Text.literal("\n  " + who.getGameProfile().getName() + " opened "
-                            + ward.name + ", " + ward.beds + " beds. Anybody bitten in this "
-                            + "city gets treated now, and the purse pays for it.")
+                    .append(Text.literal("\n  " + who.getGameProfile().getName() + " otworzył "
+                            + ward.name + ", łóżek: " + ward.beds + ". Każdy ugryziony "
+                            + "w mieście jest teraz leczony na koszt kasy miasta.")
                             .formatted(Formatting.GRAY)));
         }
         return null;
@@ -1029,9 +1029,9 @@ public final class TrapHospitals {
         save();
         ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ward.owner);
         if (owner != null) {
-            owner.sendMessage(Text.literal(ward.name + " is off the register. ")
+            owner.sendMessage(Text.literal(ward.name + " znika z rejestru. ")
                     .formatted(Formatting.YELLOW)
-                    .append(Text.literal("Whoever was in it needs another bed.")
+                    .append(Text.literal("Kto w nim leżał, potrzebuje innego łóżka.")
                             .formatted(Formatting.GRAY)), false);
         }
     }

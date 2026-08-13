@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -859,6 +860,56 @@ public final class HomeSurvey {
         }
         return Math.max(1, Math.round(rateOf(tier, floor) * heads
                 * Math.min(MOOD_MAX, mood) / (float) MOOD_MAX));
+    }
+
+    // --- who turns up, and who walks out --------------------------------------
+
+    /** Odds an empty grade-1 house is taken on any given day, and per grade above it. */
+    public static final float LET_ODDS = 0.18f;
+    public static final float LET_STEP = 0.05f;
+
+    /**
+     * Odds somebody takes an empty house today.
+     *
+     * Somebody used to move in the first time the register looked at a house
+     * that graded at all, which made a tenant a formality: finish the walls,
+     * wait twelve seconds, collect rent forever. A town where every address
+     * fills the moment it exists has no housing in it -- nothing is scarce,
+     * nothing is waited for, and a palace is worth exactly what a hovel is on
+     * the day you finish it.
+     *
+     * So it is one roll a day and the grade is the odds: a hovel waits the
+     * best part of a week, a palace is taken inside three days. That is the
+     * same "build better" the rent table already says, said again in the one
+     * currency a landlord staring at an empty house actually feels.
+     */
+    public static float lettingOdds(int tier) {
+        if (tier <= 0) {
+            return 0f;
+        }
+        return LET_ODDS + LET_STEP * (Math.min(TOP_TIER, tier) - 1);
+    }
+
+    /** Odds a tenant hands in their notice on any given day, house be damned. */
+    public static final float QUIT_ODDS = 0.04f;
+
+    /**
+     * Is this house's tenant giving their notice today?
+     *
+     * A pure function of which house and which day rather than a flag, and
+     * that is not tidiness. The register CANNOT grow a field -- see the note
+     * on {@code Home#heads} for what that cost last time -- so a notice that
+     * had to be remembered would live in memory only, and a server restart
+     * comes round far more often than a 4% roll does. Derived, it survives
+     * everything: the day a house was last looked at is already on disk, and
+     * asking that day the same question gets the same answer forever.
+     *
+     * The day is stirred through the golden ratio before it is a seed because
+     * {@link Random} barely scrambles consecutive ones, and a tenant whose
+     * Tuesday is correlated with their Wednesday quits in runs.
+     */
+    public static boolean quitting(long who, long day) {
+        return new Random(who * 31 + day * 0x9E3779B97F4A7C15L).nextFloat() < QUIT_ODDS;
     }
 
     // --- claims ---------------------------------------------------------------

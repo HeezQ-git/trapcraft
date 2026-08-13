@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:gold_block"
     },
-    "title": "Broke The Bank",
-    "description": "Win more off one machine than its casino had in the vault.",
+    "title": "Rozbity bank",
+    "description": "Wygraj z automatu więcej, niż kasyno miało w skarbcu.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

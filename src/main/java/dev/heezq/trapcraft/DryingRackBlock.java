@@ -3,7 +3,6 @@ package dev.heezq.trapcraft;
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
 import eu.pb4.polymer.blocks.api.PolymerBlockModel;
-import eu.pb4.polymer.blocks.api.PolymerBlockResourceUtils;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,12 +20,15 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,7 +39,7 @@ import java.util.Map;
  * to register. If a rack ever needs to hold a stack rather than a single
  * strain marker, that's when it earns a BlockEntity.
  */
-public class DryingRackBlock extends Block implements PolymerTexturedBlock {
+public class DryingRackBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<DryingRackBlock> CODEC = createCodec(DryingRackBlock::new);
 
     public static final BooleanProperty OCCUPIED = BooleanProperty.of("occupied");
@@ -55,37 +57,44 @@ public class DryingRackBlock extends Block implements PolymerTexturedBlock {
 
     private static final int DRY_TICKS = 1200; // 60s per stage, 4 min total
 
-    private final BlockState emptyState;
-    /** Indexed by dryness 0..MAX_DRYNESS. */
-    private final Map<Strain, BlockState[]> occupiedStates = new EnumMap<>(Strain.class);
+    private final Map<Direction, BlockState> emptyCarriers;
+    /** Indexed by dryness 0..MAX_DRYNESS, then by which way the rack faces. */
+    private final Map<Strain, List<Map<Direction, BlockState>>> occupiedCarriers =
+            new EnumMap<>(Strain.class);
 
     public DryingRackBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(OCCUPIED, false)
                 .with(STRAIN, Strain.KUSH)
                 .with(DRYNESS, 0)
                 .with(QUALITY, Quality.MIDS.index()));
 
-        this.emptyState = TrapPolymer.requestOrFallback(
+        // The bare rack is the same from every side, so one carrier does for
+        // all four angles -- the buds are what hang on the front.
+        BlockState bare = TrapPolymer.requestOrFallback(
                 BlockModelType.FULL_BLOCK,
                 PolymerBlockModel.of(Identifier.of("trapcraft:block/drying_rack_empty")),
                 () -> Blocks.BARREL.getDefaultState(),
                 "drying_rack_empty");
+        Map<Direction, BlockState> everyWay = new EnumMap<>(Direction.class);
+        for (Direction facing : Direction.Type.HORIZONTAL) {
+            everyWay.put(facing, bare);
+        }
+        this.emptyCarriers = everyWay;
 
-        // A state per (strain, dryness) so the block shows how far along the
-        // cure is. FULL_BLOCK's pool is in four figures, so 12 is nothing.
+        // A state per (strain, dryness, facing) so the block shows how far
+        // along the cure is and which way it was hung. FULL_BLOCK's pool is in
+        // four figures, so 120 is affordable -- which is the only reason this
+        // one is allowed to be directional at all.
         for (Strain strain : Strain.values()) {
-            BlockState[] byDryness = new BlockState[MAX_DRYNESS + 1];
+            List<Map<Direction, BlockState>> byDryness = new ArrayList<>();
             for (int dryness = 0; dryness <= MAX_DRYNESS; dryness++) {
-                String name = "drying_rack_" + strain.id() + "_" + dryness;
-                byDryness[dryness] = TrapPolymer.requestOrFallback(
-                        BlockModelType.FULL_BLOCK,
-                        PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                        () -> Blocks.BARREL.getDefaultState(),
-                        name);
+                byDryness.add(carriers(BlockModelType.FULL_BLOCK,
+                        "drying_rack_" + strain.id() + "_" + dryness,
+                        () -> Blocks.BARREL.getDefaultState()));
             }
-            this.occupiedStates.put(strain, byDryness);
+            this.occupiedCarriers.put(strain, byDryness);
         }
     }
 
@@ -96,6 +105,7 @@ public class DryingRackBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(OCCUPIED, STRAIN, DRYNESS, QUALITY);
     }
 
@@ -230,8 +240,9 @@ public class DryingRackBlock extends Block implements PolymerTexturedBlock {
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
         if (!state.get(OCCUPIED)) {
-            return emptyState;
+            return emptyCarriers.get(state.get(FACING));
         }
-        return occupiedStates.get(state.get(STRAIN))[state.get(DRYNESS)];
+        return occupiedCarriers.get(state.get(STRAIN))
+                .get(state.get(DRYNESS)).get(state.get(FACING));
     }
 }

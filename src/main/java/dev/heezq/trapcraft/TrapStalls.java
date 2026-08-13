@@ -132,10 +132,10 @@ public final class TrapStalls {
         STALLS.add(new Stall(world.getRegistryKey().getValue().toString(), pos.toImmutable(),
                 owner.getUuid(), owner.getGameProfile().getName()));
         save();
-        owner.sendMessage(Text.literal("Your stall. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal("Put a chest or barrel underneath and whatever is in it "
-                        + "is for sale at " + Math.round(TrapMath.STALL_RATE * 100)
-                        + "% of the market price.").formatted(Formatting.GRAY)), false);
+        owner.sendMessage(Text.literal("Twój stragan. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal("Postaw pod nim skrzynię albo beczkę, a jej zawartość "
+                        + "idzie na sprzedaż po " + Math.round(TrapMath.STALL_RATE * 100)
+                        + "% ceny rynkowej.").formatted(Formatting.GRAY)), false);
     }
 
     /**
@@ -253,7 +253,7 @@ public final class TrapStalls {
         ServerWorld world = shopper.getWorld();
         Inventory box = stockOf(world, stall);
         if (box == null) {
-            return "There's nothing under this stall.";
+            return "Pod tym straganem nic nie ma.";
         }
         int price = TrapMath.stallPrice(TrapMarket.buyPrice(shopper.getServer(), entry));
         // A neighbour's stall is still a shop, so it pays the same duty the
@@ -262,10 +262,10 @@ public final class TrapStalls {
         TrapCity.Duty band = TrapCity.forGoods(entry.category());
         int duty = TrapCity.dutyOn(price, band);
         if (TrapMarket.wealthOf(shopper) < price + duty) {
-            return "That's " + (price + duty) + "e, and you haven't got it.";
+            return "To kosztuje " + (price + duty) + "e, a tyle nie masz.";
         }
         if (!take(box, entry, entry.count())) {
-            return "They've sold out of that.";
+            return "Tego już nie ma na stanie.";
         }
 
         // The fee LEAVES circulation and the rest is a transfer, so only the
@@ -292,11 +292,11 @@ public final class TrapStalls {
 
         ServerPlayerEntity owner = shopper.getServer().getPlayerManager().getPlayer(stall.owner);
         if (owner != null && owner != shopper) {
-            owner.sendMessage(Text.literal("Sold ").formatted(Formatting.GREEN)
+            owner.sendMessage(Text.literal("Sprzedano ").formatted(Formatting.GREEN)
                     .append(Text.literal(entry.count() + "x " + entry.label())
                             .formatted(Formatting.WHITE))
-                    .append(Text.literal(" to " + shopper.getGameProfile().getName()
-                            + " -- " + keeps + "e in the till.").formatted(Formatting.GRAY)), false);
+                    .append(Text.literal(" dla " + shopper.getGameProfile().getName()
+                            + " -- " + keeps + "e w kasie.").formatted(Formatting.GRAY)), false);
         }
         return null;
     }
@@ -366,22 +366,22 @@ public final class TrapStalls {
 
     private static void directory(ServerPlayerEntity who) {
         if (STALLS.isEmpty()) {
-            who.sendMessage(Text.literal("Nobody's opened a stall yet.")
+            who.sendMessage(Text.literal("Nikt jeszcze nie otworzył straganu.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
-        who.sendMessage(Text.literal("The Market Square").formatted(Formatting.GOLD, Formatting.BOLD),
+        who.sendMessage(Text.literal("Rynek").formatted(Formatting.GOLD, Formatting.BOLD),
                 false);
         for (Stall stall : STALLS) {
             ServerWorld world = worldOf(who.getServer(), stall);
             int lines = world != null && loaded(world, stall.pos)
                     ? listing(world, stall).size() : -1;
-            who.sendMessage(Text.literal("  " + stall.ownerName + "'s stall")
+            who.sendMessage(Text.literal("  stragan: " + stall.ownerName)
                     .formatted(Formatting.WHITE)
                     .append(Text.literal("  " + stall.pos.getX() + " " + stall.pos.getY()
                             + " " + stall.pos.getZ()).formatted(Formatting.DARK_GRAY))
-                    .append(Text.literal(lines < 0 ? "  (shut)"
-                                    : lines == 0 ? "  (empty)" : "  " + lines + " lines")
+                    .append(Text.literal(lines < 0 ? "  (zamknięty)"
+                                    : lines == 0 ? "  (pusty)" : "  pozycji: " + lines)
                             .formatted(lines > 0 ? Formatting.GREEN : Formatting.DARK_GRAY)),
                     false);
         }

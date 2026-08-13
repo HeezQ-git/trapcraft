@@ -1,7 +1,6 @@
 package dev.heezq.trapcraft;
 
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
 import net.minecraft.block.Block;
@@ -20,13 +19,14 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 
 /**
@@ -40,34 +40,26 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * What it pays is in {@link TrapMath#slotPayout}: 85% back over time, and
  * about three spins in four pay nothing.
  */
-public class SlotMachineBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
+public class SlotMachineBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
     public static final EnumProperty<DoubleBlockHalf> HALF = Properties.DOUBLE_BLOCK_HALF;
 
-    private final BlockState lowerCarrier;
-    private final BlockState upperCarrier;
+    private final Map<Direction, BlockState> lowerCarriers;
+    private final Map<Direction, BlockState> upperCarriers;
 
     public SlotMachineBlock(Settings settings) {
         super(settings);
-        this.lowerCarrier = TrapPolymer.requestOrFallback(
-                // TRANSPARENT_BLOCK, not FULL_BLOCK. The carrier is what the
-                // client believes about this block, and believing a table with
-                // legs is a solid cube makes it cull the faces of whatever is
-                // underneath -- so you stand on a floor above a cave and see
-                // straight through into it. Any model that doesn't fill the
-                // cube has to say so.
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/slot_machine_lower")),
-                () -> Blocks.RED_TERRACOTTA.getDefaultState(), "slot_machine_lower");
-        this.upperCarrier = TrapPolymer.requestOrFallback(
-                // TRANSPARENT_BLOCK, not FULL_BLOCK. The carrier is what the
-                // client believes about this block, and believing a table with
-                // legs is a solid cube makes it cull the faces of whatever is
-                // underneath -- so you stand on a floor above a cave and see
-                // straight through into it. Any model that doesn't fill the
-                // cube has to say so.
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/slot_machine_upper")),
-                () -> Blocks.RED_TERRACOTTA.getDefaultState(), "slot_machine_upper");
+        // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the client
+        // believes about this block, and believing a cabinet on a plinth is a
+        // solid cube makes it cull the faces of whatever is underneath -- so
+        // you stand on a floor above a cave and see straight through into it.
+        // Any model that doesn't fill the cube has to say so.
+        //
+        // Eight states, four per half: a machine with a screen on the front is
+        // only worth having if the front can face the room.
+        this.lowerCarriers = carriers(TrapPolymer.NON_SOLID, "slot_machine_lower",
+                () -> Blocks.RED_TERRACOTTA.getDefaultState());
+        this.upperCarriers = carriers(TrapPolymer.NON_SOLID, "slot_machine_upper",
+                () -> Blocks.RED_TERRACOTTA.getDefaultState());
         setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }
 
@@ -78,12 +70,15 @@ public class SlotMachineBlock extends Block implements PolymerBlock, PolymerText
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(HALF);
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(HALF) == DoubleBlockHalf.UPPER ? upperCarrier : lowerCarrier;
+        Map<Direction, BlockState> half =
+                state.get(HALF) == DoubleBlockHalf.UPPER ? upperCarriers : lowerCarriers;
+        return half.get(state.get(FACING));
     }
 
     /** Break as metal: it's a machine full of levers and coin. */
@@ -101,7 +96,7 @@ public class SlotMachineBlock extends Block implements PolymerBlock, PolymerText
                 || !context.getWorld().getBlockState(pos.up()).isReplaceable()) {
             return null;   // no headroom: refuse rather than place a half machine
         }
-        return getDefaultState();
+        return super.getPlacementState(context);
     }
 
     @Override

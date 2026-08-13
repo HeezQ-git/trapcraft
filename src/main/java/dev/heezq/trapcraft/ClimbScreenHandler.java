@@ -150,9 +150,9 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
 
         ItemStack tag = new ItemStack(face);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(thisOne ? (busted ? "That was the one" : "Clear")
-                                : climbed ? "Behind you"
-                                : here ? "Open it" : "Locked")
+                plain(thisOne ? (busted ? "To były te złe" : "Czysto")
+                                : climbed ? "Za tobą"
+                                : here ? "Otwórz" : "Zamknięte")
                         .formatted(thisOne && busted ? Formatting.RED
                                         : here || climbed ? Formatting.GREEN : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
@@ -161,9 +161,9 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         }
         if (here) {
             tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line("One of these " + TrapMath.CLIMB_DOORS[ladder]
-                            + " ends the run.", Formatting.GRAY),
-                    line("Survive and you're on "
+                    line("Jedne z tych " + TrapMath.CLIMB_DOORS[ladder]
+                            + " drzwi kończą grę.", Formatting.GRAY),
+                    line("Przeżyjesz i masz "
                             + times(TrapMath.climbMultiplier(ladder, atRung)) + ".",
                             Formatting.DARK_GRAY))));
         }
@@ -177,14 +177,14 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         ItemStack tag = new ItemStack(reached ? Items.EMERALD : Items.GOLD_NUGGET);
         tag.setCount(Math.max(1, Math.min(64, Math.round(multiplier))));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Rung " + atRung + "   ").formatted(Formatting.GRAY)
+                plain("Szczebel " + atRung + "   ").formatted(Formatting.GRAY)
                         .append(plain(times(multiplier))
                                 .formatted(reached ? Formatting.GREEN : Formatting.GOLD,
                                         Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Reached by " + Math.round(TrapMath.climbSurvival(ladder, atRung) * 100)
-                        + " climbs in 100.", Formatting.DARK_GRAY),
-                line("Worth " + Math.round(STAKES[stakeChoice] * multiplier) + "e from here.",
+                line("Dochodzi tu " + Math.round(TrapMath.climbSurvival(ladder, atRung) * 100)
+                        + " gier na 100.", Formatting.DARK_GRAY),
+                line("Wartość stąd: " + Math.round(STAKES[stakeChoice] * multiplier) + "e.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -192,17 +192,17 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     private ItemStack infoTag() {
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The Climb").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Wspinaczka").formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new java.util.ArrayList<>(List.of(
-                line("Open a door. One on each rung ends it.", Formatting.GRAY),
-                line("Survive and you may climb, or take the", Formatting.GRAY),
-                line("money and walk away.", Formatting.GRAY),
+                line("Otwórz drzwi. Jedne na szczeblu są złe.", Formatting.GRAY),
+                line("Przeżyjesz - wspinasz się dalej albo", Formatting.GRAY),
+                line("zabierasz kasę i odchodzisz.", Formatting.GRAY),
                 Text.empty(),
-                line("Every rung carries the same edge, so", Formatting.WHITE),
-                line("there is no clever place to stop.", Formatting.WHITE),
-                line("It's nerve, not arithmetic.", Formatting.WHITE),
+                line("Każdy szczebel ma tę samą przewagę kasyna,", Formatting.WHITE),
+                line("więc nie ma sprytnego momentu na stop.", Formatting.WHITE),
+                line("To kwestia nerwów, nie matematyki.", Formatting.WHITE),
                 Text.empty(),
-                line("The house keeps about "
+                line("Kasyno zatrzymuje około "
                         + Math.round((1 - TrapMath.CLIMB_RETURN) * 100) + "%.",
                         Formatting.DARK_GRAY)));
         lore.addAll(TrapHouse.tableNote(house, TrapHouse.TOP_CLIMB));
@@ -214,11 +214,11 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake: ").formatted(Formatting.GRAY)
+                plain("Stawka: ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(climbing ? "Locked in until this run ends." : "Click to change.",
+                line(climbing ? "Zablokowane do końca gry." : "Kliknij, żeby zmienić.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -230,16 +230,16 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                         .formatted(ladder == 0 ? Formatting.AQUA : Formatting.RED,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(TrapMath.CLIMB_DOORS[ladder] + " doors a rung, one of them bad.",
+                line("Drzwi na szczebel: " + TrapMath.CLIMB_DOORS[ladder] + ", jedne złe.",
                         Formatting.GRAY),
-                line("Tops out at "
+                line("Maksymalnie "
                         + times(TrapMath.climbMultiplier(ladder, TrapMath.CLIMB_RUNGS)) + ".",
                         Formatting.GOLD),
                 Text.empty(),
-                line("Same house edge either way -- the only", Formatting.DARK_GRAY),
-                line("difference is how wild it gets.", Formatting.DARK_GRAY),
+                line("Ta sama przewaga kasyna w obu -- różnica", Formatting.DARK_GRAY),
+                line("jest tylko w wielkości wahań.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line(climbing ? "Locked in until this run ends." : "Click to switch.",
+                line(climbing ? "Zablokowane do końca gry." : "Kliknij, żeby przełączyć.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -249,14 +249,14 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                 ? Math.round(STAKES[stakeChoice] * TrapMath.climbMultiplier(ladder, rung)) : 0;
         ItemStack tag = new ItemStack(worth > 0 ? Items.GOLD_INGOT : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(worth > 0 ? "TAKE " + worth + "e" : climbing ? "Nothing yet" : "Not climbing")
+                plain(worth > 0 ? "WEŹ " + worth + "e" : climbing ? "Jeszcze nic" : "Nie grasz")
                         .formatted(worth > 0 ? Formatting.GOLD : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(worth > 0 ? "Walk away with it." : "Open a door first.",
+                line(worth > 0 ? "Odejdź z wygraną." : "Najpierw otwórz drzwi.",
                         worth > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
                 line(worth > 0 && rung < TrapMath.CLIMB_RUNGS
-                                ? "Next rung would be "
+                                ? "Następny szczebel to "
                                 + Math.round(STAKES[stakeChoice]
                                 * TrapMath.climbMultiplier(ladder, rung + 1)) + "e."
                                 : "",
@@ -319,14 +319,14 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
             int stake = STAKES[stakeChoice];
             if (!TrapHouse.covers(house, stake, TrapHouse.TOP_CLIMB)) {
                 deny();
-                player.sendMessage(plain("The house won't take that -- the sixth rung pays "
-                        + "eleven to one and the vault can't stand it.")
+                player.sendMessage(plain("Kasyno tego nie przyjmie -- szósty szczebel płaci "
+                        + "jedenaście do jednego, a skarbiec tego nie udźwignie.")
                         .formatted(Formatting.GRAY), false);
                 return;
             }
             if (TrapMarket.wealthOf(player) < stake) {
                 deny();
-                player.sendMessage(plain("You can't cover a " + stake + "e climb.")
+                player.sendMessage(plain("Nie stać cię na grę za " + stake + "e.")
                         .formatted(Formatting.GRAY), false);
                 return;
             }
@@ -384,7 +384,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                 SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.9F, 1.3F);
         player.getWorld().spawnParticles(ParticleTypes.TOTEM_OF_UNDYING,
                 player.getX(), player.getY() + 1.3, player.getZ(), 30, 0.5, 0.5, 0.5, 0.25);
-        player.sendMessage(plain("Walked away from rung " + rung + " with ")
+        player.sendMessage(plain("Zszedłeś ze szczebla " + rung + " with ")
                 .formatted(Formatting.GRAY)
                 .append(plain(won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
                 .append(plain(net >= 0 ? "   net +" + net : "   net " + net)

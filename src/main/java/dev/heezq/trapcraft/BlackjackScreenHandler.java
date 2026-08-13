@@ -128,12 +128,12 @@ public class BlackjackScreenHandler extends ScreenHandler {
 
         display.setStack(STAKE_SLOT, stakeTag());
         display.setStack(DEAL_SLOT, dealTag());
-        display.setStack(HIT_SLOT, actionTag("HIT", "Take another card.",
+        display.setStack(HIT_SLOT, actionTag("DOBIERZ", "Weź kolejną kartę.",
                 Items.LIME_STAINED_GLASS_PANE, playing));
-        display.setStack(STAND_SLOT, actionTag("STAND", "That'll do. Dealer plays.",
+        display.setStack(STAND_SLOT, actionTag("PAS", "Wystarczy. Gra krupier.",
                 Items.ORANGE_STAINED_GLASS_PANE, playing));
-        display.setStack(DOUBLE_SLOT, actionTag("DOUBLE",
-                "Double the stake, take exactly one more card.",
+        display.setStack(DOUBLE_SLOT, actionTag("PODWÓJ",
+                "Podwaja stawkę, dobierasz dokładnie jedną kartę.",
                 Items.GOLD_BLOCK, playing && mineCount == 2
                         && TrapMarket.wealthOf(player) >= staked));
         display.setStack(PURSE_SLOT, purseTag());
@@ -166,13 +166,13 @@ public class BlackjackScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(playing ? Items.PAPER
                 : outcome.isEmpty() ? Items.BOOK : Items.GOLD_INGOT);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(playing || !outcome.isEmpty() ? "You " + mineTotal : "Blackjack")
+                plain(playing || !outcome.isEmpty() ? "Ty " + mineTotal : "Blackjack")
                         .formatted(mineTotal > 21 ? Formatting.RED : Formatting.WHITE,
                                 Formatting.BOLD));
 
         List<Text> lore = new ArrayList<>();
         if (theirsCount > 0) {
-            lore.add(line("Dealer " + theirsTotal + (showAll ? "" : " showing"),
+            lore.add(line("Krupier " + theirsTotal + (showAll ? "" : " odkryte"),
                     Formatting.GRAY));
         }
         if (!outcome.isEmpty()) {
@@ -180,12 +180,12 @@ public class BlackjackScreenHandler extends ScreenHandler {
             lore.add(line(outcome, Formatting.GOLD, Formatting.BOLD));
         }
         if (!playing && outcome.isEmpty()) {
-            lore.add(line("Dealer stands on " + TrapMath.DEALER_STANDS + ".", Formatting.GRAY));
-            lore.add(line("Blackjack pays "
+            lore.add(line("Krupier pasuje na " + TrapMath.DEALER_STANDS + ".", Formatting.GRAY));
+            lore.add(line("Blackjack płaci "
                     + String.format("%.1f", TrapMath.BLACKJACK_PAY) + "x.", Formatting.GRAY));
             lore.add(Text.empty());
-            lore.add(line("Six to five, not three to two.", Formatting.DARK_GRAY));
-            lore.add(line("Yes, that's worse. It's that kind of place.",
+            lore.add(line("Sześć do pięciu, a nie trzy do dwóch.", Formatting.DARK_GRAY));
+            lore.add(line("Tak, to gorzej dla gracza. Takie kasyno.",
                     Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -199,7 +199,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
                 plain(name).formatted(live ? Formatting.WHITE : Formatting.DARK_GRAY,
                         Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(live ? blurb : "Not now.",
+                line(live ? blurb : "Nie teraz.",
                         live ? Formatting.GRAY : Formatting.DARK_GRAY))));
         return tag;
     }
@@ -207,12 +207,12 @@ public class BlackjackScreenHandler extends ScreenHandler {
     private ItemStack dealTag() {
         ItemStack tag = new ItemStack(playing ? Items.GRAY_DYE : Items.LEVER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(playing ? "In hand" : "DEAL")
+                plain(playing ? "Rozdanie trwa" : "ROZDAJ")
                         .formatted(playing ? Formatting.DARK_GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(playing ? "Finish this one first."
-                        : "Fresh deck, two cards each.", Formatting.GRAY))));
+                line(playing ? "Najpierw dokończ tę rękę."
+                        : "Nowa talia, po dwie karty.", Formatting.GRAY))));
         return tag;
     }
 
@@ -220,11 +220,11 @@ public class BlackjackScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake: ").formatted(Formatting.GRAY)
+                plain("Stawka: ").formatted(Formatting.GRAY)
                         .append(plain((playing ? staked : STAKES[stakeChoice]) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(playing ? "Locked for this hand." : "Click to change.",
+                line(playing ? "Zablokowane na tę rękę." : "Kliknij, żeby zmienić.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -232,7 +232,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
@@ -284,13 +284,13 @@ public class BlackjackScreenHandler extends ScreenHandler {
         // that never dealt the hand.
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_BLACKJACK)) {
             deny();
-            player.sendMessage(plain("The house won't deal that -- not enough behind "
-                    + "the table to cover a doubled hand.").formatted(Formatting.GRAY), false);
+            player.sendMessage(plain("Kasyno tego nie rozda -- w skarbcu nie ma na "
+                    + "pokrycie podwojonej ręki.").formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
-            player.sendMessage(plain("You can't cover a " + stake + "e hand.")
+            player.sendMessage(plain("Nie stać cię na rękę za " + stake + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -380,25 +380,25 @@ public class BlackjackScreenHandler extends ScreenHandler {
 
         int paid;
         if (me > 21) {
-            outcome = "Bust.";
+            outcome = "Fura.";
             paid = 0;
         } else if (myNatural && !theirNatural) {
-            outcome = "Blackjack.";
+            outcome = "Blackjack!";
             paid = Math.round(staked * TrapMath.BLACKJACK_PAY);
         } else if (theirNatural && !myNatural) {
-            outcome = "Dealer had it.";
+            outcome = "Krupier miał lepsze.";
             paid = 0;
         } else if (them > 21) {
-            outcome = "Dealer bust.";
+            outcome = "Krupier ma furę.";
             paid = staked * 2;
         } else if (me > them) {
-            outcome = "You take it.";
+            outcome = "Wygrywasz.";
             paid = staked * 2;
         } else if (me == them) {
-            outcome = "Push.";
+            outcome = "Remis.";
             paid = staked;
         } else {
-            outcome = "Dealer takes it.";
+            outcome = "Krupier wygrywa.";
             paid = 0;
         }
 
@@ -429,7 +429,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
         player.sendMessage(plain(outcome + "  ").formatted(
                         net > 0 ? Formatting.GREEN : net == 0 ? Formatting.GRAY : Formatting.RED,
                         Formatting.BOLD)
-                .append(plain("You " + me + ", dealer " + them + ".   ")
+                .append(plain("Ty " + me + ", krupier " + them + ".   ")
                         .formatted(Formatting.GRAY))
                 .append(plain(net >= 0 ? "+" + net + "e" : net + "e")
                         .formatted(net >= 0 ? Formatting.GREEN : Formatting.RED)), false);

@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:gold_ingot"
     },
-    "title": "Nerve",
-    "description": "Walk away from the sixth rung of The Climb.",
+    "title": "Zimna krew",
+    "description": "Odejdź z wygraną z szóstego szczebla Wspinaczki.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

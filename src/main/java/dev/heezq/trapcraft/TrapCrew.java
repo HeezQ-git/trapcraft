@@ -147,9 +147,14 @@ public final class TrapCrew {
      * this particular person is FOR, and wanting a third thing done means
      * wanting a third person on the books.
      *
-     * The cap on people went up to match. Nine jobs against five hands is ten
-     * slots for nine jobs, so a full operation is reachable -- but it is five
+     * The cap on people went up to match. Ten jobs against five hands is ten
+     * slots for ten jobs, so a full operation is reachable -- but it is five
      * wages, and the wage is what stops that being free.
+     *
+     * It used to have one slot spare, and laundering took it. Doing everything
+     * at once is now an exact fit rather than a comfortable one: there is no
+     * longer a hand who can double up on the job you actually care about while
+     * the rest of the list is still covered.
      */
     public static final int SLOTS = 2;
     public static final int MAX_HANDS = 5;
@@ -272,33 +277,43 @@ public final class TrapCrew {
         // what the wage is really for, then racks because a bud left hanging
         // past peak loses a grade, and the ground work last because dirt can
         // wait and a ripe plant can't.
-        PICK("Picking", "minecraft:wheat", 0, 0,
-                "Your mature plants, into the nearest chest.",
-                "a ripe plant in the patch"),
-        CURE("Curing", "trapcraft:drying_rack", 480, 8,
-                "Loads the racks and pulls them at peak.",
-                "a rack, and fresh buds in the chest"),
-        REFINE("Refining", "trapcraft:refiner", 1400, 20,
-                "Runs the refiner and pulls it at PEAK.",
-                "a refiner, paste and blaze powder"),
-        PRESS("Pressing", "trapcraft:leaf_press", 750, 12,
-                "Leaves into paste, batch after batch.",
-                "a press and a batch of coca leaves"),
-        ROLL("Rolling", "minecraft:paper", 600, 10,
-                "Cured buds and paper into joints.",
-                "CURED buds AND paper in the chest"),
-        FARM("Farmhand", "minecraft:carrot", 260, 5,
-                "Wheat, carrots, anything else that ripens.",
-                "a ripe food crop in the patch"),
-        FEED("Fertilising", "minecraft:bone_meal", 400, 6,
-                "Bone meal on food crops. Never on yours.",
-                "bone meal in the chest"),
-        SOW("Sowing", "minecraft:wheat_seeds", 340, 6,
-                "Plants seeds out of the chest into empty rows.",
-                "seeds in the chest and empty farmland"),
-        TILL("Tilling", "minecraft:iron_hoe", 220, 4,
-                "Turns bare ground near water into farmland.",
-                "bare ground near water");
+        PICK("Zbieranie", "minecraft:wheat", 0, 0,
+                "Zbiera twoje dojrzałe rośliny do najbliższej skrzyni.",
+                "dojrzała roślina na działce"),
+        CURE("Suszenie", "trapcraft:drying_rack", 480, 8,
+                "Ładuje suszarki i ściąga susz w idealnym momencie.",
+                "suszarka i świeże szyszki w skrzyni"),
+        REFINE("Rafinacja", "trapcraft:refiner", 1400, 20,
+                "Obsługuje rafinerię i wyjmuje towar na szczycie czystości.",
+                "rafineria, pasta i płonący proszek"),
+        PRESS("Prasowanie", "trapcraft:leaf_press", 750, 12,
+                "Przerabia liście koki na pastę, partia po partii.",
+                "prasa i partia liści koki"),
+        ROLL("Skręcanie", "minecraft:paper", 600, 10,
+                "Zwija suszone szyszki z papierem w skręty.",
+                "SUSZONE szyszki ORAZ papier w skrzyni"),
+        FARM("Rolnictwo", "minecraft:carrot", 260, 5,
+                "Zbiera pszenicę, marchew i inne dojrzałe uprawy.",
+                "dojrzała uprawa jadalna na działce"),
+        FEED("Nawożenie", "minecraft:bone_meal", 400, 6,
+                "Sypie mączkę kostną na uprawy jadalne. Nigdy na twoje.",
+                "mączka kostna w skrzyni"),
+        SOW("Sianie", "minecraft:wheat_seeds", 340, 6,
+                "Sadzi nasiona ze skrzyni w pustych grządkach.",
+                "nasiona w skrzyni i pusta zaorana ziemia"),
+        TILL("Oranie", "minecraft:iron_hoe", 220, 4,
+                "Zamienia goły grunt przy wodzie w zaoraną ziemię.",
+                "goły grunt przy wodzie"),
+        // Last, and it belongs last twice over. Nothing in a drum spoils --
+        // dirty money in the chest keeps and a finished load sits there all
+        // week -- so it is genuinely the thing that can wait longest, which is
+        // what this list is ordered by. It is also the newest, and the jobs a
+        // hand knows are saved as a bitmask of ORDINALS: slotting this in next
+        // to Refining where it reads best would have silently retaught every
+        // hand on every server. New jobs go on the end.
+        WASH("Pranie kasy", "trapcraft:laundry", 1200, 18,
+                "Ładuje bęben brudną kasą i wyjmuje ją czystą.",
+                "bęben pralniczy i brudna kasa w skrzyni");
 
         private final String display;
         private final String iconId;
@@ -390,7 +405,7 @@ public final class TrapCrew {
     // flat-out hand does nearly three times the jobs an hour it used to, and a
     // wage that had not moved would have made the top rung free money.
     public static final int[] PACE_WAGE = {0, 10, 26, 52, 96};
-    public static final String[] PACE_NAME = {"Plodding", "Steady", "Brisk", "Quick", "Flat out"};
+    public static final String[] PACE_NAME = {"Ślamazarnie", "Spokojnie", "Żwawo", "Szybko", "Na maksa"};
 
     public static final int[] REACH_BLOCKS = {12, 16, 20, 26};
     public static final int[] REACH_COST = {0, 200, 450, 900};
@@ -673,40 +688,40 @@ public final class TrapCrew {
      */
     public static String buy(ServerPlayerEntity boss, int index, Job job, boolean pace) {
         if (index < 0 || index >= CREW.size()) {
-            return "They're not on the books any more.";
+            return "Tej osoby nie ma już na liście.";
         }
         Hand hand = CREW.get(index);
         if (!hand.boss.equals(boss.getUuid())) {
-            return "That's not your hand.";
+            return "To nie jest twój człowiek.";
         }
 
         int cost;
         String bought;
         if (job != null) {
             if (hand.can(job)) {
-                return "They already know that one.";
+                return "On już to potrafi.";
             }
             if (hand.full()) {
-                return "Two jobs is all one person will hold. Drop one, or hire somebody.";
+                return "Jedna osoba uniesie dwa zawody. Usuń jeden albo zatrudnij kogoś jeszcze.";
             }
             cost = job.cost();
             bought = job.display();
         } else if (pace) {
             if (hand.pace >= PACE_TICKS.length - 1) {
-                return "They're already going flat out.";
+                return "Szybciej już nie potrafi.";
             }
             cost = PACE_COST[hand.pace + 1];
             bought = PACE_NAME[hand.pace + 1];
         } else {
             if (hand.reach >= REACH_BLOCKS.length - 1) {
-                return "That's as much ground as anybody can cover.";
+                return "Większego zasięgu nikt nie ogarnie.";
             }
             cost = REACH_COST[hand.reach + 1];
-            bought = REACH_BLOCKS[hand.reach + 1] + " blocks";
+            bought = REACH_BLOCKS[hand.reach + 1] + " bloków zasięgu";
         }
 
         if (TrapMarket.wealthOf(boss) < cost) {
-            return "That's " + cost + "e, and you haven't got it.";
+            return "To kosztuje " + cost + "e, a tyle nie masz.";
         }
         // Through the market, like every other emerald this mod moves. A wage
         // that skipped circulate() would be a hole in the money supply the
@@ -731,9 +746,9 @@ public final class TrapCrew {
             world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, mob.getX(), mob.getY() + 1.4,
                     mob.getZ(), 12, 0.35, 0.35, 0.35, 0.02);
         }
-        boss.sendMessage(Text.literal("Taught them ").formatted(Formatting.GREEN)
+        boss.sendMessage(Text.literal("Nauczono: ").formatted(Formatting.GREEN)
                 .append(Text.literal(bought).formatted(Formatting.WHITE))
-                .append(Text.literal(". Wages now " + hand.wage() + "e.")
+                .append(Text.literal(". Pensja teraz " + hand.wage() + "e.")
                         .formatted(Formatting.GRAY)), false);
         if (hand.maxed()) {
             TrapAwards.grant(boss, "foreman");
@@ -751,20 +766,20 @@ public final class TrapCrew {
      */
     public static String forget(ServerPlayerEntity boss, int index, Job job) {
         if (index < 0 || index >= CREW.size()) {
-            return "They're not on the books any more.";
+            return "Tej osoby nie ma już na liście.";
         }
         Hand hand = CREW.get(index);
         if (!hand.boss.equals(boss.getUuid())) {
-            return "That's not your hand.";
+            return "To nie jest twój człowiek.";
         }
         if (!hand.can(job)) {
-            return "They never knew that one.";
+            return "On nigdy tego nie umiał.";
         }
         hand.forget(job);
         save();
-        boss.sendMessage(Text.literal("They've forgotten ").formatted(Formatting.GRAY)
+        boss.sendMessage(Text.literal("Zapomniał: ").formatted(Formatting.GRAY)
                 .append(Text.literal(job.display()).formatted(Formatting.WHITE))
-                .append(Text.literal(". Wages now " + hand.wage() + "e.")
+                .append(Text.literal(". Pensja teraz " + hand.wage() + "e.")
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -849,15 +864,15 @@ public final class TrapCrew {
      */
     public static String whip(ServerPlayerEntity boss, int index) {
         if (index < 0 || index >= CREW.size()) {
-            return "They're not on the books any more.";
+            return "Tej osoby nie ma już na liście.";
         }
         Hand hand = CREW.get(index);
         if (!hand.boss.equals(boss.getUuid())) {
-            return "That's not your hand.";
+            return "To nie jest twój człowiek.";
         }
         ServerWorld world = worldOf(boss.getServer(), hand);
         if (world == null) {
-            return "That patch is in a world that isn't there any more.";
+            return "Ta działka jest w świecie, którego już nie ma.";
         }
 
         ChunkPos home = new ChunkPos(hand.patch);
@@ -873,7 +888,7 @@ public final class TrapCrew {
         if (mob == null && !world.canSpawnEntitiesAt(home)) {
             world.getChunkManager().addTicket(TICKET, home, ticketRadius(hand.reachBlocks()));
             world.getChunk(home.x, home.z);
-            return "That patch is still waking up. Try again in a second.";
+            return "Działka się jeszcze wczytuje. Spróbuj za sekundę.";
         }
         world.getChunkManager().addTicket(TICKET, home, ticketRadius(hand.reachBlocks()));
 
@@ -881,14 +896,14 @@ public final class TrapCrew {
         if (fresh) {
             mob = put(world, hand.patch, boss.getYaw());
             if (mob == null) {
-                return "Couldn't put anybody down there.";
+                return "Nie da się tam nikogo postawić.";
             }
             hand.mob = mob.getUuid();
             save();
         }
 
         if (!haul(world, mob, hand.patch)) {
-            return "There's nothing to stand on at that patch. Move it somewhere with a floor.";
+            return "Na tej działce nie ma na czym stanąć. Przenieś ją tam, gdzie jest podłoże.";
         }
         if (mob.isSleeping()) {
             mob.wakeUp();
@@ -908,11 +923,11 @@ public final class TrapCrew {
                 hand.patch.getY() + 1.2, hand.patch.getZ() + 0.5, 18, 0.4, 0.4, 0.4, 0.15);
 
         boss.sendMessage(fresh
-                ? Text.literal("You'd lost that one. ").formatted(Formatting.YELLOW)
-                        .append(Text.literal("Somebody else is on the patch, and they "
-                                + "know everything you paid to teach.")
+                ? Text.literal("Tamten przepadł. ").formatted(Formatting.YELLOW)
+                        .append(Text.literal("Na działce stoi ktoś nowy i umie "
+                                + "wszystko, za co zapłaciłeś.")
                                 .formatted(Formatting.GRAY))
-                : Text.literal("Back on the patch.").formatted(Formatting.GREEN), false);
+                : Text.literal("Wrócił na działkę.").formatted(Formatting.GREEN), false);
         return null;
     }
 
@@ -934,17 +949,17 @@ public final class TrapCrew {
      */
     public static String move(ServerPlayerEntity boss, int index, BlockPos to) {
         if (index < 0 || index >= CREW.size()) {
-            return "They're not on the books any more.";
+            return "Tej osoby nie ma już na liście.";
         }
         Hand hand = CREW.get(index);
         if (!hand.boss.equals(boss.getUuid())) {
-            return "That's not your hand.";
+            return "To nie jest twój człowiek.";
         }
         ServerWorld world = boss.getWorld();
         String dimension = world.getRegistryKey().getValue().toString();
         BlockPos spot = to.toImmutable();
         if (spot.equals(hand.patch) && dimension.equals(hand.dimension)) {
-            return "That's where they already work.";
+            return "On już tam pracuje.";
         }
 
         VillagerEntity mob = find(boss.getServer(), hand);
@@ -955,7 +970,7 @@ public final class TrapCrew {
             }
             mob = put(world, spot, boss.getYaw());
             if (mob == null) {
-                return "Couldn't put anybody down there.";
+                return "Nie da się tam nikogo postawić.";
             }
             hand.mob = mob.getUuid();
         }
@@ -988,9 +1003,9 @@ public final class TrapCrew {
                 SoundCategory.NEUTRAL, 0.9F, 1.0F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, spot.getX() + 0.5,
                 spot.getY() + 1.2, spot.getZ() + 0.5, 16, 0.4, 0.4, 0.4, 0.02);
-        boss.sendMessage(Text.literal("They work here now. ").formatted(Formatting.GREEN)
+        boss.sendMessage(Text.literal("Od teraz pracuje tutaj. ").formatted(Formatting.GREEN)
                 .append(Text.literal(spot.getX() + " " + spot.getY() + " " + spot.getZ()
-                        + (moved ? "" : ", and somebody new is stood on it."))
+                        + (moved ? "" : ", stoi tam nowa osoba."))
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -1002,15 +1017,15 @@ public final class TrapCrew {
      */
     public static String hire(ServerPlayerEntity boss, BlockPos patch) {
         if (sizeOf(boss) >= MAX_HANDS) {
-            return MAX_HANDS + " hands is all one operation will carry.";
+            return MAX_HANDS + " osób to maksimum dla jednej ekipy.";
         }
         if (TrapMarket.wealthOf(boss) < HIRE_COST) {
-            return "Taking somebody on costs " + HIRE_COST + "e.";
+            return "Zatrudnienie kosztuje " + HIRE_COST + "e.";
         }
         ServerWorld world = boss.getWorld();
         VillagerEntity mob = put(world, patch, boss.getYaw());
         if (mob == null) {
-            return "Nobody's about.";
+            return "Nie ma tu nikogo chętnego.";
         }
         TrapMarket.take(boss, HIRE_COST);
         // Capital, not wages, but the same line: the ledger's job is to answer
@@ -1027,12 +1042,12 @@ public final class TrapCrew {
         world.playSound(null, patch, SoundEvents.ENTITY_VILLAGER_YES,
                 SoundCategory.NEUTRAL, 0.9F, 1.1F);
         TrapAwards.grant(boss, "crew");
-        boss.sendMessage(Text.literal("Hired. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal("They know nothing yet. Two jobs is all "
-                        + "anybody will hold, so pick carefully.")
+        boss.sendMessage(Text.literal("Zatrudniony. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal("Na razie nic nie umie. Jedna osoba "
+                        + "uniesie dwa zawody, więc wybieraj z głową.")
                         .formatted(Formatting.GRAY))
                 .append(Text.literal("\n  /crew").formatted(Formatting.GREEN))
-                .append(Text.literal("  to teach them. Picking is free.")
+                .append(Text.literal("  szkoli go. Zbieranie jest darmowe.")
                         .formatted(Formatting.DARK_GRAY)),
                 false);
         return null;
@@ -1142,28 +1157,28 @@ public final class TrapCrew {
     public static String save(ServerPlayerEntity boss, String name) {
         String wanted = name.trim();
         if (wanted.isEmpty() || wanted.contains("\t")) {
-            return "Give it a name.";
+            return "Podaj nazwę.";
         }
         if (sizeOf(boss) == 0) {
-            return "You haven't got anybody to write down.";
+            return "Nie masz kogo zapisać.";
         }
         Plan plan = keepPlan(boss.getUuid(), wanted, false);
-        boss.sendMessage(Text.literal("Written down as ").formatted(Formatting.GREEN)
+        boss.sendMessage(Text.literal("Zapisano jako ").formatted(Formatting.GREEN)
                 .append(Text.literal(plan.name()).formatted(Formatting.WHITE, Formatting.BOLD))
                 .append(Text.literal("  " + plan.hands().size()
-                        + (plan.hands().size() == 1 ? " hand, " : " hands, ")
-                        + plan.cost() + "e to put back.").formatted(Formatting.GRAY)), false);
+                        + (plan.hands().size() == 1 ? " osoba, " : " osób, ")
+                        + plan.cost() + "e za przywrócenie.").formatted(Formatting.GRAY)), false);
         return null;
     }
 
     public static String forget(ServerPlayerEntity boss, String name) {
         Plan plan = planOf(boss.getUuid(), name.trim());
         if (plan == null) {
-            return "No plan by that name.";
+            return "Nie ma zapisu o tej nazwie.";
         }
         PLANS.remove(plan);
         savePlans();
-        boss.sendMessage(Text.literal("Torn up.").formatted(Formatting.GRAY), false);
+        boss.sendMessage(Text.literal("Zapis skasowany.").formatted(Formatting.GRAY), false);
         return null;
     }
 
@@ -1177,21 +1192,21 @@ public final class TrapCrew {
     public static String load(ServerPlayerEntity boss, String name) {
         Plan plan = planOf(boss.getUuid(), name.trim());
         if (plan == null) {
-            return "No plan by that name. /crew plans lists them.";
+            return "Nie ma zapisu o tej nazwie. /crew plans pokazuje listę.";
         }
         int room = MAX_HANDS - sizeOf(boss);
         if (plan.hands().size() > room) {
-            return "You've room for " + room + " more, and that plan is "
+            return "Masz miejsce jeszcze na " + room + " osób, a ten zapis ma "
                     + plan.hands().size() + ".";
         }
         int cost = plan.cost();
         if (TrapMarket.wealthOf(boss) < cost) {
-            return "Putting that crew back costs " + cost + "e.";
+            return "Przywrócenie tej ekipy kosztuje " + cost + "e.";
         }
         MinecraftServer server = boss.getServer();
         for (PlanHand wanted : plan.hands()) {
             if (worldNamed(server, wanted.dimension()) == null) {
-                return "Part of that crew worked a world that isn't here any more.";
+                return "Część tej ekipy pracowała w świecie, którego już nie ma.";
             }
         }
 
@@ -1223,9 +1238,9 @@ public final class TrapCrew {
                     14, 0.4, 0.4, 0.4, 0.02);
         }
         save();
-        boss.sendMessage(Text.literal("Back on. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal(put + (put == 1 ? " hand" : " hands") + " on their old "
-                        + "patches, trained. Payroll is now "
+        boss.sendMessage(Text.literal("Ekipa wróciła. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal(put + (put == 1 ? " hand" : " hands") + " na swoich starych "
+                        + "działkach, wyszkolonych. Suma pensji: "
                         + payrollOf(boss) + "e.").formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -1233,13 +1248,13 @@ public final class TrapCrew {
     private static void listPlans(ServerPlayerEntity boss) {
         List<Plan> mine = plansOf(boss);
         if (mine.isEmpty()) {
-            boss.sendMessage(Text.literal("Nothing written down. ").formatted(Formatting.GRAY)
+            boss.sendMessage(Text.literal("Nic nie jest zapisane. ").formatted(Formatting.GRAY)
                     .append(Text.literal("/crew save <name>").formatted(Formatting.GREEN))
-                    .append(Text.literal(" keeps the crew you've got.")
+                    .append(Text.literal(" zapisuje twoją obecną ekipę.")
                             .formatted(Formatting.DARK_GRAY)), false);
             return;
         }
-        boss.sendMessage(Text.literal("Crews on file").formatted(Formatting.GOLD, Formatting.BOLD),
+        boss.sendMessage(Text.literal("Zapisane ekipy").formatted(Formatting.GOLD, Formatting.BOLD),
                 false);
         for (Plan plan : mine) {
             boss.sendMessage(Text.literal("  " + plan.name())
@@ -1248,11 +1263,11 @@ public final class TrapCrew {
                             new net.minecraft.text.ClickEvent.SuggestCommand(
                                     "/crew load " + plan.name())))
                     .append(Text.literal("  " + plan.hands().size()
-                            + (plan.hands().size() == 1 ? " hand" : " hands"))
+                            + (plan.hands().size() == 1 ? " osoba" : " osób"))
                             .formatted(Formatting.GRAY))
-                    .append(Text.literal("  " + plan.cost() + "e to put back")
+                    .append(Text.literal("  " + plan.cost() + "e za przywrócenie")
                             .formatted(Formatting.GOLD))
-                    .append(Text.literal("  then " + plan.wage() + "e a packet")
+                    .append(Text.literal("  potem " + plan.wage() + "e za wypłatę")
                             .formatted(Formatting.DARK_GRAY)), false);
         }
     }
@@ -1276,11 +1291,11 @@ public final class TrapCrew {
      */
     public static String nights(ServerPlayerEntity boss, int index) {
         if (index < 0 || index >= CREW.size()) {
-            return "They're not on the books any more.";
+            return "Tej osoby nie ma już na liście.";
         }
         Hand hand = CREW.get(index);
         if (!hand.boss.equals(boss.getUuid())) {
-            return "That's not your hand.";
+            return "To nie jest twój człowiek.";
         }
         hand.nights = !hand.nights;
         // Straight back on or off the clock: a hand asleep in a bed when you
@@ -1293,13 +1308,13 @@ public final class TrapCrew {
             mob.wakeUp();
         }
         boss.sendMessage(hand.nights
-                ? Text.literal("On nights. ").formatted(Formatting.GOLD, Formatting.BOLD)
-                        .append(Text.literal("They work through the dark and the wage "
-                                + "clock never stops. " + hand.wage() + "e a packet now.")
+                ? Text.literal("Nocna zmiana. ").formatted(Formatting.GOLD, Formatting.BOLD)
+                        .append(Text.literal("Pracuje po ciemku, licznik pensji "
+                                + "nie staje. Teraz " + hand.wage() + "e za wypłatę.")
                                 .formatted(Formatting.GRAY))
-                : Text.literal("Days only. ").formatted(Formatting.GREEN)
-                        .append(Text.literal("Back to " + hand.wage()
-                                + "e, and nights are free again.").formatted(Formatting.GRAY)),
+                : Text.literal("Tylko za dnia. ").formatted(Formatting.GREEN)
+                        .append(Text.literal("Z powrotem " + hand.wage()
+                                + "e, a noce znów są darmowe.").formatted(Formatting.GRAY)),
                 false);
         return null;
     }
@@ -1319,10 +1334,10 @@ public final class TrapCrew {
             }
             CREW.remove(i);
             save();
-            boss.sendMessage(Text.literal("Let them go.").formatted(Formatting.GRAY), false);
+            boss.sendMessage(Text.literal("Zwolniono ekipę.").formatted(Formatting.GRAY), false);
             return null;
         }
-        return "You haven't got anybody on.";
+        return "Nie masz nikogo zatrudnionego.";
     }
 
     /**
@@ -1624,16 +1639,16 @@ public final class TrapCrew {
         // hanging the gray half off a BOLD header would print the whole thing
         // bold. Siblings each keep their own.
         boss.sendMessage(Text.empty()
-                .append(Text.literal(dawn ? "SHIFT ON" : "SHIFT OVER")
+                .append(Text.literal(dawn ? "ZMIANA STARTUJE" : "KONIEC ZMIANY")
                         .formatted(dawn ? Formatting.GOLD : Formatting.BLUE, Formatting.BOLD))
                 .append(Text.literal("  ·  ").formatted(Formatting.DARK_GRAY))
-                .append(Text.literal(hands + (hands == 1 ? " hand" : " hands"))
+                .append(Text.literal(hands + (hands == 1 ? " osoba" : " osób"))
                         .formatted(Formatting.WHITE))
-                .append(Text.literal(dawn ? " out on the patch" : " gone to bed")
+                .append(Text.literal(dawn ? " wyszła na działki" : " poszło spać")
                         .formatted(Formatting.GRAY))
                 .append(Text.literal("\n   " + (dawn
-                        ? "Wages are running again until dusk."
-                        : "Nothing picked and nothing charged till dawn."))
+                        ? "Pensje lecą znowu aż do zmroku."
+                        : "Do świtu nikt nic nie zbiera i nic nie płacisz."))
                         .formatted(Formatting.DARK_GRAY)), false);
         boss.playSoundToPlayer(dawn
                 ? SoundEvents.BLOCK_NOTE_BLOCK_BELL.value()
@@ -1762,12 +1777,42 @@ public final class TrapCrew {
 
     /** What one chest can back, read once and shared with the board. */
     private static Supplies suppliesOf(net.minecraft.inventory.Inventory box) {
+        int[] dirty = dirtyIn(box);
         return new Supplies(holds(box, Items.BONE_MEAL), holdsSeed(box),
                 holdsRawBud(box),
                 // Asked of the press, not worked out again here. See canLoad.
                 LeafPressBlock.canLoad(box),
                 holds(box, TrapContent.cocaPaste) && holds(box, Items.BLAZE_POWDER),
-                rollable(box) != null);
+                rollable(box) != null,
+                // Enough to actually START a drum, not merely some. One dirty
+                // emerald in a barrel is under the minimum load, and a hand who
+                // walked to the drum for it would stand there doing nothing
+                // every pass, which looks exactly like a hand that is broken.
+                dirty[0] * 9 + dirty[1] >= LaundryBlock.MIN_LOAD);
+    }
+
+    /**
+     * Dirty money in the chest, as {blocks, loose}.
+     *
+     * Both denominations because both turn up: the black market pays out
+     * packed, so a week's takings is a stack of blocks and a handful of change
+     * rather than a hundred and forty loose emeralds.
+     */
+    private static int[] dirtyIn(net.minecraft.inventory.Inventory box) {
+        if (box == null) {
+            return new int[]{0, 0};
+        }
+        int blocks = 0;
+        int loose = 0;
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (stack.isOf(TrapContent.dirtyEmerald)) {
+                loose += stack.getCount();
+            } else if (stack.isOf(TrapContent.dirtyEmeraldBlockItem)) {
+                blocks += stack.getCount();
+            }
+        }
+        return new int[]{blocks, loose};
     }
 
     /**
@@ -1786,13 +1831,15 @@ public final class TrapCrew {
             case REFINE -> stock.paste();
             case FEED -> stock.boneMeal();
             case SOW -> stock.seeds();
+            case WASH -> stock.dirty();
             default -> true;
         };
     }
 
     /** What the chest can back up this pass. */
     private record Supplies(boolean boneMeal, boolean seeds, boolean rawBuds,
-                            boolean leaves, boolean paste, boolean rolling) {
+                            boolean leaves, boolean paste, boolean rolling,
+                            boolean dirty) {
     }
 
     /** Inside the box the hand was hired to work. */
@@ -1834,6 +1881,22 @@ public final class TrapCrew {
             return state.get(RefinerBlock.RUNNING)
                     ? (state.get(RefinerBlock.PROGRESS) == RefinerBlock.PEAK ? Job.REFINE : null)
                     : (stock.paste() ? Job.REFINE : null);
+        }
+        if (block instanceof LaundryBlock && hand.can(Job.WASH)) {
+            if (state.get(LaundryBlock.DONE)) {
+                // Only when there is somebody to assess for it -- see launder.
+                // Asked here rather than only there because a job that cannot
+                // be done is worse than no job: the hand walks to the drum,
+                // finds it can't, and burns the pass, over and over, looking
+                // for all the world like a hand that is broken.
+                return world.getServer().getPlayerManager().getPlayer(hand.boss) != null
+                        ? Job.WASH : null;
+            }
+            // A drum already turning is left strictly alone. Tipping more in
+            // reschedules the wash from the new total, so a hand who topped up
+            // a running load once a pass would keep it going round forever and
+            // never once pull it -- the drum equivalent of pulling a rack early.
+            return state.get(LaundryBlock.LOAD) == 0 && stock.dirty() ? Job.WASH : null;
         }
         if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock) {
             return block instanceof CropBlock crop && crop.isMature(state) ? Job.PICK : null;
@@ -1915,6 +1978,10 @@ public final class TrapCrew {
             }
             return;
         }
+        if (block instanceof LaundryBlock) {
+            launder(world, hand, box, at, state);
+            return;
+        }
         if (box != null && world.getBlockEntity(at) instanceof net.minecraft.inventory.Inventory
                 && hand.can(Job.ROLL)) {
             roll(world, box, at);
@@ -1961,6 +2028,76 @@ public final class TrapCrew {
             world.setBlockState(at, Blocks.FARMLAND.getDefaultState());
             cheer(world, at, SoundEvents.ITEM_HOE_TILL, 1.0F);
         }
+    }
+
+    /**
+     * A drum, from whichever end it is asking for.
+     *
+     * The clean money goes in the chest like everything else a hand makes. The
+     * WASH itself does not: the office assesses a person, and the person here
+     * is the boss, so a load pulled by a hand shows up against their name and
+     * eats their cover exactly as if they had clicked the drum themselves.
+     * That is the whole reason this is worth 1200e -- it automates the machine,
+     * not the crime.
+     *
+     * A boss who is logged out has nobody to assess, so a finished drum is left
+     * standing until they are back. A hand may still fill one and let it run;
+     * they simply cannot cash it in behind their boss's back overnight, which
+     * is the same rule wages already follow.
+     */
+    private static void launder(ServerWorld world, Hand hand,
+                                net.minecraft.inventory.Inventory box, BlockPos at,
+                                BlockState state) {
+        if (state.get(LaundryBlock.DONE)) {
+            ServerPlayerEntity boss = world.getServer().getPlayerManager().getPlayer(hand.boss);
+            if (boss == null) {
+                return;
+            }
+            LaundryBlock.Wash out = LaundryBlock.empty(world, at, state);
+            List<ItemStack> money = new ArrayList<>();
+            int left = out.clean();
+            while (left > 0) {
+                int lot = Math.min(left, Items.EMERALD.getMaxCount());
+                money.add(new ItemStack(Items.EMERALD, lot));
+                left -= lot;
+            }
+            stow(world, box, at, money);
+            TrapLaw.washed(boss, out.gross(), out.cut());
+            cheer(world, at, SoundEvents.BLOCK_BUBBLE_COLUMN_UPWARDS_INSIDE, 1.4F);
+            return;
+        }
+        if (box == null) {
+            return;
+        }
+        // The whole load in one pass, not an emerald at a time: see jobAt for
+        // why a drum is filled once and then left. Counted and taken in the
+        // same breath so the two can't disagree about how much moved.
+        int[] have = dirtyIn(box);
+        int[] take = TrapMath.drumLoad(have[0], have[1],
+                LaundryBlock.MAX_LOAD - state.get(LaundryBlock.LOAD));
+        int going = take[0] * 9 + take[1];
+        if (going < LaundryBlock.MIN_LOAD) {
+            return;
+        }
+        pull(box, TrapContent.dirtyEmeraldBlockItem, take[0]);
+        pull(box, TrapContent.dirtyEmerald, take[1]);
+        LaundryBlock.start(world, at, state, going);
+        cheer(world, at, SoundEvents.ITEM_BUCKET_FILL, 1.1F);
+    }
+
+    /** Take exactly this many of something out of the chest. */
+    private static void pull(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want,
+                             int count) {
+        for (int slot = 0; slot < box.size() && count > 0; slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (!stack.isOf(want)) {
+                continue;
+            }
+            int lot = Math.min(stack.getCount(), count);
+            stack.decrement(lot);
+            count -= lot;
+        }
+        box.markDirty();
     }
 
     /** Hand a machine the first matching stack out of the chest. */
@@ -2227,14 +2364,14 @@ public final class TrapCrew {
             TrapLedger.record(boss, TrapLedger.Source.CREW, -wage);
             hand.paid += wage;
             if (hand.missed > 0) {
-                boss.sendMessage(Text.literal("Square with the crew again. ")
+                boss.sendMessage(Text.literal("Zaległości wyrównane. ")
                         .formatted(Formatting.GREEN)
-                        .append(Text.literal("The " + hand.owed + "e you missed is written off.")
+                        .append(Text.literal("Zaległe " + hand.owed + "e zostaje umorzone.")
                                 .formatted(Formatting.GRAY)), false);
                 hand.missed = 0;
                 hand.owed = 0;
             }
-            boss.sendMessage(Text.literal("Wages: ").formatted(Formatting.DARK_GRAY)
+            boss.sendMessage(Text.literal("Pensje: ").formatted(Formatting.DARK_GRAY)
                     .append(Text.literal("-" + wage + "e").formatted(Formatting.RED)), true);
             return true;
         }
@@ -2245,11 +2382,11 @@ public final class TrapCrew {
         if (left <= 0) {
             return false;
         }
-        boss.sendMessage(Text.literal("WAGES DUE  ").formatted(Formatting.RED, Formatting.BOLD)
+        boss.sendMessage(Text.literal("ZALEGŁA PENSJA  ").formatted(Formatting.RED, Formatting.BOLD)
                 .append(Text.literal(hand.owed + "e").formatted(Formatting.WHITE))
-                .append(Text.literal("  -- they'll work " + left
-                        + (left == 1 ? " more payday" : " more paydays")
-                        + " on nothing, then walk.").formatted(Formatting.GRAY)), false);
+                .append(Text.literal("  -- popracuje jeszcze " + left
+                        + (left == 1 ? " wypłatę" : " wypłaty")
+                        + " za darmo, potem odejdzie.").formatted(Formatting.GRAY)), false);
         return true;
     }
 
@@ -2272,9 +2409,9 @@ public final class TrapCrew {
         }
         CREW.remove(hand);
         if (boss != null) {
-            boss.sendMessage(Text.literal("They've walked. ")
+            boss.sendMessage(Text.literal("Odeszli. ")
                     .formatted(Formatting.RED, Formatting.BOLD)
-                    .append(Text.literal("Everything they knew is written down under \"")
+                    .append(Text.literal("Wszystko, co umieli, jest zapisane pod nazwą \"")
                             .formatted(Formatting.GRAY))
                     .append(Text.literal(WALKOUT).formatted(Formatting.WHITE))
                     .append(Text.literal("\" -- ").formatted(Formatting.GRAY))

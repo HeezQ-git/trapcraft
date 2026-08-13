@@ -156,7 +156,7 @@ public class ScratchScreenHandler extends ScreenHandler {
             foil.set(DataComponentTypes.CUSTOM_NAME,
                     plain("? ? ?").formatted(Formatting.WHITE, Formatting.BOLD));
             foil.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line("Click to scratch it.", Formatting.YELLOW))));
+                    line("Kliknij, żeby zdrapać.", Formatting.YELLOW))));
             return foil;
         }
         int face = card[panel];
@@ -175,18 +175,18 @@ public class ScratchScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain("Scratchers").formatted(Formatting.YELLOW, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Buy a card, then click the panels.", Formatting.GRAY),
-                line("Three of a kind pays. More pays more.", Formatting.GRAY),
+                line("Kup kartę i klikaj pola.", Formatting.GRAY),
+                line("Trzy takie same płacą. Więcej płaci więcej.", Formatting.GRAY),
                 Text.empty(),
                 line("Three in a row, column or corner-to-", Formatting.WHITE),
                 line("corner pays DOUBLE.", Formatting.WHITE),
                 Text.empty(),
-                line("One prize a card -- the best one on it.", Formatting.DARK_GRAY),
+                line("Jedna nagroda na kartę -- najwyższa.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("About " + Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
+                line("Około " + Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
                         + " cards in 100 pay something,", Formatting.DARK_GRAY),
-                line("and most of those pay back less than", Formatting.DARK_GRAY),
-                line("the card cost. The house keeps about "
+                line("a większość z nich zwraca mniej, niż", Formatting.DARK_GRAY),
+                line("kosztowała karta. Kasyno bierze około "
                         + Math.round((1 - TrapMath.SCRATCH_MEASURED_RTP) * 100) + "%.",
                         Formatting.DARK_GRAY))));
         return tag;
@@ -195,7 +195,7 @@ public class ScratchScreenHandler extends ScreenHandler {
     private ItemStack prizeTag() {
         ItemStack tag = new ItemStack(Items.PAINTING);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("What pays what").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Tabela wypłat").formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(line("Three of...", Formatting.DARK_GRAY));
         for (int face = TrapMath.SCRATCH_FACES - 1; face >= 1; face--) {
@@ -204,12 +204,12 @@ public class ScratchScreenHandler extends ScreenHandler {
                             .formatted(Formatting.WHITE)));
         }
         lore.add(Text.empty());
-        lore.add(line("Four of them  x" + trim(TrapMath.SCRATCH_SIZES[4]), Formatting.GRAY));
-        lore.add(line("Five of them  x" + trim(TrapMath.SCRATCH_SIZES[5]), Formatting.GRAY));
-        lore.add(line("Six or more   x" + trim(TrapMath.SCRATCH_SIZES[6]), Formatting.GRAY));
+        lore.add(line("Cztery takie  x" + trim(TrapMath.SCRATCH_SIZES[4]), Formatting.GRAY));
+        lore.add(line("Pięć takich  x" + trim(TrapMath.SCRATCH_SIZES[5]), Formatting.GRAY));
+        lore.add(line("Sześć lub więcej   x" + trim(TrapMath.SCRATCH_SIZES[6]), Formatting.GRAY));
         lore.add(line("In a line     x" + trim(TrapMath.SCRATCH_LINE_BONUS), Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("All multiples of what the card cost.", Formatting.DARK_GRAY));
+        lore.add(line("Wszystko jako wielokrotność ceny karty.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -218,19 +218,19 @@ public class ScratchScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Card: ").formatted(Formatting.GRAY)
+                plain("Karta: ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(card != null ? "Finish this one first."
-                        : "Click to change.", Formatting.DARK_GRAY))));
+                line(card != null ? "Najpierw dokończ tę kartę."
+                        : "Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(
@@ -242,14 +242,14 @@ public class ScratchScreenHandler extends ScreenHandler {
         boolean can = card != null && !settled;
         ItemStack tag = new ItemStack(can ? Items.SHEARS : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Scratch the lot")
+                plain("Zdrap wszystko")
                         .formatted(can ? Formatting.YELLOW : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(can ? "For when you can't stand it." : "Nothing to scratch.",
+                line(can ? "Gdy nie masz cierpliwości." : "Nie ma czego zdrapywać.",
                         can ? Formatting.GRAY : Formatting.DARK_GRAY),
                 Text.empty(),
-                line("It was already this card before you", Formatting.DARK_GRAY),
+                line("Karta była już taka, zanim zacząłeś", Formatting.DARK_GRAY),
                 line("touched it. Order changes nothing.", Formatting.DARK_GRAY))));
         return tag;
     }
@@ -258,11 +258,11 @@ public class ScratchScreenHandler extends ScreenHandler {
         boolean fresh = card == null || settled;
         ItemStack tag = new ItemStack(fresh ? Items.PAPER : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(card == null ? "Buy a card" : settled ? "Another one" : "Card in play")
+                plain(card == null ? "Kup kartę" : settled ? "Jeszcze jedna" : "Karta w grze")
                         .formatted(fresh ? Formatting.GREEN : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(fresh ? STAKES[stakeChoice] + "e." : "Finish the one you've got.",
+                line(fresh ? STAKES[stakeChoice] + "e." : "Dokończ tę, którą masz.",
                         fresh ? Formatting.GRAY : Formatting.DARK_GRAY))));
         return tag;
     }
@@ -323,13 +323,13 @@ public class ScratchScreenHandler extends ScreenHandler {
         int stake = STAKES[stakeChoice];
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SCRATCH)) {
             deny();
-            player.sendMessage(plain("The house won't sell you that one -- there isn't "
-                    + "the money behind the counter.").formatted(Formatting.GRAY), false);
+            player.sendMessage(plain("Kasyno nie sprzeda ci tej karty -- nie ma na nią "
+                    + "pokrycia w skarbcu.").formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
-            player.sendMessage(plain("You can't cover a " + stake + "e card.")
+            player.sendMessage(plain("Nie stać cię na kartę za " + stake + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -393,7 +393,7 @@ public class ScratchScreenHandler extends ScreenHandler {
         if (won <= 0) {
             world.playSound(null, player.getBlockPos(),
                     SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 0.6F, 0.6F);
-            player.sendMessage(plain("Nothing on it.").formatted(Formatting.GRAY), false);
+            player.sendMessage(plain("Nic na niej nie ma.").formatted(Formatting.GRAY), false);
             paint();
             return;
         }

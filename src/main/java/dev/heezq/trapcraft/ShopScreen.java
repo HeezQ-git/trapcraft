@@ -67,7 +67,7 @@ public class ShopScreen extends ScreenHandler {
         }
         int takings = TrapShops.collect(who, shop);
         if (takings > 0) {
-            who.sendMessage(Text.literal("Till: ").formatted(Formatting.DARK_GRAY)
+            who.sendMessage(Text.literal("Kasa: ").formatted(Formatting.DARK_GRAY)
                     .append(Text.literal("+" + takings + "e").formatted(Formatting.GREEN)),
                     false);
         }
@@ -118,34 +118,38 @@ public class ShopScreen extends ScreenHandler {
      */
     private ItemStack shelfRow(TrapShops.Shelf shelf) {
         ServerWorld world = (ServerWorld) who.getWorld();
-        int under = 0;
-        Inventory box = TrapBoxes.at(world, shelf.pos().down());
-        if (box != null) {
-            for (int slot = 0; slot < box.size(); slot++) {
-                under += box.getStack(slot).getCount();
-            }
-        }
+        int stocked = count(TrapBoxes.at(world, shelf.pos()))
+                + count(TrapBoxes.at(world, shelf.pos().down()));
         int away = (int) Math.round(Math.sqrt(shop.pos().getSquaredDistance(shelf.pos())));
         ItemStack tag = new ItemStack(TrapContent.marketShelfItem);
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain(shelf.pos().getX() + " " + shelf.pos().getY() + " " + shelf.pos().getZ())
                         .formatted(Formatting.WHITE, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(away + " blocks from the till", Formatting.GRAY),
-                line(under == 0 ? "Nothing stocked under it" : under + " items under it",
-                        under == 0 ? Formatting.RED : Formatting.GREEN),
+                line(away + " bloków od kasy", Formatting.GRAY),
+                line(stocked == 0 ? "Pusta" : "przedmiotów: " + stocked,
+                        stocked == 0 ? Formatting.RED : Formatting.GREEN),
                 Text.empty(),
-                line("Click to make it sparkle.", Formatting.YELLOW))));
+                line("Kliknij, żeby ją podświetlić.", Formatting.YELLOW))));
         return tag;
+    }
+
+    /** What is in a container, counting nothing for one that isn't there. */
+    private static int count(Inventory box) {
+        int items = 0;
+        for (int slot = 0; box != null && slot < box.size(); slot++) {
+            items += box.getStack(slot).getCount();
+        }
+        return items;
     }
 
     private ItemStack noShelves() {
         ItemStack tag = new ItemStack(Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("No shelves").formatted(Formatting.RED, Formatting.BOLD));
+                plain("Brak półek").formatted(Formatting.RED, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Put market shelves within " + TrapShops.REACH + " blocks", Formatting.GRAY),
-                line("of this till and they join on their own.", Formatting.GRAY))));
+                line("Postaw półki w promieniu " + TrapShops.REACH + " bloków", Formatting.GRAY),
+                line("od tej kasy, a same się podłączą.", Formatting.GRAY))));
         return tag;
     }
 
@@ -154,32 +158,32 @@ public class ShopScreen extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain(shop.name()).formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(shop.sold() + " sold, " + shop.turnover() + "e through the books",
+                line("sprzedano: " + shop.sold() + ", obrót: " + shop.turnover() + "e",
                         Formatting.GRAY),
                 Text.empty(),
-                line("The register empties itself when you", Formatting.DARK_GRAY),
-                line("open this. It's your money.", Formatting.DARK_GRAY),
+                line("Kasa opróżnia się sama, kiedy to", Formatting.DARK_GRAY),
+                line("otwierasz. To twoje pieniądze.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Turnover is what the revenue office", Formatting.DARK_GRAY),
-                line("will believe about your other money.", Formatting.DARK_GRAY),
+                line("Obrót to tyle, ile urząd skarbowy", Formatting.DARK_GRAY),
+                line("uwierzy na temat reszty twojej kasy.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Click holding an anvil-named item to", Formatting.YELLOW),
-                line("rename the shop. Shows next time you open.", Formatting.YELLOW))));
+                line("Kliknij, trzymając przedmiot nazwany na", Formatting.YELLOW),
+                line("kowadle, żeby zmienić nazwę sklepu.", Formatting.YELLOW))));
         return tag;
     }
 
     private ItemStack prices() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Prices").formatted(Formatting.AQUA, Formatting.BOLD)
+                plain("Ceny").formatted(Formatting.AQUA, Formatting.BOLD)
                         .append(plain("   " + shop.markupName()).formatted(Formatting.WHITE)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(shop.markup() + "% of what the town expects to pay.", Formatting.GRAY),
+                line(shop.markup() + "% ceny, jakiej spodziewają się mieszkańcy.", Formatting.GRAY),
                 Text.empty(),
-                line("Cheap brings more of them through the", Formatting.DARK_GRAY),
-                line("door. Dear takes more off each one.", Formatting.DARK_GRAY),
+                line("Tanio: przychodzi więcej ludzi.", Formatting.DARK_GRAY),
+                line("Drogo: każdy zostawia więcej.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Click to change it.", Formatting.YELLOW))));
+                line("Kliknij, żeby zmienić.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -187,22 +191,22 @@ public class ShopScreen extends ScreenHandler {
         int count = TrapShops.shelvesOf(shop).size();
         ItemStack tag = new ItemStack(count > 0 ? TrapContent.marketShelfItem : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Shelves").formatted(count > 0 ? Formatting.WHITE : Formatting.RED,
+                plain("Półki").formatted(count > 0 ? Formatting.WHITE : Formatting.RED,
                         Formatting.BOLD)
                         .append(plain("   " + count).formatted(Formatting.GRAY)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(count > 0 ? "Every one within " + TrapShops.REACH + " blocks of this till."
-                        : "None within " + TrapShops.REACH + " blocks. Nobody can be served.",
+                line(count > 0 ? "Wszystkie w promieniu " + TrapShops.REACH + " bloków od kasy."
+                        : "Żadnej w promieniu " + TrapShops.REACH + " bloków. Nie ma czego sprzedawać.",
                         count > 0 ? Formatting.GRAY : Formatting.RED),
                 Text.empty(),
-                line("They join on their own -- a shelf belongs", Formatting.DARK_GRAY),
-                line("to whichever till is nearest.", Formatting.DARK_GRAY),
+                line("Podłączają się same -- półka należy", Formatting.DARK_GRAY),
+                line("do najbliższej kasy.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Stock goes in any chest or barrel under", Formatting.DARK_GRAY),
-                line("this till or under any of them.", Formatting.DARK_GRAY),
+                line("Otwórz półkę i włóż towar -- każda ma", Formatting.DARK_GRAY),
+                line("własny zapas. Skrzynie pod nimi też się liczą.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line(listingShelves ? "Click for what's on sale."
-                        : "Click to list them.", Formatting.YELLOW))));
+                line(listingShelves ? "Kliknij, żeby zobaczyć towar."
+                        : "Kliknij, żeby wypisać półki.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -210,21 +214,21 @@ public class ShopScreen extends ScreenHandler {
         boolean on = shop.staffed();
         ItemStack tag = new ItemStack(on ? Items.VILLAGER_SPAWN_EGG : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Shopkeeper").formatted(on ? Formatting.GREEN : Formatting.GRAY,
+                plain("Sprzedawca").formatted(on ? Formatting.GREEN : Formatting.GRAY,
                         Formatting.BOLD)
-                        .append(plain(on ? "   on the counter" : "   nobody")
+                        .append(plain(on ? "   za ladą" : "   brak")
                                 .formatted(Formatting.WHITE)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(TrapShops.KEEPER_WAGE + "e a day, out of the till.", Formatting.GRAY),
+                line(TrapShops.KEEPER_WAGE + "e dziennie, z kasy sklepu.", Formatting.GRAY),
                 Text.empty(),
-                line("Somebody stands at the counter and the", Formatting.DARK_GRAY),
-                line("shop draws far more custom.", Formatting.DARK_GRAY),
+                line("Stoi za ladą i sklep przyciąga", Formatting.DARK_GRAY),
+                line("dużo więcej klientów.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("It keeps trading while you're anywhere", Formatting.DARK_GRAY),
-                line("on the server -- but not while you're", Formatting.DARK_GRAY),
-                line("logged off.", Formatting.DARK_GRAY),
+                line("Sklep handluje, kiedy jesteś gdzie", Formatting.DARK_GRAY),
+                line("indziej na serwerze -- ale NIE po", Formatting.DARK_GRAY),
+                line("twoim wylogowaniu.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line(on ? "Click to let them go." : "Click to hire.", Formatting.YELLOW))));
+                line(on ? "Kliknij, żeby go zwolnić." : "Kliknij, żeby zatrudnić.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -234,16 +238,16 @@ public class ShopScreen extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain(entry.count() + "x " + entry.label()).formatted(Formatting.WHITE));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("They pay  ", Formatting.DARK_GRAY)
+                line("Klient płaci  ", Formatting.DARK_GRAY)
                         .append(plain((entry.price() + duty) + "e").formatted(Formatting.GREEN)),
-                line("You keep  ", Formatting.DARK_GRAY)
+                line("Ty dostajesz  ", Formatting.DARK_GRAY)
                         .append(plain(entry.price() + "e").formatted(Formatting.WHITE))
-                        .append(plain(duty > 0 ? "   " + duty + "e duty" : "")
+                        .append(plain(duty > 0 ? "   " + duty + "e podatku" : "")
                                 .formatted(Formatting.DARK_GRAY)),
                 Text.empty(),
                 line(entry.duty() == TrapCity.Duty.LUXURY
-                                ? "Over a counter, so it's clean and declared."
-                                : "Ordinary goods.",
+                                ? "Sprzedane przez ladę: czyste i zgłoszone."
+                                : "Zwykły towar.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -251,13 +255,13 @@ public class ShopScreen extends ScreenHandler {
     private ItemStack empty() {
         ItemStack tag = new ItemStack(Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Nothing on the shelves").formatted(Formatting.RED, Formatting.BOLD));
+                plain("Półki są puste").formatted(Formatting.RED, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Put a chest or barrel under this till,", Formatting.GRAY),
-                line("or under any shelf, and fill it.", Formatting.GRAY),
+                line("Kliknij PPM którąś ze swoich półek", Formatting.GRAY),
+                line("it. It holds stock like a chest.", Formatting.GRAY),
                 Text.empty(),
-                line("Food, blocks, tools -- and joints, buds", Formatting.DARK_GRAY),
-                line("and powder, sold clean and taxed.", Formatting.DARK_GRAY))));
+                line("Jedzenie, bloki, narzędzia -- a także skręty,", Formatting.DARK_GRAY),
+                line("susz i proszek: legalnie i z podatkiem.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -277,8 +281,8 @@ public class ShopScreen extends ScreenHandler {
         if (index == TILL_SLOT) {
             Text named = who.getMainHandStack().get(DataComponentTypes.CUSTOM_NAME);
             if (named == null || named.getString().isBlank()) {
-                who.sendMessage(plain("Hold something you've named in an anvil and click "
-                        + "this to name the shop.").formatted(Formatting.GRAY), true);
+                who.sendMessage(plain("Weź przedmiot nazwany na kowadle i kliknij "
+                        + "tutaj, żeby nazwać sklep.").formatted(Formatting.GRAY), true);
             } else {
                 TrapShops.rename(shop, named.getString());
                 who.getWorld().playSound(null, who.getBlockPos(),

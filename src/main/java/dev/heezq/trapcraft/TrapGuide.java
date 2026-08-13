@@ -100,9 +100,9 @@ public final class TrapGuide {
      */
     private static MutableText link() {
         return Text.empty()
-                .append(Text.literal("The Field Manual\n")
+                .append(Text.literal("Poradnik terenowy\n")
                         .formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(Text.literal("  Everything in the game, in one place.\n")
+                .append(Text.literal("  Cała gra opisana w jednym miejscu.\n")
                         .formatted(Formatting.GRAY))
                 .append(Text.literal("  " + WIKI)
                         .formatted(Formatting.GREEN, Formatting.UNDERLINE)
@@ -110,8 +110,8 @@ public final class TrapGuide {
                                 .withClickEvent(new net.minecraft.text.ClickEvent.OpenUrl(
                                         java.net.URI.create(WIKI)))
                                 .withHoverEvent(new net.minecraft.text.HoverEvent.ShowText(
-                                        Text.literal("Open it in your browser")))))
-                .append(Text.literal("\n  Books instead: ").formatted(Formatting.DARK_GRAY))
+                                        Text.literal("Otwórz w przeglądarce")))))
+                .append(Text.literal("\n  Wolisz książki: ").formatted(Formatting.DARK_GRAY))
                 .append(Text.literal("/guide").formatted(Formatting.GREEN)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/guide"))));
@@ -120,20 +120,20 @@ public final class TrapGuide {
     /** Bare /guide lists them rather than erroring at you. */
     private static int menu(net.minecraft.server.command.ServerCommandSource source) {
         source.sendFeedback(() -> Text.empty()
-                .append(Text.literal("The Trap House\n").formatted(Formatting.DARK_GREEN, Formatting.BOLD))
-                .append(pick("grower", "growing, curing, rolling, heat"))
-                .append(pick("refiner", "the coca line"))
-                .append(pick("chemist", "the poppy line, end to end"))
-                .append(pick("habit", "addiction, cravings, the street"))
-                .append(pick("street", "paranoia, the ledger, contracts"))
-                .append(pick("crew", "hiring hands, and what they cost"))
-                .append(pick("casino", "running a floor"))
-                .append(pick("city", "the purse, the duties, the shops"))
-                .append(pick("housing", "houses, grades, and who pays you"))
+                .append(Text.literal("Poradniki Trap House\n").formatted(Formatting.DARK_GREEN, Formatting.BOLD))
+                .append(pick("grower", "marihuana: uprawa, suszenie, skręty"))
+                .append(pick("refiner", "kokaina: liście, pasta, proszek"))
+                .append(pick("chemist", "heroina: mak, krok po kroku"))
+                .append(pick("habit", "nałóg, głód, klienci na ulicy"))
+                .append(pick("street", "rynek, sklep, zlecenia, hazard"))
+                .append(pick("crew", "najmowanie ludzi i ich pensje"))
+                .append(pick("casino", "prowadzenie kasyna"))
+                .append(pick("city", "kasa miasta, podatki, sklepy"))
+                .append(pick("housing", "domy, klasy domów i czynsz"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
-                        .append(Text.literal("  all of it, on a page\n")
+                        .append(Text.literal("  to samo na stronie WWW\n")
                                 .formatted(Formatting.DARK_GRAY))), false);
         return 1;
     }
@@ -144,14 +144,14 @@ public final class TrapGuide {
                 .styled(style -> style
                         .withClickEvent(new net.minecraft.text.ClickEvent.RunCommand("/guide " + type))
                         .withHoverEvent(new net.minecraft.text.HoverEvent.ShowText(
-                                Text.literal("Get the " + type + "'s handbook"))))
+                                Text.literal("Weź książkę: " + type))))
                 .append(Text.literal("  " + blurb + "\n").formatted(Formatting.DARK_GRAY));
     }
 
     private static int give(net.minecraft.server.command.ServerCommandSource source, ItemStack book) {
         ServerPlayerEntity player = source.getPlayer();
         if (player == null) {
-            source.sendFeedback(() -> Text.literal("players only"), false);
+            source.sendFeedback(() -> Text.literal("tylko dla graczy"), false);
             return 0;
         }
         if (!player.giveItemStack(book)) {
@@ -184,14 +184,14 @@ public final class TrapGuide {
         crew(pages);
         network(pages);
         supply(pages);
-        return book("Grower's Handbook", pages);
+        return book("Poradnik hodowcy", pages);
     }
 
     public static ItemStack createCoca() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         cocaCover(pages);
         coca(pages);
-        return book("Refiner's Handbook", pages);
+        return book("Poradnik rafinera", pages);
     }
 
     /**
@@ -202,7 +202,7 @@ public final class TrapGuide {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         poppyCover(pages);
         poppy(pages);
-        return book("Chemist's Handbook", pages);
+        return book("Poradnik chemika", pages);
     }
 
     /**
@@ -217,7 +217,7 @@ public final class TrapGuide {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         habitCover(pages);
         habit(pages);
-        return book("The Habit", pages);
+        return book("Nałóg", pages);
     }
 
     /**
@@ -232,14 +232,14 @@ public final class TrapGuide {
     public static ItemStack createCrew() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         pages.add(page(Text.empty()
-                .append(title("THE CREW"))
-                .append(Text.literal("\nforeman's handbook\n\n")
+                .append(title("EKIPA"))
+                .append(Text.literal("\nksiążka brygadzisty\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("Hands work a patch, take a wage, and walk if you "
-                        + "can't make it.\n\n"))
-                .append(hint("Growing: /guide grower"))));
+                .append(body("Najęty robotnik pracuje na wyznaczonej działce "
+                        + "i bierze wypłatę. Nie zapłacisz - odchodzi.\n\n"))
+                .append(hint("Uprawa: /guide grower"))));
         crewBook(pages);
-        return book("The Crew", pages);
+        return book("Ekipa", pages);
     }
 
     /**
@@ -253,157 +253,356 @@ public final class TrapGuide {
     public static ItemStack createCity() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         pages.add(page(Text.empty()
-                .append(title("THE CITY"))
-                .append(Text.literal("\nthe public purse\n\n")
+                .append(title("MIASTO"))
+                .append(Text.literal("\nkasa miejska\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("What the city charges, what it buys with it, "
-                        + "and the counters it taxes.\n\n"))
-                .append(hint("Houses: /guide housing"))));
+                .append(body("Jakie podatki pobiera miasto, na co je wydaje "
+                        + "i jak działają sklepy.\n\n"))
+                .append(hint("Domy: /guide housing"))));
         cityBook(pages);
-        return book("The City", pages);
+        return book("Miasto", pages);
     }
 
     /** Every page below reads its numbers off {@link HomeSurvey}. */
     private static void cityBook(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. THE VAULT\n\n"))
-                .append(body("Craft one, put it down. That founds the "
-                        + "city.\n\n"))
-                .append(body("Until then nothing is taxed and no house "
-                        + "can be registered.\n\n"))
-                .append(hint("One only. Right-click for the purse."))));
+                .append(title("1. SKARBIEC\n\n"))
+                .append(body("Zrób skarbiec i postaw go. To zakłada "
+                        + "miasto.\n\n"))
+                .append(hint("Może być tylko jeden na serwerze."))));
 
         pages.add(page(Text.empty()
-                .append(title("1b. THE PURSE\n\n"))
-                .append(body("Every duty paid goes in it.\n\n"))
-                .append(body("Anybody may take from it. Everybody is "
-                        + "told who did.\n\n"))
-                .append(hint("/city prints the books."))));
+                .append(title("1b. PO CO ON JEST\n\n"))
+                .append(body("Dopóki go nie ma, nikt nie płaci podatków "
+                        + "i nie da się zarejestrować domu.\n\n"))
+                .append(hint("PPM otwiera kasę miasta."))));
 
         pages.add(page(Text.empty()
-                .append(title("1c. THE DUTIES\n\n"))
-                .append(body("Essentials, materials, luxury: paid "
-                        + "buying.\n"))
-                .append(body("Income: out of what you're paid.\n"))
-                .append(body("Gaming: on every stake.\n\n"))
-                .append(warn("Customers and dealers pay nothing."))));
+                .append(title("2. KASA MIASTA\n\n"))
+                .append(body("Każdy zapłacony podatek trafia do wspólnej "
+                        + "kasy.\n\n"))
+                .append(body("Wypłacić z niej może KAŻDY gracz.\n\n"))
+                .append(warn("Wszyscy widzą, kto co wziął."))));
 
         pages.add(page(Text.empty()
-                .append(title("1d. THE BUDGET\n\n"))
-                .append(body("Rates move on their own every couple of "
-                        + "days, and it is announced.\n\n"))
-                .append(body("An empty purse puts them up. A full one "
-                        + "brings them down.\n\n"))
-                .append(hint("Each one has a floor and a ceiling."))));
+                .append(title("2b. RACHUNKI\n\n"))
+                .append(body("Komenda /city pokazuje stan kasy i historię "
+                        + "wpłat oraz wypłat.\n\n"))
+                .append(hint("Nic tu nie jest tajne."))));
 
         pages.add(page(Text.empty()
-                .append(title("1d2. PUBLIC WORKS\n\n"))
-                .append(body("The purse buys things for the whole town.\n\n"))
-                .append(body("Bought once, kept for good.\n\n"))
-                .append(hint("Anybody may buy one. Everybody is told."))));
+                .append(title("3. PODATKI\n\n"))
+                .append(body("Miasto pobiera trzy rodzaje:\n\n"))
+                .append(body("- od zakupów w sklepach\n"))
+                .append(body("- od zarobków\n"))
+                .append(body("- od zakładów w kasynie\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. OD ZAKUPÓW\n\n"))
+                .append(body("Osobne stawki dla jedzenia, materiałów "
+                        + "i towarów luksusowych.\n\n"))
+                .append(body("Płaci kupujący, przy kasie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3c. KTO NIE PŁACI\n\n"))
+                .append(body("Klienci podchodzący na ulicy i twoi "
+                        + "dilerzy nie płacą podatku.\n\n"))
+                .append(warn("Dlatego ulica daje brudną kasę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. SKĄD STAWKI\n\n"))
+                .append(body("Zmieniają się same, co kilka dni. Serwer "
+                        + "ogłasza to na czacie.\n\n"))
+                .append(hint("Nikt tym nie steruje ręcznie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. CO NA NIE WPŁYWA\n\n"))
+                .append(body("Pusta kasa miasta = podatki w górę.\n\n"))
+                .append(body("Pełna kasa = podatki w dół.\n\n"))
+                .append(hint("Każdy ma swój limit górny i dolny."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. INWESTYCJE\n\n"))
+                .append(body("Za pieniądze z kasy miasta kupuje się "
+                        + "ulepszenia dla całego miasta.\n\n"))
+                .append(body("Kupione raz, zostają na zawsze.\n\n"))
+                .append(hint("Kupić może każdy. Wszyscy dostają info."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. DOTACJE\n\n"))
+                .append(body("Z kasy miasta można też dorzucić pieniądze "
+                        + "do kasyna.\n\n"))
+                .append(body("Wybierasz kasyno, ustawiasz kwotę, "
+                        + "wysyłasz.\n\n"))
+                .append(warn("To prezent. Wraca tylko podatek."))));
 
         // Off the enum. The prose version named four and went stale the day a
         // fifth was added, which is the whole failure this book reads its
         // numbers from constants to avoid.
         MutableText works = Text.empty()
-                .append(title("1d3. WHAT IT BUYS\n\n"));
+                .append(title("7. CO MOŻNA KUPIĆ\n\n"));
         for (TrapCity.Work work : TrapCity.Work.values()) {
             works.append(body(work.display() + " " + work.cost() + "e\n"));
         }
         pages.add(page(works));
 
         pages.add(page(Text.empty()
-                .append(title("1g. THE OFFICE\n\n"))
-                .append(body("It reads what you earned against what you "
-                        + "declared.\n\n"))
-                .append(body("Over " + TrapLaw.LOOKS_AWAY + "e a day it "
-                        + "can't account for, it bills you.\n\n"))
-                .append(warn("Owe it and you're watched. /law pay"))));
+                .append(title("8. SZPITAL\n\n"))
+                .append(body("Jeśli zombie dopadnie lokatora, ten zamienia "
+                        + "się w zombie i tracisz go.\n\n"))
+                .append(warn("Szpital go leczy i ratuje."))));
 
         pages.add(page(Text.empty()
-                .append(title("1h. DIRTY MONEY\n\n"))
-                .append(body("The street pays in dirty emeralds.\n\n"))
-                .append(body("No shop takes them. They aren't money "
-                        + "yet.\n\n"))
-                .append(hint("Craft a laundry drum."))));
+                .append(title("8b. JAK ZAŁOŻYĆ\n\n"))
+                .append(body("Zrób blok szpitala, wejdź do gotowego "
+                        + "budynku i postaw go w środku.\n\n"))
+                .append(hint("Działa tak jak skrzynka pocztowa: sprawdza "
+                        + "pomieszczenie."))));
 
         pages.add(page(Text.empty()
-                .append(title("1h2. CARRYING IT\n\n"))
-                .append(body("Nine make a block, and a block makes nine "
-                        + "again. Same as emeralds.\n\n"))
-                .append(body("A big payout arrives in blocks already.\n\n"))
-                .append(hint("The drum takes blocks too. One counts as 9."))));
+                .append(title("8c. WYMAGANIA\n\n"))
+                .append(body("Łóżka: " + TrapHospitals.MIN_BEDS + "\n"))
+                .append(body("Podłoga: " + TrapHospitals.MIN_FLOOR
+                        + " kratek\n"))
+                .append(body("Zamknięte, z drzwiami\n"))
+                .append(body("Wszędzie światło\n\n"))
+                .append(hint("Zbudowane, nie wykopane w ziemi."))));
 
         pages.add(page(Text.empty()
-                .append(title("1i. THE DRUM\n\n"))
-                .append(body("Right-click holding dirty money. "
-                        + LaundryBlock.MIN_LOAD + " min, "
-                        + LaundryBlock.MAX_LOAD + " a load.\n\n"))
-                .append(body(LaundryBlock.washLabel(8) + " for 8. "
-                        + LaundryBlock.washLabel(LaundryBlock.MAX_LOAD)
-                        + " for a full one.\n\n"))
-                .append(hint("Up to " + Math.round(TrapLaw.WASH_CUT * 100)
-                        + "% down the drain, and you never know how much."))));
+                .append(title("8d. ILU NARAZ\n\n"))
+                .append(body("Tylu, ile jest łóżek. Chcesz leczyć więcej "
+                        + "osób jednocześnie - dostaw łóżka.\n\n"))
+                .append(hint("Reszta czeka w kolejce."))));
 
         pages.add(page(Text.empty()
-                .append(title("1i2. THE DRUM (2)\n\n"))
-                .append(body("Adding more restarts the clock. Load it all, "
-                        + "then walk away.\n\n"))
-                .append(body("Build more drums if one isn't enough.\n\n"))
-                .append(warn("Wash more than your shops took and the "
-                        + "office still asks."))));
+                .append(title("8e. KOSZT LECZENIA\n\n"))
+                .append(body("Kasa miasta płaci lekarzom "
+                        + TrapHospitals.FEE + "e dziennie za pacjenta.\n\n"))
+                .append(body("Chory leży " + TrapHospitals.STAY_DAYS
+                        + " dzień i przez ten czas nic nie zarabia.\n\n"))
+                .append(warn("Pusta kasa = brak leczenia."))));
 
         pages.add(page(Text.empty()
-                .append(title("1e. THE SHOPS\n\n"))
-                .append(body("Put a SHOP TILL down. That's the shop.\n\n"))
-                .append(body("Shelves within " + TrapShops.REACH
-                        + " blocks join it on their own.\n\n"))
-                .append(hint("Open a shelf and fill it. That's the stock."))));
+                .append(title("8f. BEZ LECZENIA\n\n"))
+                .append(body("Nieleczony chory umiera po "
+                        + TrapHospitals.LOST_DAYS + " dniach.\n\n"))
+                .append(warn("Pilnuj, żeby kasa miasta nie była pusta."))));
 
         pages.add(page(Text.empty()
-                .append(title("1e4. A SHOPKEEPER\n\n"))
-                .append(body("Hire one at the till for "
-                        + TrapShops.KEEPER_WAGE + "e a day.\n\n"))
-                .append(body("They stand at the counter and the shop draws far "
-                        + "more people.\n\n"))
-                .append(warn("Empty till, and they walk out."))));
+                .append(title("9. URZĄD SKARBOWY\n\n"))
+                .append(body("Urząd porównuje to, co naprawdę zarobiłeś, "
+                        + "z tym, co zgłosiłeś.\n\n"))
+                .append(body("Legalne są zarobki ze sklepów i pensje."))));
 
         pages.add(page(Text.empty()
-                .append(title("1e5. WHY BOTHER\n\n"))
-                .append(body("A staffed shop keeps trading while you are "
-                        + "anywhere on the server.\n\n"))
-                .append(body("Not while you're logged off.\n\n"))
-                .append(hint("Go mining. The shop stays open."))));
+                .append(title("9b. DOMIAR\n\n"))
+                .append(body("Jeśli dziennie masz ponad " + TrapLaw.LOOKS_AWAY
+                        + "e z nieznanego źródła, dostajesz rachunek.\n\n"))
+                .append(body("Płacisz komendą: /law pay\n\n"))
+                .append(warn("Dług = policja ma cię na oku."))));
 
         pages.add(page(Text.empty()
-                .append(title("1e2. THE TILL\n\n"))
-                .append(body("One register for the whole building.\n\n"))
-                .append(body("Open it and the takings are yours. Set your "
-                        + "prices there too.\n\n"))
-                .append(hint("Cheap draws more people. Dear takes more "
-                        + "off each."))));
+                .append(title("10. BRUDNA KASA\n\n"))
+                .append(body("Za towar sprzedany na ulicy dostajesz "
+                        + "BRUDNE SZMARAGDY.\n\n"))
+                .append(warn("Żaden sklep ich nie przyjmie. To jeszcze "
+                        + "nie są pieniądze."))));
 
         pages.add(page(Text.empty()
-                .append(title("1e3. OVER THE COUNTER\n\n"))
-                .append(body("Shelves sell joints, buds and powder too.\n\n"))
-                .append(body(Math.round(TrapShops.LEGAL_RATE * 100)
-                        + "% of the street -- but CLEAN, declared, taxed, "
-                        + "and no heat.\n\n"))
-                .append(hint("Slow money is the safe kind."))));
+                .append(title("10b. PRZENOSZENIE\n\n"))
+                .append(body("Dziewięć brudnych szmaragdów daje blok, "
+                        + "a blok rozkłada się z powrotem na dziewięć.\n\n"))
+                .append(hint("Duże wypłaty od razu przychodzą w blokach."))));
 
         pages.add(page(Text.empty()
-                .append(title("1f. WHO SHOPS\n\n"))
-                .append(body("The people in your houses. More housing, "
-                        + "more custom.\n\n"))
-                .append(body("A better grade holds more of them.\n\n"))
-                .append(warn("No houses, no shoppers. No vault, no city."))));
+                .append(title("11. PRALNIA\n\n"))
+                .append(body("Zrób BĘBEN PRALNICZY. Zamienia brudne "
+                        + "szmaragdy na zwykłe.\n\n"))
+                .append(body("Kliknij PPM trzymając brudną kasę.\n\n"))
+                .append(hint("Bloki też wchodzą."))));
 
         pages.add(page(Text.empty()
-                .append(title("1f2. AND WHO PAYS\n\n"))
-                .append(body("Residents work, and their wages are the only "
-                        + "money the town has.\n\n"))
-                .append(body("Taxed on the way in. Spent in your shops.\n\n"))
-                .append(hint("The whole of it: /guide housing"))));
+                .append(title("11b. ILE NARAZ\n\n"))
+                .append(body("Minimum " + LaundryBlock.MIN_LOAD
+                        + ", maksimum " + LaundryBlock.MAX_LOAD
+                        + " na jedno pranie.\n\n"))
+                .append(body("8 sztuk: " + LaundryBlock.washLabel(8) + "\n"))
+                .append(body("Pełny wsad: "
+                        + LaundryBlock.washLabel(LaundryBlock.MAX_LOAD)))));
+
+        pages.add(page(Text.empty()
+                .append(title("11c. PROWIZJA\n\n"))
+                .append(body("Pranie zabiera do "
+                        + Math.round(TrapLaw.WASH_CUT * 100)
+                        + "% wsadu.\n\n"))
+                .append(warn("Za każdym razem inaczej. Nie da się tego "
+                        + "przewidzieć."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11d. WAŻNE\n\n"))
+                .append(body("Dorzucenie kasy w trakcie prania zeruje "
+                        + "licznik czasu.\n\n"))
+                .append(body("Wrzuć wszystko naraz i odejdź.\n\n"))
+                .append(hint("Mało miejsca? Postaw drugi bęben."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11e. UWAGA\n\n"))
+                .append(body("Wyprane pieniądze urząd widzi jako "
+                        + "twój dochód.\n\n"))
+                .append(warn("Jeśli wyprałeś więcej, niż utargowały twoje "
+                        + "sklepy, i tak dostaniesz rachunek."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12. SKLEP\n\n"))
+                .append(body("Postaw KASĘ SKLEPOWĄ. To już jest sklep.\n\n"))
+                .append(body("Półki postawione w promieniu "
+                        + TrapShops.REACH + " bloków same się do niej "
+                        + "podłączą.\n\n"))
+                .append(hint("Nie trzeba ich niczym łączyć."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12b. TOWAR\n\n"))
+                .append(body("Otwórz półkę i włóż do niej przedmioty. "
+                        + "To, co w niej leży, jest na sprzedaż.\n\n"))
+                .append(hint("Pusta półka nic nie sprzedaje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12c. KASA\n\n"))
+                .append(body("Jedna kasa obsługuje cały budynek.\n\n"))
+                .append(body("Otwórz ją, żeby wybrać utarg i ustawić "
+                        + "ceny.\n\n"))
+                .append(hint("Nie stawiaj drugiej kasy obok."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12d. CENY\n\n"))
+                .append(body("Tanio: przychodzi więcej ludzi, ale każdy "
+                        + "zostawia mniej.\n\n"))
+                .append(body("Drogo: mniej ludzi, ale każdy płaci "
+                        + "więcej.\n\n"))
+                .append(hint("Sprawdź obie opcje i policz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13. SPRZEDAWCA\n\n"))
+                .append(body("Przy kasie możesz nająć sprzedawcę za "
+                        + TrapShops.KEEPER_WAGE + "e dziennie.\n\n"))
+                .append(body("Sklep przyciąga wtedy dużo więcej "
+                        + "klientów.\n\n"))
+                .append(warn("Pusta kasa - odchodzi."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13b. PO CO ON JEST\n\n"))
+                .append(body("Sklep ze sprzedawcą handluje dalej, kiedy "
+                        + "jesteś gdzie indziej na serwerze.\n\n"))
+                .append(body("Idź kopać - sklep zarabia."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13c. GRANICA\n\n"))
+                .append(body("Po twoim wylogowaniu sklep NIE handluje.\n\n"))
+                .append(warn("Sprzedawca nie zastąpi cię offline."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14. TOWAR Z UPRAWY\n\n"))
+                .append(body("Na półkach możesz sprzedawać też skręty, "
+                        + "susz i proszek.\n\n"))
+                .append(body("Płacą " + Math.round(TrapShops.LEGAL_RATE * 100)
+                        + "% ceny ulicznej.\n\n"))
+                .append(hint("Czyli mniej niż na ulicy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14b. DLACZEGO WARTO\n\n"))
+                .append(body("Ta kasa jest CZYSTA: nie trzeba jej prać, "
+                        + "urząd ją akceptuje.\n\n"))
+                .append(body("Nie ściąga też policji.\n\n"))
+                .append(warn("Wolniejszy zarobek, ale bezpieczny."))));
+
+        pages.add(page(Text.empty()
+                .append(title("15. KTO KUPUJE\n\n"))
+                .append(body("Lokatorzy z twoich domów.\n\n"))
+                .append(body("Więcej domów = więcej klientów w sklepie.\n\n"))
+                .append(warn("Brak domów = brak klientów."))));
+
+        pages.add(page(Text.empty()
+                .append(title("15b. SKĄD MAJĄ KASĘ\n\n"))
+                .append(body("Lokatorzy chodzą do pracy i dostają "
+                        + "pensje. To jedyne źródło pieniędzy w "
+                        + "mieście.\n\n"))
+                .append(hint("Całość: /guide housing"))));
+
+        pages.add(page(Text.empty()
+                .append(title("15c. OBIEG KASY\n\n"))
+                .append(body("Pensja -> podatek do miasta -> czynsz dla "
+                        + "ciebie -> reszta w twoich sklepach.\n\n"))
+                .append(hint("Dlatego domy są opłacalne."))));
+
+        pages.add(page(Text.empty()
+                .append(title("16. WPŁATY\n\n"))
+                .append(body("Do skarbca możesz dołożyć własne "
+                        + "pieniądze.\n\n"))
+                .append(body("Kliknij \"Wpłać\". PPM wrzuca wszystko "
+                        + "naraz.\n\n"))
+                .append(hint("Z tej kasy kupuje się inwestycje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17. POZIOMY\n\n"))
+                .append(body("Każdą inwestycję można ulepszać do poziomu "
+                        + TrapCity.TOP_TIER + ".\n\n"))
+                .append(body("Kolejny poziom kosztuje więcej niż "
+                        + "poprzedni.\n\n"))
+                .append(hint("Przychodnia II to lepsza Przychodnia."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17b. W TRAKCIE\n\n"))
+                .append(body("Stary poziom działa cały czas, kiedy "
+                        + "zbierasz na następny.\n\n"))
+                .append(hint("Nic nie jest wyłączane na czas budowy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("18. OPŁATY STAŁE\n\n"))
+                .append(body("Posiadanie kosztuje:\n\n"))
+                .append(body("Sklep: " + TrapCity.SHOP_RATE + "e dziennie\n"))
+                .append(body("Dom: " + TrapCity.HOUSE_RATE
+                        + "e dziennie za każdą klasę\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("18b. PRZYKŁAD\n\n"))
+                .append(body("Dom klasy 4 kosztuje cię "
+                        + (TrapCity.HOUSE_RATE * 4) + "e dziennie.\n\n"))
+                .append(warn("Idzie z twojej kieszeni do kasy miasta."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19. KLUB NOCNY\n\n"))
+                .append(body("Postaw BUDKĘ KLUBOWĄ w pomieszczeniu. "
+                        + "To już jest klub.\n\n"))
+                .append(body("Nic tu nie jest sprawdzane. Buduj jak "
+                        + "chcesz, zostaw miejsce do stania."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19b. WSTĘP\n\n"))
+                .append(body("Bilet od " + TrapClubs.DOOR[0] + "e do "
+                        + TrapClubs.DOOR[TrapClubs.DOOR.length - 1]
+                        + "e.\n\n"))
+                .append(body("Tanio: klub się zapełnia.\nDrogo: pustki.\n\n"))
+                .append(hint("Kliknij budkę, żeby zmienić cenę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19c. ILE USTAWIĆ\n\n"))
+                .append(body("Zależy, ilu ludzi mieszka w mieście.\n\n"))
+                .append(body("Mało mieszkańców - tanie bilety, inaczej "
+                        + "nikt nie przyjdzie.\n\n"))
+                .append(hint("Dużo mieszkańców - można podnieść."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19d. KTO PRZYCHODZI\n\n"))
+                .append(body("Twoi właśni lokatorzy. Przychodzą po "
+                        + "zmroku.\n\n"))
+                .append(warn("Ten, kto jest w klubie, nie siedzi w domu, "
+                        + "w sklepie ani przy automacie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19e. HAŁAS\n\n"))
+                .append(body("Pełny klub robi hałas i ściąga uwagę "
+                        + "policji na okolicę.\n\n"))
+                .append(warn("Nie buduj klubu obok plantacji."))));
     }
 
     /**
@@ -422,15 +621,14 @@ public final class TrapGuide {
     public static ItemStack createHousing() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         pages.add(page(Text.empty()
-                .append(title("HOUSING"))
-                .append(Text.literal("\nthe register\n\n")
+                .append(title("MIESZKANIA"))
+                .append(Text.literal("\nrejestr domów\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("A room somebody could live in is worth "
-                        + "something. Here is what it is worth, and why the "
-                        + "rest of the city cares.\n\n"))
-                .append(hint("The purse and the duties: /guide city"))));
+                .append(body("Jak zbudować dom, w którym ktoś zamieszka "
+                        + "i zacznie ci płacić czynsz.\n\n"))
+                .append(hint("Podatki: /guide city"))));
         housingBook(pages);
-        return book("Housing", pages);
+        return book("Mieszkania", pages);
     }
 
     /**
@@ -445,86 +643,117 @@ public final class TrapGuide {
      */
     private static void housingBook(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. WHY BUILD HOUSES\n\n"))
-                .append(body("People move into houses you build.\n\n"))
-                .append(body("They pay you rent, they go to work, and they "
-                        + "spend their wages in your shops.\n\n"))
-                .append(hint("More houses means more customers."))));
+                .append(title("1. PO CO DOMY\n\n"))
+                .append(body("Do domu, który zbudujesz, wprowadza się "
+                        + "mieszkaniec.\n\n"))
+                .append(body("Płaci ci czynsz KAŻDEGO DNIA.\n\n"))
+                .append(hint("Za darmo, bez twojej pracy."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. START: A MAILBOX\n\n"))
-                .append(body("Craft a mailbox.\n\n"))
-                .append(body("Stand INSIDE the room you built and right-click "
-                        + "it on the floor.\n\n"))
-                .append(hint("The city checks the room and writes it down."))));
+                .append(title("1b. I JESZCZE\n\n"))
+                .append(body("Mieszkaniec chodzi do pracy i wydaje "
+                        + "pensję w twoich sklepach.\n\n"))
+                .append(warn("Więcej domów = więcej klientów."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. MOVE IT OUTSIDE\n\n"))
-                .append(body("Crouch and right-click the mailbox with an "
-                        + "empty hand.\n\n"))
-                .append(body("Put it back down outside, by the door.\n\n"))
-                .append(hint("The house stays where you first checked it."))));
+                .append(title("2. KROK 1: SKRZYNKA\n\n"))
+                .append(body("Zrób SKRZYNKĘ POCZTOWĄ.\n\n"))
+                .append(body("Wejdź DO ŚRODKA gotowego pokoju i postaw "
+                        + "ją na podłodze.\n\n"))
+                .append(hint("Miasto sprawdzi pokój i zapisze go."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. LOST THE BOX?\n\n"))
-                .append(body("A new mailbox inside takes over from the old one.\n\n"))
-                .append(body("Put one outside and it joins your nearest house "
-                        + "that has none.\n\n"))
-                .append(hint("/homes demolish removes the house you're in."))));
+                .append(title("2b. KROK 2\n\n"))
+                .append(body("Kucnij i kliknij PPM pustą ręką w "
+                        + "skrzynkę - podniesiesz ją.\n\n"))
+                .append(body("Postaw ją na zewnątrz, przy drzwiach.\n\n"))
+                .append(hint("Dom zostaje tam, gdzie był."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. IT MUST BE SEALED\n\n"))
-                .append(body("Walls, a floor and a roof, with no holes.\n\n"))
-                .append(body("If daylight gets in, it is not a house yet.\n\n"))
-                .append(hint("A closed door counts as a wall."))));
+                .append(title("2c. ZGUBIŁEŚ SKRZYNKĘ?\n\n"))
+                .append(body("Postaw nową w środku - zastąpi starą.\n\n"))
+                .append(body("Postawiona na zewnątrz sama podłączy się "
+                        + "do najbliższego domu bez skrzynki."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. FIVE MUST-HAVES\n\n"))
-                .append(body("No holes.\n"))
-                .append(body(HomeSurvey.MIN_FLOOR + " blocks of floor.\n"))
-                .append(body("A bed.\n"))
-                .append(body("A door outside.\n"))
-                .append(body("A light.\n\n"))
-                .append(warn("Miss any one and it is not a house."))));
+                .append(title("2d. USUWANIE DOMU\n\n"))
+                .append(body("Stań w domu i wpisz:\n\n"))
+                .append(body("/homes demolish\n\n"))
+                .append(warn("Kasuje dom z rejestru. Lokatorzy znikają."))));
 
         pages.add(page(Text.empty()
-                .append(title("7. THE GRADE\n\n"))
-                .append(body("Every house gets a grade from 1 to "
+                .append(title("3. MUSI BYĆ SZCZELNY\n\n"))
+                .append(body("Ściany, podłoga i dach - bez dziur.\n\n"))
+                .append(body("Jeśli wpada światło dzienne przez szparę, "
+                        + "to jeszcze nie jest dom.\n\n"))
+                .append(hint("Zamknięte drzwi liczą się jak ściana."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. PIĘĆ WYMOGÓW\n\n"))
+                .append(body("1. Brak dziur\n"))
+                .append(body("2. " + HomeSurvey.MIN_FLOOR
+                        + " kratek podłogi\n"))
+                .append(body("3. Łóżko\n"))
+                .append(body("4. Drzwi na zewnątrz\n"))
+                .append(body("5. Światło\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. UWAGA\n\n"))
+                .append(warn("Brak choćby jednego z tych pięciu i dom "
+                        + "NIE zostanie zarejestrowany.\n\n"))
+                .append(hint("Skrzynka powie ci, czego brakuje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. KLASA DOMU\n\n"))
+                .append(body("Każdy dom dostaje klasę od 1 do "
                         + HomeSurvey.TOP_TIER + ".\n\n"))
-                .append(body("A higher grade means more rent for you and "
-                        + "better-paid people living there.\n\n"))
-                .append(hint("The mailbox tells you how to improve it."))));
+                .append(body("Wyższa klasa = wyższy czynsz dla ciebie."))));
 
         pages.add(page(Text.empty()
-                .append(title("8. RAISING IT\n\n"))
-                .append(body("You earn points for building well. Every 2 "
-                        + "points is one grade.\n\n"))
-                .append(body("There are " + HomeSurvey.topPoints()
-                        + " points to get.\n\n"))
-                .append(hint("The next page says how to earn them."))));
+                .append(title("5b. I LEPSI LUDZIE\n\n"))
+                .append(body("W lepszym domu mieszkają lepiej opłacani "
+                        + "ludzie.\n\n"))
+                .append(body("Mają więcej kasy na zakupy u ciebie.\n\n"))
+                .append(hint("Skrzynka mówi, co poprawić."))));
 
         pages.add(page(Text.empty()
-                .append(title("9. EARNING POINTS\n\n"))
-                .append(body("Build with crafted blocks, not dirt and "
-                        + "stone.\n\n"))
-                .append(body("Add a table, a chest, a furnace, a stall, a window.\n\n"))
-                .append(body("Use lots of different blocks, and light every "
-                        + "corner."))));
+                .append(title("6. JAK PODNIEŚĆ KLASĘ\n\n"))
+                .append(body("Za dobre budowanie dostajesz punkty.\n\n"))
+                .append(body("Każde 2 punkty to jedna klasa wyżej.\n\n"))
+                .append(hint("Do zdobycia jest " + HomeSurvey.topPoints()
+                        + " punktów."))));
 
         pages.add(page(Text.empty()
-                .append(title("10. SIZE IS A LIMIT\n\n"))
-                .append(body("However nicely you build it, a small room is a "
-                        + "low grade.\n\n"))
-                .append(body("Every storey counts. So does the square under "
-                        + "a chest.\n\n"))
-                .append(hint("A balcony counts too."))));
+                .append(title("6b. ZA CO PUNKTY\n\n"))
+                .append(body("- buduj z obrobionych bloków, nie z ziemi "
+                        + "i kamienia\n"))
+                .append(body("- używaj wielu różnych bloków\n"))
+                .append(body("- oświetl każdy kąt\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. MEBLE\n\n"))
+                .append(body("Punkty dają też sprzęty w środku:\n\n"))
+                .append(body("stół, skrzynia, piec, stragan, okno.\n\n"))
+                .append(hint("Im więcej różnych, tym lepiej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7. WIELKOŚĆ\n\n"))
+                .append(body("Mały pokój dostanie niską klasę, choćbyś "
+                        + "wykończył go idealnie.\n\n"))
+                .append(warn("Metraż to twardy limit."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7b. CO SIĘ LICZY\n\n"))
+                .append(body("Liczy się każde piętro.\n\n"))
+                .append(body("Kratka pod skrzynią też się liczy.\n\n"))
+                .append(hint("Balkon również."))));
 
         // Padded rather than joined with spaces: 9 and 560 are different
         // widths, so a plain concatenation walks the right-hand column
         // sideways down the page and stops reading as a table at all.
         MutableText lid = Text.empty()
-                .append(title("11. FLOOR NEEDED\n\n"))
-                .append(body("grade   floor\n"));
+                .append(title("8. ILE PODŁOGI\n\n"))
+                .append(body("klasa  kratki\n"));
         for (int step = 0; step < HomeSurvey.FLOOR_STEPS.length; step++) {
             lid.append(body(String.format("  %d     %4d\n",
                     step + 1, HomeSurvey.FLOOR_STEPS[step])));
@@ -532,41 +761,67 @@ public final class TrapGuide {
         pages.add(page(lid));
 
         pages.add(page(Text.empty()
-                .append(title("12. HOW MANY LIVE\n\n"))
-                .append(body("You need one bed each, " + HomeSurvey.FLOOR_PER_HEAD
-                        + " blocks of floor each, and a good enough "
-                        + "grade.\n\n"))
-                .append(warn("Whichever of those three is smallest is how "
-                        + "many people move in."))));
+                .append(title("9. ILU LOKATORÓW\n\n"))
+                .append(body("Liczą się trzy rzeczy:\n\n"))
+                .append(body("- jedno łóżko na osobę\n"))
+                .append(body("- " + HomeSurvey.FLOOR_PER_HEAD
+                        + " kratki podłogi na osobę\n"))
+                .append(body("- klasa domu\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("13. THEY MOVE IN\n\n"))
-                .append(body("Somebody turns up within a day of the house "
-                        + "being finished.\n\n"))
-                .append(body("They pay rent every day. Open the mailbox to "
-                        + "take it.\n\n"))
-                .append(hint("Each person pays. Four people, four rents."))));
+                .append(title("9b. KTÓRE DECYDUJE\n\n"))
+                .append(warn("To NAJMNIEJSZE z tych trzech.\n\n"))
+                .append(body("Dziesięć łóżek w małym pokoju nie da ci "
+                        + "dziesięciu lokatorów.\n\n"))
+                .append(hint("Dokładaj wszystko po równo."))));
 
         pages.add(page(Text.empty()
-                .append(title("14. THEIR WAGES\n\n"))
-                .append(body("They go out to work and are paid once a day.\n\n"))
-                .append(body("The city taxes that, then they pay you rent "
-                        + "out of what is left.\n\n"))
-                .append(hint("They spend the rest in shops and casinos."))));
+                .append(title("10. WPROWADZKA\n\n"))
+                .append(body("Znalezienie chętnego trwa kilka dni. Na "
+                        + "klasę 1 czeka się prawie tydzień.\n\n"))
+                .append(hint("Im wyższa klasa, tym szybciej ktoś przyjdzie."))));
 
         pages.add(page(Text.empty()
-                .append(title("15. BIGGER IS BETTER\n\n"))
-                .append(body("Grade sets the money. Extra floor space adds "
-                        + "more on top.\n\n"))
-                .append(body("A big grade 4 beats a small one, for rent and wages.\n\n"))
-                .append(hint("But grade 5 always beats any grade 4."))));
+                .append(title("10b. POTEM\n\n"))
+                .append(body("Od wprowadzki płacą czynsz codziennie.\n\n"))
+                .append(body("Czterech lokatorów to cztery czynsze.\n\n"))
+                .append(hint("Kasa leci sama."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10c. WYPROWADZKI\n\n"))
+                .append(body("Czasem lokator po prostu się wyprowadza, "
+                        + "nawet z dobrego domu.\n\n"))
+                .append(body("Dzień wcześniej zostawia list w "
+                        + "skrzynce.\n\n"))
+                .append(warn("Nic na to nie poradzisz. Wynajmij komuś "
+                        + "innemu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11. ICH PENSJE\n\n"))
+                .append(body("Lokatorzy chodzą do pracy i raz dziennie "
+                        + "dostają wypłatę.\n\n"))
+                .append(body("Kolejność: podatek dla miasta, potem "
+                        + "czynsz dla ciebie.\n\n"))
+                .append(hint("Resztę wydają w sklepach i kasynach."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12. WIĘKSZY = LEPSZY\n\n"))
+                .append(body("Klasa ustala podstawę. Dodatkowa podłoga "
+                        + "dokłada do niej bonus.\n\n"))
+                .append(body("Duża klasa 4 daje więcej niż mała klasa 4 "
+                        + "- i z czynszu, i z pensji."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12b. ALE\n\n"))
+                .append(warn("Klasa 5 zawsze bije każdą klasę 4.\n\n"))
+                .append(hint("Najpierw klasa, potem metraż."))));
 
         MutableText owed = Text.empty()
-                .append(title("16. RENT YOU GET\n\n"))
-                .append(body("grade small   big\n"));
+                .append(title("13. TWÓJ CZYNSZ\n\n"))
+                .append(body("klasa mały  duży\n"));
         MutableText paid = Text.empty()
-                .append(title("17. WHAT THEY EARN\n\n"))
-                .append(body("grade small   big\n"));
+                .append(title("14. ICH PENSJA\n\n"))
+                .append(body("klasa mały  duży\n"));
         for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
             int lo = HomeSurvey.FLOOR_STEPS[tier - 1];
             int hi = tier >= HomeSurvey.TOP_TIER ? HomeSurvey.topFloor()
@@ -578,46 +833,73 @@ public final class TrapGuide {
                     HomeSurvey.wageDue(tier, 1, lo) + "e",
                     HomeSurvey.wageDue(tier, 1, hi) + "e")));
         }
-        pages.add(page(owed.append(hint("\nPer person, per day."))));
-        pages.add(page(paid.append(hint("\nPer person, per day."))));
+        pages.add(page(owed.append(hint("\nNa osobę, na dzień."))));
+        pages.add(page(paid.append(hint("\nNa osobę, na dzień."))));
 
         pages.add(page(Text.empty()
-                .append(title("18. KEEP THEM HAPPY\n\n"))
-                .append(body("Dark corners and a house falling apart make "
-                        + "people unhappy.\n\n"))
-                .append(body("An unhappy person pays less rent, then "
-                        + "leaves.\n\n"))
-                .append(hint("They post letters. Read them in the mailbox."))));
+                .append(title("15. ZADOWOLENIE\n\n"))
+                .append(body("Ciemne kąty i rozwalający się dom psują "
+                        + "nastrój lokatora.\n\n"))
+                .append(body("Niezadowolony płaci MNIEJSZY czynsz, "
+                        + "a potem się wyprowadza."))));
 
         pages.add(page(Text.empty()
-                .append(title("19. NOT NEXT TO A GROW\n\n"))
-                .append(body("Nobody will live beside a cannabis or coca farm.\n\n"))
-                .append(body("A small one makes them miserable. A big one "
-                        + "makes them leave.\n\n"))
-                .append(warn("Keep your farm away from your houses."))));
+                .append(title("15b. SKARGI\n\n"))
+                .append(body("Lokatorzy zostawiają listy.\n\n"))
+                .append(body("Otwórz skrzynkę pocztową i przeczytaj "
+                        + "je - piszą wprost, co jest nie tak.\n\n"))
+                .append(hint("Napraw to, zanim odejdą."))));
 
         pages.add(page(Text.empty()
-                .append(title("20. IT IS CHECKED\n\n"))
-                .append(body("The city looks at every house every few "
-                        + "minutes.\n\n"))
-                .append(body("Break a wall or take the bed out and the grade "
-                        + "falls straight away.\n\n"))
-                .append(hint("/homes lists every house on the server."))));
+                .append(title("16. NIE PRZY PLANTACJI\n\n"))
+                .append(body("Nikt nie chce mieszkać obok uprawy "
+                        + "konopi ani koki.\n\n"))
+                .append(body("Mała uprawa: lokatorzy są nieszczęśliwi.\n"))
+                .append(body("Duża: wyprowadzają się.\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("21. TWO HOUSES\n\n"))
-                .append(body("Two houses cannot use the same room.\n\n"))
-                .append(body("Flats side by side are fine. So is one flat "
-                        + "above another.\n\n"))
-                .append(hint("A house reaches " + HomeSurvey.SPAN
-                        + " blocks from its mailbox."))));
+                .append(title("16b. WNIOSEK\n\n"))
+                .append(warn("Trzymaj plantację z dala od domów.\n\n"))
+                .append(hint("Osobna wyspa albo kilkaset bloków dalej."))));
 
         pages.add(page(Text.empty()
-                .append(title("22. THEY SHOP\n\n"))
-                .append(body("Right-click somebody empty-handed. They say "
-                        + "what they want.\n\n"))
-                .append(body("Hold it, click again, and they pay you.\n\n"))
-                .append(hint("They visit shops on their own too."))));
+                .append(title("17. KONTROLE\n\n"))
+                .append(body("Miasto sprawdza każdy dom co kilka "
+                        + "minut.\n\n"))
+                .append(body("Rozwalisz ścianę albo zabierzesz łóżko - "
+                        + "klasa spada natychmiast."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17b. PODGLĄD\n\n"))
+                .append(body("Komenda /homes pokazuje wszystkie domy "
+                        + "na serwerze.\n\n"))
+                .append(hint("Także cudze."))));
+
+        pages.add(page(Text.empty()
+                .append(title("18. DWA DOMY\n\n"))
+                .append(body("Dwa domy nie mogą dzielić tego samego "
+                        + "pokoju.\n\n"))
+                .append(body("Mieszkania obok siebie są OK. Jedno nad "
+                        + "drugim też."))));
+
+        pages.add(page(Text.empty()
+                .append(title("18b. ZASIĘG\n\n"))
+                .append(body("Dom sięga " + HomeSurvey.SPAN
+                        + " bloków od swojej skrzynki.\n\n"))
+                .append(hint("Dalsze pokoje już się nie liczą."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19. SPRZEDAŻ WPROST\n\n"))
+                .append(body("Kliknij lokatora PPM z pustą ręką - "
+                        + "powie, czego chce.\n\n"))
+                .append(body("Weź to do ręki, kliknij znowu, a on "
+                        + "zapłaci."))));
+
+        pages.add(page(Text.empty()
+                .append(title("19b. ALBO SAMI\n\n"))
+                .append(body("Lokatorzy i tak sami chodzą po twoich "
+                        + "sklepach.\n\n"))
+                .append(hint("Sprzedaż z ręki to tylko dodatek."))));
     }
 
     /**
@@ -631,137 +913,223 @@ public final class TrapGuide {
     public static ItemStack createCasino() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
         pages.add(page(Text.empty()
-                .append(title("THE HOUSE"))
-                .append(Text.literal("\ncasino handbook\n\n")
+                .append(title("KASYNO"))
+                .append(Text.literal("\nporadnik właściciela\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("Seven games, a vault, and a name you can lose "
-                        + "in an evening.\n\n"))
-                .append(hint("Machines: /guide street"))));
+                .append(body("Jak otworzyć kasyno, ile ono kosztuje "
+                        + "i skąd bierze się zysk.\n\n"))
+                .append(hint("Zasady gier: /guide street"))));
         casino(pages);
-        return book("The House", pages);
+        return book("Kasyno", pages);
     }
 
     private static void casino(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. OPENING UP\n\n"))
-                .append(body("Craft a "))
-                .append(item("Casino Licence"))
-                .append(body(" and right-click the air.\n\n"))
-                .append(body("Name it in an anvil first and the house takes "
-                        + "that name.\n\n"))
-                .append(hint("Whoever holds it owns the place."))));
+                .append(title("1. OTWARCIE\n\n"))
+                .append(body("Zrób przedmiot "))
+                .append(item("Licencja kasyna"))
+                .append(body(" i kliknij nim PPM w powietrze.\n\n"))
+                .append(hint("Kto trzyma licencję, ten jest właścicielem."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. WIRING UP\n\n"))
-                .append(body("Right-click any machine holding the card and it "
-                        + "pays into your vault.\n\n"))
-                .append(body("Every loss lands there. Every win comes out of "
-                        + "it.\n\n"))
-                .append(hint("Right-click again to cut it loose."))));
+                .append(title("1b. NAZWA\n\n"))
+                .append(body("Chcesz własną nazwę kasyna? Nazwij licencję "
+                        + "na kowadle ZANIM jej użyjesz.\n\n"))
+                .append(hint("Później się nie da."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. THE FLOAT\n\n"))
-                .append(body("A machine won't take a bet it can't pay off.\n\n"))
-                .append(body("Keep " + TrapMath.FLOAT_PER_MACHINE
-                        + "e a machine behind them. It's most of your "
-                        + "name as well as your table limit.\n\n"))
-                .append(warn("Thin vault, small tables, no trade."))));
+                .append(title("2. PODŁĄCZANIE\n\n"))
+                .append(body("Weź licencję do ręki i kliknij PPM w "
+                        + "automat. Od tej chwili należy do kasyna.\n\n"))
+                .append(hint("Kliknij drugi raz, żeby odłączyć."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. WHAT IT COSTS\n\n"))
-                .append(body("Every machine: " + TrapMath.MACHINE_UPKEEP
-                        + "e every 30s, lit or not.\n\n"))
-                .append(body("Somebody takes "
+                .append(title("2b. PRZEPŁYWY\n\n"))
+                .append(body("Wszystko, co gracz przegra, wpada do "
+                        + "twojego skarbca kasyna.\n\n"))
+                .append(body("Wszystko, co wygra, jest z niego "
+                        + "wypłacane."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. ZAPAS W KASIE\n\n"))
+                .append(body("Automat nie przyjmie zakładu, którego nie "
+                        + "byłby w stanie wypłacić.\n\n"))
+                .append(warn("Pusty skarbiec = niskie limity = nikt nie "
+                        + "gra."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. ILE TRZYMAĆ\n\n"))
+                .append(body("Licz " + TrapMath.FLOAT_PER_MACHINE
+                        + "e na każdy automat.\n\n"))
+                .append(body("Ta kwota ustala limit stołu i mocno wpływa "
+                        + "na twoją reputację.\n\n"))
+                .append(hint("Pięć automatów: "
+                        + (TrapMath.FLOAT_PER_MACHINE * 5) + "e."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. KOSZTY STAŁE\n\n"))
+                .append(body("Każdy automat kosztuje "
+                        + TrapMath.MACHINE_UPKEEP + "e co 30 sekund.\n\n"))
+                .append(warn("Płacisz też wtedy, gdy nikt na nim nie "
+                        + "gra."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. HARACZ\n\n"))
+                .append(body("Gang zabiera "
                         + Math.round(TrapMath.PROTECTION_RATE * 100)
-                        + "% of everything played, win or lose.\n\n"))
-                .append(warn("Miss the cut three times and they visit."))));
+                        + "% wszystkiego, co zostało obstawione.\n\n"))
+                .append(body("Niezależnie od tego, kto wygrał.\n\n"))
+                .append(warn("Trzy niezapłacone raty i przychodzą."))));
 
         pages.add(page(Text.empty()
-                .append(title("4b. THE BAR\n\n"))
-                .append(body("Wire a "))
+                .append(title("5. BAR\n\n"))
+                .append(body("Podłącz "))
                 .append(item("Bar"))
-                .append(body(" to the house and stock it. Everybody gets one, "
-                        + "and one off the shelf pours about "
-                        + TrapMath.SERVINGS_PER_ITEM + ".\n\n"))
-                .append(body("Holds " + TrapMath.BAR_SLOTS
-                        + " stacks. Wire a second for twice the room.\n\n"))
-                .append(warn("Dry bar: one go each and out."))));
+                .append(body(" licencją i wypełnij go jedzeniem.\n\n"))
+                .append(body("Każdy gość dostaje jedną kolejkę.\n\n"))
+                .append(hint("Jeden przedmiot z półki to ok. "
+                        + TrapMath.SERVINGS_PER_ITEM + " porcji."))));
 
         pages.add(page(Text.empty()
-                .append(title("4b2. WHAT TO STOCK\n\n"))
-                .append(body("Anything edible. Anything you grew.\n\n"))
-                .append(body("Your own product keeps them at the machines "
-                        + "far longer than bread does.\n\n"))
-                .append(hint("This is what the farm is for."))));
+                .append(title("5b. POJEMNOŚĆ\n\n"))
+                .append(body("Bar mieści " + TrapMath.BAR_SLOTS
+                        + " stacków.\n\n"))
+                .append(body("Podłącz drugi bar, żeby mieć dwa razy "
+                        + "tyle miejsca.\n\n"))
+                .append(warn("Pusty bar: goście wychodzą po jednej grze."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. THE PUNTERS\n\n"))
-                .append(body("Villagers wander in and play with their own "
-                        + "money.\n\n"))
-                .append(body("Busy after dark. At noon they're at work.\n\n"))
-                .append(hint("/floor shows the room."))));
+                .append(title("5c. CO WSTAWIĆ\n\n"))
+                .append(body("Cokolwiek jadalnego.\n\n"))
+                .append(body("Ale najlepiej TWÓJ WŁASNY TOWAR z "
+                        + "plantacji.\n\n"))
+                .append(hint("Po to właśnie jest uprawa."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. THE ROOM\n\n"))
-                .append(body("Quiet floor, big bets -- up to "
-                        + TrapMath.PUNTER_MAX_STAKE + "e.\n\n"))
-                .append(body("Packed floor, " + TrapMath.PUNTER_MIN_STAKE
-                        + "e a go. But a lot of them.\n\n"))
-                .append(hint("One machine, one player."))));
+                .append(title("5d. DLACZEGO TOWAR\n\n"))
+                .append(body("Goście siedzą przy automatach dużo dłużej "
+                        + "niż po chlebie.\n\n"))
+                .append(body("I odzyskują o "
+                        + Math.round(TrapMath.SERVED_EDGE_PRODUCT * 100)
+                        + " punktów mniej wygranych.\n\n"))
+                .append(hint("Czysty zysk dla kasyna."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. YOUR NAME\n\n"))
-                .append(body("Different games. A full vault. A machine free "
-                        + "when somebody walks in.\n\n"))
-                .append(warn("A queue at the door costs you most.\n\n"))
-                .append(hint("It falls twice as fast as it climbs."))));
+                .append(title("6. GRACZE\n\n"))
+                .append(body("Do kasyna przychodzą wieśniacy i grają za "
+                        + "własne pieniądze.\n\n"))
+                .append(body("Tłoczno po zmroku. W południe są w "
+                        + "pracy.\n\n"))
+                .append(hint("/floor pokazuje, co się dzieje na sali."))));
 
         pages.add(page(Text.empty()
-                .append(title("6b. THE REGULARS\n\n"))
-                .append(body("Held up by trade, forgotten in the quiet.\n\n"))
-                .append(body("Half an hour of nothing and they're gone.\n\n"))
-                .append(hint("Nobody keeps it at 100."))));
+                .append(title("6b. STAWKI\n\n"))
+                .append(body("Pusta sala: pojedyncze osoby, ale grają "
+                        + "grubo - do " + TrapMath.PUNTER_MAX_STAKE
+                        + "e.\n\n"))
+                .append(body("Pełna sala: po " + TrapMath.PUNTER_MIN_STAKE
+                        + "e, ale bardzo dużo osób."))));
 
         pages.add(page(Text.empty()
-                .append(title("7. WEAR\n\n"))
-                .append(body("Machines break. A broken one takes no bets.\n\n"))
-                .append(body("Hit it with a "))
-                .append(item("Miner's Hammer"))
-                .append(body(". The house pays.\n\n"))
-                .append(hint("Cheaper before it goes."))));
+                .append(title("6c. LIMIT SALI\n\n"))
+                .append(warn("Jeden automat obsługuje jedną osobę "
+                        + "naraz.\n\n"))
+                .append(hint("Więcej gości = potrzeba więcej automatów."))));
 
         pages.add(page(Text.empty()
-                .append(title("8. A PIT BOSS\n\n"))
-                .append(body(TrapMath.PIT_BOSS_HIRE + "e up front, "
-                        + TrapMath.PIT_BOSS_WAGE + "e a beat.\n\n"))
-                .append(body("Without one the staff skim and about one punter "
-                        + "in " + Math.round(1 / TrapMath.CHEAT_CHANCE)
-                        + " is counting.\n\n"))
-                .append(hint("A wage is flat. A cut isn't."))));
+                .append(title("7. REPUTACJA\n\n"))
+                .append(body("Reputacja rośnie, gdy masz:\n\n"))
+                .append(body("- różne rodzaje gier\n"))
+                .append(body("- pełny skarbiec\n"))
+                .append(body("- wolny automat dla wchodzącego\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("9. STANDING A ROUND\n\n"))
-                .append(body(TrapMath.COMP_COST_PER_MACHINE + "e a machine, "
-                        + "straight out of the vault.\n\n"))
-                .append(body("Buys +" + TrapMath.COMP_ADDICTION
-                        + " regulars and nothing else.\n\n"))
-                .append(hint("That is what a comp is."))));
+                .append(title("7b. CO JĄ PSUJE\n\n"))
+                .append(warn("Najbardziej szkodzi kolejka przy "
+                        + "drzwiach.\n\n"))
+                .append(body("Reputacja spada dwa razy szybciej, niż "
+                        + "rośnie.\n\n"))
+                .append(hint("Dostaw automaty, zanim zrobi się tłok."))));
 
         pages.add(page(Text.empty()
-                .append(title("10. RUNNING LOOSE\n\n"))
-                .append(body("The machines pay over the odds for "
-                        + TrapMath.LOOSE_BEATS / 2 + " minutes.\n\n"))
-                .append(body("+" + TrapMath.LOOSE_REP_BONUS + " to your name, "
-                        + "and the regulars build twice as fast.\n\n"))
-                .append(warn("You lose money. That's the point."))));
+                .append(title("8. STALI BYWALCY\n\n"))
+                .append(body("To osobny licznik. Rośnie, kiedy w kasynie "
+                        + "ktoś gra.\n\n"))
+                .append(body("Spada, kiedy sala stoi pusta.\n\n"))
+                .append(warn("Pół godziny bez gry i licznik jest "
+                        + "wyzerowany."))));
 
         pages.add(page(Text.empty()
-                .append(title("11. THE NUMBERS\n\n"))
-                .append(body("The villagers hand over about 3%. The lights "
-                        + "eat most of it.\n\n"))
-                .append(body("Your own play is kept out of the books. It's "
-                        + "your money in a circle.\n\n"))
-                .append(warn("A bad night really can lose money."))));
+                .append(title("8b. PO CO ONI\n\n"))
+                .append(body("Im wyższy licznik, tym częściej ktoś "
+                        + "wchodzi i tym dłużej zostaje.\n\n"))
+                .append(hint("Nikt nie utrzyma go na 100."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. ZUŻYCIE\n\n"))
+                .append(body("Automaty się psują. Zepsuty nie przyjmuje "
+                        + "zakładów.\n\n"))
+                .append(body("Napraw go, uderzając przedmiotem "))
+                .append(item("Młot górniczy"))
+                .append(body("."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9b. NAPRAWA\n\n"))
+                .append(body("Naprawę opłaca skarbiec kasyna.\n\n"))
+                .append(hint("Naprawa przed awarią jest tańsza niż po."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. SZEF SALI\n\n"))
+                .append(body("Koszt: " + TrapMath.PIT_BOSS_HIRE
+                        + "e na start, potem " + TrapMath.PIT_BOSS_WAGE
+                        + "e co takt.\n\n"))
+                .append(hint("Stała pensja, nie procent."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10b. PO CO ON JEST\n\n"))
+                .append(body("Bez niego obsługa podkrada z kasy.\n\n"))
+                .append(body("I mniej więcej co "
+                        + Math.round(1 / TrapMath.CHEAT_CHANCE)
+                        + " gracz oszukuje.\n\n"))
+                .append(warn("Przy dużym obrocie to droższe niż pensja."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11. DARMOWA KOLEJKA\n\n"))
+                .append(body("Kosztuje " + TrapMath.COMP_COST_PER_MACHINE
+                        + "e za automat, prosto ze skarbca.\n\n"))
+                .append(body("Daje +" + TrapMath.COMP_ADDICTION
+                        + " do stałych bywalców.\n\n"))
+                .append(warn("I nic poza tym. To całe działanie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12. LUŹNE AUTOMATY\n\n"))
+                .append(body("Na " + TrapMath.LOOSE_BEATS / 2
+                        + " minut automaty wypłacają więcej, niż "
+                        + "powinny.\n\n"))
+                .append(warn("Przez ten czas TRACISZ pieniądze."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12b. PO CO TO ROBIĆ\n\n"))
+                .append(body("+" + TrapMath.LOOSE_REP_BONUS
+                        + " do reputacji.\n\n"))
+                .append(body("Stali bywalcy przybywają dwa razy "
+                        + "szybciej.\n\n"))
+                .append(hint("Reklama, za którą płacisz wypłatami."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13. ILE SIĘ ZARABIA\n\n"))
+                .append(body("Kasyno zabiera graczom około 3% tego, co "
+                        + "obstawią.\n\n"))
+                .append(warn("Utrzymanie automatów zjada większość "
+                        + "tej marży."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13b. TWOJA GRA\n\n"))
+                .append(body("Twoje własne zakłady nie liczą się do "
+                        + "statystyk kasyna.\n\n"))
+                .append(body("To twoje pieniądze w kółko.\n\n"))
+                .append(warn("Słaby wieczór naprawdę może wyjść na "
+                        + "minus."))));
     }
 
     /**
@@ -779,387 +1147,536 @@ public final class TrapGuide {
         contracts(pages);
         market(pages);
         street(pages);
-        return book("Street Handbook", pages);
+        return book("Poradnik uliczny", pages);
     }
 
     private static void streetCover(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("THE TRAP HOUSE"))
-                .append(Text.literal("\nstreet handbook\n\n")
+                .append(title("ULICA"))
+                .append(Text.literal("\nporadnik ogólny\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("Nerves, inventory, and work. None of it cares which "
-                        + "product you're moving.\n\n"))
-                .append(hint("Growing: /guide grower\nRefining: /guide refiner"))));
+                .append(body("Nerwy, rynek, zlecenia i hazard. Działa tak "
+                        + "samo dla każdego towaru.\n\n"))
+                .append(hint("Uprawa: /guide grower"))));
     }
 
     private static void paranoia(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. PARANOIA\n\n"))
-                .append(body("Heat brings more than pillagers. It gets in your head.\n\n"))
-                .append(body("Watch the Nerves bar at the top of the screen.\n\n"))
-                .append(hint("None of it is real."))));
+                .append(title("1. PARANOJA\n\n"))
+                .append(body("Im większą masz uwagę policji, tym bardziej "
+                        + "odbija ci na punkcie nerwów.\n\n"))
+                .append(body("Pasek NERWY jest na górze ekranu.\n\n"))
+                .append(warn("To wszystko są złudzenia. Nic realnego."))));
 
         // Thresholds read from the code, so retuning the meter retunes the book.
-        MutableText tiers = Text.empty().append(title("1b. HOW BAD\n\n"));
-        String[] words = {"noises behind you", "footsteps, phantom light",
-                "blocks that aren't", "someone watching"};
+        MutableText tiers = Text.empty().append(title("1b. POZIOMY\n\n"));
+        String[] words = {"dźwięki za plecami", "kroki i błyski",
+                "bloki, których nie ma", "ktoś patrzy"};
         for (int tier = 0; tier < TrapParanoia.TIERS.length; tier++) {
             tiers.append(body(TrapParanoia.TIERS[tier] + ": " + words[tier] + "\n"));
         }
         pages.add(page(tiers.append(body("\n"))
-                .append(hint("Out of " + (int) TrapParanoia.MAX + "."))));
+                .append(hint("Skala do " + (int) TrapParanoia.MAX + "."))));
 
         pages.add(page(Text.empty()
-                .append(title("1c. WHAT HELPS\n\n"))
-                .append(body("Daylight. Torches. Sobriety.\n\n"))
-                .append(body("Better: a friend within "
-                        + TrapParanoia.COMPANY_RANGE + " blocks.\n\n"))
-                .append(item("Nerve Tonic"))
-                .append(body(" clears it "
-                        + TrapContent.NerveTonicItem.CALM_TICKS / 20 + "s.\n\n"))
-                .append(hint("Honey, sugar, flower."))));
+                .append(title("1c. CO POMAGA\n\n"))
+                .append(body("- światło dzienne\n"))
+                .append(body("- pochodnie\n"))
+                .append(body("- bycie na trzeźwo\n\n"))
+                .append(hint("Najlepiej: drugi gracz w promieniu "
+                        + TrapParanoia.COMPANY_RANGE + " bloków."))));
 
         pages.add(page(Text.empty()
-                .append(title("1d. ENOUGH\n\n"))
-                .append(body("Not for you? Turn it off:\n\n"))
+                .append(title("1c2. LEK\n\n"))
+                .append(item("Lek na nerwy"))
+                .append(body(" wycisza nerwy na "
+                        + TrapContent.NerveTonicItem.CALM_TICKS / 20
+                        + " sekund.\n\n"))
+                .append(hint("Miód, cukier, kwiatek."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1d. WYŁĄCZANIE\n\n"))
+                .append(body("Nie chcesz tego efektu? Wpisz:\n\n"))
                 .append(item("/paranoia\n\n"))
-                .append(body("Per player. Nobody else.\n\n"))
-                .append(hint("Also clear for a minute after respawn."))));
+                .append(body("Działa tylko na ciebie.\n\n"))
+                .append(hint("Po respawnie i tak masz minutę spokoju."))));
     }
 
     private static void market(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("4. THE MARKET\n\n"))
-                .append(body("Build a stall and somebody will trade with you.\n\n"))
-                .append(item("Wool Wool Wool\nLog  Emrld Log\nLog  Log  Log\n\n"))
-                .append(hint("Emerald block in the middle."))));
+                .append(title("4. RYNEK\n\n"))
+                .append(body("Postaw STRAGAN, żeby kupować i sprzedawać "
+                        + "przedmioty za szmaragdy.\n\n"))
+                .append(item("Wełna Wełna Wełna\nKłoda Szmar Kłoda\nKłoda Kłoda Kłoda"))));
 
         pages.add(page(Text.empty()
-                .append(title("4y. THE WIKI\n\n"))
-                .append(body("/wiki\n\n"))
-                .append(body("Every strain, price, tier and recipe on one "
-                        + "page, in a browser.\n\n"))
-                .append(hint("Same numbers as these books."))));
+                .append(title("4a. HANDEL\n\n"))
+                .append(body("LPM kupuje jedną partię. Shift+LPM cztery.\n\n"))
+                .append(body("PPM sprzedaje jedną sztukę z powrotem.\n\n"))
+                .append(warn("Odkupują za jakąś jedną trzecią ceny "
+                        + "sprzedaży."))));
 
         pages.add(page(Text.empty()
-                .append(title("4z. THE BOOKS\n\n"))
-                .append(body("Every emerald earned is written down, tagged "
-                        + "with the job it came from.\n\n"))
-                .append(body("/earnings  -  today, everybody.\n\n"))
-                .append(hint("Full history in the world folder."))));
+                .append(title("4b. CENY\n\n"))
+                .append(body("Ceny zmieniają się co 30 sekund. Stój i "
+                        + "patrz, a zobaczysz ruch.\n\n"))
+                .append(body("Każdy przedmiot ma własny wykres.\n\n"))
+                .append(hint("Wszyscy widzą te same ceny."))));
 
         pages.add(page(Text.empty()
-                .append(title("4a. YOUR STALL\n\n"))
-                .append(body("Put a chest UNDER the one you placed. The "
-                        + "contents go on sale.\n\n"))
-                .append(body("Others pay " + Math.round(TrapMath.STALL_RATE * 100)
-                        + "%. Right-click yours for the till.\n\n"))
-                .append(hint("/stalls finds everybody else's."))));
+                .append(title("4b2. TWOJE ZAKUPY\n\n"))
+                .append(body("Kupowanie natychmiast podbija cenę tego "
+                        + "przedmiotu. Sprzedawanie ją zbija.\n\n"))
+                .append(body("Wykupisz całą półkę - ostatnia partia "
+                        + "będzie droższa niż pierwsza."))));
 
         pages.add(page(Text.empty()
-                .append(title("4a2. WHY BOTHER\n\n"))
-                .append(body("The counter pays you "
+                .append(title("4b3. POWRÓT DO NORMY\n\n"))
+                .append(body("Ten efekt zanika z czasem.\n\n"))
+                .append(hint("Wróć później, cena będzie z powrotem "
+                        + "normalna."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c. INDEKS\n\n"))
+                .append(body("Im więcej szmaragdów krąży po serwerze, "
+                        + "tym wszystko droższe.\n\n"))
+                .append(body("Wypłaty dodają szmaragdy. Wydawanie i "
+                        + "przegrywanie je usuwa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c2. SCHOWANE\n\n"))
+                .append(warn("Szmaragdy w skrzyniach też się liczą.\n\n"))
+                .append(hint("Chomikowanie nie ukrywa ich przed "
+                        + "indeksem."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. PORTFEL\n\n"))
+                .append(item("Nić   Bryłka Nić\nSkóra Szmar  Skóra\nSkóra Skóra  Skóra\n\n"))
+                .append(body("Mieści dowolną ilość szmaragdów w jednym "
+                        + "slocie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d2. OBSŁUGA\n\n"))
+                .append(body("PPM otwiera portfel.\n\n"))
+                .append(body("Jeden przycisk wrzuca do niego wszystkie "
+                        + "szmaragdy, jakie masz przy sobie.\n\n"))
+                .append(hint("Bloki liczą się po dziewięć, w obie "
+                        + "strony."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d3. WAŻNE\n\n"))
+                .append(body("Pieniędzmi z portfela normalnie płacisz.\n\n"))
+                .append(hint("Sklepy i automaty biorą je same z "
+                        + "portfela."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. WŁASNY STRAGAN\n\n"))
+                .append(body("Postaw skrzynię POD swoim straganem.\n\n"))
+                .append(body("Wszystko, co w niej leży, idzie na "
+                        + "sprzedaż dla innych graczy.\n\n"))
+                .append(hint("PPM na własnym straganie otwiera utarg."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. PO CO TO KOMU\n\n"))
+                .append(body("Lada NPC płaci ci tylko "
                         + Math.round(TrapMath.SELL_RATE * 100)
-                        + "% and charges them 100%.\n\n"))
-                .append(body("Through a stall they pay "
-                        + Math.round(TrapMath.STALL_RATE * 100) + "% and you keep "
+                        + "% ceny, a od kupującego bierze 100%.\n\n"))
+                .append(body("To spora strata na obie strony."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. PRZEZ STRAGAN\n\n"))
+                .append(body("Kupujący płaci tylko "
+                        + Math.round(TrapMath.STALL_RATE * 100) + "%.\n\n"))
+                .append(body("Ty zatrzymujesz "
                         + Math.round((TrapMath.STALL_RATE
-                        - TrapMath.STALL_RATE * TrapMath.STALL_FEE) * 100) + "%.\n\n"))
-                .append(hint("You both do better. Nobody loses."))));
+                        - TrapMath.STALL_RATE * TrapMath.STALL_FEE) * 100)
+                        + "%.\n\n"))
+                .append(hint("Obaj wychodzicie lepiej niż na ladzie."))));
 
         pages.add(page(Text.empty()
-                .append(title("4b. PRICES\n\n"))
-                .append(body("They step every 30 seconds. Watch and you'll "
-                        + "see them move.\n\n"))
-                .append(body("Each item walks its own path.\n\n"))
-                .append(hint("Nobody is quoted a different price to you."))));
+                .append(title("5d. CUDZE STRAGANY\n\n"))
+                .append(body("Komenda /stalls pokazuje wszystkie stragany "
+                        + "innych graczy.\n\n"))
+                .append(hint("Warto zajrzeć przed zakupami u NPC."))));
 
         pages.add(page(Text.empty()
-                .append(title("4c. THE INDEX\n\n"))
-                .append(body("More emeralds about means dearer everything.\n\n"))
-                .append(body("Spending and losing take them out. Getting "
-                        + "paid puts them in.\n\n"))
-                .append(hint("Chests count. Hoarding is not hiding."))));
+                .append(title("6. LADA (LEJ)\n\n"))
+                .append(body("Lej z przodu straganu przyjmuje WSZYSTKO, "
+                        + "nie tylko rzeczy z listy.\n\n"))
+                .append(body("Wsyp wszystko i sprzedaj za jednym razem.\n\n"))
+                .append(hint("Shift+LPM napełnia go szybko."))));
 
         pages.add(page(Text.empty()
-                .append(title("4c2. THE WALLET\n\n"))
-                .append(item("String Nugget String\nLeather Emrld Leather\nLeather Leather Leather\n\n"))
-                .append(body("Holds any amount in one slot.\n\n"))
-                .append(hint("Right-click it to open."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4c3. BANKING\n\n"))
-                .append(body("One button puts every emerald you're carrying "
-                        + "away. Buttons take it back out.\n\n"))
-                .append(body("Blocks count as nine, both ways.\n\n"))
-                .append(warn("Money in it still spends. Shops take it."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4d. ORDER FLOW\n\n"))
-                .append(body("Buying pushes that price up. Selling pushes "
-                        + "it down. At once.\n\n"))
-                .append(body("Clear a shelf and the last lot costs more "
-                        + "than the first.\n\n"))
-                .append(warn("It fades. Come back later."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4d2. THE COUNTER\n\n"))
-                .append(body("The hopper on the shopfront takes anything, "
-                        + "not just what's listed.\n\n"))
-                .append(body("Tip it all in, sell in one go.\n\n"))
-                .append(hint("Shift-click fills it fast."))));
-
-        pages.add(page(Text.empty()
-                .append(title("4d3. WHAT IT PAYS\n\n"))
-                .append(body("Listed goods fetch the market price.\n\n"))
-                .append(body("Anything else is valued on the spot, at "
+                .append(title("6b. ILE PŁACI\n\n"))
+                .append(body("Rzeczy z listy: pełna cena rynkowa.\n\n"))
+                .append(body("Wszystko inne wyceniane na miejscu, po "
                         + Math.round(TrapMath.SCRAP_RATE * 100) + "%.\n\n"))
-                .append(warn("Junk is worth pennies. Sell it by the stack."))));
+                .append(warn("Za śmieci grosze. Sprzedawaj stackami."))));
 
         pages.add(page(Text.empty()
-                .append(title("4d4. REFUSALS\n\n"))
-                .append(body("It won't take money, a full wallet, a loaded "
-                        + "shulker, or damaged gear.\n\n"))
-                .append(body("Those come straight back.\n\n"))
-                .append(hint("It tells you why in chat."))));
+                .append(title("6c. CZEGO NIE WEŹMIE\n\n"))
+                .append(body("- pieniędzy\n"))
+                .append(body("- pełnego portfela\n"))
+                .append(body("- shulkera z zawartością\n"))
+                .append(body("- zniszczonego sprzętu\n\n"))
+                .append(hint("Wracają do ciebie, z powodem na czacie."))));
 
         pages.add(page(Text.empty()
-                .append(title("4e. DEALING\n\n"))
-                .append(body("Click to buy a lot. Shift for four.\n\n"))
-                .append(body("Right-click to sell one back.\n\n"))
-                .append(warn("They buy at about a third of what they sell for."))));
+                .append(title("7. LOKATY\n\n"))
+                .append(body("Na giełdzie możesz odłożyć szmaragdy na "
+                        + "dzień, trzy dni albo tydzień.\n\n"))
+                .append(hint("Nie da się wypłacić przed terminem."))));
 
         pages.add(page(Text.empty()
-                .append(title("4f. THE EXCHANGE\n\n"))
-                .append(body("Put emeralds away for a day, three, or a week.\n\n"))
-                .append(body("You get more back if the index rose while you waited.\n\n"))
-                .append(warn("And less if it fell. No early withdrawals."))));
+                .append(title("7b. ZYSK LUB STRATA\n\n"))
+                .append(body("Jeśli indeks wzrósł w tym czasie - "
+                        + "dostajesz więcej.\n\n"))
+                .append(warn("Jeśli spadł - dostajesz mniej. To nie jest "
+                        + "gwarantowany zysk."))));
 
         pages.add(page(Text.empty()
-                .append(title("4g. LUCKY STREAK\n\n"))
-                .append(body("A two-block cabinet. Needs headroom.\n\n"))
-                .append(body("Lines, blocks, crosses, stars, Zs, corners.\n\n"))
-                .append(hint("Winning squares glow. No glow, no win."))));
+                .append(title("8. HISTORIA ZAROBKÓW\n\n"))
+                .append(body("Każdy zarobiony szmaragd jest zapisany "
+                        + "razem ze źródłem.\n\n"))
+                .append(body("/earnings - dzisiejszy dzień, wszyscy.\n\n"))
+                .append(hint("Pełna historia leży w folderze świata."))));
 
         pages.add(page(Text.empty()
-                .append(title("4g2. COMBOS\n\n"))
-                .append(body("Separate wins on one board both pay.\n\n"))
-                .append(body("Three diamonds across and three stars down is "
-                        + "two wins, not one.\n\n"))
-                .append(hint("A shape pays once, not for its own lines too."))));
+                .append(title("8b. STRONA WWW\n\n"))
+                .append(body("/wiki\n\n"))
+                .append(body("Wszystkie odmiany, ceny, poziomy i "
+                        + "receptury na jednej stronie.\n\n"))
+                .append(hint("Te same liczby co w tych książkach."))));
 
         pages.add(page(Text.empty()
-                .append(title("4h. ROULETTE\n\n"))
-                .append(item("Gold  Iron  Gold\nGreen Green Green\nPlank Plank Plank\n\n"))
-                .append(body("A table, not a cabinet. Green wool.\n\n"))
-                .append(hint("Any planks will do."))));
+                .append(title("9. JEDNORĘKI BANDYTA\n\n"))
+                .append(body("Szafa wysoka na dwa bloki - musi mieć "
+                        + "miejsce nad sobą.\n\n"))
+                .append(hint("Wygrywające pola świecą. Nie świeci - "
+                        + "nie ma wygranej."))));
 
         pages.add(page(Text.empty()
-                .append(title("4h2. THE FELT\n\n"))
-                .append(body("Click a number or an outside bet to put a chip "
-                        + "down. As many as you like.\n\n"))
-                .append(body("Right-click takes one back.\n\n"))
-                .append(hint("The chip button sets how much each click is."))));
+                .append(title("9b. UKŁADY\n\n"))
+                .append(body("Płacą: linie, kwadraty, krzyże, gwiazdy, "
+                        + "kształty Z i rogi.\n\n"))
+                .append(hint("Wszystko jest podświetlane, więc widać, "
+                        + "za co dostałeś."))));
 
         pages.add(page(Text.empty()
-                .append(title("4h3. ONE ZERO\n\n"))
-                .append(body("A number pays " + (TrapMath.ROULETTE_STRAIGHT - 1)
-                        + " to 1. Red, black, odd, even and the halves pay "
-                        + "even money.\n\n"))
-                .append(warn("Zero takes every outside bet. That is the "
-                        + "whole edge."))));
+                .append(title("9c. KILKA NARAZ\n\n"))
+                .append(body("Dwa osobne układy na jednej planszy płacą "
+                        + "oba.\n\n"))
+                .append(body("Trzy diamenty w poziomie i trzy gwiazdki "
+                        + "w pionie to dwie wygrane."))));
 
         pages.add(page(Text.empty()
-                .append(title("4h4. THE SAME BET\n\n"))
-                .append(body("Every bet on the table returns "
+                .append(title("9d. WYJĄTEK\n\n"))
+                .append(warn("Jeden kształt płaci raz.\n\n"))
+                .append(body("Nie dostaniesz dodatkowo za linie, które "
+                        + "ten kształt zawiera."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9e. WYPŁATY\n\n"))
+                .append(body("Około " + Math.round(TrapMath.slotWinRate(5) * 100)
+                        + " zakręceń na 100 coś wypłaca - i nigdy mniej "
+                        + "niż twoja stawka.\n\n"))
+                .append(hint("Tęczowe szybki i fajerwerki = duża "
+                        + "wygrana."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9f. PRZEWAGA KASYNA\n\n"))
+                .append(warn("Kasyno i tak zatrzymuje około "
+                        + Math.round((1.0f - TrapMath.slotRtp(5)) * 100)
+                        + "%.\n\n"))
+                .append(body("Zawsze tak jest. Na dłuższą metę "
+                        + "przegrywasz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9g. CZTERY ROZMIARY\n\n"))
+                .append(body("Przycisk obok stawki zmienia planszę: "
+                        + "2x2, 3x3, 4x4, 5x5.\n\n"))
+                .append(body("Mała: szybka, płaci za pary.\n"))
+                .append(body("Duża: mieści wszystkie kształty.\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. RULETKA\n\n"))
+                .append(item("Złoto  Żelazo Złoto\nZielona Zielona Zielona\nDeska  Deska  Deska\n\n"))
+                .append(body("Zielona wełna. Deski dowolne."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10b. OBSTAWIANIE\n\n"))
+                .append(body("Kliknij liczbę albo pole zewnętrzne, żeby "
+                        + "położyć żeton. Ile chcesz.\n\n"))
+                .append(body("PPM zabiera jeden żeton z powrotem.\n\n"))
+                .append(hint("Przycisk żetonu ustala wartość kliknięcia."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10c. WYPŁATY\n\n"))
+                .append(body("Pojedyncza liczba płaci "
+                        + (TrapMath.ROULETTE_STRAIGHT - 1) + " do 1.\n\n"))
+                .append(body("Czerwone, czarne, parzyste, nieparzyste "
+                        + "i połówki płacą 1 do 1."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10d. ZERO\n\n"))
+                .append(warn("Na zerze przepadają wszystkie zakłady "
+                        + "zewnętrzne.\n\n"))
+                .append(body("Na tym polega cała przewaga kasyna w "
+                        + "ruletce."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10e. KTÓRY ZAKŁAD\n\n"))
+                .append(body("Każdy zakład na tym stole zwraca "
                         + Math.round(TrapMath.rouletteReturnToPlayer("red") * 100)
                         + "%.\n\n"))
-                .append(body("Straight up or flat on red, the edge is "
-                        + "identical.\n\n"))
-                .append(hint("Shift-click SPIN repeats your last bet."))));
+                .append(body("Pojedyncza liczba czy czerwone - "
+                        + "dokładnie ta sama przewaga kasyna.\n\n"))
+                .append(hint("Shift+LPM na SPIN powtarza ostatni zakład."))));
 
         pages.add(page(Text.empty()
-                .append(title("4i. THE DROP\n\n"))
-                .append(item("Plank Iron  Plank\nGlass Dmnd  Glass\nPlank Iron  Plank\n\n"))
-                .append(body("Two blocks tall. Needs headroom.\n\n"))
-                .append(hint("A ball, some pegs, nine slots."))));
+                .append(title("11. PLINKO\n\n"))
+                .append(item("Deska Żelazo Deska\nSzkło Diament Szkło\nDeska Żelazo Deska\n\n"))
+                .append(body("Wysokie na dwa bloki. Zostaw miejsce nad."))));
 
         pages.add(page(Text.empty()
-                .append(title("4i2. THE ODDS\n\n"))
-                .append(body("Eight bounces, all coin flips. Nothing "
-                        + "is decided first.\n\n"))
-                .append(body("The middle catches 70 in 256 and pays "
-                        + "least. Each edge catches one.\n\n"))
-                .append(warn("You can see the odds. That's the point."))));
+                .append(title("11b. JAK DZIAŁA\n\n"))
+                .append(body("Kulka spada przez kołki i wpada do jednej "
+                        + "z dziewięciu przegródek.\n\n"))
+                .append(body("Osiem odbić, każde to rzut monetą.\n\n"))
+                .append(hint("Nic nie jest ustalane z góry."))));
 
         pages.add(page(Text.empty()
-                .append(title("4j. THE CLIMB\n\n"))
-                .append(item("Iron  Iron  Iron\nGold  Hook  Gold\nIron  Iron  Iron\n\n"))
-                .append(body("A strongbox with three locks.\n\n"))
-                .append(hint("Six rungs. One bad door on each."))));
+                .append(title("11c. SZANSE\n\n"))
+                .append(body("Środek łapie 70 kulek na 256 i płaci "
+                        + "najmniej.\n\n"))
+                .append(body("Skrajne przegródki łapią po jednej na 256 "
+                        + "i płacą najwięcej."))));
 
         pages.add(page(Text.empty()
-                .append(title("4j2. WHEN TO STOP\n\n"))
-                .append(body("Open a door. Survive and you may climb "
-                        + "again, or take the money.\n\n"))
-                .append(body("Every rung has the same edge.\n\n"))
-                .append(warn("So there is no clever height. Only nerve."))));
+                .append(title("12. WSPINACZKA\n\n"))
+                .append(item("Żelazo Żelazo Żelazo\nZłoto  Hak    Złoto\nŻelazo Żelazo Żelazo\n\n"))
+                .append(body("Sejf z trzema zamkami."))));
 
         pages.add(page(Text.empty()
-                .append(title("4j3. TWO LADDERS\n\n"))
-                .append(body("Steady: four doors, tops out at "
+                .append(title("12b. ZASADY\n\n"))
+                .append(body("Sześć szczebli. Na każdym otwierasz jedne "
+                        + "drzwi - jedne z nich są złe.\n\n"))
+                .append(body("Przeżyjesz: wspinasz się dalej albo "
+                        + "zabierasz kasę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12c. KIEDY PRZESTAĆ\n\n"))
+                .append(body("Każdy szczebel ma DOKŁADNIE taką samą "
+                        + "przewagę kasyna.\n\n"))
+                .append(warn("Nie ma sprytnej wysokości. To czysta "
+                        + "loteria."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12d. DWIE DRABINY\n\n"))
+                .append(body("Spokojna: 4 drzwi, maks. "
                         + Math.round(TrapMath.climbMultiplier(0, TrapMath.CLIMB_RUNGS))
-                        + "x.\n\n"))
-                .append(body("Reckless: three doors, tops out at "
+                        + "x stawki.\n\n"))
+                .append(body("Ryzykowna: 3 drzwi, maks. "
                         + Math.round(TrapMath.climbMultiplier(1, TrapMath.CLIMB_RUNGS))
-                        + "x.\n\n"))
-                .append(hint("Same bet either way. Wilder, not better."))));
+                        + "x stawki.\n\n"))
+                .append(hint("Ta sama średnia. Tylko większe wahania."))));
 
         pages.add(page(Text.empty()
-                .append(title("4k. COIN TOSS\n\n"))
-                .append(item("  -  Gold   -\nGreen Green Green\nPlank Plank Plank\n\n"))
-                .append(body("Heads, tails, or the rim.\n\n"))
-                .append(hint("The rim pays " + (int) TrapMath.TOSS_EDGE_PAY
-                        + "x and lands about "
-                        + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0 + "%."))));
+                .append(title("13. RZUT MONETĄ\n\n"))
+                .append(item("  -   Złoto   -\nZielona Zielona Zielona\nDeska  Deska  Deska\n\n"))
+                .append(body("Obstawiasz orła, reszkę albo kant."))));
 
         pages.add(page(Text.empty()
-                .append(title("4l. BLACKJACK\n\n"))
-                .append(item("Paper Plank Paper\nGreen Green Green\nPlank Plank Plank\n\n"))
-                .append(body("Hit, stand or double. Dealer stands on "
+                .append(title("13b. KANT\n\n"))
+                .append(body("Kant płaci " + (int) TrapMath.TOSS_EDGE_PAY
+                        + "x stawki.\n\n"))
+                .append(warn("Wypada w około "
+                        + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0
+                        + "% rzutów."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14. BLACKJACK\n\n"))
+                .append(item("Papier Deska Papier\nZielona Zielona Zielona\nDeska  Deska  Deska\n\n"))
+                .append(body("Dobierasz, pasujesz albo podwajasz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14b. ZASADY STOŁU\n\n"))
+                .append(body("Krupier zatrzymuje się na "
                         + TrapMath.DEALER_STANDS + ".\n\n"))
-                .append(warn("Blackjack pays six to five here, not three to two."))));
+                .append(warn("Blackjack płaci tu 6 do 5, a nie 3 do 2. "
+                        + "To gorzej dla gracza."))));
 
         pages.add(page(Text.empty()
-                .append(title("4l2. SCRATCHERS\n\n"))
-                .append(body("Buy a card. Click the nine panels in any "
-                        + "order.\n\n"))
-                .append(body("Three of a kind pays. Four pays x"
-                        + (int) TrapMath.SCRATCH_SIZES[4] + ", five x"
-                        + (int) TrapMath.SCRATCH_SIZES[5] + ".\n\n"))
-                .append(hint("Three in a line pays double."))));
+                .append(title("15. ZDRAPKI\n\n"))
+                .append(body("Kup kartę i klikaj dziewięć pól w "
+                        + "dowolnej kolejności.\n\n"))
+                .append(body("Trzy takie same symbole płacą."))));
 
         pages.add(page(Text.empty()
-                .append(title("4l3. THE ODDS\n\n"))
-                .append(body(Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
-                        + " cards in 100 pay something.\n\n"))
-                .append(warn("Most of those pay back less than the card "
-                        + "cost.\n\n"))
-                .append(hint("One prize a card. The best on it."))));
+                .append(title("15b. WYPŁATY\n\n"))
+                .append(body("Cztery symbole: x"
+                        + (int) TrapMath.SCRATCH_SIZES[4] + "\n"))
+                .append(body("Pięć symboli: x"
+                        + (int) TrapMath.SCRATCH_SIZES[5] + "\n\n"))
+                .append(hint("Trzy w linii płacą podwójnie."))));
 
         pages.add(page(Text.empty()
-                .append(title("4m. COINS\n\n"))
-                .append(body("The exchange has a second window: six coins "
-                        + "you can buy and sell whenever.\n\n"))
-                .append(body("Steady, Swingy, Degenerate.\n\n"))
-                .append(warn("The wild ones do go to zero. Permanently."))));
+                .append(title("15c. SZANSE\n\n"))
+                .append(body("Około "
+                        + Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
+                        + " kart na 100 coś wypłaca.\n\n"))
+                .append(warn("Większość z nich zwraca MNIEJ, niż "
+                        + "kosztowała karta."))));
 
         pages.add(page(Text.empty()
-                .append(title("4m2. LOCKING\n\n"))
-                .append(body("Buy locked and you can't sell for "
-                        + TrapCoins.LOCK_BEATS / 2 + " minutes.\n\n"))
-                .append(body("It pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
-                        + "% extra when the term is up.\n\n"))
-                .append(warn("A rug doesn't care that you locked it."))));
+                .append(title("15d. JEDNA NAGRODA\n\n"))
+                .append(body("Z karty dostajesz tylko jedną wygraną - "
+                        + "tę najwyższą.\n\n"))
+                .append(hint("Nagrody się nie sumują."))));
 
         pages.add(page(Text.empty()
-                .append(title("4n. THE HOUSE\n\n"))
-                .append(body("About " + Math.round(TrapMath.slotWinRate(5) * 100)
-                        + " spins in 100 pay, and never less than "
-                        + "your stake.\n\n"))
-                .append(body("Rainbow panes and fireworks mean a big one.\n\n"))
-                .append(warn("The house still keeps about "
-                        + Math.round((1.0f - TrapMath.slotRtp(5)) * 100)
-                        + "%. It always does."))));
+                .append(title("16. KRYPTOWALUTY\n\n"))
+                .append(body("Giełda ma drugie okno: sześć monet, które "
+                        + "kupujesz i sprzedajesz kiedy chcesz.\n\n"))
+                .append(body("Trzy poziomy ryzyka: spokojne, "
+                        + "zmienne, hazardowe."))));
 
         pages.add(page(Text.empty()
-                .append(title("4n1. FOUR CABINETS\n\n"))
-                .append(body("The button by the stake swaps the window: "
-                        + "2x2, 3x3, 4x4, 5x5.\n\n"))
-                .append(body("Small is quick and pays pairs. Big holds "
-                        + "every shape there is.\n\n"))
-                .append(hint("Each has its own reels and odds."))));
+                .append(title("16b. RYZYKO\n\n"))
+                .append(warn("Te najdziksze NAPRAWDĘ potrafią spaść "
+                        + "do zera.\n\n"))
+                .append(warn("Na stałe. Kasa przepada."))));
+
+        pages.add(page(Text.empty()
+                .append(title("16c. BLOKADA\n\n"))
+                .append(body("Kupując z blokadą, nie możesz sprzedać "
+                        + "przez " + TrapCoins.LOCK_BEATS / 2 + " minut.\n\n"))
+                .append(body("Po tym czasie dostajesz "
+                        + Math.round(TrapCoins.LOCK_BONUS * 100)
+                        + "% premii."))));
+
+        pages.add(page(Text.empty()
+                .append(title("16d. UWAGA\n\n"))
+                .append(warn("Blokada nie chroni przed spadkiem do "
+                        + "zera.\n\n"))
+                .append(body("Jeśli moneta padnie w trakcie blokady, "
+                        + "tracisz wszystko i nie możesz uciec."))));
 
     }
 
 
     private static void street(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("5. HANDING OVER\n\n"))
-                .append(body("Sell to a customer or a buyer yourself and "
-                        + "somebody may follow the money back.\n\n"))
-                .append(warn("Four of them at worst luck. Eleven at your "
-                        + "worst."))));
+                .append(title("17. NAPADY\n\n"))
+                .append(body("Kiedy sam sprzedajesz towar z ręki, ktoś "
+                        + "może pójść za pieniędzmi.\n\n"))
+                .append(warn("Napastników bywa od czterech do "
+                        + "jedenastu."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. WHAT DECIDES IT\n\n"))
-                .append(body("Your name, mostly. Then heat, how much you "
-                        + "hand over at once, and how good it is.\n\n"))
-                .append(body("Daylight helps. A friend within "
-                        + TrapParanoia.COMPANY_RANGE + " blocks helps more."))));
+                .append(title("17b. OD CZEGO ZALEŻY\n\n"))
+                .append(body("Głównie od twojej reputacji na ulicy.\n\n"))
+                .append(body("Potem: uwaga policji, ile oddajesz naraz "
+                        + "i jak dobry jest towar."))));
 
         pages.add(page(Text.empty()
-                .append(title("5c. OR DON'T\n\n"))
-                .append(body("A dealer selling for you never brings one.\n\n"))
-                .append(body("That is what the cut buys.\n\n"))
-                .append(hint("/heat shows your odds."))));
+                .append(title("17c. CO POMAGA\n\n"))
+                .append(body("Sprzedawaj w dzień, nie po ciemku.\n\n"))
+                .append(body("Miej drugiego gracza w promieniu "
+                        + TrapParanoia.COMPANY_RANGE + " bloków - to "
+                        + "pomaga najbardziej.\n\n"))
+                .append(hint("/heat pokazuje twoje szanse."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17d. ALBO WCALE\n\n"))
+                .append(body("Towar sprzedany przez twojego dilera NIGDY "
+                        + "nie ściąga napadu.\n\n"))
+                .append(hint("Za to właśnie płacisz mu prowizję."))));
     }
 
     private static void ledger(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("2. THE LEDGER\n\n"))
-                .append(body("Where did you put the iron.\n\n"))
-                .append(body("Right-click to read every container within "
-                        + LedgerItem.RADIUS_H + " blocks across and "
-                        + LedgerItem.RADIUS_V + " up or down.\n\n"))
-                .append(hint("Book + compass + 2 amethyst."))));
+                .append(title("2. SPIS SKRZYŃ\n\n"))
+                .append(body("Przedmiot, który mówi ci, gdzie co "
+                        + "schowałeś.\n\n"))
+                .append(body("PPM czyta wszystkie pojemniki w promieniu "
+                        + LedgerItem.RADIUS_H + " bloków i "
+                        + LedgerItem.RADIUS_V + " w pionie.\n\n"))
+                .append(hint("Książka + kompas + 2 ametysty."))));
 
         pages.add(page(Text.empty()
-                .append(title("2b. TRACING\n\n"))
-                .append(body("Click any row and it draws a line of light through "
-                        + "the air to the chests holding it.\n\n"))
-                .append(body("Up to " + LedgerItem.MAX_PINGS + " at once.\n\n"))
-                .append(hint("It looks inside shulker boxes too."))));
+                .append(title("2b. SZUKANIE\n\n"))
+                .append(body("Kliknij dowolną pozycję na liście.\n\n"))
+                .append(body("W powietrzu pojawi się świetlna linia "
+                        + "prowadząca do skrzyni z tym przedmiotem.\n\n"))
+                .append(hint("Naraz do " + LedgerItem.MAX_PINGS
+                        + " skrzyń."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2c. SHULKERY\n\n"))
+                .append(body("Spis zagląda też do środka shulkerów "
+                        + "stojących w skrzyniach.\n\n"))
+                .append(hint("Nic się przed nim nie schowa."))));
     }
 
     private static void contracts(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("3. CONTRACTS\n\n"))
-                .append(body("A burner phone gets work. "
-                        + TrapContracts.BOARD_SIZE + " jobs a day, each to its "
-                        + "own drop " + TrapContracts.MIN_DROP + "-"
-                        + TrapContracts.MAX_DROP + " out.\n\n"))
-                .append(body("A compass points the way. Beat the clock.\n\n"))
-                .append(hint("Copper + amethyst + redstone."))));
+                .append(title("3. ZLECENIA\n\n"))
+                .append(body("Zrób TELEFON NA KARTĘ. Przez niego "
+                        + "dostajesz płatne dostawy.\n\n"))
+                .append(hint("Miedź + ametyst + redstone."))));
 
         pages.add(page(Text.empty()
-                .append(title("3b. THE CATCH\n\n"))
-                .append(warn("A job puts heat on you.\n\n"))
-                .append(body("Heat feeds paranoia the whole run. It is also "
-                        + "why the job pays.\n\n"))
-                .append(hint("Wears off in "
+                .append(title("3b. TABLICA\n\n"))
+                .append(body("Dziennie pojawia się "
+                        + TrapContracts.BOARD_SIZE + " zleceń.\n\n"))
+                .append(body("Każde ma swoje miejsce odbioru, "
+                        + TrapContracts.MIN_DROP + "-"
+                        + TrapContracts.MAX_DROP + " bloków stąd.\n\n"))
+                .append(hint("Dostajesz kompas i masz limit czasu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3c. HACZYK\n\n"))
+                .append(warn("Przyjęte zlecenie podnosi uwagę policji.\n\n"))
+                .append(body("Przez całą dostawę masz podbitą paranoję. "
+                        + "Za to właśnie płacą.\n\n"))
+                .append(hint("Schodzi po "
                         + TrapContracts.JOB_HEAT_TICKS / 20 / 60 + " min."))));
 
         pages.add(page(Text.empty()
-                .append(title("3c. GETTING PAID\n\n"))
-                .append(body("Right-click your buyer, within "
-                        + TrapContracts.DELIVERY_RANGE + " blocks of the drop.\n\n"))
-                .append(body("Emeralds and rep.\n\n"))
-                .append(warn("Miss it: -" + TrapContracts.FAIL_REP + " rep.\n\n"))
-                .append(hint("Rep rides the phone."))));
-        pages.add(page(Text.empty()
-                .append(title("3c2. THE DROP\n\n"))
-                .append(body("A compass, and a waypoint to click.\n\n"))
-                .append(body("Get close and your buyer turns up, glowing. "
-                        + "Right-click to hand over.\n\n"))
-                .append(hint("Empty-handed, they'll remind you."))));
+                .append(title("3d. MIEJSCE ODBIORU\n\n"))
+                .append(body("Kompas prowadzi do punktu. Na mapie masz "
+                        + "też znacznik do kliknięcia.\n\n"))
+                .append(body("Podejdź blisko, a odbiorca się pojawi - "
+                        + "będzie świecił."))));
 
         pages.add(page(Text.empty()
-                .append(title("3d. WHAT THEY TAKE\n\n"))
-                .append(body("Each job says: cured buds only, rolled joints "
-                        + "only, or either.\n\n"))
-                .append(body("A joint counts as one bud.\n\n"))
-                .append(hint("Check before you roll the batch.")))); 
+                .append(title("3e. PRZEKAZANIE\n\n"))
+                .append(body("Kliknij odbiorcę PPM, będąc maks. "
+                        + TrapContracts.DELIVERY_RANGE
+                        + " bloków od punktu.\n\n"))
+                .append(body("Dostajesz szmaragdy i reputację.\n\n"))
+                .append(hint("Z pustymi rękami tylko ci przypomni."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3f. NIEPOWODZENIE\n\n"))
+                .append(warn("Nie zdążysz - tracisz "
+                        + TrapContracts.FAIL_REP + " reputacji.\n\n"))
+                .append(hint("Reputacja jest zapisana w telefonie, "
+                        + "nie w tobie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3g. CO ODBIERAJĄ\n\n"))
+                .append(body("Każde zlecenie mówi wprost, czego chce:\n\n"))
+                .append(body("- tylko suszone szyszki\n"))
+                .append(body("- tylko skręty\n"))
+                .append(body("- obojętnie\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("3g2. PRZELICZNIK\n\n"))
+                .append(body("Jeden skręt liczy się jak jedna szyszka.\n\n"))
+                .append(warn("Sprawdź zlecenie ZANIM zwiniesz całą "
+                        + "partię w skręty."))));
     }
 
     private static ItemStack book(String title, List<RawFilteredPair<Text>> pages) {
@@ -1172,116 +1689,180 @@ public final class TrapGuide {
 
     private static void cocaCover(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("THE TRAP HOUSE"))
-                .append(Text.literal("\nrefiner's handbook\n\n")
+                .append(title("KOKAINA"))
+                .append(Text.literal("\nporadnik rafinera\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("The coca line. Longer than weed, worth far more.\n\n"))
-                .append(hint("Poppy: /guide chemist\nHabit: /guide habit"))));
+                .append(body("Dłuższa produkcja niż przy trawie, ale "
+                        + "towar wart dużo więcej.\n\n"))
+                .append(hint("Mak: /guide chemist"))));
     }
 
     // --- pages ----------------------------------------------------------------
 
     private static void cover(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("THE TRAP HOUSE"))
-                .append(Text.literal("\ngrower's handbook\n\n").formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(title("MARIHUANA"))
+                .append(Text.literal("\nporadnik hodowcy\n\n").formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
                 // Paired per line: nine on their own lines plus the header and
                 // footer came to ~16, over the 14-line page limit.
-                .append(body("1 Growing  2 Grade\n3 Curing   4 Rolling\n5 Baked    6 Strains\n7 Breeding 8 Heat\n9 Supply\n"))
-                .append(hint("Coca: /guide refiner\nHabit: /guide habit"))));
+                .append(body("1 Uprawa    2 Jakość\n3 Suszenie  4 Skręty\n5 Palenie   6 Odmiany\n7 Efekty    8 Policja\n9 Sprzedaż\n"))
+                .append(hint("Koka: /guide refiner"))));
     }
 
     private static void growing(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. GROWING\n\n"))
-                .append(body("Plant seeds on farmland. Dirt and grass work too, just slower.\n\n"))
-                .append(body("Four stages. Watered: ~" + Math.round(TrapMath.stageMinutes(
-                        TrapMath.WEED_GROWTH_ROLLS_WET, 3) * 3) + " min. Dry: ~"
-                        + Math.round(TrapMath.stageMinutes(
-                        TrapMath.WEED_GROWTH_ROLLS_DRY, 3) * 3) + " min.\n\n"))
-                .append(hint("Water is worth 3 quality points AND half the wait."))));
+                .append(title("1. UPRAWA\n\n"))
+                .append(body("Posadź nasiona na zaoranej ziemi.\n\n"))
+                .append(body("Na zwykłej ziemi i trawie też urosną, "
+                        + "tylko wolniej.\n\n"))
+                .append(hint("Roślina ma cztery fazy wzrostu."))));
 
         pages.add(page(Text.empty()
-                .append(title("1b. HARVEST\n\n"))
-                .append(body("Right-click a full-grown plant with an empty hand.\n\n"))
-                .append(body("You get buds, sometimes a seed, and the plant stays and regrows.\n\n"))
-                .append(hint("Breaking it also works and returns your seed."))));
+                .append(title("1b. CZAS WZROSTU\n\n"))
+                .append(body("Podlana: ok. " + Math.round(TrapMath.stageMinutes(
+                        TrapMath.WEED_GROWTH_ROLLS_WET, 3) * 3) + " min\n"))
+                .append(body("Sucha: ok. " + Math.round(TrapMath.stageMinutes(
+                        TrapMath.WEED_GROWTH_ROLLS_DRY, 3) * 3) + " min\n\n"))
+                .append(warn("Woda to +3 punkty jakości I połowa czasu. "
+                        + "Zawsze podlewaj."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1c. ZBIÓR\n\n"))
+                .append(body("Kliknij PPM pustą ręką w wyrośniętą "
+                        + "roślinę.\n\n"))
+                .append(body("Dostajesz szyszki, czasem nasiono, "
+                        + "a roślina zostaje i odrasta."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1d. ALBO ZNISZCZ\n\n"))
+                .append(body("Rozbicie rośliny też działa i zwraca ci "
+                        + "nasiono.\n\n"))
+                .append(warn("Ale wtedy trzeba sadzić od nowa."))));
     }
 
     private static void grading(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("2. GRADE\n\n"))
-                .append(body("Set the moment you pick it, from how it grew:\n\n"))
-                .append(body("+3 wet farmland\n+2 light 12+\n+1 light 9-11\n+2 open sky\n+1 no bone meal\n\n"))
-                .append(hint("8 points possible."))));
+                .append(title("2. JAKOŚĆ\n\n"))
+                .append(body("Ustala się w chwili zbioru, na podstawie "
+                        + "warunków wzrostu.\n\n"))
+                .append(warn("Potem już jej nie poprawisz."))));
 
-        MutableText table = Text.empty().append(title("2b. WHAT IT'S WORTH\n\n"));
+        pages.add(page(Text.empty()
+                .append(title("2b. PUNKTY\n\n"))
+                .append(body("+3 mokra zaorana ziemia\n"))
+                .append(body("+2 światło 12 i więcej\n"))
+                .append(body("+1 światło 9-11\n"))
+                .append(body("+2 otwarte niebo\n"))
+                .append(body("+1 bez mączki kostnej\n\n"))
+                .append(hint("Maksymalnie 8 punktów."))));
+
+        MutableText table = Text.empty().append(title("2c. CO TO DAJE\n\n"));
         for (Quality grade : Quality.values()) {
             table.append(Text.literal(pad(grade.display(), 6)).formatted(grade.bookColour()))
                     .append(body(String.format("%.1fx  %de\n", grade.potency(), grade.emeralds())));
         }
         table.append(body("\n"))
-                .append(hint("Points needed: " + joinInts(Quality.THRESHOLDS)));
+                .append(hint("moc i cena za sztukę"));
         pages.add(page(table));
+
+        pages.add(page(Text.empty()
+                .append(title("2d. PROGI\n\n"))
+                .append(body("Punkty potrzebne na kolejne klasy:\n\n"))
+                .append(body(joinInts(Quality.THRESHOLDS) + "\n\n"))
+                .append(hint("Poniżej pierwszego progu masz najgorszą "
+                        + "klasę."))));
     }
 
     private static void curing(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("3. CURING\n\n"))
-                .append(body("Craft a rack: 8 sticks, 2 string.\n\n"))
-                .append(body("Right-click holding fresh buds. Buds darken as they cure. When the tips go "))
-                .append(Text.literal("gold").formatted(Formatting.GOLD))
-                .append(body(" it's ready."))));
+                .append(title("3. SUSZENIE\n\n"))
+                .append(body("Świeże szyszki są mało warte. Trzeba je "
+                        + "wysuszyć.\n\n"))
+                .append(body("Zrób SUSZARKĘ: 8 patyków i 2 nici."))));
 
-        MutableText window = Text.empty().append(title("3b. THE WINDOW\n\n"));
+        pages.add(page(Text.empty()
+                .append(title("3b. JAK SUSZYĆ\n\n"))
+                .append(body("Kliknij PPM w suszarkę, trzymając świeże "
+                        + "szyszki.\n\n"))
+                .append(body("Z czasem ciemnieją. Kiedy końcówki są "))
+                .append(Text.literal("złote").formatted(Formatting.GOLD))
+                .append(body(", są gotowe.\n\n"))
+                .append(hint("Wtedy kliknij, żeby je zabrać."))));
+
+        MutableText window = Text.empty().append(title("3c. MOMENT ZBIORU\n\n"));
         for (int stage = 0; stage <= DryingRackBlock.MAX_DRYNESS; stage++) {
             String label;
             if (stage == 0) {
-                label = "too wet";
+                label = "za mokre";
             } else if (stage == DryingRackBlock.READY_DRYNESS) {
-                label = "READY";
+                label = "GOTOWE";
             } else if (stage == DryingRackBlock.MAX_DRYNESS) {
-                label = "-1 grade";
+                label = "-1 klasa";
             } else {
-                label = "-" + (DryingRackBlock.READY_DRYNESS - stage) + " grade";
+                label = "-" + (DryingRackBlock.READY_DRYNESS - stage) + " klasy";
             }
-            window.append(body("stage " + stage + "  "))
+            window.append(body("faza " + stage + "  "))
                     .append(stage == DryingRackBlock.READY_DRYNESS
                             ? Text.literal(label + "\n").formatted(Formatting.GOLD)
                             : body(label + "\n"));
         }
-        window.append(body("\n")).append(hint("Peak also gives 2 buds instead of 1."));
         pages.add(page(window));
+
+        pages.add(page(Text.empty()
+                .append(title("3d. PO CO CZEKAĆ\n\n"))
+                .append(body("Zbiór w idealnym momencie daje 2 szyszki "
+                        + "zamiast 1.\n\n"))
+                .append(warn("Za wcześnie albo za późno tracisz klasę "
+                        + "ORAZ połowę zbioru."))));
     }
 
     private static void rolling(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("4. ROLLING\n\n"))
-                .append(body("Cured bud + paper = joint. The grade carries over.\n\n"))
-                .append(body("Hold right-click to smoke. You raise it to your mouth and trail smoke.\n\n"))
-                .append(hint("Everyone nearby sees it."))));
+                .append(title("4. SKRĘTY\n\n"))
+                .append(body("Suszona szyszka + papier = skręt.\n\n"))
+                .append(body("Klasa szyszki przechodzi na skręt.\n\n"))
+                .append(hint("Skręty łatwiej sprzedać niż susz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. PALENIE\n\n"))
+                .append(body("Przytrzymaj PPM. Postać podnosi skręt do "
+                        + "ust i leci dym.\n\n"))
+                .append(warn("Wszyscy w pobliżu to widzą."))));
     }
 
     /** Three ways to smoke, in order of setup cost. Numbers from the blocks. */
     private static void methods(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("4b. METHODS\n\n"))
-                .append(body(String.format("joint   1.0x\nbong    %.1fx\ntlok    %.1fx\n\n",
+                .append(title("5. SPOSOBY PALENIA\n\n"))
+                .append(body(String.format("skręt   1.0x\nbong    %.1fx\ntłok    %.1fx\n\n",
                         BongBlock.POTENCY, GravityBongBlock.POTENCY)))
-                .append(body("Stronger hits raise Tolerance faster, so none of them is free.\n\n"))
-                .append(hint("Joints travel. The rest don't."))));
+                .append(hint("Liczba to mnożnik siły efektu."))));
 
         pages.add(page(Text.empty()
-                .append(title("4c. BONG\n\n"))
-                .append(body("Glass and bamboo.\n\n"))
-                .append(body("Water bucket once, then a cured bud per hit, then right-click.\n\n"))
-                .append(hint("Water stays. The bowl doesn't."))));
+                .append(title("5b. KOSZT\n\n"))
+                .append(warn("Mocniejsze wejście szybciej podnosi "
+                        + "TOLERANCJĘ.\n\n"))
+                .append(body("Żaden sposób nie jest darmowy.\n\n"))
+                .append(hint("Skręt możesz zabrać ze sobą. Reszty nie."))));
 
         pages.add(page(Text.empty()
-                .append(title("4d. TLOK\n\n"))
-                .append(body("Bottle, bucket, bamboo, paper.\n\n"))
-                .append(body("Water, bud, flint and steel, then pull.\n\n"))
-                .append(warn("Pull soon after lighting. Leave it and the smoke goes stale."))));
+                .append(title("5c. BONG\n\n"))
+                .append(body("Zrobisz go ze szkła i bambusa.\n\n"))
+                .append(body("Raz wlej wiadro wody, potem wkładaj po "
+                        + "jednej suszonej szyszce i klikaj PPM.\n\n"))
+                .append(hint("Woda zostaje na stałe. Szyszka nie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d. TŁOK\n\n"))
+                .append(body("Butelka, wiadro, bambus, papier.\n\n"))
+                .append(body("Kolejność: woda, szyszka, krzesiwo, "
+                        + "potem pociągnij."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d2. UWAGA\n\n"))
+                .append(warn("Ciągnij zaraz po podpaleniu.\n\n"))
+                .append(body("Jak zostawisz, dym zwietrzeje i stracisz "
+                        + "szyszkę."))));
 
         mixing(pages);
     }
@@ -1293,53 +1874,85 @@ public final class TrapGuide {
      */
     private static void mixing(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("4e. MIXING\n\n"))
-                .append(item("Bottle Bowl Bottle\nCopper Iron Copper\nLog    Log  Log\n\n"))
-                .append(body("Buds in the four slots, then click the jar.\n\n"))
-                .append(hint("Any log will do."))));
+                .append(title("6. MIESZANIE\n\n"))
+                .append(item("Butelka Miska  Butelka\nMiedź   Żelazo Miedź\nKłoda   Kłoda  Kłoda\n\n"))
+                .append(body("Kłody dowolne."))));
 
         pages.add(page(Text.empty()
-                .append(title("4e2. THE JAR\n\n"))
-                .append(body("The jar on the right shows what you'd get before "
-                        + "you commit.\n\n"))
-                .append(body("It says why when it can't.\n\n"))
-                .append(hint("Close it and your buds come back."))));
+                .append(title("6b. OBSŁUGA\n\n"))
+                .append(body("Włóż suszone szyszki w cztery sloty, "
+                        + "potem kliknij słoik po prawej.\n\n"))
+                .append(hint("Zamkniesz okno - szyszki wracają do "
+                        + "ciebie."))));
 
         pages.add(page(Text.empty()
-                .append(title("4f. BLENDS\n\n"))
-                .append(body("A mix does what all its parts do, each cut to its share.\n\n"))
-                .append(body("More different strains = stronger, and much wilder to look at.\n\n"))
-                .append(warn("Grade is your WORST bud, not the average."))));
+                .append(title("6c. PODGLĄD\n\n"))
+                .append(body("Słoik po prawej pokazuje, co dostaniesz, "
+                        + "ZANIM to zatwierdzisz.\n\n"))
+                .append(hint("Jak się nie da, napisze dlaczego."))));
 
         pages.add(page(Text.empty()
-                .append(title("4g. KNOWN\n\n"))
-                .append(body("Some mixes do more than the sum:\n\n"))
-                .append(body("Trinity  K+H+P\nVoid  M+M+P\nDaybreak  H+S\nTurbo  D+D+H\nTar  K+K+M\nKaleidoscope  P+S+H+D\n"))));
+                .append(title("6d. JAK TO DZIAŁA\n\n"))
+                .append(body("Mieszanka ma efekty wszystkich swoich "
+                        + "składników, każdy proporcjonalnie słabszy.\n\n"))
+                .append(body("Więcej różnych odmian = mocniej i dziwniej "
+                        + "wygląda."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6e. PUŁAPKA\n\n"))
+                .append(warn("Klasa mieszanki to klasa NAJGORSZEJ "
+                        + "szyszki, nie średnia.\n\n"))
+                .append(body("Jedna słaba szyszka psuje całą partię."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6f. NAZWANE MIESZANKI\n\n"))
+                .append(body("Niektóre składy dają więcej niż suma "
+                        + "części:\n\n"))
+                .append(body("Trinity  K+H+P\nVoid  M+M+P\nDaybreak  H+S\nTurbo  D+D+H\nTar  K+K+M\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("6f2. I JESZCZE\n\n"))
+                .append(body("Kaleidoscope  P+S+H+D\n\n"))
+                .append(hint("Litery to pierwsze litery nazw odmian."))));
     }
 
     private static void baked(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("5. BAKED\n\n"))
-                .append(body("Burns food. Well fed, it heals you back.\n\n"))
-                .append(warn("On an empty stomach it hurts. Eat first.\n\n"))
-                .append(hint("Each strain adds its own effects on top."))));
+                .append(title("7. EFEKT BAKED\n\n"))
+                .append(body("Zjada ci jedzenie z paska głodu.\n\n"))
+                .append(body("Jeśli jesteś najedzony, w zamian cię "
+                        + "leczy."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. TOLERANCE\n\n"))
-                .append(body("Every joint raises it a level. Each level cuts "))
-                .append(body(Math.round(ToleranceStatusEffect.PER_LEVEL * 100) + "% "))
-                .append(body("off the next high.\n\n"))
-                .append(body("Floor is " + Math.round(ToleranceStatusEffect.FLOOR * 100) + "%. "))
-                .append(body("A level wears off in " + (ToleranceStatusEffect.DURATION_TICKS / 20 / 60) + " min.\n\n"))
-                .append(hint("Pace yourself."))));
+                .append(title("7b. NA PUSTY ŻOŁĄDEK\n\n"))
+                .append(warn("Bez jedzenia zabiera ci zdrowie.\n\n"))
+                .append(body("Najedz się PRZED paleniem.\n\n"))
+                .append(hint("Każda odmiana dokłada swoje efekty."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c. TOLERANCJA\n\n"))
+                .append(body("Każdy skręt podnosi ją o jeden poziom.\n\n"))
+                .append(body("Każdy poziom zabiera "
+                        + Math.round(ToleranceStatusEffect.PER_LEVEL * 100)
+                        + "% siły kolejnego efektu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d. GRANICE\n\n"))
+                .append(body("Efekt nie spadnie poniżej "
+                        + Math.round(ToleranceStatusEffect.FLOOR * 100)
+                        + "% siły.\n\n"))
+                .append(body("Jeden poziom schodzi po "
+                        + (ToleranceStatusEffect.DURATION_TICKS / 20 / 60)
+                        + " min.\n\n"))
+                .append(hint("Rozkładaj palenie w czasie."))));
     }
 
     private static void strains(List<RawFilteredPair<Text>> pages) {
         for (Strain strain : Strain.values()) {
             pages.add(page(Text.empty()
-                    .append(title("6. STRAINS\n\n"))
+                    .append(title("8. ODMIANY\n\n"))
                     .append(Text.literal(strain.display() + "\n").withColor(strain.bookColour()))
-                    .append(Text.literal(strain.isHybrid() ? "hybrid\n\n" : "wild\n\n")
+                    .append(Text.literal(strain.isHybrid() ? "krzyżówka\n\n" : "naturalna\n\n")
                             .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
                     .append(body(strain.describe()))));
         }
@@ -1347,8 +1960,9 @@ public final class TrapGuide {
 
     private static void breeding(List<RawFilteredPair<Text>> pages) {
         MutableText text = Text.empty()
-                .append(title("7. BREEDING\n\n"))
-                .append(body("Two different strains, full grown, side by side.\n\n"));
+                .append(title("9. KRZYŻOWANIE\n\n"))
+                .append(body("Dwie różne odmiany, obie wyrośnięte, "
+                        + "posadzone obok siebie.\n\n"));
 
         // Read straight off hybridOf, so a new pairing can't be missed here.
         for (Strain a : Strain.values()) {
@@ -1366,75 +1980,124 @@ public final class TrapGuide {
                 }
             }
         }
-        text.append(body("\n")).append(hint("Hybrids don't breed further."));
         pages.add(page(text));
+
+        pages.add(page(Text.empty()
+                .append(title("9b. KONIEC LINII\n\n"))
+                .append(warn("Krzyżówek nie da się krzyżować dalej.\n\n"))
+                .append(body("Z dwóch krzyżówek nic nie powstanie.\n\n"))
+                .append(hint("Do krzyżowania trzymaj zapas odmian "
+                        + "naturalnych."))));
     }
 
     private static void heat(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("8. HEAT\n\n"))
-                .append(body("A grow in the open gets noticed. You get a warning.\n\n"))
-                .append(body("Bigger plot, sooner they come back.\n\n"))
-                .append(hint("Past the top tier, sooner still."))));
+                .append(title("10. UWAGA POLICJI\n\n"))
+                .append(body("Uprawa na widoku zostaje zauważona. "
+                        + "Dostajesz ostrzeżenie na czacie.\n\n"))
+                .append(warn("Po ostrzeżeniu przychodzi nalot."))));
 
         pages.add(page(Text.empty()
-                .append(title("8a. BOTH LINES\n\n"))
-                .append(body("Coca counts now. So do presses and refiners.\n\n"))
-                .append(body("Weed AND coca in one place is worth "
+                .append(title("10b. CZĘSTOTLIWOŚĆ\n\n"))
+                .append(body("Im większa plantacja, tym szybciej wracają "
+                        + "po następny nalot.\n\n"))
+                .append(hint("Powyżej najwyższego progu - jeszcze "
+                        + "szybciej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10c. CO SIĘ LICZY\n\n"))
+                .append(body("Liczone są wyrośnięte rośliny w promieniu "
+                        + TrapHeat.RADIUS + " bloków.\n\n"))
+                .append(body("Pod gołym niebem: 2 pkt każda\n"))
+                .append(body("Pod dachem: 1 pkt każda\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("10d. WNIOSEK\n\n"))
+                .append(body("Zadaszona plantacja może być dwa razy "
+                        + "większa przy tej samej uwadze.\n\n"))
+                .append(hint("Dach opłaca się od pierwszej rośliny."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10e. NIE TYLKO KONOPIE\n\n"))
+                .append(body("Koka liczy się tak samo.\n\n"))
+                .append(body("Prasy i rafinerie też dodają uwagę.\n\n"))
+                .append(hint("Każdy sprzęt to " + 2 + " punkty."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10f. NIE MIESZAJ\n\n"))
+                .append(warn("Konopie I koka w jednym miejscu to o "
                         + Math.round((TrapHeat.MIXED_TRADE - 1) * 100)
-                        + "% more heat than the two apart.\n\n"))
-                .append(hint("Two sheds beat one shed."))));
+                        + "% więcej uwagi niż osobno.\n\n"))
+                .append(hint("Dwie osobne szopy biją jedną wspólną."))));
 
         pages.add(page(Text.empty()
-                .append(title("8a3. WALLS\n\n"))
-                .append(body("Sealing the grow in buys you time, not safety.\n\n"))
-                .append(body("If they can't find a way round, they come "
-                        + "through the wall.\n\n"))
-                .append(warn("Obsidian stops them. Dirt does not."))));
+                .append(title("10g. MURY\n\n"))
+                .append(body("Zamurowanie uprawy kupuje ci czas, ale nie "
+                        + "daje bezpieczeństwa.\n\n"))
+                .append(warn("Jak nie znajdą wejścia, wejdą przez "
+                        + "ścianę."))));
 
         pages.add(page(Text.empty()
-                .append(title("8b. THE NUMBERS\n\n"))
-                .append(body("Counts mature plants within " + TrapHeat.RADIUS + " blocks.\n\n"))
-                .append(body("Open sky = 2 each\nRoofed = 1 each\n\n"))
-                .append(hint("A fully roofed grow trips at half the size."))));
+                .append(title("10g2. Z CZEGO BUDOWAĆ\n\n"))
+                .append(body("Obsydian ich zatrzymuje.\n\n"))
+                .append(warn("Ziemia, drewno i kamień nie."))));
 
         // Built from the arrays rather than written out, so the book can't
         // drift from the tiers the way the old fixed numbers did.
         net.minecraft.text.MutableText tiers =
-                Text.empty().append(title("8c. WHO COMES\n\n"));
+                Text.empty().append(title("10h. KTO PRZYCHODZI\n\n"));
         for (int tier = 0; tier < TrapHeat.THRESHOLDS.length; tier++) {
             tiers.append(body(TrapHeat.THRESHOLDS[tier] + ": " + TrapHeat.squadOf(tier)
                     + "  (" + TrapHeat.cooldownMinutes(tier) + "m)\n"));
         }
-        pages.add(page(tiers.append(body("\n"))
-                .append(hint("Heat, not plants: 15 in the open is the first tier."))));
+        pages.add(page(tiers));
+
+        pages.add(page(Text.empty()
+                .append(title("10h2. JAK CZYTAĆ\n\n"))
+                .append(body("Pierwsza liczba to PUNKTY uwagi, nie "
+                        + "liczba roślin.\n\n"))
+                .append(body("15 roślin na otwartym to już pierwszy "
+                        + "próg.\n\n"))
+                .append(hint("W nawiasie: przerwa między nalotami."))));
     }
 
     /** The second product line. Numbers read from Purity and RefinerBlock. */
     private static void coca(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("9. COCA\n\n"))
-                .append(body("Bush -> leaves -> press -> refiner -> powder.\n\n"))
-                .append(body("~" + Math.round(TrapMath.stageMinutes(
-                        TrapMath.COCA_GROWTH_ROLLS, 3) * 3) + " min to ripen. "
-                        + "Any dirt, but it needs light.\n\n"))
-                .append(hint("Seeds: warm structures, or a trader."))));
+                .append(title("1. CAŁA DROGA\n\n"))
+                .append(body("krzak -> liście -> prasa -> rafineria -> "
+                        + "proszek\n\n"))
+                .append(hint("Cztery kroki, każdy opisany dalej."))));
 
         pages.add(page(Text.empty()
-                .append(title("9b. PRESSING\n\n"))
-                .append(body("Craft a "))
-                .append(item("Leaf Press"))
-                .append(body(": smooth stone, logs, iron.\n\n"))
-                .append(body("Right-click with " + LeafPressBlock.LEAVES_PER_BATCH
-                        + " leaves. Wait, then right-click for paste.\n\n"))
-                .append(hint("No window here. It just takes time."))));
+                .append(title("2. UPRAWA KOKI\n\n"))
+                .append(body("Dojrzewa około " + Math.round(TrapMath.stageMinutes(
+                        TrapMath.COCA_GROWTH_ROLLS, 3) * 3) + " minut.\n\n"))
+                .append(body("Rośnie na dowolnej ziemi, ale potrzebuje "
+                        + "światła.\n\n"))
+                .append(hint("Nasiona: ciepłe struktury albo handlarz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. PRASOWANIE\n\n"))
+                .append(body("Zrób "))
+                .append(item("Prasa do liści"))
+                .append(body(": gładki kamień, kłody, żelazo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. OBSŁUGA PRASY\n\n"))
+                .append(body("Kliknij PPM mając "
+                        + LeafPressBlock.LEAVES_PER_BATCH + " liści.\n\n"))
+                .append(body("Odczekaj, potem kliknij ponownie, żeby "
+                        + "wyjąć pastę.\n\n"))
+                .append(hint("Nie ma tu okna czasowego. Po prostu trwa."))));
 
         MutableText refining = Text.empty()
-                .append(title("9c. REFINING\n\n"))
-                .append(body("Paste + blaze powder in the "))
-                .append(item("Refiner"))
+                .append(title("4. RAFINACJA\n\n"))
+                .append(body("Pasta + płonący proszek w "))
+                .append(item("Rafineria"))
                 .append(body(".\n\n"))
-                .append(body("Purity is all in the timing:\n\n"));
+                .append(body("Czystość zależy WYŁĄCZNIE od tego, kiedy "
+                        + "to wyjmiesz:\n\n"));
         for (int step = 1; step <= RefinerBlock.BURNT; step++) {
             Purity grade = RefinerBlock.purityFor(step);
             boolean peak = step == RefinerBlock.PEAK;
@@ -1444,26 +2107,44 @@ public final class TrapGuide {
         }
         pages.add(page(refining));
 
-        MutableText worth = Text.empty().append(title("9d. WORTH IT\n\n"));
+        pages.add(page(Text.empty()
+                .append(title("4b. GWIAZDKA\n\n"))
+                .append(body("Faza oznaczona gwiazdką to szczyt "
+                        + "czystości.\n\n"))
+                .append(warn("Za długo w rafinerii i towar się psuje."))));
+
+        MutableText worth = Text.empty().append(title("5. ILE TO WARTE\n\n"));
         for (Purity grade : Purity.values()) {
             worth.append(Text.literal(pad(grade.display(), 7)).formatted(grade.bookColour()))
                     .append(body(String.format("%.1fx  %de\n", grade.potency(), grade.emeralds())));
         }
-        worth.append(body("\n"))
-                .append(warn("Wired costs nothing until it ends. Then it all lands at once."));
+        worth.append(body("\n")).append(hint("moc i cena za sztukę"));
         pages.add(page(worth));
+
+        pages.add(page(Text.empty()
+                .append(title("6. EFEKT WIRED\n\n"))
+                .append(body("Kokaina daje szybkość i siłę.\n\n"))
+                .append(warn("Przez cały czas trwania nic cię nie "
+                        + "kosztuje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. RACHUNEK\n\n"))
+                .append(warn("Kiedy efekt się kończy, cała kara spada "
+                        + "na ciebie NARAZ.\n\n"))
+                .append(hint("Nie bierz kolejnej działki tuż przed "
+                        + "walką."))));
     }
 
     // --- the chemist's handbook -----------------------------------------------
 
     private static void poppyCover(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("THE TRAP HOUSE"))
-                .append(Text.literal("\nchemist's handbook\n\n")
+                .append(title("HEROINA"))
+                .append(Text.literal("\nporadnik chemika\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("The long line. Three machines, and it can still "
-                        + "come to nothing.\n\n"))
-                .append(hint("The habit: /guide habit\nCoca: /guide refiner"))));
+                .append(body("Najdłuższa produkcja w grze. Trzy maszyny "
+                        + "i łatwo stracić całą partię.\n\n"))
+                .append(hint("Nałóg: /guide habit"))));
     }
 
     /**
@@ -1474,58 +2155,87 @@ public final class TrapGuide {
      */
     private static void poppy(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. THE POPPY\n\n"))
-                .append(body("Pod -> score -> wash -> acetylate -> dope.\n\n"))
-                .append(body("~" + Math.round(TrapMath.stageMinutes(
-                        TrapMath.POPPY_GROWTH_ROLLS, 3) * 3) + " min to ripen, and "
-                        + "it wants light " + PoppyCropBlock.NEEDS_LIGHT + ".\n\n"))
-                .append(warn("No cellar farms. This one needs sky."))));
+                .append(title("1. CAŁA DROGA\n\n"))
+                .append(body("makówka -> nacinanie -> gotowanie -> "
+                        + "acetylacja -> towar\n\n"))
+                .append(hint("Cztery maszyny, każda opisana dalej."))));
 
         pages.add(page(Text.empty()
-                .append(title("1b. HARVEST\n\n"))
-                .append(body("Right-click a ripe plant. " + PoppyCropBlock.MIN_PODS + "-"
-                        + PoppyCropBlock.MAX_PODS + " pods, sometimes a seed, "
-                        + "and it stays standing.\n\n"))
-                .append(hint("Red flowers mean nearly. Pods mean now."))));
+                .append(title("2. UPRAWA MAKU\n\n"))
+                .append(body("Dojrzewa około " + Math.round(TrapMath.stageMinutes(
+                        TrapMath.POPPY_GROWTH_ROLLS, 3) * 3) + " minut.\n\n"))
+                .append(body("Wymaga światła co najmniej "
+                        + PoppyCropBlock.NEEDS_LIGHT + ".\n\n"))
+                .append(warn("W piwnicy nie urośnie. Musi widzieć "
+                        + "niebo."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. SCORING\n\n"))
-                .append(body("Craft a "))
-                .append(item("Scoring Table"))
-                .append(body(": iron over logs.\n\n"))
-                .append(body("Right-click with " + ScoringTableBlock.PODS_PER_BATCH
-                        + " pods. Wait, then click for opium.\n\n"))
-                .append(hint("No window. It just takes a while."))));
+                .append(title("2b. ZBIÓR\n\n"))
+                .append(body("Kliknij PPM dojrzałą roślinę.\n\n"))
+                .append(body("Dostajesz " + PoppyCropBlock.MIN_PODS + "-"
+                        + PoppyCropBlock.MAX_PODS + " makówek, czasem "
+                        + "nasiono. Roślina zostaje."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. THE WASH\n\n"))
-                .append(body("Craft a "))
-                .append(item("Wash Pot"))
-                .append(body(": copper, a cauldron, bricks.\n\n"))
-                .append(body(WashPotBlock.OPIUM_PER_BATCH + " opium in hand, "
-                        + WashPotBlock.LIME_PER_BATCH + " bone meal in the bag.\n\n"))
-                .append(warn("It only cooks over a fire. No fire, no progress."))));
+                .append(title("2c. KIEDY ZBIERAĆ\n\n"))
+                .append(body("Czerwone kwiaty = już prawie.\n\n"))
+                .append(body("Widoczne makówki = teraz.\n\n"))
+                .append(hint("Nie zbieraj wcześniej, nic nie dostaniesz."))));
 
         pages.add(page(Text.empty()
-                .append(title("3b. THE FIRE\n\n"))
-                .append(body("Anything lit counts: campfire, furnace, lava.\n\n"))
-                .append(body("Let it go out and nothing spoils. Nothing moves, "
-                        + "either.\n\n"))
-                .append(hint("Build the lab. Don't click the pot."))));
+                .append(title("3. NACINANIE\n\n"))
+                .append(body("Zrób "))
+                .append(item("Stół do nacinania"))
+                .append(body(": żelazo nad kłodami."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. OBSŁUGA\n\n"))
+                .append(body("Kliknij PPM mając "
+                        + ScoringTableBlock.PODS_PER_BATCH + " makówek.\n\n"))
+                .append(body("Odczekaj, kliknij ponownie i odbierz "
+                        + "opium.\n\n"))
+                .append(hint("Nie ma okna czasowego. Po prostu trwa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. GOTOWANIE\n\n"))
+                .append(body("Zrób "))
+                .append(item("Garnek do gotowania"))
+                .append(body(": miedź, kocioł, cegły."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. SKŁADNIKI\n\n"))
+                .append(body("W ręce: " + WashPotBlock.OPIUM_PER_BATCH
+                        + " opium.\n\n"))
+                .append(body("W ekwipunku: " + WashPotBlock.LIME_PER_BATCH
+                        + " mączki kostnej.\n\n"))
+                .append(hint("Mączka jest brana automatycznie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c. OGIEŃ\n\n"))
+                .append(warn("Garnek gotuje TYLKO nad ogniem. Bez ognia "
+                        + "nic się nie dzieje.\n\n"))
+                .append(body("Liczy się cokolwiek płonącego: ognisko, "
+                        + "piec, lawa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. JAK ZGAŚNIE\n\n"))
+                .append(body("Nic się nie psuje. Po prostu proces stoi.\n\n"))
+                .append(hint("Zbuduj laboratorium raz i nie klikaj "
+                        + "garnka niepotrzebnie."))));
 
         MutableText timing = Text.empty()
-                .append(title("4. ACETYLATING\n\n"))
-                .append(body("Base + fermented spider eye in the "))
+                .append(title("5. ACETYLACJA\n\n"))
+                .append(body("Baza + sfermentowane oko pająka w "))
                 .append(item("Acetylator"))
                 .append(body(".\n\n"));
         for (int step = 1; step <= AcetylatorBlock.RUINED; step++) {
             Purity grade = AcetylatorBlock.purityFor(step);
             if (grade == null) {
-                timing.append(body("stage " + step + "  "))
-                        .append(Text.literal("GONE\n").formatted(Formatting.DARK_RED));
+                timing.append(body("faza " + step + "  "))
+                        .append(Text.literal("STRACONE\n").formatted(Formatting.DARK_RED));
             } else {
                 boolean peak = step == AcetylatorBlock.PEAK;
-                timing.append(body("stage " + step + "  "))
+                timing.append(body("faza " + step + "  "))
                         .append(Text.literal(grade.display() + (peak ? " *\n" : "\n"))
                                 .formatted(grade.bookColour()));
             }
@@ -1533,160 +2243,236 @@ public final class TrapGuide {
         pages.add(page(timing));
 
         pages.add(page(Text.empty()
-                .append(title("4b. THE WINDOW\n\n"))
-                .append(body("The refiner gives you five steps of slack at peak. "
-                        + "This gives you " + AcetylatorBlock.PEAK_GRACE + ".\n\n"))
-                .append(body("Miss it and the batch is gone -- base, acid, pods, "
-                        + "the lot.\n\n"))
-                .append(warn("Stand next to this one."))));
+                .append(title("5b. OKNO CZASOWE\n\n"))
+                .append(body("Rafineria do koki daje pięć faz luzu na "
+                        + "szczycie.\n\n"))
+                .append(warn("Acetylator daje tylko "
+                        + AcetylatorBlock.PEAK_GRACE + "."))));
 
-        MutableText worth = Text.empty().append(title("4c. WORTH IT\n\n"));
+        pages.add(page(Text.empty()
+                .append(title("5c. RYZYKO\n\n"))
+                .append(warn("Przegapisz - przepada CAŁA partia.\n\n"))
+                .append(body("Baza, kwas, makówki, wszystko.\n\n"))
+                .append(hint("Stój przy tej maszynie i patrz."))));
+
+        MutableText worth = Text.empty().append(title("6. ILE TO WARTE\n\n"));
         for (Purity grade : Purity.values()) {
             worth.append(Text.literal(pad(grade.display(), 7)).formatted(grade.bookColour()))
                     .append(body(String.format("%.1fx  %de\n", grade.potency(),
                             Math.round(grade.emeralds() * Drug.DOPE.priceScale()))));
         }
         worth.append(body("\n"))
-                .append(hint(String.format("%.0fx what powder fetches.",
+                .append(hint(String.format("%.0fx tego, co daje proszek.",
                         Drug.DOPE.priceScale())));
         pages.add(page(worth));
 
         pages.add(page(Text.empty()
-                .append(title("5. NOD\n\n"))
-                .append(body("Nothing hurts, you heal, you don't get hungry.\n\n"))
-                .append(body("And you can't run, fight or mine while it lasts.\n\n"))
-                .append(hint("Weed bills you now. Coke bills you after. This one bills you later."))));
+                .append(title("7. EFEKT NOD\n\n"))
+                .append(body("Nic cię nie boli, regenerujesz zdrowie "
+                        + "i nie chce ci się jeść."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. GOING OVER\n\n"))
-                .append(body("A second hit on a live one puts you on the floor "
-                        + "and keeps you there.\n\n"))
-                .append(body("It won't kill you. It costs you minutes.\n\n"))
-                .append(warn("Wait for the icon to go."))));
+                .append(title("7b. CENA\n\n"))
+                .append(warn("Przez cały czas trwania NIE możesz "
+                        + "biegać, walczyć ani kopać.\n\n"))
+                .append(body("Jesteś bezbronny. Nie bierz tego w "
+                        + "terenie."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. THE BILL\n\n"))
-                .append(body("Dope hooks " + Math.round(
+                .append(title("7c. PORÓWNANIE\n\n"))
+                .append(body("Trawa: płacisz od razu.\n"))
+                .append(body("Koka: płacisz po efekcie.\n"))
+                .append(body("Heroina: płacisz później.\n\n"))
+                .append(hint("Cała mechanika nałogu: /guide habit"))));
+
+        pages.add(page(Text.empty()
+                .append(title("8. PRZEDAWKOWANIE\n\n"))
+                .append(warn("Druga działka, zanim zejdzie pierwsza, "
+                        + "kładzie cię na ziemię.\n\n"))
+                .append(body("Nie zabija. Kosztuje kilka minut "
+                        + "bezradności."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8b. JAK UNIKNĄĆ\n\n"))
+                .append(body("Poczekaj, aż ikona efektu zniknie z "
+                        + "ekranu.\n\n"))
+                .append(hint("Dopiero wtedy bierz kolejną."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9. NAŁÓG\n\n"))
+                .append(warn("Heroina uzależnia " + Math.round(
                         Drug.DOPE.hookPerHit() / Drug.KUSH.hookPerHit())
-                        + "x harder than weed and lets go "
-                        + Math.round(Drug.KUSH.decayPerMinute() / Drug.DOPE.decayPerMinute())
-                        + "x slower.\n\n"))
-                .append(body(Drug.DOPE.hitsToMax() + " hits and you're at the top "
-                        + "of the meter.\n\n"))
-                .append(hint("All of it: /guide habit"))));
+                        + "x mocniej niż trawa.\n\n"))
+                .append(body("I schodzi "
+                        + Math.round(Drug.KUSH.decayPerMinute()
+                        / Drug.DOPE.decayPerMinute())
+                        + "x wolniej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9b. LICZBY\n\n"))
+                .append(body("Wystarczy " + Drug.DOPE.hitsToMax()
+                        + " działek, żeby wbić licznik na maksa.\n\n"))
+                .append(hint("Całość: /guide habit"))));
     }
 
     // --- the habit ------------------------------------------------------------
 
     private static void habitCover(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("THE HABIT"))
-                .append(Text.literal("\nand the client list\n\n")
+                .append(title("NAŁÓG"))
+                .append(Text.literal("\ni lista klientów\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("What using costs, and what selling buys.\n\n"))
-                .append(hint("Your meters: /addiction"))));
+                .append(body("Ile kosztuje branie i co daje sprzedawanie "
+                        + "innym.\n\n"))
+                .append(hint("Twoje liczniki: /addiction"))));
     }
 
     private static void habit(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("1. THE METER\n\n"))
-                .append(body("One per thing you take. Every strain counts "
-                        + "separately.\n\n"))
-                .append(body("A Purp habit wants Purp. A shed full of Kush is "
-                        + "no use at all.\n\n"))
-                .append(hint("/addiction"))));
+                .append(title("1. LICZNIKI\n\n"))
+                .append(body("Każda używka ma WŁASNY licznik nałogu.\n\n"))
+                .append(body("Każda odmiana trawy liczy się osobno.\n\n"))
+                .append(hint("Sprawdzasz je komendą /addiction"))));
+
+        pages.add(page(Text.empty()
+                .append(title("1b. CO Z TEGO WYNIKA\n\n"))
+                .append(body("Nałóg na Purp domaga się Purpa.\n\n"))
+                .append(warn("Cała szopa Kusha nic wtedy nie da."))));
 
         MutableText bands = Text.empty()
-                .append(title("2. THE BANDS\n\n"))
-                .append(body("Two things at once: a high meter AND time off it.\n\n"));
-        bands.append(Text.literal(pad("itch", 8)).formatted(Formatting.DARK_GRAY))
-                .append(body("from " + Math.round(TrapAddiction.ITCH_AT * Drug.MAX) + "\n"))
-                .append(Text.literal(pad("craving", 8)).formatted(Formatting.GOLD))
-                .append(body("from " + Math.round(TrapAddiction.CRAVE_AT * Drug.MAX) + "\n"))
-                .append(Text.literal(pad("sick", 8)).formatted(Formatting.DARK_RED))
-                .append(body("from " + Math.round(TrapAddiction.SICK_AT * Drug.MAX) + "\n\n"))
-                .append(hint("Below the number, you never get there."));
+                .append(title("2. TRZY POZIOMY\n\n"))
+                .append(body("Objaw pojawia się, gdy licznik jest wysoko "
+                        + "I minęło trochę czasu od ostatniej działki.\n\n"));
+        bands.append(Text.literal(pad("swędzi", 8)).formatted(Formatting.DARK_GRAY))
+                .append(body("od " + Math.round(TrapAddiction.ITCH_AT * Drug.MAX) + "\n"))
+                .append(Text.literal(pad("głód", 8)).formatted(Formatting.GOLD))
+                .append(body("od " + Math.round(TrapAddiction.CRAVE_AT * Drug.MAX) + "\n"))
+                .append(Text.literal(pad("choroba", 8)).formatted(Formatting.DARK_RED))
+                .append(body("od " + Math.round(TrapAddiction.SICK_AT * Drug.MAX) + "\n"));
         pages.add(page(bands));
 
         pages.add(page(Text.empty()
-                .append(title("2b. HOW LONG\n\n"))
-                .append(body("Each takes its own time to build after your last hit:\n\n"))
-                .append(body("weed  " + Drug.KUSH.cravePeriodMinutes() + " min\n"
-                        + "coke  " + Drug.COKE.cravePeriodMinutes() + " min\n"
-                        + "dope  " + Drug.DOPE.cravePeriodMinutes() + " min\n\n"))
-                .append(hint("Dope is at you again in minutes."))));
+                .append(title("2b. BEZPIECZNY PRÓG\n\n"))
+                .append(body("Trzymaj licznik poniżej pierwszej liczby, "
+                        + "a nigdy nie poczujesz objawów.\n\n"))
+                .append(hint("Sprawdzaj /addiction przed paleniem."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. WHAT IT DOES\n\n"))
-                .append(body("Itching: nothing but the nag.\n\n"))
-                .append(body("Craving: your hands stop working.\n\n"))
-                .append(body("Sick: everything stops working, and dope also "
-                        + "bleeds you.\n\n"))
-                .append(hint("It won't kill you."))));
+                .append(title("2c. PO JAKIM CZASIE\n\n"))
+                .append(body("Od ostatniej działki do objawów:\n\n"))
+                .append(body("trawa    " + Drug.KUSH.cravePeriodMinutes() + " min\n"
+                        + "kokaina  " + Drug.COKE.cravePeriodMinutes() + " min\n"
+                        + "heroina  " + Drug.DOPE.cravePeriodMinutes() + " min\n\n"))
+                .append(warn("Heroina wraca po kilku minutach."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. THE FIX\n\n"))
-                .append(body("Taking the thing you crave clears it on the spot "
-                        + "and pays a bonus.\n\n"))
-                .append(body("And puts the meter up again.\n\n"))
-                .append(warn("That's the trap. It is meant to be."))));
+                .append(title("3. CO ROBIĄ OBJAWY\n\n"))
+                .append(body("Swędzi: tylko komunikaty, nic więcej.\n\n"))
+                .append(body("Głód: przestają działać ci ręce - nie "
+                        + "kopiesz i nie walczysz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. CHOROBA\n\n"))
+                .append(warn("Wszystko przestaje działać.\n\n"))
+                .append(body("Przy heroinie dodatkowo tracisz zdrowie.\n\n"))
+                .append(hint("Nałóg cię nie zabije, ale unieruchomi."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. DZIAŁKA\n\n"))
+                .append(body("Wzięcie tego, czego ci brakuje, kasuje "
+                        + "objawy natychmiast i daje premię."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. HACZYK\n\n"))
+                .append(warn("I jednocześnie podnosi licznik jeszcze "
+                        + "wyżej.\n\n"))
+                .append(body("Na tym polega pułapka. Tak ma być."))));
 
         MutableText clean = Text.empty()
-                .append(title("5. GETTING CLEAN\n\n"))
-                .append(body("Time. From the top:\n\n"));
+                .append(title("5. WYCHODZENIE\n\n"))
+                .append(body("Pomaga tylko czas. Od pełnego licznika:\n\n"));
         for (Drug drug : new Drug[]{Drug.KUSH, Drug.COKE, Drug.DOPE}) {
-            clean.append(Text.literal(pad(drug.isWeed() ? "weed" : drug.display(), 8))
+            clean.append(Text.literal(pad(drug.isWeed() ? "trawa" : drug.display(), 8))
                             .formatted(drug.text() == Formatting.WHITE
                                     ? Formatting.DARK_GRAY : Formatting.BLACK))
                     .append(body(drug.minutesToClean() + " min\n"));
         }
-        clean.append(body("\n"))
-                .append(hint("Half that if you ride out the sick part."));
         pages.add(page(clean));
 
         pages.add(page(Text.empty()
-                .append(title("5b. TONIC\n\n"))
-                .append(item("Nerve Tonic"))
-                .append(body(" holds the shakes off for "
-                        + (TrapContent.NerveTonicItem.CALM_TICKS / 20) + "s.\n\n"))
-                .append(body("It does not lower the meter. It buys you an "
-                        + "afternoon's work.\n\n"))
-                .append(hint("Honey, sugar, a flower."))));
+                .append(title("5b. SKRÓT\n\n"))
+                .append(body("Jeśli przetrzymasz fazę choroby i nie "
+                        + "weźmiesz, licznik spada dwa razy szybciej.\n\n"))
+                .append(hint("Najgorsze minuty są na początku."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. LEK\n\n"))
+                .append(item("Lek na nerwy"))
+                .append(body(" wstrzymuje objawy na "
+                        + (TrapContent.NerveTonicItem.CALM_TICKS / 20)
+                        + " sekund.\n\n"))
+                .append(hint("Miód, cukier, kwiatek."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d. UWAGA\n\n"))
+                .append(warn("Lek NIE obniża licznika nałogu.\n\n"))
+                .append(body("Kupuje ci tylko spokojne popołudnie "
+                        + "pracy."))));
 
         MutableText hooks = Text.empty()
-                .append(title("6. THE NUMBERS\n\n"))
-                .append(body("Hits at normal strength to fill the meter:\n\n"));
+                .append(title("6. ILE DZIAŁEK\n\n"))
+                .append(body("Do zapełnienia licznika, przy zwykłej "
+                        + "mocy towaru:\n\n"));
         for (Drug drug : new Drug[]{Drug.KUSH, Drug.COKE, Drug.DOPE}) {
-            hooks.append(Text.literal(pad(drug.isWeed() ? "weed" : drug.display(), 8))
+            hooks.append(Text.literal(pad(drug.isWeed() ? "trawa" : drug.display(), 8))
                             .formatted(Formatting.BLACK))
                     .append(body(drug.hitsToMax() + "\n"));
         }
         hooks.append(body("\n"))
-                .append(hint("Strong grades count for more than one."));
+                .append(hint("Mocniejsze klasy liczą się za więcej."));
         pages.add(page(hooks));
 
         pages.add(page(Text.empty()
-                .append(title("7. THE STREET\n\n"))
-                .append(body("They get hooked too, and they get hooked on YOU.\n\n"))
-                .append(body("Every sale builds a client list. Dope builds it "
-                        + "fastest by a mile.\n\n"))
-                .append(hint("Shown on /addiction once it's moving."))));
+                .append(title("7. KLIENCI\n\n"))
+                .append(body("NPC też się uzależniają - i to od "
+                        + "CIEBIE.\n\n"))
+                .append(body("Każda sprzedaż buduje twoją listę "
+                        + "klientów."))));
 
         pages.add(page(Text.empty()
-                .append(title("7b. WHAT IT BUYS\n\n"))
-                .append(body("Customers turn up sooner, ask for the strong stuff, "
-                        + "and take more each visit.\n\n"))
-                .append(body("Your tenants start asking for it too.\n\n"))
-                .append(warn("Stop selling and it fades."))));
+                .append(title("7b. TEMPO\n\n"))
+                .append(body("Heroina buduje listę zdecydowanie "
+                        + "najszybciej.\n\n"))
+                .append(hint("Widać ją w /addiction, jak tylko ruszy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c. CO TO DAJE\n\n"))
+                .append(body("Klienci:\n\n"))
+                .append(body("- podchodzą częściej\n"))
+                .append(body("- proszą o mocniejszy towar\n"))
+                .append(body("- kupują więcej za jednym razem\n"))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d. I JESZCZE\n\n"))
+                .append(body("Twoi właśni lokatorzy też zaczynają "
+                        + "pytać o towar.\n\n"))
+                .append(warn("Przestaniesz sprzedawać i lista zanika."))));
     }
 
     private static void checking(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("8a2. /HEAT\n\n"))
-                .append(body("How hot this spot is, and what it brings.\n\n"))
-                .append(body("Ripe 3, hidden 2, growing 1, rack 1.\n\n"))
-                .append(body("Coca the same. Machines 2.\n\n"))
-                .append(hint("Reads 22 across, 10 tall."))));
+                .append(title("11. KOMENDA /HEAT\n\n"))
+                .append(body("Pokazuje, jak gorąco jest w miejscu, "
+                        + "w którym stoisz, i co z tego wyniknie.\n\n"))
+                .append(hint("Sprawdza 22 bloki wszerz i 10 w pionie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("11b. TARYFIKATOR\n\n"))
+                .append(body("dojrzała roślina  3\n"))
+                .append(body("ukryta roślina    2\n"))
+                .append(body("rosnąca roślina   1\n"))
+                .append(body("suszarka          1\n"))
+                .append(body("maszyna           2\n"))));
     }
 
     /**
@@ -1695,20 +2481,30 @@ public final class TrapGuide {
      * The search is a RAID page, not a crew page -- it only ever sat next to
      * them because both were about your farm being looked after or looked at.
      */
+    /** Paid jobs to a page of the handbook. See where it is used for why. */
+    private static final int JOBS_A_PAGE = 5;
+
     private static void crew(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("8b. THE CREW\n\n"))
-                .append(body("Hire hands to work a patch for you: picking, "
-                        + "farming, curing, sowing.\n\n"))
-                .append(body(TrapCrew.HIRE_COST + "e each, then wages.\n\n"))
-                .append(hint("The lot of it: /guide crew"))));
+                .append(title("12. EKIPA\n\n"))
+                .append(body("Możesz nająć ludzi do pracy na plantacji: "
+                        + "zbierają, sadzą, orzą, suszą.\n\n"))
+                .append(body("Kosztuje " + TrapCrew.HIRE_COST
+                        + "e za osobę, plus pensje.\n\n"))
+                .append(hint("Całość: /guide crew"))));
 
         pages.add(page(Text.empty()
-                .append(title("8c. THE SEARCH\n\n"))
-                .append(body("A raid doesn't just swing axes. They walk to "
-                        + "your chests and take product.\n\n"))
-                .append(body("Only product. Seeds and gear are safe.\n\n"))
-                .append(hint("Bury it, split it, or stand in the way."))));
+                .append(title("13. NALOT\n\n"))
+                .append(body("Napastnicy nie tylko machają toporami.\n\n"))
+                .append(warn("Podchodzą do twoich skrzyń i zabierają "
+                        + "z nich TOWAR."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13b. CO JEST BEZPIECZNE\n\n"))
+                .append(body("Biorą wyłącznie towar.\n\n"))
+                .append(body("Nasiona i sprzęt zostają.\n\n"))
+                .append(hint("Zakop skrzynie, rozdziel zapasy albo "
+                        + "stań im na drodze."))));
     }
 
     // --- the crew handbook ----------------------------------------------------
@@ -1727,258 +2523,432 @@ public final class TrapGuide {
         int wide = TrapCrew.REACH_BLOCKS.length - 1;
 
         pages.add(page(Text.empty()
-                .append(title("1. HIRING\n\n"))
-                .append(body("Stand where you want the work done:\n\n"))
-                .append(body("/crew hire  -  " + TrapCrew.HIRE_COST + "e\n\n"))
-                .append(body("That spot is their patch. They arrive knowing "
-                        + "nothing.\n\n"))
-                .append(hint("Up to " + TrapCrew.MAX_HANDS + " on the books."))));
+                .append(title("1. ZATRUDNIANIE\n\n"))
+                .append(body("Stań dokładnie tam, gdzie ma być "
+                        + "wykonywana praca, i wpisz:\n\n"))
+                .append(body("/crew hire\n\n"))
+                .append(body("Koszt: " + TrapCrew.HIRE_COST + "e"))));
 
         pages.add(page(Text.empty()
-                .append(title("2. THE CHEST\n\n"))
-                .append(body("Everything they pick goes in the nearest "
-                        + "container to the patch.\n\n"))
-                .append(body("They take seeds and bone meal back out of that "
-                        + "same chest.\n\n"))
-                .append(warn("No chest, and the drops land on the floor."))));
+                .append(title("1b. DZIAŁKA\n\n"))
+                .append(body("Miejsce, w którym stałeś, staje się jego "
+                        + "działką.\n\n"))
+                .append(body("Nowy robotnik nie umie nic - wszystkiego "
+                        + "trzeba go nauczyć.\n\n"))
+                .append(hint("Maksymalnie " + TrapCrew.MAX_HANDS
+                        + " osób."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. THE BOARD\n\n"))
-                .append(body("/crew\n\n"))
-                .append(body("Top row is your hands. Click one, then buy pace, "
-                        + "patch or a job for them.\n\n"))
-                .append(hint("Each hand is trained on its own."))));
+                .append(title("2. SKRZYNIA\n\n"))
+                .append(body("Wszystko, co zbierze, ląduje w pojemniku "
+                        + "NAJBLIŻSZYM jego działki.\n\n"))
+                .append(body("Z tej samej skrzyni bierze nasiona "
+                        + "i mączkę kostną."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. PACE\n\n"))
-                .append(body(TrapCrew.PACE_NAME[0] + ": a job every "
-                        + TrapCrew.paceLabel(0) + ".\n\n"))
-                .append(body(TrapCrew.PACE_NAME[top] + ": every "
-                        + TrapCrew.paceLabel(top) + ", and they walk quicker.\n\n"))
-                .append(hint(top + " rungs, " + TrapCrew.PACE_COST[1] + "e to "
-                        + TrapCrew.PACE_COST[top] + "e."))));
+                .append(title("2b. BEZ SKRZYNI\n\n"))
+                .append(warn("Nie ma skrzyni - plony lecą na ziemię "
+                        + "i znikają.\n\n"))
+                .append(hint("Postaw skrzynię, zanim zatrudnisz "
+                        + "kogokolwiek."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. MOVING THEM\n\n"))
-                .append(body("Each one has their own spot. Stand where you "
-                        + "want them and open /crew.\n\n"))
-                .append(body("\"Work here instead\" moves the spot and "
-                        + "them with it.\n\n"))
-                .append(hint("Works between worlds too."))));
+                .append(title("3. TABLICA\n\n"))
+                .append(body("Wpisz /crew\n\n"))
+                .append(body("Górny rząd to twoi ludzie. Kliknij "
+                        + "jednego, żeby go wybrać."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. THE PATCH\n\n"))
-                .append(body("They work a box " + TrapCrew.REACH_BLOCKS[0]
-                        + " blocks around the spot, up to " + TrapCrew.REACH_BLOCKS[wide]
-                        + ".\n\n"))
-                .append(body("Wider is more ground and more wage, not more "
-                        + "speed.\n\n"))
-                .append(hint("Buy pace first. An idle hand still eats."))));
+                .append(title("3b. SZKOLENIE\n\n"))
+                .append(body("Po wybraniu kupujesz mu tempo, zasięg "
+                        + "działki albo zawód.\n\n"))
+                .append(warn("Każdy szkoli się osobno. Kupione u "
+                        + "jednego nie działa u drugiego."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. TEMPO\n\n"))
+                .append(body(TrapCrew.PACE_NAME[0] + ": jedna czynność "
+                        + "co " + TrapCrew.paceLabel(0) + "\n\n"))
+                .append(body(TrapCrew.PACE_NAME[top] + ": co "
+                        + TrapCrew.paceLabel(top) + ", i szybciej "
+                        + "chodzi"))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. CENA TEMPA\n\n"))
+                .append(body("Do kupienia " + top + " poziomów.\n\n"))
+                .append(body("Od " + TrapCrew.PACE_COST[1] + "e do "
+                        + TrapCrew.PACE_COST[top] + "e.\n\n"))
+                .append(hint("Tempo kupuj w pierwszej kolejności."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. ZASIĘG DZIAŁKI\n\n"))
+                .append(body("Na start pracuje w kwadracie "
+                        + TrapCrew.REACH_BLOCKS[0]
+                        + " bloków wokół swojego miejsca.\n\n"))
+                .append(body("Można rozszerzyć do "
+                        + TrapCrew.REACH_BLOCKS[wide] + " bloków."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. UWAGA\n\n"))
+                .append(warn("Szerszy zasięg to więcej terenu i WYŻSZA "
+                        + "pensja, ale NIE większa szybkość.\n\n"))
+                .append(hint("Bezczynny robotnik i tak bierze kasę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. PRZENOSZENIE\n\n"))
+                .append(body("Stań tam, gdzie ma teraz pracować, "
+                        + "i otwórz /crew.\n\n"))
+                .append(body("Kliknij \"Pracuj tutaj\" - przeniesie się "
+                        + "razem z działką.\n\n"))
+                .append(hint("Działa też między wymiarami."))));
 
         jobs(pages);
 
         pages.add(page(Text.empty()
-                .append(title("8. WAGES\n\n"))
-                .append(body(TrapCrew.WAGE + "e each, every five minutes THEY "
-                        + "WORK.\n\n"))
-                .append(body("The clock stops at dusk and when you log off. "
-                        + "Nights are free.\n\n"))
-                .append(hint("Every rung and job puts the packet up."))));
+                .append(title("8. PENSJE\n\n"))
+                .append(body("Podstawa: " + TrapCrew.WAGE + "e na osobę "
+                        + "za każde pięć minut PRACY.\n\n"))
+                .append(warn("Każdy poziom tempa, zasięgu i zawodu "
+                        + "podnosi tę stawkę."))));
 
         pages.add(page(Text.empty()
-                .append(title("8b. IF YOU CAN'T PAY\n\n"))
-                .append(body("You get a notice, not a walkout.\n\n"))
-                .append(body(TrapCrew.GRACE_PACKETS + " paydays on nothing -- about two "
-                        + "days -- then they go.\n\n"))
-                .append(hint("Pay one packet and the arrears are written off."))));
+                .append(title("8b. KIEDY LICZNIK STOI\n\n"))
+                .append(body("Zegar zatrzymuje się o zmroku i kiedy się "
+                        + "wylogujesz.\n\n"))
+                .append(hint("Noce są darmowe."))));
 
         pages.add(page(Text.empty()
-                .append(title("9. HOURS\n\n"))
-                .append(body("Daylight only, unless you say otherwise.\n\n"))
-                .append(body("At dusk they find a bed in the patch and turn "
-                        + "in. Build them one.\n\n"))
-                .append(hint("The clock stops with them, so the dark costs "
-                        + "nothing."))));
+                .append(title("8c. BRAK PIENIĘDZY\n\n"))
+                .append(body("Nie odchodzą od razu - najpierw dostajesz "
+                        + "ostrzeżenie.\n\n"))
+                .append(body("Masz " + TrapCrew.GRACE_PACKETS
+                        + " niezapłaconych wypłat, czyli około dwóch "
+                        + "dni."))));
 
         pages.add(page(Text.empty()
-                .append(title("9a. NIGHTS\n\n"))
-                .append(body("Put one on nights and they never stop.\n\n"))
-                .append(body("+" + Math.round((TrapCrew.NIGHT_RATE - 1) * 100)
-                        + "% on the wage, and the clock runs all night "
-                        + "too.\n\n"))
-                .append(hint("Twice the work, a bit over twice the money."))));
+                .append(title("8d. RATUNEK\n\n"))
+                .append(body("Zapłać JEDNĄ wypłatę, a całe zaległości "
+                        + "są umarzane.\n\n"))
+                .append(hint("Nie musisz spłacać wszystkiego."))));
 
         pages.add(page(Text.empty()
-                .append(title("9e. CREWS ON FILE\n\n"))
-                .append(body("/crew save <name>\n"))
+                .append(title("9. GODZINY PRACY\n\n"))
+                .append(body("Domyślnie pracują tylko za dnia.\n\n"))
+                .append(body("O zmroku szukają łóżka w obrębie działki "
+                        + "i kładą się spać."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9b. ŁÓŻKO\n\n"))
+                .append(warn("Postaw im łóżko na działce.\n\n"))
+                .append(hint("Zegar pensji też staje na noc, więc "
+                        + "ciemność nic nie kosztuje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9c. NOCNA ZMIANA\n\n"))
+                .append(body("Możesz przestawić kogoś na noce - wtedy "
+                        + "nie przerywa pracy w ogóle.\n\n"))
+                .append(body("Kosztuje +"
+                        + Math.round((TrapCrew.NIGHT_RATE - 1) * 100)
+                        + "% do pensji."))));
+
+        pages.add(page(Text.empty()
+                .append(title("9c2. CZY WARTO\n\n"))
+                .append(warn("Na nocnej zmianie zegar chodzi całą noc, "
+                        + "więc płacisz też za noc.\n\n"))
+                .append(hint("Dwa razy więcej pracy za trochę ponad "
+                        + "dwa razy więcej pieniędzy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("10. ZAPIS EKIPY\n\n"))
+                .append(body("/crew save <nazwa>\n"))
                 .append(body("/crew plans\n"))
-                .append(body("/crew load <name>\n\n"))
-                .append(body("Puts them back on the same patches, trained, "
-                        + "for what it cost the first time.\n\n"))
-                .append(hint("A walkout files itself."))));
+                .append(body("/crew load <nazwa>\n\n"))
+                .append(hint("Zapisuje cały układ ekipy."))));
 
         pages.add(page(Text.empty()
-                .append(title("9b. WHAT THEY WON'T DO\n\n"))
-                .append(body("Pull a rack early. That costs a grade.\n\n"))
-                .append(body("Bone meal YOUR crops. Same reason.\n\n"))
-                .append(body("Tread farmland back into dirt.\n\n"))
-                .append(hint("Nor wander off."))));
+                .append(title("10b. WCZYTYWANIE\n\n"))
+                .append(body("Wczytanie stawia tych samych ludzi na tych "
+                        + "samych działkach, już wyszkolonych.\n\n"))
+                .append(body("Za tyle, ile kosztowało pierwszy raz.\n\n"))
+                .append(hint("Odejście ekipy zapisuje się samo."))));
 
         pages.add(page(Text.empty()
-                .append(title("9c. WHILE YOU'RE AWAY\n\n"))
-                .append(body("The patch keeps going wherever you are, as "
-                        + "long as you're logged in.\n\n"))
-                .append(body("Log off and the field sleeps -- and so does "
-                        + "the wage.\n\n"))
-                .append(hint("No need to stand over anybody."))));
+                .append(title("11. CZEGO NIE ZROBIĄ\n\n"))
+                .append(body("- nie ściągną suszu z suszarki za wcześnie\n"))
+                .append(body("- nie użyją mączki na twoich roślinach\n"))
+                .append(body("- nie zdepczą zaoranej ziemi\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("9d. THE WHIP\n\n"))
-                .append(body("Wandered off? Stuck? Whip them in /crew.\n\n"))
-                .append(body("Back to the spot, break over, free.\n\n"))
-                .append(warn("If something ATE them, it puts somebody "
-                        + "new down -- trained."))));
+                .append(title("11b. DLACZEGO\n\n"))
+                .append(body("Dwa pierwsze punkty kosztowałyby cię klasę "
+                        + "towaru.\n\n"))
+                .append(hint("Nie odchodzą też z działki."))));
 
         pages.add(page(Text.empty()
-                .append(title("10. IS IT WORTH IT?\n\n"))
-                .append(body("A hand you can't keep busy is a hand losing you "
-                        + "money.\n\n"))
-                .append(body("Work out what the patch brings in per five "
-                        + "minutes, then read the wage.\n\n"))
-                .append(hint("/crew shows the payroll, and what you're carrying."))));
+                .append(title("12. GDY CIĘ NIE MA\n\n"))
+                .append(body("Działka pracuje niezależnie od tego, gdzie "
+                        + "jesteś - byle byś był zalogowany.\n\n"))
+                .append(hint("Nie musisz nad nikim stać."))));
+
+        pages.add(page(Text.empty()
+                .append(title("12b. PO WYLOGOWANIU\n\n"))
+                .append(body("Wylogujesz się - pole zasypia.\n\n"))
+                .append(hint("Pensje też przestają lecieć."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13. ZACIĄŁ SIĘ?\n\n"))
+                .append(body("Odszedł gdzieś albo utknął? Otwórz /crew "
+                        + "i kliknij bat.\n\n"))
+                .append(body("Wraca na miejsce i przerywa przerwę. "
+                        + "Za darmo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("13b. GDY ZGINĄŁ\n\n"))
+                .append(body("Jeśli coś go ZJADŁO, bat stawia na jego "
+                        + "miejsce nową osobę.\n\n"))
+                .append(hint("Już wyszkoloną tak samo. Nie płacisz "
+                        + "za szkolenie drugi raz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14. CZY SIĘ OPŁACA\n\n"))
+                .append(warn("Robotnik bez roboty to strata "
+                        + "pieniędzy.\n\n"))
+                .append(body("Policz, ile działka daje na pięć minut, "
+                        + "i porównaj z pensją."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14b. GDZIE SPRAWDZIĆ\n\n"))
+                .append(body("Komenda /crew pokazuje sumę pensji i to, "
+                        + "ile masz przy sobie.\n\n"))
+                .append(hint("Zaglądaj tam regularnie."))));
     }
 
     /** The five you can teach, priced off the enum so the board can't disagree. */
     private static void jobs(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("6. TWO JOBS EACH\n\n"))
-                .append(body("Nobody holds more than " + TrapCrew.SLOTS + ".\n\n"))
-                .append(body("Want a third thing done? Hire a third person. "
-                        + "Up to " + TrapCrew.MAX_HANDS + ".\n\n"))
-                .append(hint("Picking is free. Shift-click to drop a job."))));
+                .append(title("6. DWA ZAWODY\n\n"))
+                .append(body("Jedna osoba może mieć maksymalnie "
+                        + TrapCrew.SLOTS + " zawody.\n\n"))
+                .append(body("Potrzebujesz trzeciej rzeczy? Zatrudnij "
+                        + "trzecią osobę. Limit: " + TrapCrew.MAX_HANDS
+                        + "."))));
 
-        MutableText list = Text.empty().append(title("7. THE JOBS\n\n"));
+        pages.add(page(Text.empty()
+                .append(title("6b. ZMIANA ZAWODU\n\n"))
+                .append(body("Zbieranie plonów jest darmowe i ma "
+                        + "każdy.\n\n"))
+                .append(hint("Shift+LPM usuwa wykupiony zawód, żeby "
+                        + "zwolnić miejsce."))));
+
+        // Five to a page. The whole list on one page was already at the ~14
+        // line ceiling this book truncates at, and laundering pushed it over
+        // twice: a ninth entry, and a four-figure price that makes
+        // "Laundering  1200e  +18e" too wide to sit on one line. Paged rather
+        // than shortened, so the tenth job lands on a page with room on it
+        // instead of quietly falling off the end of one.
+        List<TrapCrew.Job> paid = new ArrayList<>();
         for (TrapCrew.Job job : TrapCrew.Job.values()) {
-            if (job.free()) {
-                continue;
+            if (!job.free()) {
+                paid.add(job);
             }
-            list.append(body(job.display() + "  " + job.cost() + "e  +"
-                    + job.wage() + "e\n"));
         }
-        pages.add(page(list.append(Text.literal("\n"))
-                .append(hint("Cost, then what it adds to the wage."))));
+        for (int from = 0; from < paid.size(); from += JOBS_A_PAGE) {
+            MutableText list = Text.empty().append(title(from == 0
+                    ? "7. ZAWODY\n\n" : "7. ZAWODY, DALEJ\n\n"));
+            for (TrapCrew.Job job : paid.subList(from,
+                    Math.min(from + JOBS_A_PAGE, paid.size()))) {
+                list.append(body(job.display() + "  " + job.cost() + "e  +"
+                        + job.wage() + "e\n"));
+            }
+            pages.add(page(list.append(Text.literal("\n"))
+                    .append(hint("cena, potem dodatek do pensji"))));
+        }
 
         pages.add(page(Text.empty()
-                .append(title("7b. ONE CHEST\n\n"))
-                .append(body("A hand uses the NEAREST container to their "
-                        + "spot. That one, and no other.\n\n"))
-                .append(body("Everything they need goes in it.\n\n"))
-                .append(warn("Another chest nearer their spot steals the "
-                        + "job."))));
+                .append(title("7b. JEDNA SKRZYNIA\n\n"))
+                .append(body("Robotnik korzysta z pojemnika NAJBLIŻSZEGO "
+                        + "swojemu miejscu. Tylko z tego jednego.\n\n"))
+                .append(body("Wszystko, czego potrzebuje, ma być w "
+                        + "środku."))));
 
         pages.add(page(Text.empty()
-                .append(title("7c. NOT ROLLING?\n\n"))
-                .append(body("CURED buds AND paper, in that chest.\n\n"))
-                .append(body("No crafting table. Fresh buds won't do.\n\n"))
-                .append(hint("The board says which jobs the chest can "
-                        + "back."))));
+                .append(title("7b2. PUŁAPKA\n\n"))
+                .append(warn("Postawisz inną skrzynię bliżej - "
+                        + "przerzuci się na nią.\n\n"))
+                .append(hint("I nagle przestanie mieć swoje nasiona."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c. NIE SKRĘCA?\n\n"))
+                .append(body("W skrzyni muszą być SUSZONE szyszki ORAZ "
+                        + "papier.\n\n"))
+                .append(warn("Świeże szyszki nie wystarczą."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c2. BEZ STOŁU\n\n"))
+                .append(body("Stół rzemieślniczy nie jest potrzebny.\n\n"))
+                .append(hint("Tablica /crew pokazuje, które zawody "
+                        + "skrzynia jest w stanie obsłużyć."))));
     }
 
     private static void network(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("8e. THE NETWORK\n\n"))
-                .append(body("Sneak + right-click the phone.\n\n"))
-                .append(body("Hire up to " + TrapDealers.MAX_DEALERS
-                        + " dealers. They sell while you're away.\n\n"))
-                .append(hint("Click one to call them in."))));
+                .append(title("14. DILERZY\n\n"))
+                .append(body("Kucnij i kliknij PPM telefonem na kartę.\n\n"))
+                .append(body("Możesz zatrudnić do " + TrapDealers.MAX_DEALERS
+                        + " dilerów. Sprzedają towar, kiedy ciebie nie "
+                        + "ma."))));
 
         pages.add(page(Text.empty()
-                .append(title("8f. LOADING UP\n\n"))
-                .append(body("Right-click a called dealer to open their "
-                        + "book.\n\n"))
-                .append(body("Drop product in. Take the money out.\n\n"))
-                .append(warn("They sell nothing while stood in front of you."))));
+                .append(title("14b. WEZWANIE\n\n"))
+                .append(body("Kliknij dilera na liście, żeby wezwać go "
+                        + "do siebie.\n\n"))
+                .append(body("Kliknij go PPM, żeby otworzyć jego "
+                        + "zeszyt.\n\n"))
+                .append(hint("Włóż towar, wyjmij pieniądze."))));
 
         pages.add(page(Text.empty()
-                .append(title("8g. THE HOURS\n\n"))
-                .append(body("They shift about three times as much at "
-                        + "midnight as at noon.\n\n"))
-                .append(body("Load them in the evening, collect in the "
-                        + "morning.\n\n"))
-                .append(hint("Heat slows them. It doesn't stop them."))));
+                .append(title("14c. WAŻNE\n\n"))
+                .append(warn("Diler stojący przed tobą NIC nie "
+                        + "sprzedaje.\n\n"))
+                .append(body("Odeślij go, jak go załadujesz."))));
 
         pages.add(page(Text.empty()
-                .append(title("8h. LEVELS\n\n"))
-                .append(body("Eight of them. Higher = more slots, faster, "
-                        + "robbed less, bigger cut.\n\n"))
-                .append(body("The throughput covers the cut.\n\n"))
-                .append(hint("Level 8 carries 18 slots."))));
+                .append(title("14d. PORY DNIA\n\n"))
+                .append(body("O północy sprzedają jakieś trzy razy "
+                        + "więcej niż w południe.\n\n"))
+                .append(hint("Załaduj wieczorem, odbierz rano."))));
 
         pages.add(page(Text.empty()
-                .append(title("8h2. YOUR NAME\n\n"))
-                .append(body("Contract rep cuts hiring costs, up to 40%.\n\n"))
-                .append(body("It also gets better people on the board, and "
-                        + "your dealers learn faster.\n\n"))
-                .append(hint("Courier work pays twice."))));
+                .append(title("14e. UWAGA POLICJI\n\n"))
+                .append(body("Wysoka uwaga policji spowalnia dilerów.\n\n"))
+                .append(hint("Ale ich nie zatrzymuje."))));
 
         pages.add(page(Text.empty()
-                .append(title("8h3. THE BOARD\n\n"))
-                .append(body("Turns over on its own every ten minutes.\n\n"))
-                .append(body("Or pay " + TrapDealers.REROLL_COST
-                        + "e to ask around now.\n\n"))
-                .append(warn("Product on the street brings raids forward."))));
+                .append(title("14f. POZIOMY\n\n"))
+                .append(body("Diler ma poziom od 1 do 8.\n\n"))
+                .append(body("Wyższy = więcej slotów, szybsza sprzedaż, "
+                        + "rzadsze napady, ale większa prowizja."))));
 
         pages.add(page(Text.empty()
-                .append(title("8i. CROWDING\n\n"))
-                .append(body("Every extra dealer on the same patch sells "
-                        + "less than the last.\n\n"))
-                .append(warn("Four are worth less than four times one."))));
+                .append(title("14f2. CZY WARTO\n\n"))
+                .append(body("Tak. Wyższy przerób z nawiązką pokrywa "
+                        + "wyższą prowizję.\n\n"))
+                .append(hint("Poziom 8 nosi 18 slotów towaru."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14g. TWOJA REPUTACJA\n\n"))
+                .append(body("Reputacja ze zleceń obniża koszt "
+                        + "zatrudnienia, nawet o 40%.\n\n"))
+                .append(body("Na liście pojawiają się też lepsi ludzie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14g2. I SZKOLENIE\n\n"))
+                .append(body("Przy wysokiej reputacji twoi dilerzy "
+                        + "szybciej się uczą.\n\n"))
+                .append(hint("Kurierka opłaca się podwójnie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14h. LISTA CHĘTNYCH\n\n"))
+                .append(body("Odświeża się sama co dziesięć minut.\n\n"))
+                .append(body("Albo zapłać " + TrapDealers.REROLL_COST
+                        + "e, żeby popytać od razu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14i. RYZYKO\n\n"))
+                .append(warn("Towar na ulicy przyspiesza naloty.\n\n"))
+                .append(body("Im więcej dilerów pracuje, tym częściej "
+                        + "ktoś przychodzi do ciebie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14j. NASYCENIE\n\n"))
+                .append(body("Każdy kolejny diler w tej samej okolicy "
+                        + "sprzedaje mniej niż poprzedni.\n\n"))
+                .append(warn("Czterech to MNIEJ niż cztery razy jeden."))));
+
+        pages.add(page(Text.empty()
+                .append(title("14j2. CO ROBIĆ\n\n"))
+                .append(body("Rozstawiaj dilerów po różnych "
+                        + "miejscach.\n\n"))
+                .append(hint("Im dalej od siebie, tym lepiej."))));
     }
 
     private static void supply(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
-                .append(title("9. SUPPLY\n\n"))
-                .append(body("Seeds: grass, chests, wild patches in plains, savanna and jungle.\n\n"))
-                .append(body("Wandering traders sell one strain each, 5 emeralds.\n\n"))
-                .append(hint("Farmers sell seeds and buy fresh buds."))));
+                .append(title("15. SKĄD NASIONA\n\n"))
+                .append(body("- z rozbijania trawy\n"))
+                .append(body("- ze skrzyń w strukturach\n"))
+                .append(body("- z dzikich krzaków na równinach, "
+                        + "sawannie i w dżungli\n"))));
 
         pages.add(page(Text.empty()
-                .append(title("9b. SELLING\n\n"))
-                .append(body("Traders pay by grade, and they check:\n\n"))
-                .append(body("4 cured buds, or 2 joints, per sale.\n\n"))
-                .append(body(Quality.SWILL.display() + " pays " + Quality.SWILL.emeralds() + "e. "))
-                .append(Text.literal(Quality.FIRE.display()).formatted(Quality.FIRE.colour()))
-                .append(body(" pays " + Quality.FIRE.emeralds() + "e.\n\n"))
-                .append(hint("Same work, " + (Quality.FIRE.emeralds() / Quality.SWILL.emeralds()) + "x the money."))));
+                .append(title("15b. OD HANDLARZY\n\n"))
+                .append(body("Wędrowny handlarz sprzedaje jedną odmianę, "
+                        + "po 5 szmaragdów.\n\n"))
+                .append(hint("Rolnicy sprzedają nasiona i skupują "
+                        + "świeże szyszki."))));
 
         pages.add(page(Text.empty()
-                .append(title("9c. CUSTOMERS\n\n"))
-                .append(body("Carry product and somebody walks up wanting it.\n\n"))
-                .append(body("A strain, powder, or a mix.\n\n"))
-                .append(hint("Their name says what they're after."))));
+                .append(title("16. SPRZEDAŻ NPC\n\n"))
+                .append(body("Wieśniacy płacą według klasy towaru "
+                        + "i sprawdzają go.\n\n"))
+                .append(body("Jedna transakcja to 4 suszone szyszki "
+                        + "albo 2 skręty."))));
 
         pages.add(page(Text.empty()
-                .append(title("9c1. THE FORM\n\n"))
-                .append(body("Their name says the strain AND whether they "
-                        + "want bud, joints, or any.\n\n"))
-                .append(body("They only ask for what you're carrying.\n\n"))
-                .append(hint("Right-click with the wrong form does nothing."))));
+                .append(title("16b. RÓŻNICA W CENIE\n\n"))
+                .append(body(Quality.SWILL.display() + ": "
+                        + Quality.SWILL.emeralds() + "e\n"))
+                .append(Text.literal(Quality.FIRE.display() + ": ")
+                        .formatted(Quality.FIRE.colour()))
+                .append(body(Quality.FIRE.emeralds() + "e\n\n"))
+                .append(warn("Ta sama praca, "
+                        + (Quality.FIRE.emeralds() / Quality.SWILL.emeralds())
+                        + "x więcej kasy. Dbaj o jakość."))));
 
         pages.add(page(Text.empty()
-                .append(title("9c2. MIXES\n\n"))
-                .append(body("Some ask for any mix. Some ask for a known "
-                        + "blend by name.\n\n"))
-                .append(body("Both pay more than a single strain. Named pays "
-                        + "most.\n\n"))
-                .append(hint("More parts, more money."))));
+                .append(title("17. KLIENCI Z ULICY\n\n"))
+                .append(body("Kiedy nosisz przy sobie towar, podchodzą "
+                        + "do ciebie chętni.\n\n"))
+                .append(body("Chcą konkretnej odmiany, proszku albo "
+                        + "mieszanki."))));
 
         pages.add(page(Text.empty()
-                .append(title("9d. DEALING\n\n"))
-                .append(body("Hold it and right-click them. No menu.\n\n"))
-                .append(body("They take up to " + TrapDealing.UNITS_WANTED
-                        + ", paying per item as you go.\n\n"))
-                .append(hint("Sneak-click to send them off.\nThey leave on their own after "
-                        + TrapDealing.LIFETIME_TICKS / 20 / 60 + " min."))));
+                .append(title("17b. CZEGO CHCĄ\n\n"))
+                .append(body("Ich NAZWA mówi wszystko: jaką odmianę "
+                        + "i w jakiej postaci.\n\n"))
+                .append(body("Susz, skręty albo obojętnie.\n\n"))
+                .append(hint("Proszą tylko o to, co masz przy sobie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17c. ZŁA POSTAĆ\n\n"))
+                .append(warn("PPM z niewłaściwą postacią towaru nie "
+                        + "robi nic.\n\n"))
+                .append(hint("Przeczytaj nazwę, zanim klikniesz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17d. MIESZANKI\n\n"))
+                .append(body("Jedni chcą dowolnej mieszanki.\n\n"))
+                .append(body("Inni proszą o konkretną nazwaną mieszankę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17d2. STAWKI\n\n"))
+                .append(body("Obie płacą więcej niż pojedyncza odmiana. "
+                        + "Nazwana płaci najwięcej.\n\n"))
+                .append(hint("Im więcej składników, tym więcej kasy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17e. TRANSAKCJA\n\n"))
+                .append(body("Weź towar do ręki i kliknij klienta PPM. "
+                        + "Nie ma żadnego menu.\n\n"))
+                .append(body("Bierze do " + TrapDealing.UNITS_WANTED
+                        + " sztuk, płacąc za każdą osobno."))));
+
+        pages.add(page(Text.empty()
+                .append(title("17f. ODPRAWA\n\n"))
+                .append(body("Kucnij i kliknij, żeby go odesłać.\n\n"))
+                .append(body("Sam odchodzi po "
+                        + TrapDealing.LIFETIME_TICKS / 20 / 60 + " min.\n\n"))
+                .append(warn("Sprzedaż z ręki może ściągnąć napad."))));
     }
 
     // --- text helpers ---------------------------------------------------------

@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -22,12 +21,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Step two of the long line: latex and lime, cooked down to base.
@@ -48,7 +51,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * list of block ids, so a lit campfire, a lit furnace and whatever this pack's
  * other 136 mods call a forge all count without anybody maintaining a list.
  */
-public class WashPotBlock extends Block implements PolymerTexturedBlock {
+public class WashPotBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<WashPotBlock> CODEC = createCodec(WashPotBlock::new);
 
     public static final BooleanProperty LOADED = BooleanProperty.of("loaded");
@@ -64,24 +67,21 @@ public class WashPotBlock extends Block implements PolymerTexturedBlock {
     /** How often a stalled pot looks again for its fire. */
     private static final int COLD_RETRY_TICKS = 100;
 
-    private final BlockState emptyState;
-    private final BlockState[] workingStates = new BlockState[DONE + 1];
+    private final Map<Direction, BlockState> emptyCarriers;
+    private final List<Map<Direction, BlockState>> workingCarriers = new ArrayList<>();
 
     public WashPotBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(LOADED, false).with(PROGRESS, 0));
 
-        this.emptyState = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/wash_pot_empty")),
-                () -> Blocks.CAULDRON.getDefaultState(), "wash_pot_empty");
+        // Four carriers per model rather than one: a pot with a firebox mouth
+        // on the front is worth turning to face the room.
+        this.emptyCarriers = carriers(BlockModelType.FULL_BLOCK, "wash_pot_empty",
+                () -> Blocks.CAULDRON.getDefaultState());
         for (int step = 0; step <= DONE; step++) {
-            String name = "wash_pot_" + step;
-            this.workingStates[step] = TrapPolymer.requestOrFallback(
-                    BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                    () -> Blocks.CAULDRON.getDefaultState(), name);
+            this.workingCarriers.add(carriers(BlockModelType.FULL_BLOCK,
+                    "wash_pot_" + step, () -> Blocks.CAULDRON.getDefaultState()));
         }
     }
 
@@ -92,6 +92,7 @@ public class WashPotBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(LOADED, PROGRESS);
     }
 
@@ -278,6 +279,8 @@ public class WashPotBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(LOADED) ? workingStates[state.get(PROGRESS)] : emptyState;
+        return (state.get(LOADED)
+                ? workingCarriers.get(state.get(PROGRESS))
+                : emptyCarriers).get(state.get(FACING));
     }
 }

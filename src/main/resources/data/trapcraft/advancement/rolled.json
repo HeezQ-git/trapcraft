@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:joint_kush"
     },
-    "title": "Rolled",
-    "description": "Turn a bud into something you can actually sell.",
+    "title": "Zwinięte",
+    "description": "Zamień szyszkę w coś, co da się realnie sprzedać.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

@@ -70,7 +70,7 @@ public class GravityBongBlock extends Block implements PolymerTexturedBlock {
         for (int stage = 0; stage <= STALE; stage++) {
             String name = "gravity_bong_" + stage;
             this.states[stage] = TrapPolymer.requestOrFallback(
-                    BlockModelType.TRANSPARENT_BLOCK,
+                    TrapPolymer.NON_SOLID,
                     PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
                     () -> Blocks.GLASS.getDefaultState(), name);
         }
@@ -159,7 +159,7 @@ public class GravityBongBlock extends Block implements PolymerTexturedBlock {
         int stage = state.get(STAGE);
         if (stage != BURNING && stage != STALE) {
             if (!world.isClient && stage == EMPTY) {
-                player.sendMessage(Text.literal("Water, bud, flint and steel, then pull")
+                player.sendMessage(Text.literal("Woda, szyszka, krzesiwo, potem pociągnij")
                         .formatted(Formatting.GRAY), true);
             }
             return stage == EMPTY ? ActionResult.SUCCESS : ActionResult.PASS;

@@ -152,7 +152,7 @@ public final class TrapCoins {
         }
         int cost = TrapMath.coinBuyCost(coin.price(beat), units);
         if (TrapMarket.wealthOf(player) < cost) {
-            return "That's " + cost + "e and you haven't got it.";
+            return "To kosztuje " + cost + "e, a tyle nie masz.";
         }
         TrapMarket.take(player, cost);
         TrapLedger.record(player, TrapLedger.Source.INVEST, -cost);

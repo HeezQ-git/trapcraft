@@ -477,12 +477,16 @@ def lang() -> None:
         "item.trapcraft.plinko": "The Drop",
         "item.trapcraft.roulette": "Roulette Table",
         "item.trapcraft.burner_phone": "Burner Phone",
+        "block.trapcraft.nightclub": "Nightclub Booth",
+        "item.trapcraft.nightclub": "Nightclub Booth",
         "block.trapcraft.market_stall": "Market Stall",
         "item.trapcraft.market_stall": "Market Stall",
         "block.trapcraft.mailbox": "Mailbox",
         "item.trapcraft.mailbox": "Mailbox",
         "block.trapcraft.city_vault": "City Vault",
         "item.trapcraft.city_vault": "City Vault",
+        "block.trapcraft.hospital": "Hospital",
+        "item.trapcraft.hospital": "Hospital",
         # "Shop Shelf", not "Market Shelf". Three things called market -- the
         # counter, the stall and this -- meant the word had stopped narrowing
         # anything down. The ID stays market_shelf: every placed block on the
@@ -840,22 +844,29 @@ def scoring_model(progress: int | None) -> dict:
         box([12.5, 3, 0], [16, 13, 3.5], "wood"),
         box([0, 3, 12.5], [3.5, 13, 16], "wood"),
         box([12.5, 3, 12.5], [16, 13, 16], "wood"),
-        # Dark interior above the work, which is what keeps it solid.
-        box([3.5, 12, 3.5], [12.5, 13, 12.5], "void"),
         # The sap channel, running right round the base and standing proud so
         # it catches light on all four sides.
         box([-0.05, 3, -0.05], [16.05, sap_top, 16.05], "latex"),
     ]
     if loaded:
-        els.append(box([3.6, sap_top, 3.6], [12.4, pod_top, 12.4], "pods"))
-        # Blades, hanging just above whatever is left of the pods.
-        for offset in (4.5, 7.5, 10.5):
-            els.append(box([3.4, pod_top + 0.4, offset - 0.4],
-                           [12.6, pod_top + 1.4, offset + 0.4], "iron"))
-    else:
-        els.append(box([3.5, sap_top, 3.5], [12.5, 11.5, 12.5], "void"))
-        for offset in (4.5, 7.5, 10.5):
-            els.append(box([3.4, 11.5, offset - 0.4], [12.6, 12.5, offset + 0.4], "iron"))
+        els.append(box([3.5, sap_top, 3.5], [12.5, pod_top, 12.5], "pods"))
+    # Dark interior, from the top of the work all the way up to the lid.
+    #
+    # This is the piece that keeps the block solid, and it has to reach the
+    # lid: the bench used to stop this at y=12 and leave the band above the
+    # pods as open air, which on a FULL_BLOCK carrier is not a gap but a hole.
+    # The client has been told this is a solid cube and has already culled the
+    # faces of the floor and wall behind it, so a straight line through the
+    # band is a straight line into a world with nothing drawn in it. That got
+    # worse as the batch worked down -- an empty bench leaked half a pixel and
+    # a nearly-done one leaked four.
+    els.append(box([3.5, pod_top if loaded else sap_top, 3.5],
+                   [12.5, 13, 12.5], "void"))
+    # Blade rails, crossing the recesses on the OUTSIDE of that core rather
+    # than floating in the middle of it. Same detail, visible from all four
+    # sides, and it cannot open the block up again wherever it is put.
+    for offset in (4.5, 7.5, 10.5):
+        els.append(box([-0.05, 11.4, offset - 0.4], [16.05, 12.4, offset + 0.4], "iron"))
 
     # A handle across the lid, so the top is not a blank slab.
     els.append(box([5, 16, 7.2], [11, 17, 8.8], "iron"))
@@ -1828,6 +1839,9 @@ def advancements() -> None:
           f"{NS}:mailbox", "root", trigger=has(f"{NS}:mailbox"))
     award("founded", "Founded", "Put the city vault down and start taxing everybody.",
           f"{NS}:city_vault", "root", trigger=has(f"{NS}:city_vault"), frame="goal")
+    award("ward", "Somewhere To Get Better",
+          "Open a hospital, so a bite stops being the end of somebody.",
+          f"{NS}:hospital", "founded", trigger=has(f"{NS}:hospital"), frame="goal")
     award("shopkeeper", "Shopkeeper", "Open a shop the town can buy from.",
           f"{NS}:shop_till", "open", trigger=has(f"{NS}:shop_till"))
     award("dirty", "Dirty Money", "Take payment nobody can bank.",
@@ -2398,6 +2412,43 @@ def slot_assets() -> None:
     })
 
 
+def club_assets() -> None:
+    # Explicit geometry rather than parenting to cube_all. A vanilla parent
+    # carries no elements of its own, so check_models reads the shell as empty
+    # and -- correctly -- warns that every sightline goes straight through a
+    # FULL_BLOCK carrier. Six faces, spelled out.
+    put(f"assets/{NS}/models/block/nightclub.json", {
+        "parent": "minecraft:block/block",
+        "textures": {"all": f"{NS}:block/nightclub",
+                     "particle": f"{NS}:block/nightclub"},
+        "elements": [{
+            "from": [0, 0, 0], "to": [16, 16, 16],
+            "faces": {face: {"uv": [0, 0, 16, 16], "texture": "#all",
+                             "cullface": face}
+                      for face in ("north", "south", "east", "west", "up", "down")},
+        }],
+    })
+    put(f"assets/{NS}/models/item/nightclub.json", {"parent": f"{NS}:block/nightclub"})
+    put(f"assets/{NS}/items/nightclub.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/nightclub"},
+    })
+    put(f"data/{NS}/loot_table/blocks/nightclub.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:nightclub"}]}],
+    })
+    # A note block for the thump, wool to deaden the room, redstone lamps for
+    # the lights, and a diamond because a club is not a thing you open cheaply.
+    put(f"data/{NS}/recipe/nightclub.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["WLW", "NDN", "WLW"],
+        "key": {"W": "#minecraft:wool", "L": "minecraft:redstone_lamp",
+                "N": "minecraft:note_block", "D": "minecraft:diamond_block"},
+        "result": {"id": f"{NS}:nightclub", "count": 1},
+    })
+
+
 def stall_assets() -> None:
     put(f"assets/{NS}/models/block/market_stall.json", stall_model())
     put(f"assets/{NS}/models/item/market_stall.json", {"parent": f"{NS}:block/market_stall"})
@@ -2471,9 +2522,19 @@ def till_assets() -> None:
         },
         "elements": [
             box([0, 0, 0], [16, 10, 16], "counter", up="top"),    # the counter
-            box([2, 10, 3], [14, 13, 13], "body", up="body"),     # the register
-            box([3, 13, 4], [13, 14, 9], "keys", up="keys"),      # the key deck
-            box([4, 13, 9], [12, 15, 12], "screen"),              # the display
+            # The register FILLS the bay between counter and canopy rather
+            # than standing in the middle of it with air all round.
+            #
+            # That air was the bug in the screenshot: a FULL_BLOCK carrier
+            # tells the client this is a solid cube, so it culls the faces of
+            # the floor and the wall behind -- and then the open band between
+            # counter and shelf is a window onto a world with nothing drawn in
+            # it. A till against a wall showed the landscape through itself.
+            box([0, 10, 0], [16, 15, 16], "body", up="body"),     # the register
+            # Key deck and display stand proud of the FRONT, which is the whole
+            # point of the till having a front to be placed facing with.
+            box([2.5, 12.4, -0.9], [13.5, 13.8, 0.6], "keys", up="keys"),
+            box([4, 13.8, -0.7], [12, 15, 0.5], "screen"),
             box([0, 15, 0], [16, 16, 16], "counter", up="top"),   # overhead shelf
         ],
     })
@@ -2684,6 +2745,58 @@ def vault_assets() -> None:
     })
 
 
+def hospital_assets() -> None:
+    """A tiled panel with a red cross on it, spelled out as a solid cube.
+
+    Same reasoning as the vault: it claims a FULL_BLOCK carrier, so it has to
+    BE a full block or check_models.py finds the X-ray hole -- and the elements
+    are written out here rather than inherited from block/cube because the
+    checker measures coverage off a model's own geometry.
+    """
+    put(f"assets/{NS}/models/block/hospital.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "face": f"{NS}:block/hospital_face",
+            "side": f"{NS}:block/hospital_side",
+            "top": f"{NS}:block/hospital_top",
+            "particle": f"{NS}:block/hospital_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#face"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#top"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/hospital.json", {"parent": f"{NS}:block/hospital"})
+    put(f"assets/{NS}/items/hospital.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/hospital"},
+    })
+    put(f"data/{NS}/loot_table/blocks/hospital.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:hospital"}]}],
+    })
+    # Quartz for the tiling, a lamp because a ward is lit, and a golden apple
+    # in the middle -- the one thing in vanilla that already means "cures a
+    # villager of this exact illness", and dear enough that a hospital is a
+    # thing a city saves up for rather than the first block anybody places.
+    put(f"data/{NS}/recipe/hospital.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["QLQ", "QAQ", "QQQ"],
+        "key": {"Q": "minecraft:quartz_block", "L": "minecraft:lantern",
+                "A": "minecraft:golden_apple"},
+        "result": {"id": f"{NS}:hospital", "count": 1},
+    })
+
+
 def mailbox_assets() -> None:
     put(f"assets/{NS}/models/block/mailbox.json", mailbox_model())
     put(f"assets/{NS}/models/item/mailbox.json", {"parent": f"{NS}:block/mailbox"})
@@ -2785,7 +2898,9 @@ def main() -> None:
     advancements()
     phone_assets()
     stall_assets()
+    club_assets()
     mailbox_assets()
+    hospital_assets()
     vault_assets()
     shelf_assets()
     laundry_assets()

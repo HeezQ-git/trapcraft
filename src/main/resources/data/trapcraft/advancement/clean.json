@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:barrier"
     },
-    "title": "Nothing To See",
-    "description": "Sit through a raid without losing a gram.",
+    "title": "Nic tu nie ma",
+    "description": "Przetrwaj nalot, nie tracąc ani grama towaru.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

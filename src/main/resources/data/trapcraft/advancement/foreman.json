@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:golden_hoe"
     },
-    "title": "Foreman",
-    "description": "Teach one hand everything there is to teach.",
+    "title": "Brygadzista",
+    "description": "Naucz jednego robotnika wszystkiego, czego się da.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

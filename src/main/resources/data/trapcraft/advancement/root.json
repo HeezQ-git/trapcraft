@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:seeds_kush"
     },
-    "title": "Everybody Eats",
-    "description": "Get hold of some seeds and start something.",
+    "title": "Każdy musi jeść",
+    "description": "Zdobądź nasiona i zacznij działać.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

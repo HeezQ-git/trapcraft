@@ -294,12 +294,12 @@ public final class TrapLedger {
 
     private static void report(net.minecraft.server.command.ServerCommandSource source) {
         if (TODAY.isEmpty()) {
-            source.sendFeedback(() -> Text.literal("Nobody's earned anything today.")
+            source.sendFeedback(() -> Text.literal("Dzisiaj nikt nic nie zarobił.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         MinecraftServer server = source.getServer();
-        Text header = Text.literal("Earnings, day " + TrapMarket.today(server))
+        Text header = Text.literal("Zarobki, dzień " + TrapMarket.today(server))
                 .formatted(Formatting.GOLD, Formatting.BOLD);
         source.sendFeedback(() -> header, false);
         TODAY.forEach((name, row) -> {

@@ -179,7 +179,7 @@ public final class TrapDealing {
             return 0;
         }
         if (hasCustomer(player)) {
-            player.sendMessage(Text.literal("You've already got one on the way.")
+            player.sendMessage(Text.literal("Jeden klient jest już w drodze.")
                     .formatted(Formatting.GRAY), false);
             return 0;
         }
@@ -189,7 +189,7 @@ public final class TrapDealing {
         Craving wanted = craving != null ? craving : cravingFor(player);
         if (wanted == null) {
             player.sendMessage(Text.literal(
-                            "Nobody wants nothing. Carry some product, or name a strain.")
+                            "Nikt nie chce niczego. Weź towar do ręki albo podaj odmianę.")
                     .formatted(Formatting.GRAY), false);
             return 0;
         }
@@ -198,7 +198,7 @@ public final class TrapDealing {
         // different, far larger clock -- mixing them made the difference
         // negative, so a summoned customer never aged out and waited forever.
         if (!visit(player, wanted, player.getServer().getTicks())) {
-            player.sendMessage(Text.literal("Nowhere for them to walk in from.")
+            player.sendMessage(Text.literal("Nie ma skąd im przyjść.")
                     .formatted(Formatting.RED), false);
             return 0;
         }
@@ -555,21 +555,21 @@ public final class TrapDealing {
         // A receipt in chat, so a sale leaves a record you can scroll back to
         // rather than a line that flashes past the actionbar and is gone.
         // The item's own name carries its grade and colour already.
-        seller.sendMessage(Text.literal("Sold ").formatted(Formatting.GRAY)
+        seller.sendMessage(Text.literal("Sprzedano ").formatted(Formatting.GRAY)
                         .append(Text.literal(units + "x ").formatted(Formatting.WHITE))
                         .append(sold)
-                        .append(Text.literal("  for  ").formatted(Formatting.GRAY))
-                        .append(Text.literal(paid + " emerald" + (paid == 1 ? "" : "s"))
+                        .append(Text.literal("  za  ").formatted(Formatting.GRAY))
+                        .append(Text.literal(paid + " szmaragdów")
                                 .formatted(Formatting.GREEN))
                         // Three outcomes, not two. Reporting "still wants 5"
                         // and then walking off because the seller ran dry reads
                         // as a bug -- the number was true and the conclusion
                         // wasn't, which is worse than saying nothing.
                         .append(Text.literal(left <= 0
-                                        ? "   that's the lot"
+                                        ? "   to już wszystko"
                                         : soldOut
-                                        ? "   you're out -- they'll take it and go"
-                                        : "   still wants " + left)
+                                        ? "   nic ci nie zostało -- weźmie to i pójdzie"
+                                        : "   chce jeszcze " + left)
                                 .formatted(Formatting.DARK_GRAY)),
                 false);
         // Rolled AFTER the receipt, so the sale is on the screen before the
@@ -593,28 +593,28 @@ public final class TrapDealing {
         int appetite = APPETITE.getOrDefault(customer.getUuid(), wanted(seller, craving));
         Text message;
         if (appetite <= 0) {
-            message = Text.literal("They've had enough. They're off.")
+            message = Text.literal("Ma dość. Odchodzi.")
                     .formatted(Formatting.GRAY);
         } else if (craving.dope()) {
-            message = Text.literal("They're rattling. They want dope, in your hand.")
+            message = Text.literal("Trzęsie się. Chce heroiny, w twojej ręce.")
                     .formatted(Formatting.GRAY);
         } else if (craving.powder()) {
-            message = Text.literal("They want powder. Put some in your hand.")
+            message = Text.literal("Chce proszku. Weź go do ręki.")
                     .formatted(Formatting.GRAY);
         } else if (craving.isMix()) {
-            message = Text.literal("They want ").formatted(Formatting.GRAY)
-                    .append(Text.literal(craving.isNamedMix() ? craving.mix() : "any mix")
+            message = Text.literal("Chce ").formatted(Formatting.GRAY)
+                    .append(Text.literal(craving.isNamedMix() ? craving.mix() : "dowolnej mieszanki")
                             .formatted(Formatting.LIGHT_PURPLE))
-                    .append(Text.literal(" -- in your hand.  Sneak-click to send them off.")
+                    .append(Text.literal(" -- w ręce.  Kucnij i kliknij, żeby go odesłać.")
                             .formatted(Formatting.GRAY));
         } else {
-            message = Text.literal("They want ").formatted(Formatting.GRAY)
+            message = Text.literal("Chce ").formatted(Formatting.GRAY)
                     .append(Text.literal(craving.strain().display())
                             .withColor(craving.strain().colour()))
                     .append(Text.literal(" -- " + craving.form().label.toLowerCase(
-                            java.util.Locale.ROOT) + ", in your hand.")
+                            java.util.Locale.ROOT) + ", w ręce.")
                             .formatted(Formatting.GRAY))
-                    .append(Text.literal("  Sneak-click to send them off.")
+                    .append(Text.literal("  Kucnij i kliknij, żeby go odesłać.")
                             .formatted(Formatting.DARK_GRAY));
         }
         seller.sendMessage(message, true);
@@ -729,8 +729,8 @@ public final class TrapDealing {
         DEALT.add(customer.getUuid());
         startLeaving(customer, seller, now, bought);
         seller.sendMessage(Text.literal(bought
-                        ? "Deal's done. They're off."
-                        : "You wave them off.")
+                        ? "Transakcja zamknięta. Odchodzi."
+                        : "Odsyłasz go.")
                 .formatted(Formatting.GRAY), true);
     }
 
@@ -857,10 +857,10 @@ public final class TrapDealing {
          */
         String formWord() {
             return switch (form) {
-                case BUDS -> "bud";
-                case JOINTS -> "joints";
-                case EITHER -> "any";
-                case POWDER -> "powder";
+                case BUDS -> "susz";
+                case JOINTS -> "skręty";
+                case EITHER -> "obojętnie";
+                case POWDER -> "proszek";
             };
         }
 
@@ -876,31 +876,31 @@ public final class TrapDealing {
         /** On the nameplate, so you can tell from across a field whether it's worth walking over. */
         String title() {
             if (dope) {
-                return "Customer (dope)";
+                return "Klient (heroina)";
             }
             if (powder) {
-                return "Customer (powder)";
+                return "Klient (proszek)";
             }
             if (isMix()) {
-                return "Customer (" + (isNamedMix() ? mix : "any mix") + ")";
+                return "Klient (" + (isNamedMix() ? mix : "dowolna mieszanka") + ")";
             }
-            return "Customer (" + strain.display() + ", " + formWord() + ")";
+            return "Klient (" + strain.display() + ", " + formWord() + ")";
         }
 
         String greeting() {
             if (dope) {
-                return "Somebody's heading your way, and they're in a hurry. They want dope.";
+                return "Ktoś idzie w twoją stronę i bardzo mu się spieszy. Chce heroiny.";
             }
             if (powder) {
-                return "Somebody's heading your way. They want powder.";
+                return "Ktoś idzie w twoją stronę. Chce proszku.";
             }
             if (isNamedMix()) {
-                return "Somebody's heading your way. They're asking for " + mix + " by name.";
+                return "Ktoś idzie w twoją stronę. Pyta konkretnie o " + mix + ".";
             }
             if (isMix()) {
-                return "Somebody's heading your way. They want something mixed.";
+                return "Ktoś idzie w twoją stronę. Chce jakiejś mieszanki.";
             }
-            return "Somebody's heading your way. They're after " + strain.display()
+            return "Ktoś idzie w twoją stronę. Szuka " + strain.display()
                     + " -- " + form.label.toLowerCase(java.util.Locale.ROOT) + ".";
         }
     }

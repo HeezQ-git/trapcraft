@@ -11,10 +11,10 @@ import net.minecraft.util.Formatting;
  * them lazily -- in both potency and emeralds.
  */
 public enum Quality {
-    SWILL("Swill", Formatting.DARK_GRAY, 0.60F, 1),
-    MIDS("Mids", Formatting.WHITE, 1.00F, 2),
-    LOUD("Loud", Formatting.AQUA, 1.45F, 4),
-    FIRE("Fire", Formatting.LIGHT_PURPLE, 2.00F, 7);
+    SWILL("Słabe", Formatting.DARK_GRAY, 0.60F, 1),
+    MIDS("Zwykłe", Formatting.WHITE, 1.00F, 2),
+    LOUD("Mocne", Formatting.AQUA, 1.45F, 4),
+    FIRE("Topowe", Formatting.LIGHT_PURPLE, 2.00F, 7);
 
     /** How many condition points are needed to reach each grade. */
     public static final int[] THRESHOLDS = {0, 3, 5, 7};

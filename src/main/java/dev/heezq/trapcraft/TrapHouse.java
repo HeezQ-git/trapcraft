@@ -610,7 +610,7 @@ public final class TrapHouse {
      */
     public static Text sign(MutableText game, House house) {
         return house == null ? game
-                : game.copy().append(plain("  at  ").formatted(Formatting.DARK_GRAY))
+                : game.copy().append(plain("  w  ").formatted(Formatting.DARK_GRAY))
                 .append(plain(house.name).formatted(Formatting.WHITE));
     }
 
@@ -627,9 +627,9 @@ public final class TrapHouse {
         int most = limit(house, topMultiple);
         return List.of(
                 Text.empty(),
-                plain("House  ").formatted(Formatting.DARK_GRAY)
+                plain("Kasyno  ").formatted(Formatting.DARK_GRAY)
                         .append(plain(house.name).formatted(Formatting.GOLD)),
-                plain("Table limit  ").formatted(Formatting.DARK_GRAY)
+                plain("Limit stołu  ").formatted(Formatting.DARK_GRAY)
                         .append(plain(most + "e").formatted(
                                 most > 0 ? Formatting.WHITE : Formatting.RED)));
     }
@@ -768,12 +768,12 @@ public final class TrapHouse {
         if (server == null) {
             return;
         }
-        Text line = plain("").append(plain("BROKE THE BANK  ")
+        Text line = plain("").append(plain("ROZBIŁ BANK  ")
                         .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(plain(winner.getGameProfile().getName()).formatted(Formatting.WHITE))
-                .append(plain(" cleaned out ").formatted(Formatting.GRAY))
+                .append(plain(" wyczyścił ").formatted(Formatting.GRAY))
                 .append(plain(house.name).formatted(Formatting.LIGHT_PURPLE))
-                .append(plain(" for every emerald it had. It was good for "
+                .append(plain(" ze wszystkich szmaragdów. Kasa wynosiła "
                         + owed + "e.").formatted(Formatting.GRAY));
         for (ServerPlayerEntity everyone : server.getPlayerManager().getPlayerList()) {
             everyone.sendMessage(line, false);
@@ -814,6 +814,26 @@ public final class TrapHouse {
         TrapLedger.record(owner, TrapLedger.Source.CASINO, taken);
         save();
         return taken;
+    }
+
+    /**
+     * Money into the float from somewhere that is not a pocket.
+     *
+     * No {@link TrapMarket} call at all, and that is deliberate: the city
+     * purse and this balance are BOTH already counted by
+     * TrapMarket.heldElsewhere, so a donation moves the world's total
+     * nowhere. Reporting it would mint the same emeralds a second time.
+     *
+     * Nor does it touch handle or paid. A float top-up is not a night's
+     * trade, and folding it in would flatter the floor's margin the same way
+     * the owner's own play used to.
+     */
+    public static void endow(House house, int amount) {
+        if (house == null || amount <= 0) {
+            return;
+        }
+        house.balance += amount;
+        save();
     }
 
     // --- hooks ----------------------------------------------------------------
@@ -886,8 +906,8 @@ public final class TrapHouse {
                              World world, BlockPos pos) {
         House house = of(card);
         if (house == null) {
-            owner.sendMessage(plain("That card hasn't been signed. Right-click the air "
-                    + "with it first.").formatted(Formatting.GRAY), false);
+            owner.sendMessage(plain("Ta licencja nie została podpisana. Najpierw kliknij "
+                    + "nią PPM w powietrze.").formatted(Formatting.GRAY), false);
             note(owner, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6F);
             return;
         }
@@ -907,7 +927,7 @@ public final class TrapHouse {
                 }
             }
             save();
-            owner.sendMessage(plain("Cut loose. That machine keeps its own takings again.")
+            owner.sendMessage(plain("Odłączono. Automat znowu zatrzymuje własny utarg.")
                     .formatted(Formatting.GRAY), false);
             note(owner, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.8F);
             spark(world, pos, ParticleTypes.SMOKE);
@@ -917,13 +937,12 @@ public final class TrapHouse {
         WIRES.put(where, house.id);
         save();
         int count = machineCount(house);
-        owner.sendMessage(plain("Wired to ").formatted(Formatting.GRAY)
+        owner.sendMessage(plain("Podłączono do ").formatted(Formatting.GRAY)
                 .append(plain(house.name).formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(plain(".  " + count + (count == 1 ? " machine" : " machines")
-                        + " on the floor.").formatted(Formatting.GRAY)), false);
+                .append(plain(".  Automatów na sali: " + count + ".").formatted(Formatting.GRAY)), false);
         if (house.balance <= 0) {
-            owner.sendMessage(plain("The vault is empty, so it won't take a bet. "
-                            + "Right-click the air with the card to put money in.")
+            owner.sendMessage(plain("Skarbiec jest pusty, więc automat nie przyjmie zakładu. "
+                            + "Kliknij licencją PPM w powietrze, żeby wpłacić.")
                     .formatted(Formatting.RED), false);
         }
         note(owner, SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), 1.5F);
@@ -1133,10 +1152,10 @@ public final class TrapHouse {
      */
     public static String hirePitBoss(House house) {
         if (house.pitBoss) {
-            return "You've already got somebody on the floor.";
+            return "Masz już szefa sali.";
         }
         if (house.balance < TrapMath.PIT_BOSS_HIRE) {
-            return "That's " + TrapMath.PIT_BOSS_HIRE + "e up front and the vault's short.";
+            return "To " + TrapMath.PIT_BOSS_HIRE + "e z góry, a w skarbcu tyle nie ma.";
         }
         house.balance -= TrapMath.PIT_BOSS_HIRE;
         house.costs += TrapMath.PIT_BOSS_HIRE;
@@ -1158,13 +1177,13 @@ public final class TrapHouse {
      */
     public static String comp(House house, int machines) {
         if (house.compCooldown > 0) {
-            return "You've only just stood one. Give it "
+            return "Dopiero co to zrobiłeś. Odczekaj "
                     + house.compCooldown / 2 + " minutes.";
         }
         int cost = Math.max(TrapMath.COMP_COST_PER_MACHINE,
                 machines * TrapMath.COMP_COST_PER_MACHINE);
         if (house.balance < cost) {
-            return "A round for this lot is " + cost + "e. The vault's short.";
+            return "Kolejka dla tej sali to " + cost + "e. Skarbiec tyle nie ma.";
         }
         house.balance -= cost;
         house.costs += cost;
@@ -1185,13 +1204,13 @@ public final class TrapHouse {
      */
     public static String runLoose(House house) {
         if (house.loose()) {
-            return "It's already running loose.";
+            return "Automaty już chodzą na luzie.";
         }
         if (house.looseCooldown > 0) {
             return "Not yet. Another " + house.looseCooldown / 2 + " minutes.";
         }
         if (house.balance < TrapMath.FLOAT_PER_MACHINE) {
-            return "Not on a vault this thin. It's a loss on purpose.";
+            return "Nie przy tak pustym skarbcu. To celowa strata.";
         }
         house.looseBeats = TrapMath.LOOSE_BEATS;
         house.looseCooldown = TrapMath.LOOSE_COOLDOWN_BEATS;

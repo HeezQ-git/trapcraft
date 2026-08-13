@@ -29,9 +29,9 @@ public final class TrapInvest {
 
     /** How long you can tie money up for, and what it's called. */
     public enum Term {
-        SHORT("Overnight", 1),
-        MEDIUM("Three days", 3),
-        LONG("A week", 7);
+        SHORT("Na dobę", 1),
+        MEDIUM("Na trzy dni", 3),
+        LONG("Na tydzień", 7);
 
         public final String label;
         public final int days;
@@ -42,6 +42,10 @@ public final class TrapInvest {
         }
     }
 
+    /** One button on the exchange: this much, for this long. */
+    public record Offer(int stake, Term term) {
+    }
+
     /** One holding: what went in, when, and what the market looked like then. */
     public record Position(int principal, int days, long maturesOn, float indexAtStart) {
         public boolean matured(long today) {
@@ -49,8 +53,19 @@ public final class TrapInvest {
         }
     }
 
+    /**
+     * What you can put in at a go, smallest to largest.
+     *
+     * 256 was the ceiling and a week of farming clears it, so the exchange
+     * stopped being somewhere to put real money. Four sizes, each 4x the last,
+     * so the row reads as a ladder and the top of it is worth a week of your
+     * time. They are all the same bet -- the multiplier doesn't care how big
+     * the stake is -- so a big one is only ever a bigger loss as well.
+     */
+    public static final int[] STAKES = {64, 256, 1024, 4096};
+
     /** The most positions one player may hold, so the screen stays readable. */
-    public static final int MAX_POSITIONS = 5;
+    public static final int MAX_POSITIONS = 9;
 
     private static final Map<UUID, List<Position>> BOOK = new HashMap<>();
     private static Path saveFile;

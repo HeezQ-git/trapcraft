@@ -232,7 +232,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                             .formatted(Formatting.GOLD)));
         }
         lore.add(Text.empty());
-        lore.add(line("Click", Formatting.YELLOW)
+        lore.add(line("LPM", Formatting.YELLOW)
                 .append(plain(" to put " + CHIPS[chipChoice] + "e on it")
                         .formatted(Formatting.GRAY)));
         if (staked > 0) {
@@ -256,7 +256,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         }
         List<Text> lore = new ArrayList<>();
         lore.add(line("Pays even money", Formatting.GOLD));
-        lore.add(line("Zero takes it. That's the edge.", Formatting.DARK_GRAY));
+        lore.add(line("Na zerze wszystko przepada. To przewaga kasyna.", Formatting.DARK_GRAY));
         if (staked > 0) {
             lore.add(line("Riding: ", Formatting.DARK_GRAY)
                     .append(plain(staked + "e").formatted(Formatting.GREEN))
@@ -264,7 +264,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                             .formatted(Formatting.GOLD)));
         }
         lore.add(Text.empty());
-        lore.add(line("Click", Formatting.YELLOW)
+        lore.add(line("LPM", Formatting.YELLOW)
                 .append(plain(" to put " + CHIPS[chipChoice] + "e on it").formatted(Formatting.GRAY)));
         if (staked > 0) {
             lore.add(line("Right-click", Formatting.YELLOW)
@@ -277,14 +277,14 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     private ItemStack chipTag() {
         ItemStack tag = new ItemStack(Items.EMERALD, Math.max(1, Math.min(64, CHIPS[chipChoice])));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Chip: ").formatted(Formatting.GRAY)
+                plain("Żeton: ").formatted(Formatting.GRAY)
                         .append(plain(CHIPS[chipChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("How much each click puts down.", Formatting.GRAY),
                 Text.empty(),
-                line("Click", Formatting.YELLOW)
-                        .append(plain(" for the next size up").formatted(Formatting.GRAY)))));
+                line("LPM", Formatting.YELLOW)
+                        .append(plain(" zmienia wartość żetonu").formatted(Formatting.GRAY)))));
         return tag;
     }
 
@@ -293,14 +293,14 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         ItemStack tag = new ItemStack(spinning > 0 ? Items.REDSTONE_TORCH
                 : total > 0 ? Items.LEVER : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(spinning > 0 ? "No more bets" : total > 0 ? "SPIN" : "Place a bet")
+                plain(spinning > 0 ? "Koniec zakładów" : total > 0 ? "KRĘĆ" : "Postaw zakład")
                         .formatted(spinning > 0 ? Formatting.GRAY
                                 : total > 0 ? Formatting.GOLD : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
 
         List<Text> lore = new ArrayList<>();
         if (total > 0) {
-            lore.add(line("On the table: ", Formatting.GRAY)
+            lore.add(line("Na stole: ", Formatting.GRAY)
                     .append(plain(total + "e").formatted(Formatting.GREEN, Formatting.BOLD)));
             for (Map.Entry<String, Integer> bet : bets.entrySet()) {
                 lore.add(line("  " + pretty(bet.getKey()) + "   ", Formatting.DARK_GRAY)
@@ -308,16 +308,16 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             }
             lore.add(Text.empty());
         }
-        lore.add(line("One zero, so every bet on this", Formatting.DARK_GRAY));
-        lore.add(line("table returns the same "
+        lore.add(line("Jedno zero, więc każdy zakład na tym", Formatting.DARK_GRAY));
+        lore.add(line("stole zwraca tyle samo: "
                 + Math.round(TrapMath.rouletteReturnToPlayer("red") * 100)
                 + "%.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(line("Right-click", Formatting.YELLOW)
-                .append(plain(" clears the table").formatted(Formatting.GRAY)));
+                .append(plain(" czyści stół").formatted(Formatting.GRAY)));
         if (!lastBets.isEmpty() && total == 0) {
-            lore.add(line("Shift-click", Formatting.YELLOW)
-                    .append(plain(" repeats your last bet").formatted(Formatting.GRAY)));
+            lore.add(line("Shift+LPM", Formatting.YELLOW)
+                    .append(plain(" powtarza ostatni zakład").formatted(Formatting.GRAY)));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -326,7 +326,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         List<Text> lore = new java.util.ArrayList<>(List.of(
@@ -341,7 +341,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             case "red" -> "Red";
             case "black" -> "Black";
             case "odd" -> "Odd";
-            case "even" -> "Even";
+            case "even" -> "Parzyste";
             case "low" -> "1-18";
             case "high" -> "19-36";
             default -> "No. " + bet;
@@ -438,14 +438,14 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         // position the vault can't settle.
         if (!TrapHouse.covers(house, staked() + chip, TrapHouse.TOP_ROULETTE)) {
             deny();
-            player.sendMessage(plain("The house won't take another chip -- there isn't "
-                    + "the money behind the table to settle that board at 36 to one.")
+            player.sendMessage(plain("Kasyno nie przyjmie kolejnego żetonu -- nie ma pokrycia, "
+                    + "żeby rozliczyć ten stół po 36 do jednego.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < chip) {
             deny();
-            player.sendMessage(plain("You can't cover a " + chip + "e chip.")
+            player.sendMessage(plain("Nie stać cię na żeton " + chip + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -484,7 +484,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         }
         if (!TrapHouse.covers(house, staked() + owed, TrapHouse.TOP_ROULETTE)) {
             deny();
-            player.sendMessage(plain("The house can't settle that board tonight.")
+            player.sendMessage(plain("Kasyno nie rozliczy dziś tego stołu.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -492,7 +492,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             deny();
             player.sendMessage(plain("That bet was ").formatted(Formatting.GRAY)
                     .append(plain(owed + "e").formatted(Formatting.RED))
-                    .append(plain(". You're short.").formatted(Formatting.GRAY)), false);
+                    .append(plain(". Brakuje ci kasy.").formatted(Formatting.GRAY)), false);
             return;
         }
         TrapHouse.stake(player, house, owed);
@@ -506,7 +506,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     private void spin() {
         if (bets.isEmpty()) {
             deny();
-            player.sendMessage(plain("Put something on the table first.")
+            player.sendMessage(plain("Najpierw postaw coś na stole.")
                     .formatted(Formatting.GRAY), false);
             return;
         }

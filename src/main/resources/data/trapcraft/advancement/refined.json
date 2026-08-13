@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:coca_powder"
     },
-    "title": "Refined",
-    "description": "Take the coca line all the way to powder.",
+    "title": "Oczyszczone",
+    "description": "Przejdź całą linię koki aż do proszku.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

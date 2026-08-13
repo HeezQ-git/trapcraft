@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:emerald"
     },
-    "title": "House Money",
-    "description": "Win something on all four machines.",
+    "title": "Kasa kasyna",
+    "description": "Wygraj coś na wszystkich czterech automatach.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

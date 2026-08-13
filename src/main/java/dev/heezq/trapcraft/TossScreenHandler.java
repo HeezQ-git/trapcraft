@@ -131,14 +131,14 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
             tag.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Heads and tails pay "
+                line("Orzeł i reszka płacą "
                         + String.format("%.2f", TrapMath.TOSS_SIDE_PAY) + "x.", Formatting.GRAY),
-                line("The rim pays " + (int) TrapMath.TOSS_EDGE_PAY + "x and comes up",
+                line("Kant płaci " + (int) TrapMath.TOSS_EDGE_PAY + "x i wypada w",
                         Formatting.GRAY),
                 line("about " + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0
-                        + "% of the time.", Formatting.GRAY),
+                        + "% rzutów.", Formatting.GRAY),
                 Text.empty(),
-                line("Same house edge whichever you call.", Formatting.DARK_GRAY))));
+                line("Ta sama przewaga kasyna niezależnie od wyboru.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -156,10 +156,10 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                 line("Pays " + (rim ? String.valueOf((int) pays) : String.format("%.2f", pays))
                         + "x  ->  " + Math.round(STAKES[stakeChoice] * pays) + "e",
                         Formatting.GOLD),
-                line(rim ? "It lands on its rim now and then." : "Even money, near enough.",
+                line(rim ? "Czasem staje na kancie." : "Mniej więcej jeden do jednego.",
                         Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Click to call it and toss.", Formatting.YELLOW))));
+                line("Kliknij, żeby obstawić i rzucić.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -167,18 +167,18 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Stake: ").formatted(Formatting.GRAY)
+                plain("Stawka: ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Click to change.", Formatting.DARK_GRAY))));
+                line("Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(
@@ -218,14 +218,14 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
         int stake = STAKES[stakeChoice];
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_TOSS)) {
             deny();
-            player.sendMessage(plain("The house won't take that -- the rim pays 64 to one "
-                            + "and there isn't the money behind the table.")
+            player.sendMessage(plain("Kasyno tego nie przyjmie -- kant płaci 64 do jednego, "
+                            + "a stół nie ma na to pokrycia.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         if (TrapMarket.wealthOf(player) < stake) {
             deny();
-            player.sendMessage(plain("You can't cover a " + stake + "e toss.")
+            player.sendMessage(plain("Nie stać cię na rzut za " + stake + "e.")
                     .formatted(Formatting.GRAY), false);
             return;
         }

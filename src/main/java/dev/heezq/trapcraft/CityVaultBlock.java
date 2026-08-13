@@ -1,10 +1,8 @@
 package dev.heezq.trapcraft;
 
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
@@ -19,11 +17,13 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 /**
  * The block that turns three people with farms into a city.
@@ -44,20 +44,19 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * every emerald is still there when it is. Same reason the casino keeps its
  * balance in the ledger and not on the card.
  */
-public class CityVaultBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
-    private final BlockState carrier;
+public class CityVaultBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
+    private final Map<Direction, BlockState> carriers;
 
     public CityVaultBlock(Settings settings) {
         super(settings);
-        this.carrier = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/city_vault")),
-                () -> Blocks.CHISELED_STONE_BRICKS.getDefaultState(), "city_vault");
+        this.carriers = carriers(
+                BlockModelType.FULL_BLOCK, "city_vault",
+                () -> Blocks.CHISELED_STONE_BRICKS.getDefaultState());
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return carrier;
+        return carriers.get(state.get(FACING));
     }
 
     @Override
@@ -99,7 +98,7 @@ public class CityVaultBlock extends Block implements PolymerBlock, PolymerTextur
                 SoundCategory.BLOCKS, 0.7F, 1.1F);
         who.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new CityScreenHandler(syncId, inventory),
-                Text.literal("The City Purse").formatted(Formatting.GOLD)));
+                Text.literal("Kasa miasta").formatted(Formatting.GOLD)));
         return ActionResult.SUCCESS;
     }
 

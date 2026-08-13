@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -14,11 +13,13 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 /**
  * The mixing station: where two to four buds become something that isn't any
@@ -32,23 +33,22 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * saved inventory -- consistent with every other machine in the mod, all of
  * which keep their state in blockstate properties or not at all.
  */
-public class MixerBlock extends Block implements PolymerTexturedBlock {
+public class MixerBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<MixerBlock> CODEC = createCodec(MixerBlock::new);
 
-    private final BlockState visual;
+    private final Map<Direction, BlockState> carriers;
 
     public MixerBlock(Settings settings) {
         super(settings);
-        this.visual = TrapPolymer.requestOrFallback(
-                // TRANSPARENT_BLOCK, not FULL_BLOCK. The carrier is what the
+        this.carriers = carriers(
+                // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the
                 // client believes about this block, and believing a table with
                 // legs is a solid cube makes it cull the faces of whatever is
                 // underneath -- so you stand on a floor above a cave and see
                 // straight through into it. Any model that doesn't fill the
                 // cube has to say so.
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/mixing_station")),
-                () -> Blocks.CRAFTING_TABLE.getDefaultState(), "mixing_station");
+                TrapPolymer.NON_SOLID, "mixing_station",
+                () -> Blocks.CRAFTING_TABLE.getDefaultState());
     }
 
     @Override
@@ -77,6 +77,6 @@ public class MixerBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return visual;
+        return carriers.get(state.get(FACING));
     }
 }

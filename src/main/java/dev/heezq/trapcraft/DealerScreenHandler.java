@@ -128,20 +128,20 @@ public class DealerScreenHandler extends ScreenHandler {
         List<Text> about = new ArrayList<>();
         about.add(line("Level " + dealer.level + " of " + TrapMath.DEALER_MAX_LEVEL,
                 Formatting.WHITE));
-        about.add(line("Carries " + dealer.slots() + " slots  ·  holding "
+        about.add(line("Nosi " + dealer.slots() + " slots  ·  holding "
                 + dealer.carrying(), Formatting.GRAY));
         about.add(line("Keeps " + Math.round(TrapMath.dealerCut(dealer.level) * 100)
-                + "% of what they sell.", Formatting.GRAY));
+                + "% tego, co sprzeda.", Formatting.GRAY));
         about.add(Text.empty());
         about.add(dealer.level >= TrapMath.DEALER_MAX_LEVEL
-                ? line("As good as they get.", Formatting.GOLD)
-                : line(dealer.toNextLevel() + " more sales to level "
+                ? line("Maksymalny poziom.", Formatting.GOLD)
+                : line("jeszcze " + dealer.toNextLevel() + " sprzedaży do poziomu "
                         + (dealer.level + 1) + ".", Formatting.DARK_GRAY));
         about.add(line("Robbed about "
                 + String.format("%.1f", robbedPerHour() * 100) + "% of hours.",
                 dealer.level < 3 ? Formatting.RED : Formatting.DARK_GRAY));
         about.add(Text.empty());
-        about.add(line("They sell best at night.", Formatting.DARK_GRAY));
+        about.add(line("Najlepiej sprzedają nocą.", Formatting.DARK_GRAY));
         who.set(DataComponentTypes.LORE, new LoreComponent(about));
         chrome.setStack(WHO, who);
 
@@ -152,7 +152,7 @@ public class DealerScreenHandler extends ScreenHandler {
                         .append(plain(dealer.earnings + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         takings.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(dealer.earnings > 0 ? "Click to take it." : "Nothing yet.",
+                line(dealer.earnings > 0 ? "Kliknij, żeby odebrać." : "Jeszcze nic.",
                         dealer.earnings > 0 ? Formatting.YELLOW : Formatting.DARK_GRAY),
                 line("Already net of their cut.", Formatting.DARK_GRAY),
                 Text.empty(),
@@ -161,20 +161,20 @@ public class DealerScreenHandler extends ScreenHandler {
 
         ItemStack out = new ItemStack(Items.CLOCK);
         out.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Send them out").formatted(Formatting.YELLOW, Formatting.BOLD));
+                plain("Odeślij na ulicę").formatted(Formatting.YELLOW, Formatting.BOLD));
         out.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("They sell nothing while they're stood here.", Formatting.GRAY),
-                line("Close the book and they go back to it.", Formatting.DARK_GRAY))));
+                line("Stojąc tutaj, nic nie sprzedaje.", Formatting.GRAY),
+                line("Zamknij zeszyt, a wróci do pracy.", Formatting.DARK_GRAY))));
         chrome.setStack(SEND_OUT, out);
 
         ItemStack go = new ItemStack(Items.BARRIER);
         go.set(DataComponentTypes.CUSTOM_NAME,
                 plain("Let them go").formatted(Formatting.RED, Formatting.BOLD));
         go.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Off the books for good.", Formatting.GRAY),
-                line("Stock and takings come back to you.", Formatting.DARK_GRAY),
+                line("Zwolnienie na stałe.", Formatting.GRAY),
+                line("Towar i utarg wracają do ciebie.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Shift-click to be sure.", Formatting.DARK_GRAY))));
+                line("Shift+LPM, żeby potwierdzić.", Formatting.DARK_GRAY))));
         chrome.setStack(LET_GO, go);
 
         sendContentUpdates();
@@ -197,7 +197,7 @@ public class DealerScreenHandler extends ScreenHandler {
                 TrapDealers.drop(boss, dealer);
                 boss.closeHandledScreen();
             } else if (at == LET_GO) {
-                boss.sendMessage(plain("Shift-click if you're sure.")
+                boss.sendMessage(plain("Shift+LPM, jeśli jesteś pewien.")
                         .formatted(Formatting.GRAY), true);
             } else if (at == SEND_OUT) {
                 // Actually send them. This used to just close the screen and

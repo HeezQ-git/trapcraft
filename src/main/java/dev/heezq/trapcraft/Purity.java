@@ -10,10 +10,10 @@ import net.minecraft.util.Formatting;
  * should feel like different skills rather than one mechanic reskinned.
  */
 public enum Purity {
-    CUT("Cut", Formatting.DARK_GRAY, 0.55F, 3),
-    STREET("Street", Formatting.WHITE, 1.00F, 7),
-    CLEAN("Clean", Formatting.AQUA, 1.50F, 13),
-    PURE("Pure", Formatting.LIGHT_PURPLE, 2.10F, 22);
+    CUT("Cięte", Formatting.DARK_GRAY, 0.55F, 3),
+    STREET("Uliczne", Formatting.WHITE, 1.00F, 7),
+    CLEAN("Dobre", Formatting.AQUA, 1.50F, 13),
+    PURE("Idealne", Formatting.LIGHT_PURPLE, 2.10F, 22);
 
     private final String display;
     private final Formatting colour;

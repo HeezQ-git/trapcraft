@@ -89,16 +89,16 @@ public class NetworkScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain("The Network").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Top row: yours. Click to call one in.", Formatting.GRAY),
+                line("Górny rząd: twoi. Kliknij, żeby wezwać.", Formatting.GRAY),
                 line("Bottom row: hiring tonight.", Formatting.GRAY),
                 Text.empty(),
-                line("They sell while you're away. Best at", Formatting.WHITE),
+                line("Sprzedają, kiedy cię nie ma. Najlepiej w", Formatting.WHITE),
                 line("night, worst around noon.", Formatting.WHITE),
                 Text.empty(),
-                line("Every extra dealer working the same", Formatting.DARK_GRAY),
-                line("patch sells less than the last.", Formatting.DARK_GRAY),
+                line("Każdy kolejny diler w tej samej okolicy", Formatting.DARK_GRAY),
+                line("sprzedaje mniej niż poprzedni.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line(mine.size() + " of " + TrapDealers.MAX_DEALERS + " on the books.",
+                line("zatrudnionych: " + mine.size() + " z " + TrapDealers.MAX_DEALERS + ".",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -107,15 +107,15 @@ public class NetworkScreenHandler extends ScreenHandler {
         boolean can = TrapMarket.wealthOf(boss) >= TrapDealers.REROLL_COST;
         ItemStack tag = new ItemStack(can ? Items.ENDER_EYE : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Ask around").formatted(can ? Formatting.AQUA : Formatting.DARK_GRAY,
+                plain("Popytaj").formatted(can ? Formatting.AQUA : Formatting.DARK_GRAY,
                         Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(TrapDealers.REROLL_COST + "e for three new faces.", Formatting.GRAY),
                 Text.empty(),
-                line("The board turns over on its own every", Formatting.DARK_GRAY),
+                line("Lista odświeża się sama co", Formatting.DARK_GRAY),
                 line("ten minutes or so anyway.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Reputation gets you better people.", Formatting.WHITE),
+                line("Wysoka reputacja przyciąga lepszych ludzi.", Formatting.WHITE),
                 line("Yours: " + rep() + " rep.", Formatting.DARK_GRAY))));
         return tag;
     }
@@ -131,7 +131,7 @@ public class NetworkScreenHandler extends ScreenHandler {
                 plain(dealer.name).formatted(Formatting.GOLD, Formatting.BOLD)
                         .append(plain("  L" + dealer.level).formatted(Formatting.WHITE)));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Carrying " + dealer.carrying() + " in "
+        lore.add(line("Ma przy sobie " + dealer.carrying() + " in "
                 + dealer.slots() + " slots", Formatting.GRAY));
         lore.add(line("Takings  ", Formatting.DARK_GRAY)
                 .append(plain(dealer.earnings + "e").formatted(Formatting.GREEN)));
@@ -143,8 +143,8 @@ public class NetworkScreenHandler extends ScreenHandler {
         // enough, and the honest answer to "is this thing progressing?" has to
         // be visible or it may as well not be true.
         lore.add(dealer.level >= TrapMath.DEALER_MAX_LEVEL
-                ? line("Top of the ladder.", Formatting.GOLD)
-                : line(dealer.toNextLevel() + " more sales", Formatting.DARK_GRAY)
+                ? line("Maksymalny poziom.", Formatting.GOLD)
+                : line("jeszcze " + dealer.toNextLevel() + " sprzedaży", Formatting.DARK_GRAY)
                 .append(plain(" to L" + (dealer.level + 1)).formatted(Formatting.WHITE)));
         // Your rep is in this number, because it is in the real one. Quoting
         // the rate a nobody would get would make the screen wrong for exactly
@@ -154,8 +154,8 @@ public class NetworkScreenHandler extends ScreenHandler {
                 + " an hour at this level.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(here
-                ? line("Already stood in front of you.", Formatting.DARK_GRAY)
-                : line("Click to call them in.", Formatting.YELLOW));
+                ? line("Już stoi przed tobą.", Formatting.DARK_GRAY)
+                : line("Kliknij, żeby go wezwać.", Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -174,12 +174,12 @@ public class NetworkScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 cost < full
                         ? line("Wants " + cost + "e up front  ", Formatting.GOLD)
-                        .append(plain("(was " + full + ", your name helps)")
+                        .append(plain("(było " + full + ", reputacja pomaga)")
                                 .formatted(Formatting.DARK_GRAY))
                         : line("Wants " + cost + "e up front.", Formatting.GOLD),
                 line("Keeps " + Math.round(TrapMath.dealerCut(offer.level) * 100)
-                        + "% of what they sell.", Formatting.GRAY),
-                line("Carries " + TrapMath.dealerSlots(offer.level) + " slots.",
+                        + "% tego, co sprzedadzą.", Formatting.GRAY),
+                line("Nosi " + TrapMath.dealerSlots(offer.level) + " slots.",
                         Formatting.GRAY),
                 Text.empty(),
                 line(offer.level < 3
@@ -189,7 +189,7 @@ public class NetworkScreenHandler extends ScreenHandler {
                 Text.empty(),
                 line(can ? "Click to take them on."
                                 : mine.size() >= TrapDealers.MAX_DEALERS
-                                ? "Your books are full." : "You can't cover it.",
+                                ? "Nie masz już miejsca." : "Nie stać cię.",
                         can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
         return tag;
     }

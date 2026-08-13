@@ -103,9 +103,9 @@ public final class TrapParanoia {
 
     private static final String[] TIER_WORDS = {
             "You feel watched.",
-            "Something moved. You're sure of it.",
-            "You can't tell what's real anymore.",
-            "They're here. They've been here a while.",
+            "Coś się poruszyło. Jesteś tego pewien.",
+            "Nie wiesz już, co jest prawdziwe.",
+            "Oni tu są. Są tu już od dłuższego czasu.",
     };
 
     private TrapParanoia() {
@@ -299,7 +299,7 @@ public final class TrapParanoia {
         }
         bar.setPercent(Math.max(0.0f, Math.min(1.0f, sanity)));
         bar.setColor(BAR_COLOURS[tier]);
-        bar.setName(Text.literal("Nerves")
+        bar.setName(Text.literal("Nerwy")
                 .formatted(Formatting.GRAY)
                 .append(Text.literal("  " + BAR_WORDS[tier]).formatted(BAR_TEXT[tier])));
     }
@@ -627,7 +627,7 @@ public final class TrapParanoia {
             return 0;
         }
         calm(player, 0);
-        player.sendMessage(Text.literal("Cleared. Nothing was ever really there.")
+        player.sendMessage(Text.literal("Wyciszone. Tak naprawdę nigdy nic tam nie było.")
                 .formatted(Formatting.GRAY), false);
         return 1;
     }
@@ -645,7 +645,7 @@ public final class TrapParanoia {
         METER.put(player.getUuid(), (float) level);
         LAST_TIER.put(player.getUuid(), tierOf(level));
         updateBar(player, level);
-        player.sendMessage(Text.literal("Nerves at " + level + "  (tier "
+        player.sendMessage(Text.literal("Nerwy: " + level + "  (tier "
                 + tierOf(level) + ")").formatted(Formatting.GRAY), false);
         return 1;
     }
@@ -663,7 +663,7 @@ public final class TrapParanoia {
         }
         saveOptOuts();
         player.sendMessage(Text.literal(nowOff
-                        ? "Paranoia off. Nothing's out there."
+                        ? "Paranoja wyłączona. Nic tam nie ma."
                         : "Paranoia on. Watch yourself.")
                 .formatted(Formatting.GRAY), false);
         return 1;

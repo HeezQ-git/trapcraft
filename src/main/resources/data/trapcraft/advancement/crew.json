@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:villager_spawn_egg"
     },
-    "title": "Payroll",
-    "description": "Take somebody on. Wages start immediately.",
+    "title": "Lista płac",
+    "description": "Zatrudnij pierwszą osobę. Pensja leci od razu.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

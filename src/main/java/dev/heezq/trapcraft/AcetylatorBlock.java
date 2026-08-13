@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,12 +20,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Step three, and the one that can beat you: base plus acid becomes product.
@@ -44,7 +47,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * The grace at peak is {@link #PEAK_GRACE} steps against the refiner's five --
  * enough to walk to a chest, not enough to go and do something else.
  */
-public class AcetylatorBlock extends Block implements PolymerTexturedBlock {
+public class AcetylatorBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<AcetylatorBlock> CODEC = createCodec(AcetylatorBlock::new);
 
     public static final BooleanProperty RUNNING = BooleanProperty.of("running");
@@ -62,24 +65,21 @@ public class AcetylatorBlock extends Block implements PolymerTexturedBlock {
     /** What passes for acetic anhydride round here. */
     public static final net.minecraft.item.Item ACID = Items.FERMENTED_SPIDER_EYE;
 
-    private final BlockState idleState;
-    private final BlockState[] runningStates = new BlockState[RUINED + 1];
+    private final Map<Direction, BlockState> idleCarriers;
+    private final List<Map<Direction, BlockState>> runningCarriers = new ArrayList<>();
 
     public AcetylatorBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(RUNNING, false).with(PROGRESS, 0));
 
-        this.idleState = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/acetylator_idle")),
-                () -> Blocks.BREWING_STAND.getDefaultState(), "acetylator_idle");
+        // Four carriers per model rather than one: a machine with a door and a
+        // dial on the front is worth turning to face the room.
+        this.idleCarriers = carriers(BlockModelType.FULL_BLOCK, "acetylator_idle",
+                () -> Blocks.BREWING_STAND.getDefaultState());
         for (int step = 0; step <= RUINED; step++) {
-            String name = "acetylator_" + step;
-            this.runningStates[step] = TrapPolymer.requestOrFallback(
-                    BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                    () -> Blocks.BREWING_STAND.getDefaultState(), name);
+            this.runningCarriers.add(carriers(BlockModelType.FULL_BLOCK,
+                    "acetylator_" + step, () -> Blocks.BREWING_STAND.getDefaultState()));
         }
     }
 
@@ -90,6 +90,7 @@ public class AcetylatorBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(RUNNING, PROGRESS);
     }
 
@@ -148,7 +149,7 @@ public class AcetylatorBlock extends Block implements PolymerTexturedBlock {
             Purity purity = purityFor(progress);
             if (purity == null) {
                 clear(world, pos, state);
-                player.sendMessage(Text.literal("Cooked to tar. The batch is gone.")
+                player.sendMessage(Text.literal("Spaliło się na smołę. Cała partia przepadła.")
                         .formatted(Formatting.RED), false);
                 return ActionResult.SUCCESS;
             }
@@ -265,7 +266,9 @@ public class AcetylatorBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(RUNNING) ? runningStates[state.get(PROGRESS)] : idleState;
+        return (state.get(RUNNING)
+                ? runningCarriers.get(state.get(PROGRESS))
+                : idleCarriers).get(state.get(FACING));
     }
 
     /** Glass and iron over a stone bench -- see RefinerBlock for why this matters. */

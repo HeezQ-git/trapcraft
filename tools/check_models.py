@@ -8,9 +8,10 @@ game, hours after the change that caused them.
 
 It also checks a Polymer trap: a block whose CARRIER is FULL_BLOCK tells the
 client "I am a solid cube", so the client culls the faces of its neighbours.
-If the model doesn't actually fill the cube you get an X-ray hole -- stand on
-a floor above a cave with one of these in it and you see straight down into
-the cave. The roulette table shipped like that.
+If you can see straight THROUGH the model you get an X-ray hole -- stand on a
+floor above a cave with one of these in it and you see straight down into the
+cave. The roulette table shipped like that; so did the shop till, which showed
+the landscape through the gap between its counter and its canopy.
 
     python3 tools/check_models.py
 """
@@ -30,57 +31,76 @@ TEXTURES = ROOT / "textures"
 MIN_COORD, MAX_COORD = -16.0, 32.0
 
 
-def face_coverage(data: dict) -> dict[str, float]:
-    """How much of each cube face the model's elements actually cover."""
-    faces = {}
-    for name, axis, at in (("down", 1, 0), ("up", 1, 16), ("north", 2, 0),
-                           ("south", 2, 16), ("west", 0, 0), ("east", 0, 16)):
+def sightlines(data: dict) -> dict[str, float]:
+    """How much of the block you can see straight through, per axis.
+
+    Not "is this face covered". A recessed cabinet fails that test and is
+    perfectly solid -- the recess has a back. What matters for a FULL_BLOCK
+    carrier is whether there is a straight LINE through the block, because the
+    client has been told this is a solid cube and has already culled the faces
+    of the floor and the wall behind it. A line through the block is therefore
+    a line into a world with nothing drawn in it.
+
+    Project every element onto each axis-perpendicular plane and union them. A
+    pixel column no element covers is a hole.
+    """
+    leaks = {}
+    for axis, name in ((0, "east-west"), (1, "up-down"), (2, "north-south")):
+        a, b = [i for i in range(3) if i != axis]
         covered = set()
         for element in data.get("elements", []):
             frm, to = element["from"], element["to"]
-            if not frm[axis] <= at <= to[axis]:
-                continue
-            a, b = [i for i in range(3) if i != axis]
-            for u in range(int(frm[a]), min(16, int(to[a]))):
-                for v in range(int(frm[b]), min(16, int(to[b]))):
+            for u in range(max(0, int(frm[a])), min(16, int(to[a] + 0.999))):
+                for v in range(max(0, int(frm[b])), min(16, int(to[b] + 0.999))):
                     covered.add((u, v))
-        faces[name] = len(covered) / 256.0
-    return faces
+        leaks[name] = 1 - len(covered) / 256.0
+    return leaks
+
+
+def solid_models() -> tuple[set[str], list[str]]:
+    """Every model served on a FULL_BLOCK carrier, read off the Java.
+
+    A bare name is one model. A name that is concatenated with something is a
+    PREFIX, and covers every stage model built from it in a loop -- which is
+    the case that used to escape this check entirely, so refiner_idle was
+    tested and refiner_0..4 were not.
+    """
+    wanted = set()
+    unresolved = []
+    for java in sorted(SRC.glob("*.java")):
+        text = java.read_text()
+        for match in re.finditer(r"BlockModelType\.(\w+)", text):
+            if match.group(1) != "FULL_BLOCK":
+                continue
+            call = text[match.end():text.find(";", match.end())]
+            name = re.search(r'"(?:trapcraft:block/)?([a-z0-9_]+)"(\s*\+)?', call)
+            if not name:
+                unresolved.append(
+                    f"{java.name}: a FULL_BLOCK carrier whose model name this check "
+                    f"cannot read -- it is not a string literal, so nothing verifies "
+                    f"that the model is a closed cube")
+                continue
+            if name.group(2):        # "foo_" + step: a family of stage models
+                wanted.update(p.stem for p in (MODELS / "block").glob(f"{name.group(1)}*.json"))
+            else:
+                wanted.add(name.group(1))
+    return wanted, unresolved
 
 
 def xray_holes() -> list[str]:
-    """Blocks claiming to be solid cubes whose models leave the sky showing.
-
-    Fails only on the up and down faces. Those are the ones you notice, because
-    a floor with a hole in it shows the caves underneath. Open SIDES are
-    reported as a note and tolerated on purpose: the three machines that have
-    them would need thirty-seven carrier states between them to fix, which is
-    the entire remaining TRANSPARENT_BLOCK pool on this pack.
-    """
-    declared = re.compile(
-        r"BlockModelType\.(\w+),\s*\n\s*PolymerBlockModel\.of\(Identifier\.of\("
-        r"\"trapcraft:block/([a-z0-9_]+)\"\)\)")
-    problems = []
-    notes = []
-    for java in sorted(SRC.glob("*.java")):
-        for carrier, model in declared.findall(java.read_text()):
-            if carrier != "FULL_BLOCK":
-                continue
-            path = MODELS / "block" / f"{model}.json"
-            if not path.is_file():
-                continue
-            faces = face_coverage(json.loads(path.read_text()))
-            for side in ("down", "up"):
-                if faces[side] < 0.99:
-                    problems.append(
-                        f"{model}: FULL_BLOCK carrier but the {side} face is only "
-                        f"{faces[side] * 100:.0f}% covered -- players will see through it")
-            open_sides = [f"{k} {v * 100:.0f}%"
-                          for k, v in faces.items() if k not in ("down", "up") and v < 0.99]
-            if open_sides:
-                notes.append(f"  note: {model} has open sides ({', '.join(open_sides)})")
-    for line in notes:
-        print(line)
+    """Blocks claiming to be solid cubes that you can see straight through."""
+    wanted, problems = solid_models()
+    for model in sorted(wanted):
+        path = MODELS / "block" / f"{model}.json"
+        if not path.is_file():
+            continue
+        for axis, leak in sightlines(json.loads(path.read_text())).items():
+            if leak > 0.001:
+                problems.append(
+                    f"{model}: FULL_BLOCK carrier, but {leak * 100:.0f}% of the "
+                    f"{axis} sightlines go straight through it -- against a wall or "
+                    f"a floor, players see the culled world through the gap. Close "
+                    f"the shell, or move the block to TrapPolymer.NON_SOLID")
     return problems
 
 

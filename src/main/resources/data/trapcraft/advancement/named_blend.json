@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:blend_joint"
     },
-    "title": "By Name",
-    "description": "Make a blend somebody has already named.",
+    "title": "Z nazwy",
+    "description": "Zrób mieszankę, która ma już swoją nazwę.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

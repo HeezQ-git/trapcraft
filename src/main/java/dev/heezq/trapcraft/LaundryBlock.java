@@ -104,6 +104,53 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
         return Math.max(20, load * WASH_TICKS_EACH);
     }
 
+    /** What came off one finished load. */
+    public record Wash(int gross, int cut, int clean) {
+    }
+
+    /**
+     * Tip this much in and set the drum turning, from whichever door.
+     *
+     * The reschedule is the part worth keeping in one place: the clock is set
+     * from the NEW total every time, so anything that adds to a running drum
+     * starts it over rather than leaving a part-washed load for somebody to
+     * reason about.
+     */
+    public static void start(ServerWorld world, BlockPos pos, BlockState state, int going) {
+        int load = state.get(LOAD) + going;
+        world.setBlockState(pos, state.with(LOAD, load));
+        if (load >= MIN_LOAD) {
+            world.scheduleBlockTick(pos, state.getBlock(), washTicks(load));
+            world.playSound(null, pos, SoundEvents.BLOCK_WATER_AMBIENT,
+                    SoundCategory.BLOCKS, 0.7F, 1.0F);
+        }
+    }
+
+    /**
+     * Empty a finished drum, and mint what came out of it.
+     *
+     * Shared with the crew, who launder into a chest rather than into a pocket.
+     * The roll, the reset and the mint have to happen exactly once per load and
+     * in that order, so they live here instead of at each door -- a second
+     * caller that did its own arithmetic is how a drum ends up paying twice.
+     */
+    public static Wash empty(ServerWorld world, BlockPos pos, BlockState state) {
+        int load = state.get(LOAD);
+        // Anything from nothing to a fifth. A flat rate is a fee somebody
+        // budgets for; a roll is a risk they take, and the whole point of
+        // laundering is that you do not know what you will get back.
+        int cut = Math.round(load * TrapLaw.WASH_CUT * world.getRandom().nextFloat());
+        int clean = Math.max(0, load - cut);
+        world.setBlockState(pos, state.with(LOAD, 0).with(DONE, false));
+        if (clean > 0) {
+            // Minted here and nowhere else. Dirty money was never in the world
+            // -- the market has never counted it and no shop would take it --
+            // so this is the moment those emeralds actually exist.
+            TrapMarket.minted(clean);
+        }
+        return new Wash(load, cut, clean);
+    }
+
     /** "8 minutes", "45s" -- for the drum, the book and the page. */
     public static String washLabel(int load) {
         int seconds = washTicks(load) / 20;
@@ -165,9 +212,9 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
 
         int load = state.get(LOAD);
         who.sendMessage(load == 0
-                ? Text.literal("Empty. Put dirty money in it -- up to " + MAX_LOAD + ".")
+                ? Text.literal("Pusty. Włóż brudną kasę -- do " + MAX_LOAD + ".")
                         .formatted(Formatting.GRAY)
-                : Text.literal(load + " in the drum, going round.")
+                : Text.literal("W bębnie: " + load + ", pierze się.")
                         .formatted(Formatting.GRAY), true);
         return ActionResult.SUCCESS;
     }
@@ -177,8 +224,8 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
                       ServerPlayerEntity who, ItemStack held, int each) {
         int room = MAX_LOAD - state.get(LOAD);
         if (room < each) {
-            who.sendMessage(Text.literal(room <= 0 ? "The drum's full."
-                            : "Only room for " + room + " more. Break a block up.")
+            who.sendMessage(Text.literal(room <= 0 ? "Bęben jest pełny."
+                            : "Zmieści się jeszcze " + room + ". Rozbij blok.")
                     .formatted(Formatting.GRAY), true);
             return;
         }
@@ -187,27 +234,20 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
         // vanishing.
         int lots = Math.min(room / each, held.getCount());
         held.decrement(lots);
-        int going = lots * each;
-        int load = state.get(LOAD) + going;
-        world.setBlockState(pos, state.with(LOAD, load));
-
-        if (load >= MIN_LOAD) {
-            // Rescheduled on every top-up, from the new total. Tipping more in
-            // starts the clock again -- which is worth saying out loud, and is
-            // simpler than a part-washed load that somebody has to reason
-            // about. Load it all, then leave it.
-            world.scheduleBlockTick(pos, this, washTicks(load));
-            world.playSound(null, pos, SoundEvents.BLOCK_WATER_AMBIENT,
-                    SoundCategory.BLOCKS, 0.7F, 1.0F);
-        }
+        // Rescheduled on every top-up, from the new total. Tipping more in
+        // starts the clock again -- which is worth saying out loud, and is
+        // simpler than a part-washed load that somebody has to reason about.
+        // Load it all, then leave it.
+        start(world, pos, state, lots * each);
+        int load = state.get(LOAD) + lots * each;
         who.sendMessage(load < MIN_LOAD
                 ? Text.literal(load + " in. It wants at least " + MIN_LOAD
                         + " before it'll run.").formatted(Formatting.GRAY)
-                : Text.literal(load + " in the drum. ").formatted(Formatting.GRAY)
+                : Text.literal("W bębnie: " + load + ". ").formatted(Formatting.GRAY)
                         .append(Text.literal(washLabel(load))
                                 .formatted(Formatting.WHITE))
                         .append(Text.literal(load < MAX_LOAD
-                                        ? "   adding more restarts it" : "   full")
+                                        ? "   dorzucenie zeruje licznik" : "   pełny")
                                 .formatted(Formatting.DARK_GRAY)), true);
     }
 
@@ -222,35 +262,23 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
      */
     private void collect(ServerWorld world, BlockPos pos, BlockState state,
                          ServerPlayerEntity who) {
-        int load = state.get(LOAD);
-        // Anything from nothing to a fifth. A flat rate is a fee somebody
-        // budgets for; a roll is a risk they take, and the whole point of
-        // laundering is that you do not know what you will get back.
-        int cut = Math.round(load * TrapLaw.WASH_CUT * world.getRandom().nextFloat());
-        int clean = Math.max(0, load - cut);
-        world.setBlockState(pos, state.with(LOAD, 0).with(DONE, false));
-        if (clean > 0) {
-            // Minted here and nowhere else. Dirty money was never in the world
-            // -- the market has never counted it and no shop would take it --
-            // so this is the moment those emeralds actually exist.
-            TrapMarket.minted(clean);
-            int left = clean;
-            while (left > 0) {
-                int lot = Math.min(left, Items.EMERALD.getMaxCount());
-                who.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, lot));
-                left -= lot;
-            }
+        Wash out = empty(world, pos, state);
+        int left = out.clean();
+        while (left > 0) {
+            int lot = Math.min(left, Items.EMERALD.getMaxCount());
+            who.getInventory().offerOrDrop(new ItemStack(Items.EMERALD, lot));
+            left -= lot;
         }
-        TrapLaw.washed(who, load, cut);
+        TrapLaw.washed(who, out.gross(), out.cut());
 
         world.playSound(null, pos, SoundEvents.BLOCK_BUBBLE_COLUMN_UPWARDS_INSIDE,
                 SoundCategory.BLOCKS, 0.8F, 1.4F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, pos.getX() + 0.5,
                 pos.getY() + 1.1, pos.getZ() + 0.5, 14, 0.35, 0.3, 0.35, 0.02);
-        who.sendMessage(Text.literal("Out of the drum. ").formatted(Formatting.GREEN)
-                .append(Text.literal(clean + "e clean").formatted(Formatting.WHITE))
-                .append(Text.literal(cut == 0 ? ", and nothing lost this time."
-                                : ", " + cut + " gone in the wash.")
+        who.sendMessage(Text.literal("Wyjęte z bębna. ").formatted(Formatting.GREEN)
+                .append(Text.literal(out.clean() + "e czystych").formatted(Formatting.WHITE))
+                .append(Text.literal(out.cut() == 0 ? ", tym razem nic nie przepadło."
+                                : ", " + out.cut() + " przepadło w praniu.")
                         .formatted(Formatting.DARK_GRAY)), false);
     }
 

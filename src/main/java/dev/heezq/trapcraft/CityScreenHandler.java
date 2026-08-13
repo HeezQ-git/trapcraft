@@ -33,21 +33,26 @@ import java.util.List;
  * announcement is the whole of the accountability, and it is enough.
  *
  *   [purse] . [essentials][materials][luxury][income][gaming][rent][ledger]
- *   . . [take 64][take 256][take 1024][take all] . . .
+ *   . . [take 64][take 256][take 1024][take all] . [donations] .
  *   [works..] . [what it is for]
  */
 public class CityScreenHandler extends ScreenHandler {
     private static final int SIZE = 27;
 
     private static final int PURSE_SLOT = 0;
+    private static final int PAY_SLOT = 1;
     private static final int RATES_FROM = 2;
     private static final int LEDGER_SLOT = 8;
     private static final int TAKE_FROM = 11;
+    private static final int GIVE_SLOT = 16;
     private static final int ABOUT_SLOT = 26;
     private static final int WORKS_FROM = 18;
 
     /** What each withdraw button is worth. Null means everything. */
     private static final Integer[] TAKES = {64, 256, 1024, null};
+
+    /** What one click of "pay in" is worth. Right-click gives everything. */
+    private static final int PAY_STEP = 1024;
 
     /** One per public work, in declaration order. */
     private static final Item[] WORK_ICONS = {
@@ -66,6 +71,11 @@ public class CityScreenHandler extends ScreenHandler {
                 || RATES_FROM + ICONS.length > LEDGER_SLOT) {
             throw new IllegalStateException("city board: "
                     + TrapCity.Duty.values().length + " duties won't fit");
+        }
+        // A fifth withdraw button would land on the donations door, and the
+        // symptom would be "Take 4096e opened a different screen".
+        if (GIVE_SLOT >= TAKE_FROM && GIVE_SLOT < TAKE_FROM + TAKES.length) {
+            throw new IllegalStateException("city board: the take row reaches the donations door");
         }
         if (WORK_ICONS.length != TrapCity.Work.values().length
                 || WORKS_FROM + WORK_ICONS.length > SIZE
@@ -107,6 +117,7 @@ public class CityScreenHandler extends ScreenHandler {
         }
 
         display.setStack(PURSE_SLOT, purse());
+        display.setStack(PAY_SLOT, payIn());
         TrapCity.Duty[] duties = TrapCity.Duty.values();
         for (int i = 0; i < duties.length; i++) {
             display.setStack(RATES_FROM + i, rate(duties[i], ICONS[i]));
@@ -115,6 +126,7 @@ public class CityScreenHandler extends ScreenHandler {
         for (int i = 0; i < TAKES.length; i++) {
             display.setStack(TAKE_FROM + i, take(TAKES[i]));
         }
+        display.setStack(GIVE_SLOT, donations());
         TrapCity.Work[] works = TrapCity.Work.values();
         for (int i = 0; i < works.length; i++) {
             display.setStack(WORKS_FROM + i, work(works[i], WORK_ICONS[i]));
@@ -127,21 +139,21 @@ public class CityScreenHandler extends ScreenHandler {
         long money = TrapCity.treasury();
         ItemStack tag = new ItemStack(money > 0 ? Items.EMERALD_BLOCK : Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The City Purse").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Kasa miasta").formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(line(money + "e", money > 0 ? Formatting.GREEN : Formatting.RED,
                 Formatting.BOLD));
         lore.add(Text.empty());
         lore.add(line(money < TrapCity.BROKE
-                        ? "Empty. Rates go up at the next budget."
+                        ? "Pusta. Podatki wzrosną przy następnym budżecie."
                         : money > TrapCity.FLUSH
-                        ? "Full. Rates come down at the next budget."
-                        : "Healthy. Rates only drift.",
+                        ? "Pełna. Podatki spadną przy następnym budżecie."
+                        : "W dobrym stanie. Podatki tylko lekko drgają.",
                 money < TrapCity.BROKE ? Formatting.RED
                         : money > TrapCity.FLUSH ? Formatting.AQUA : Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("Everybody's. Anybody may spend it,", Formatting.DARK_GRAY));
-        lore.add(line("and everybody is told who did.", Formatting.DARK_GRAY));
+        lore.add(line("Wspólna. Wydać może każdy,", Formatting.DARK_GRAY));
+        lore.add(line("a wszyscy dostają info kto.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -155,9 +167,9 @@ public class CityScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(duty.blurb(), Formatting.GRAY),
                 Text.empty(),
-                line("Never below " + duty.floor() + "%, never above "
+                line("Nigdy poniżej " + duty.floor() + "%, nigdy powyżej "
                         + duty.ceiling() + "%.", Formatting.DARK_GRAY),
-                line("Raised " + TrapCity.takenBy(duty) + "e so far.",
+                line("Zebrano dotąd " + TrapCity.takenBy(duty) + "e.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -172,12 +184,37 @@ public class CityScreenHandler extends ScreenHandler {
         }
         ItemStack tag = new ItemStack(Items.WRITTEN_BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Raised, all time").formatted(Formatting.GOLD, Formatting.BOLD)
+                plain("Zebrane od początku").formatted(Formatting.GOLD, Formatting.BOLD)
                         .append(plain("   " + total + "e").formatted(Formatting.WHITE)));
         lore.add(Text.empty());
-        lore.add(line("Nothing sold to customers or", Formatting.DARK_GRAY));
-        lore.add(line("dealers appears here at all.", Formatting.DARK_GRAY));
+        lore.add(line("Sprzedaż klientom z ulicy i dilerom", Formatting.DARK_GRAY));
+        lore.add(line("w ogóle się tu nie pojawia.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
+    /**
+     * The other direction, which the vault has never had.
+     *
+     * Sat next to the purse rather than beside the take buttons on purpose:
+     * the first thing anybody does at this screen is look at the number, and
+     * the way to change it should be the next thing their eye lands on.
+     */
+    private ItemStack payIn() {
+        int held = TrapMarket.wealthOf(who);
+        boolean can = held > 0;
+        ItemStack tag = new ItemStack(can ? Items.EMERALD_BLOCK : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME, plain("Wpłać")
+                .formatted(can ? Formatting.GREEN : Formatting.DARK_GRAY, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(can ? "Masz przy sobie " + held + "e." : "Nie masz przy sobie pieniędzy.",
+                        can ? Formatting.GREEN : Formatting.DARK_GRAY),
+                Text.empty(),
+                line("LPM wpłaca " + PAY_STEP + "e.", Formatting.YELLOW),
+                line("PPM wpłaca wszystko.", Formatting.YELLOW),
+                Text.empty(),
+                line("Z tej kasy opłacane są inwestycje,", Formatting.DARK_GRAY),
+                line("a nic innego jej nie zasila.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -187,14 +224,32 @@ public class CityScreenHandler extends ScreenHandler {
         boolean can = wanted > 0;
         ItemStack tag = new ItemStack(can ? Items.EMERALD : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(amount == null ? "Take the lot" : "Take " + amount + "e")
+                plain(amount == null ? "Wypłać wszystko" : "Wypłać " + amount + "e")
                         .formatted(can ? Formatting.YELLOW : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(can ? "You'd get " + wanted + "e." : "Not that much in there.",
+                line(can ? "Dostaniesz " + wanted + "e." : "Nie ma tam tyle.",
                         can ? Formatting.GREEN : Formatting.DARK_GRAY),
                 Text.empty(),
-                line("Announced to everybody on the server.", Formatting.DARK_GRAY))));
+                line("Wszyscy na serwerze dostaną info.", Formatting.DARK_GRAY))));
+        return tag;
+    }
+
+    /** The door to the page that hands the purse to somebody who runs a floor. */
+    private ItemStack donations() {
+        int floors = TrapHouse.all().size();
+        ItemStack tag = new ItemStack(floors > 0 ? TrapContent.casinoCard : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Dotacje").formatted(floors > 0 ? Formatting.LIGHT_PURPLE
+                        : Formatting.DARK_GRAY, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line(floors > 0
+                                ? "Kasyn do wsparcia: " + floors + "."
+                                : "Nikt jeszcze nie założył kasyna.",
+                        floors > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
+                Text.empty(),
+                line("Bezzwrotna dotacja z kasy miasta prosto", Formatting.DARK_GRAY),
+                line("do kasyna. Wybierz komu i ile.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -205,24 +260,33 @@ public class CityScreenHandler extends ScreenHandler {
      * spend is a reason to stop collecting.
      */
     private ItemStack work(TrapCity.Work work, Item icon) {
-        boolean done = TrapCity.built(work);
-        boolean can = !done && TrapCity.treasury() >= work.cost();
-        ItemStack tag = new ItemStack(done || can ? icon : Items.GRAY_DYE);
+        int level = TrapCity.level(work);
+        int cost = TrapCity.nextCost(work);
+        boolean finished = cost < 0;
+        boolean can = !finished && TrapCity.treasury() >= cost;
+        ItemStack tag = new ItemStack(level > 0 || can ? icon : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(work.display()).formatted(done ? Formatting.GREEN
-                        : can ? Formatting.YELLOW : Formatting.DARK_GRAY, Formatting.BOLD));
+                plain(TrapCity.titleOf(work)).formatted(finished ? Formatting.GREEN
+                        : can ? Formatting.YELLOW : level > 0 ? Formatting.WHITE
+                        : Formatting.DARK_GRAY, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(line(work.blurb() + ".", Formatting.GRAY));
         lore.add(Text.empty());
-        if (done) {
-            lore.add(line("Built. Nothing more to pay.", Formatting.GREEN));
+        if (finished) {
+            lore.add(line("Ukończone -- " + TrapCity.TOP_TIER + " z "
+                    + TrapCity.TOP_TIER + ". Nic więcej do zapłaty.", Formatting.GREEN));
         } else {
-            lore.add(line(work.cost() + "e out of the purse", Formatting.GOLD));
-            lore.add(line(can ? "Click to build it."
-                    : "The purse is " + (work.cost() - TrapCity.treasury()) + "e short.",
+            if (level > 0) {
+                lore.add(line("Poziom " + level + " z " + TrapCity.TOP_TIER
+                        + ". Działa, kiedy zbierasz na kolejny.", Formatting.GREEN));
+                lore.add(Text.empty());
+            }
+            lore.add(line(cost + "e z kasy miasta", Formatting.GOLD));
+            lore.add(line(can ? "Kliknij, żeby zbudować kolejny poziom."
+                    : "Kasie miasta brakuje " + (cost - TrapCity.treasury()) + "e.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
             lore.add(Text.empty());
-            lore.add(line("Anybody may. Everybody is told.", Formatting.DARK_GRAY));
+            lore.add(line("Kupić może każdy. Wszyscy dostają info.", Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -231,16 +295,16 @@ public class CityScreenHandler extends ScreenHandler {
     private ItemStack about() {
         ItemStack tag = new ItemStack(Items.BELL);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("What it's for").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Po co to jest").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Roads, walls, a square, a town hall --", Formatting.GRAY),
-                line("whatever the money in here builds.", Formatting.GRAY),
+                line("Drogi, mury, rynek, ratusz --", Formatting.GRAY),
+                line("co tylko te pieniądze zbudują.", Formatting.GRAY),
                 Text.empty(),
-                line("Rates change on their own every couple", Formatting.DARK_GRAY),
-                line("of days, and it is announced. An empty", Formatting.DARK_GRAY),
-                line("purse puts them up.", Formatting.DARK_GRAY),
+                line("Stawki zmieniają się same co kilka dni,", Formatting.DARK_GRAY),
+                line("z ogłoszeniem na czacie. Pusta kasa", Formatting.DARK_GRAY),
+                line("podnosi podatki.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("/city prints the same thing in chat.", Formatting.DARK_GRAY))));
+                line("/city pokazuje to samo na czacie.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -250,6 +314,27 @@ public class CityScreenHandler extends ScreenHandler {
     public void onSlotClick(int index, int button, SlotActionType type, PlayerEntity clicker) {
         if (index < 0 || index >= SIZE) {
             super.onSlotClick(index, button, type, clicker);
+            return;
+        }
+        if (index == PAY_SLOT) {
+            int all = TrapMarket.wealthOf(who);
+            int amount = button == 1 || type == SlotActionType.QUICK_MOVE
+                    ? all : Math.min(PAY_STEP, all);
+            String no = TrapCity.payIn(who, amount);
+            if (no != null) {
+                who.sendMessage(Text.literal(no).formatted(Formatting.GRAY), true);
+                click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
+            } else {
+                click(SoundEvents.BLOCK_VAULT_INSERT_ITEM, 1.2F);
+            }
+            paint();
+            return;
+        }
+        if (index == GIVE_SLOT) {
+            click(SoundEvents.BLOCK_VAULT_OPEN_SHUTTER, 1.2F);
+            who.openHandledScreen(new net.minecraft.screen.SimpleNamedScreenHandlerFactory(
+                    (syncId, inventory, ignored) -> new DonationScreenHandler(syncId, inventory),
+                    plain("Dotacje").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)));
             return;
         }
         if (index >= WORKS_FROM && index < WORKS_FROM + WORK_ICONS.length) {

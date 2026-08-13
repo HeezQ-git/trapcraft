@@ -37,14 +37,14 @@ public enum Drug {
     SUNSET(Strain.SUNSET),
 
     /** Refined coca. Purity is the variation, so there is only ever one meter. */
-    COKE("coke", "Cocaine", 0xE8E4F0, Formatting.WHITE, 6.0F, 0.60F, 7, 1.0F),
+    COKE("coke", "Kokaina", 0xE8E4F0, Formatting.WHITE, 6.0F, 0.60F, 7, 1.0F),
 
     /**
      * The long line. Four times weed's hook per hit and a quarter of its decay,
      * which is the whole reason the chain behind it is allowed to be worth so
      * much: the money is real and so is the bill.
      */
-    DOPE("dope", "Heroin", 0xA86A3A, Formatting.GOLD, 16.0F, 0.30F, 3, 3.0F);
+    DOPE("dope", "Heroina", 0xA86A3A, Formatting.GOLD, 16.0F, 0.30F, 3, 3.0F);
 
     /** Nothing is ever hooked harder than this, whatever you do to it. */
     public static final float MAX = 100.0F;

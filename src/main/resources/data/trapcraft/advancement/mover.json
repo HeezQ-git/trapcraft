@@ -3,8 +3,8 @@
     "icon": {
       "id": "minecraft:emerald_block"
     },
-    "title": "Moved The Market",
-    "description": "Push one item's price by a fifth on your own.",
+    "title": "Ruszyłeś rynek",
+    "description": "Podbij cenę jednego przedmiotu o jedną piątą, w pojedynkę.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

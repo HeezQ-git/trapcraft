@@ -35,7 +35,7 @@ import java.util.List;
  *
  *   [hand][hand][hand][hand][hand] . [book] . [hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][whip][move][wages][nights][plans] . [fire]
+ *   [job][job][job][move][wages][nights][plans][whip][fire]
  *
  * The selected hand is the one everything on the bottom two rows applies to,
  * which is why the top row is heads you click rather than a list you read.
@@ -54,7 +54,10 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
     private static final int JOBS_FROM = 11;
-    private static final int WHIP_SLOT = 20;
+    // Moved off 20 into the gap the row already had when laundering made a
+    // tenth job. The job row is the only thing here that grows, so the spare
+    // slot is better spent on it than left as a hole next to the fire button.
+    private static final int WHIP_SLOT = 25;
     private static final int MOVE_SLOT = 21;
     private static final int NIGHTS_SLOT = 23;
     private static final int PLANS_SLOT = 24;
@@ -73,10 +76,11 @@ public class CrewScreenHandler extends ScreenHandler {
             List.of(TrapCrew.Job.values());
 
     static {
-        // The job row is laid out by counting off JOBS_FROM, so a tenth job
-        // would land on the whip and be eaten by the click handler without a
-        // word. Better to fall over the first time somebody opens the board.
-        if (JOBS_FROM + TEACHABLE.size() > WHIP_SLOT) {
+        // The job row is laid out by counting off JOBS_FROM, so an eleventh job
+        // would land on the move button and be eaten by the click handler
+        // without a word. Better to fall over the first time somebody opens the
+        // board than to sell a job that quietly relocates the hand instead.
+        if (JOBS_FROM + TEACHABLE.size() > MOVE_SLOT) {
             throw new IllegalStateException(
                     "crew board: " + TEACHABLE.size() + " jobs won't fit before the whip");
         }
@@ -153,57 +157,57 @@ public class CrewScreenHandler extends ScreenHandler {
     private ItemStack head(TrapCrew.Card card, int nth, boolean chosen) {
         ItemStack tag = new ItemStack(chosen ? Items.VILLAGER_SPAWN_EGG : Items.PLAYER_HEAD);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Hand " + (nth + 1))
+                plain("Robotnik " + (nth + 1))
                         .formatted(chosen ? Formatting.YELLOW : Formatting.WHITE, Formatting.BOLD)
                         .append(plain(chosen ? "  <" : "").formatted(Formatting.GOLD)));
         List<Text> lore = new ArrayList<>();
-        lore.add(line(TrapCrew.PACE_NAME[card.pace()] + " -- a job every "
+        lore.add(line(TrapCrew.PACE_NAME[card.pace()] + " -- czynność co "
                 + card.tempo(), Formatting.GRAY));
-        lore.add(line("Works " + card.reachBlocks() + " blocks around  ", Formatting.GRAY)
+        lore.add(line("Pracuje " + card.reachBlocks() + " bloków wokół  ", Formatting.GRAY)
                 .append(plain(card.spot()).formatted(Formatting.WHITE)));
         // The single most misunderstood thing about the crew: a hand uses ONE
         // container, the nearest one to its spot, and nothing else in the
         // world. Somebody with the right things in the wrong chest was doing
         // everything right and getting nothing.
         lore.add(card.chest() == null
-                ? line("NO CHEST in the patch. They can't work.", Formatting.RED)
-                : line("Uses the chest at  ", Formatting.DARK_GRAY)
+                ? line("BRAK SKRZYNI na działce. Nie może pracować.", Formatting.RED)
+                : line("Korzysta ze skrzyni na  ", Formatting.DARK_GRAY)
                 .append(plain(card.chest()).formatted(Formatting.WHITE))
-                .append(plain("  (nearest one)").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("Wages  ", Formatting.DARK_GRAY)
+                .append(plain("  (najbliższa)").formatted(Formatting.DARK_GRAY)));
+        lore.add(line("Pensja  ", Formatting.DARK_GRAY)
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
-                .append(plain(" every five minutes ON THE CLOCK")
+                .append(plain(" za każde pięć minut PRACY")
                         .formatted(Formatting.DARK_GRAY)));
         lore.add(card.nights()
-                ? line("ON NIGHTS. The clock never stops.", Formatting.GOLD)
-                : line("Nights are free. They're asleep.", Formatting.DARK_GRAY));
+                ? line("NOCNA ZMIANA. Licznik nie staje.", Formatting.GOLD)
+                : line("Noce darmowe. Wtedy śpi.", Formatting.DARK_GRAY));
         // The books, which exist because "are they earning their keep" was a
         // question three people had and nobody could answer.
         if (card.done() > 0) {
-            lore.add(line("Done " + card.done() + " jobs for " + card.paid() + "e  ",
+            lore.add(line("Wykonał " + card.done() + " czynności za " + card.paid() + "e  ",
                     Formatting.DARK_GRAY)
-                    .append(plain(String.format("%.1fe a job", card.perJob()))
+                    .append(plain(String.format("%.1fe za czynność", card.perJob()))
                             .formatted(Formatting.WHITE))
-                    .append(plain(String.format("  (best %.1fe)", card.parJob()))
+                    .append(plain(String.format("  (najlepiej %.1fe)", card.parJob()))
                             .formatted(Formatting.DARK_GRAY)));
             if (card.perJob() > card.parJob() * 1.6f) {
-                lore.add(line("Most of that is walking. Tighter patch,",
+                lore.add(line("Głównie chodzi. Zmniejsz działkę",
                         Formatting.YELLOW));
-                lore.add(line("or a chest closer to the work.", Formatting.YELLOW));
+                lore.add(line("albo postaw skrzynię bliżej pracy.", Formatting.YELLOW));
             }
         }
         if (card.missed() > 0) {
-            lore.add(line("OWED " + card.owed() + "e -- "
+            lore.add(line("ZALEGŁE " + card.owed() + "e -- jeszcze "
                     + (TrapCrew.GRACE_PACKETS - card.missed())
-                    + " paydays before they walk", Formatting.RED, Formatting.BOLD));
+                    + " wypłat i odchodzi", Formatting.RED, Formatting.BOLD));
         }
         lore.add(Text.empty());
         StringBuilder knows = new StringBuilder();
         for (TrapCrew.Job job : card.taught()) {
             knows.append(knows.isEmpty() ? "" : ", ").append(job.display());
         }
-        lore.add(line("Knows " + card.taught().size() + " of " + TrapCrew.SLOTS
-                + (knows.isEmpty() ? " -- nothing yet" : ": " + knows),
+        lore.add(line("Umie " + card.taught().size() + " z " + TrapCrew.SLOTS
+                + (knows.isEmpty() ? " -- na razie nic" : ": " + knows),
                 card.taught().isEmpty() ? Formatting.RED : Formatting.WHITE));
         lore.add(Text.empty());
         // "Present" is worth a line of its own: a hand who isn't there does no
@@ -212,10 +216,10 @@ public class CrewScreenHandler extends ScreenHandler {
         // also mean "you are stood too far away", which it no longer can --
         // the patch holds itself open now, so this is a zombie or nothing.
         lore.add(card.present()
-                ? line("On the patch.", Formatting.GREEN)
-                : line("Gone. Something got them -- whip a new one in.",
+                ? line("Jest na działce.", Formatting.GREEN)
+                : line("Zginął. Użyj bata, żeby postawić nowego.",
                 Formatting.RED));
-        lore.add(line(chosen ? "Selected." : "Click to select.",
+        lore.add(line(chosen ? "Wybrany." : "Kliknij, żeby wybrać.",
                 chosen ? Formatting.DARK_GRAY : Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -231,31 +235,31 @@ public class CrewScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(top ? Items.GOLD_INGOT
                 : can ? (pace ? Items.SUGAR : Items.SPYGLASS) : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(pace ? "Pace" : "Patch")
+                plain(pace ? "Tempo" : "Zasięg")
                         .formatted(top ? Formatting.GOLD : can ? Formatting.AQUA
                                 : Formatting.DARK_GRAY, Formatting.BOLD)
-                        .append(plain("  " + (rung + 1) + " of " + rungs)
+                        .append(plain("  " + (rung + 1) + " z " + rungs)
                                 .formatted(Formatting.WHITE)));
         List<Text> lore = new ArrayList<>();
         lore.add(pace
-                ? line("Now: a job every " + card.tempo() + ".", Formatting.GRAY)
-                : line("Now: " + card.reachBlocks() + " blocks around the spot.",
+                ? line("Teraz: czynność co " + card.tempo() + ".", Formatting.GRAY)
+                : line("Teraz: " + card.reachBlocks() + " bloków wokół miejsca.",
                 Formatting.GRAY));
         if (top) {
-            lore.add(line("Top of the ladder.", Formatting.GOLD));
+            lore.add(line("Maksymalny poziom.", Formatting.GOLD));
         } else {
             lore.add(pace
-                    ? line("Next: every " + TrapCrew.paceLabel(rung + 1)
-                    + ", and they walk quicker.", Formatting.WHITE)
-                    : line("Next: " + TrapCrew.REACH_BLOCKS[rung + 1] + " blocks.",
+                    ? line("Dalej: co " + TrapCrew.paceLabel(rung + 1)
+                    + ", i szybciej chodzi.", Formatting.WHITE)
+                    : line("Dalej: " + TrapCrew.REACH_BLOCKS[rung + 1] + " bloków.",
                     Formatting.WHITE));
             lore.add(Text.empty());
             lore.add(line(cost + "e", Formatting.GOLD)
-                    .append(plain(", and wages go to " + (card.wage()
+                    .append(plain(", pensja wzrośnie do " + (card.wage()
                             + (pace ? TrapCrew.PACE_WAGE[rung + 1] - TrapCrew.PACE_WAGE[rung]
                             : TrapCrew.REACH_WAGE[rung + 1] - TrapCrew.REACH_WAGE[rung]))
                             + "e.").formatted(Formatting.DARK_GRAY)));
-            lore.add(line(can ? "Click to buy." : "You can't cover it.",
+            lore.add(line(can ? "Kliknij, żeby kupić." : "Nie stać cię.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -274,29 +278,29 @@ public class CrewScreenHandler extends ScreenHandler {
         lore.add(line(job.blurb(), Formatting.GRAY));
         lore.add(Text.empty());
         if (known) {
-            lore.add(line("Taught.", Formatting.GREEN)
-                    .append(plain("  +" + job.wage() + "e on the wage.")
+            lore.add(line("Wyszkolony.", Formatting.GREEN)
+                    .append(plain("  +" + job.wage() + "e do pensji.")
                             .formatted(Formatting.DARK_GRAY)));
             // The line that would have saved somebody asking why their roller
             // never rolled. A job with nothing to work on looks identical to a
             // job that is broken, and only one of them is your fault.
-            lore.add(line("Wants " + job.needs() + ".", Formatting.GRAY));
+            lore.add(line("Potrzebuje: " + job.needs() + ".", Formatting.GRAY));
             if (card.starved().contains(job)) {
-                lore.add(line("NOT RIGHT NOW -- the chest hasn't got it.",
+                lore.add(line("NIE TERAZ -- w skrzyni tego nie ma.",
                         Formatting.RED, Formatting.BOLD));
-                lore.add(line("It only ever looks in ONE chest: the", Formatting.RED));
-                lore.add(line("nearest one to their spot.", Formatting.RED));
+                lore.add(line("Zagląda tylko do JEDNEJ skrzyni:", Formatting.RED));
+                lore.add(line("najbliższej jego miejscu pracy.", Formatting.RED));
             } else {
-                lore.add(line("Ready. The chest can back it.", Formatting.GREEN));
+                lore.add(line("Gotowe. Skrzynia ma czym pracować.", Formatting.GREEN));
             }
-            lore.add(line("Shift-click to drop it.", Formatting.YELLOW));
+            lore.add(line("Shift+LPM usuwa ten zawód.", Formatting.YELLOW));
         } else {
-            lore.add(line(job.cost() == 0 ? "Free." : job.cost() + "e", Formatting.GOLD)
-                    .append(plain(job.wage() == 0 ? ", and no wage."
-                                    : ", then +" + job.wage() + "e every packet.")
+            lore.add(line(job.cost() == 0 ? "Za darmo." : job.cost() + "e", Formatting.GOLD)
+                    .append(plain(job.wage() == 0 ? ", bez dodatku do pensji."
+                                    : ", potem +" + job.wage() + "e do każdej wypłaty.")
                             .formatted(Formatting.DARK_GRAY)));
-            lore.add(line(full ? "Both slots are taken. Drop one first."
-                            : can ? "Click to teach them." : "You can't cover it.",
+            lore.add(line(full ? "Oba miejsca zajęte. Najpierw usuń jeden."
+                            : can ? "Kliknij, żeby nauczyć." : "Nie stać cię.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -311,27 +315,27 @@ public class CrewScreenHandler extends ScreenHandler {
     private ItemStack help() {
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The Crew").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Ekipa").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Stand where you want somebody working", Formatting.GRAY),
-                line("and run /crew hire. They work a box", Formatting.GRAY),
-                line("around that spot and put everything", Formatting.GRAY),
-                line("in the nearest chest to it.", Formatting.GRAY),
-                line("Each one has their own. Move it with", Formatting.GRAY),
-                line("the compass, from wherever you stand.", Formatting.GRAY),
+                line("Stań tam, gdzie ma być praca, i wpisz", Formatting.GRAY),
+                line("/crew hire. Robotnik pracuje w kwadracie", Formatting.GRAY),
+                line("wokół tego miejsca i wszystko wkłada", Formatting.GRAY),
+                line("do najbliższej skrzyni.", Formatting.GRAY),
+                line("Każdy ma swoje miejsce. Przenieś je", Formatting.GRAY),
+                line("kompasem, stojąc gdzie chcesz.", Formatting.GRAY),
                 Text.empty(),
-                line("TWO JOBS EACH. Want a third thing", Formatting.WHITE),
-                line("done? Hire a third person.", Formatting.WHITE),
-                line("Teaching costs up front AND puts", Formatting.WHITE),
-                line("the wage up for good.", Formatting.WHITE),
+                line("DWA ZAWODY NA OSOBĘ. Potrzebujesz", Formatting.WHITE),
+                line("trzeciej rzeczy? Zatrudnij trzecią osobę.", Formatting.WHITE),
+                line("Szkolenie kosztuje z góry ORAZ podnosi", Formatting.WHITE),
+                line("pensję na stałe.", Formatting.WHITE),
                 Text.empty(),
-                line("They keep working while you're", Formatting.GRAY),
-                line("elsewhere, as long as you're", Formatting.GRAY),
-                line("logged in. Log off and so do they.", Formatting.GRAY),
+                line("Pracują, kiedy jesteś gdzie indziej,", Formatting.GRAY),
+                line("o ile jesteś zalogowany.", Formatting.GRAY),
+                line("Wylogujesz się - oni też kończą.", Formatting.GRAY),
                 Text.empty(),
-                line("Miss a wage packet and you get a", Formatting.DARK_GRAY),
-                line("notice. Miss " + TrapCrew.GRACE_PACKETS + " and they walk --", Formatting.DARK_GRAY),
-                line("but the crew is saved on the way out.", Formatting.DARK_GRAY))));
+                line("Za niezapłaconą wypłatę dostajesz", Formatting.DARK_GRAY),
+                line("ostrzeżenie. Po " + TrapCrew.GRACE_PACKETS + " odchodzą --", Formatting.DARK_GRAY),
+                line("ale ekipa zapisuje się przy wyjściu.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -340,17 +344,17 @@ public class CrewScreenHandler extends ScreenHandler {
         boolean can = room && TrapMarket.wealthOf(boss) >= TrapCrew.HIRE_COST;
         ItemStack tag = new ItemStack(can ? Items.EMERALD : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Take somebody on").formatted(can ? Formatting.GREEN
+                plain("Zatrudnij kogoś").formatted(can ? Formatting.GREEN
                         : Formatting.DARK_GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(TrapCrew.HIRE_COST + "e, then " + TrapCrew.WAGE
-                        + "e every five minutes.", Formatting.GRAY),
-                line(crew.size() + " of " + TrapCrew.MAX_HANDS + " on the books.",
+                line(TrapCrew.HIRE_COST + "e, potem " + TrapCrew.WAGE
+                        + "e co pięć minut.", Formatting.GRAY),
+                line(crew.size() + " z " + TrapCrew.MAX_HANDS + " miejsc zajętych.",
                         Formatting.DARK_GRAY),
                 Text.empty(),
-                line(!room ? "Your books are full."
-                                : can ? "Click to hire them where YOU are stood."
-                                : "You can't cover it.",
+                line(!room ? "Nie masz już miejsca."
+                                : can ? "Kliknij, żeby zatrudnić TAM, GDZIE STOISZ."
+                                : "Nie stać cię.",
                         can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
         return tag;
     }
@@ -365,20 +369,20 @@ public class CrewScreenHandler extends ScreenHandler {
         boolean gone = !card.present();
         ItemStack tag = new ItemStack(Items.LEAD);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Whip them back").formatted(gone ? Formatting.RED : Formatting.YELLOW,
+                plain("Zagoń go z powrotem").formatted(gone ? Formatting.RED : Formatting.YELLOW,
                         Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Drags them to the spot and ends", Formatting.GRAY));
-        lore.add(line("whatever break they were on.", Formatting.GRAY));
+        lore.add(line("Wraca na swoje miejsce i kończy", Formatting.GRAY));
+        lore.add(line("przerwę, na której akurat był.", Formatting.GRAY));
         lore.add(Text.empty());
         lore.add(gone
-                ? line("This one is gone. Clicking puts", Formatting.RED)
-                : line("For when they've got stuck behind", Formatting.DARK_GRAY));
+                ? line("Ten zginął. Kliknięcie postawi", Formatting.RED)
+                : line("Przydaje się, gdy utknął za", Formatting.DARK_GRAY));
         lore.add(gone
-                ? line("somebody new on the patch, trained.", Formatting.RED)
-                : line("a wall or wandered off.", Formatting.DARK_GRAY));
+                ? line("nowego, już wyszkolonego.", Formatting.RED)
+                : line("ścianą albo gdzieś odszedł.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line("Free. Click as often as you like.", Formatting.YELLOW));
+        lore.add(line("Za darmo. Klikaj ile chcesz.", Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -394,20 +398,20 @@ public class CrewScreenHandler extends ScreenHandler {
         int saved = TrapCrew.plansOf(boss).size();
         ItemStack tag = new ItemStack(saved > 0 ? Items.WRITTEN_BOOK : Items.WRITABLE_BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Crews on file").formatted(Formatting.AQUA, Formatting.BOLD)
+                plain("Zapisane ekipy").formatted(Formatting.AQUA, Formatting.BOLD)
                         .append(plain(saved == 0 ? "" : "  " + saved)
                                 .formatted(Formatting.WHITE)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Write down who works where and what", Formatting.GRAY),
-                line("they know, then buy the lot back later.", Formatting.GRAY),
+                line("Zapisz, kto gdzie pracuje i co umie,", Formatting.GRAY),
+                line("a potem odkup całość później.", Formatting.GRAY),
                 Text.empty(),
                 line("/crew save <name>", Formatting.GREEN),
                 line("/crew plans", Formatting.GREEN),
                 line("/crew load <name>", Formatting.GREEN),
                 line("/crew forget <name>", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("If they ever walk over wages, the crew", Formatting.DARK_GRAY),
-                line("is filed under \"" + TrapCrew.WALKOUT + "\" on its way out.",
+                line("Jeśli odejdą przez brak wypłat, ekipa", Formatting.DARK_GRAY),
+                line("zapisuje się pod nazwą \"" + TrapCrew.WALKOUT + "\".",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -425,21 +429,21 @@ public class CrewScreenHandler extends ScreenHandler {
                 && boss.getBlockPos().getZ() == card.z();
         ItemStack tag = new ItemStack(here ? Items.GRAY_DYE : Items.COMPASS);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Work here instead").formatted(here ? Formatting.DARK_GRAY
+                plain("Pracuj tutaj").formatted(here ? Formatting.DARK_GRAY
                         : Formatting.AQUA, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Their spot moves to where you are", Formatting.GRAY));
-        lore.add(line("stood, and so do they.", Formatting.GRAY));
+        lore.add(line("Jego miejsce pracy przenosi się tam,", Formatting.GRAY));
+        lore.add(line("gdzie stoisz, i on razem z nim.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("Now:  ", Formatting.DARK_GRAY)
+        lore.add(line("Teraz:  ", Formatting.DARK_GRAY)
                 .append(plain(card.spot()).formatted(Formatting.WHITE)));
-        lore.add(line("You:  ", Formatting.DARK_GRAY)
+        lore.add(line("Ty:  ", Formatting.DARK_GRAY)
                 .append(plain(boss.getBlockPos().getX() + " " + boss.getBlockPos().getY()
                         + " " + boss.getBlockPos().getZ()).formatted(Formatting.WHITE)));
         lore.add(Text.empty());
-        lore.add(line(here ? "You're stood on it." : "Click to move them.",
+        lore.add(line(here ? "Już tu stoisz." : "Kliknij, żeby go przenieść.",
                 here ? Formatting.DARK_GRAY : Formatting.YELLOW));
-        lore.add(line("They forget the bed and the chest.", Formatting.DARK_GRAY));
+        lore.add(line("Zapomina stare łóżko i skrzynię.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -456,23 +460,23 @@ public class CrewScreenHandler extends ScreenHandler {
         boolean on = card.nights();
         ItemStack tag = new ItemStack(on ? Items.CLOCK : Items.RED_BED);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(on ? "On nights" : "Days only")
+                plain(on ? "Nocna zmiana" : "Tylko za dnia")
                         .formatted(on ? Formatting.GOLD : Formatting.WHITE, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line(on ? "They work through the dark and never" : "At dusk they find a bed",
+        lore.add(line(on ? "Pracuje po ciemku i nigdy nie" : "O zmroku szuka łóżka na",
                 Formatting.GRAY));
-        lore.add(line(on ? "go to bed." : "in the patch and turn in.", Formatting.GRAY));
+        lore.add(line(on ? "kładzie się spać." : "działce i kładzie się spać.", Formatting.GRAY));
         lore.add(Text.empty());
-        lore.add(line("Wage  ", Formatting.DARK_GRAY)
+        lore.add(line("Pensja  ", Formatting.DARK_GRAY)
                 .append(plain(card.wage() + "e").formatted(Formatting.RED))
                 .append(plain(on ? "  (+" + Math.round((TrapCrew.NIGHT_RATE - 1) * 100)
-                        + "% for nights)" : "").formatted(Formatting.DARK_GRAY)));
-        lore.add(line(on ? "And the clock runs all night, so you"
-                : "The clock stops at dusk, so the dark", Formatting.DARK_GRAY));
-        lore.add(line(on ? "pay about twice as many packets."
-                : "costs you nothing at all.", Formatting.DARK_GRAY));
+                        + "% za noce)" : "").formatted(Formatting.DARK_GRAY)));
+        lore.add(line(on ? "Licznik chodzi całą noc, więc"
+                : "Licznik staje o zmroku, więc noc", Formatting.DARK_GRAY));
+        lore.add(line(on ? "płacisz około dwa razy więcej wypłat."
+                : "nic cię nie kosztuje.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line(on ? "Click for days only." : "Click to put them on nights.",
+        lore.add(line(on ? "Kliknij, by wrócić do dnia." : "Kliknij, by przestawić na noce.",
                 Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -482,28 +486,28 @@ public class CrewScreenHandler extends ScreenHandler {
         int payroll = TrapCrew.payrollOf(boss);
         ItemStack tag = new ItemStack(Items.CLOCK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Payroll").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Suma pensji").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(payroll + "e every five minutes", Formatting.RED),
-                line("about " + payroll * 12 + "e an hour", Formatting.DARK_GRAY),
+                line(payroll + "e co pięć minut", Formatting.RED),
+                line("czyli około " + payroll * 12 + "e na godzinę", Formatting.DARK_GRAY),
                 Text.empty(),
-                line("You have " + TrapMarket.wealthOf(boss) + "e on you.",
+                line("Masz przy sobie " + TrapMarket.wealthOf(boss) + "e.",
                         Formatting.GRAY),
-                line("Wages come out of your pockets and", Formatting.DARK_GRAY),
-                line("your wallet, wherever you are.", Formatting.DARK_GRAY))));
+                line("Pensje schodzą z ekwipunku i portfela,", Formatting.DARK_GRAY),
+                line("gdziekolwiek jesteś.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack fireTag(int nth) {
         ItemStack tag = new ItemStack(Items.BARRIER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Let Hand " + (nth + 1) + " go")
+                plain("Zwolnij robotnika " + (nth + 1))
                         .formatted(Formatting.RED, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Nothing comes back. Not the hire fee,", Formatting.GRAY),
-                line("not what you paid to teach them.", Formatting.GRAY),
+                line("Nic nie wraca. Ani opłata za najem,", Formatting.GRAY),
+                line("ani koszty szkolenia.", Formatting.GRAY),
                 Text.empty(),
-                line("Shift-click to be sure.", Formatting.YELLOW))));
+                line("Shift+LPM, żeby potwierdzić.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -559,7 +563,7 @@ public class CrewScreenHandler extends ScreenHandler {
             if (type == SlotActionType.QUICK_MOVE) {
                 answer(TrapCrew.fire(boss, card.index()));
             } else {
-                boss.sendMessage(Text.literal("Shift-click if you mean it.")
+                boss.sendMessage(Text.literal("Shift+LPM, jeśli na pewno.")
                         .formatted(Formatting.GRAY), true);
                 click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
             }

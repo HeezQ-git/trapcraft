@@ -76,12 +76,18 @@ public final class TrapContent {
     public static Item burnerPhone;
     public static Block marketStall;
     public static Item marketStallItem;
+    public static Block nightclub;
+    public static Item nightclubItem;
     public static Block mailbox;
     public static Item mailboxItem;
     public static Block cityVault;
     public static Item cityVaultItem;
+    public static Block hospital;
+    public static Item hospitalItem;
     public static Block marketShelf;
     public static Item marketShelfItem;
+    public static net.minecraft.block.entity.BlockEntityType<MarketShelfBlockEntity>
+            marketShelfEntity;
     public static Block shopTill;
     public static Item shopTillItem;
     public static Item dirtyEmerald;
@@ -462,6 +468,16 @@ public final class TrapContent {
         marketStallItem = registerItem("market_stall",
                 (settings, model) -> new RackItem(marketStall, settings, model));
 
+        // Ticks randomly so it can thump when there is somebody in -- a
+        // Polymer block's client never knows it is there, so every ambient
+        // effect has to be server-side and hung off a tick the block already
+        // gets. See the note in NightclubBlock.randomTick.
+        nightclub = registerBlock("nightclub", NightclubBlock::new,
+                AbstractBlock.Settings.create().strength(2.5F)
+                        .sounds(BlockSoundGroup.WOOD).ticksRandomly());
+        nightclubItem = registerItem("nightclub",
+                (settings, model) -> new RackItem(nightclub, settings, model));
+
         mailbox = registerBlock("mailbox", MailboxBlock::new,
                 AbstractBlock.Settings.create().strength(1.5F)
                         .sounds(BlockSoundGroup.WOOD).nonOpaque());
@@ -474,10 +490,28 @@ public final class TrapContent {
         cityVaultItem = registerItem("city_vault",
                 (settings, model) -> new RackItem(cityVault, settings, model));
 
+        // Glass sounds and a light of its own: it is a lit sign over a door,
+        // and a ward has to be lit anyway, so the block that registers one
+        // pulls its own weight towards passing the inspection.
+        hospital = registerBlock("hospital", HospitalBlock::new,
+                AbstractBlock.Settings.create().strength(2.0F)
+                        .sounds(BlockSoundGroup.GLASS).luminance(state -> 10));
+        hospitalItem = registerItem("hospital",
+                (settings, model) -> new RackItem(hospital, settings, model));
+
         marketShelf = registerBlock("market_shelf", MarketShelfBlock::new,
                 AbstractBlock.Settings.create().strength(2.0F).sounds(BlockSoundGroup.WOOD));
         marketShelfItem = registerItem("market_shelf",
                 (settings, model) -> new RackItem(marketShelf, settings, model));
+        // A shelf holds its own stock, so it needs a block entity -- the only
+        // one in this mod. Polymer is told it is server-side only, or a
+        // vanilla client gets sent a block entity type it has never heard of.
+        marketShelfEntity = Registry.register(Registries.BLOCK_ENTITY_TYPE,
+                TrapCraft.id("market_shelf"),
+                net.fabricmc.fabric.api.object.builder.v1.block.entity
+                        .FabricBlockEntityTypeBuilder
+                        .create(MarketShelfBlockEntity::new, marketShelf).build());
+        eu.pb4.polymer.core.api.block.PolymerBlockUtils.registerBlockEntity(marketShelfEntity);
 
         shopTill = registerBlock("shop_till", ShopTillBlock::new,
                 AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
@@ -647,6 +681,7 @@ public final class TrapContent {
                     entries.add(marketStallItem);
                     entries.add(mailboxItem);
                     entries.add(cityVaultItem);
+                    entries.add(hospitalItem);
                     entries.add(shopTillItem);
                     entries.add(marketShelfItem);
                     entries.add(laundryItem);

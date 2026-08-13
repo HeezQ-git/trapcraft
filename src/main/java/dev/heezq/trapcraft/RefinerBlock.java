@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,12 +20,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Step two: paste plus blaze powder becomes finished product.
@@ -38,7 +41,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * WHEN you pull it, on the same shape as the drying rack's curing window:
  * early is weak, one stage is perfect, past that it burns.
  */
-public class RefinerBlock extends Block implements PolymerTexturedBlock {
+public class RefinerBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<RefinerBlock> CODEC = createCodec(RefinerBlock::new);
 
     public static final BooleanProperty RUNNING = BooleanProperty.of("running");
@@ -48,24 +51,21 @@ public class RefinerBlock extends Block implements PolymerTexturedBlock {
 
     private static final int STEP_TICKS = 500;
 
-    private final BlockState idleState;
-    private final BlockState[] runningStates = new BlockState[BURNT + 1];
+    private final Map<Direction, BlockState> idleCarriers;
+    private final List<Map<Direction, BlockState>> runningCarriers = new ArrayList<>();
 
     public RefinerBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(RUNNING, false).with(PROGRESS, 0));
 
-        this.idleState = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/refiner_idle")),
-                () -> Blocks.FURNACE.getDefaultState(), "refiner_idle");
+        // Four carriers per model rather than one: a machine with a door
+        // and a dial on the front is worth turning to face the room.
+        this.idleCarriers = carriers(BlockModelType.FULL_BLOCK, "refiner_idle",
+                () -> Blocks.FURNACE.getDefaultState());
         for (int step = 0; step <= BURNT; step++) {
-            String name = "refiner_" + step;
-            this.runningStates[step] = TrapPolymer.requestOrFallback(
-                    BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                    () -> Blocks.FURNACE.getDefaultState(), name);
+            this.runningCarriers.add(carriers(BlockModelType.FULL_BLOCK,
+                    "refiner_" + step, () -> Blocks.FURNACE.getDefaultState()));
         }
     }
 
@@ -76,6 +76,7 @@ public class RefinerBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(RUNNING, PROGRESS);
     }
 
@@ -208,7 +209,9 @@ public class RefinerBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(RUNNING) ? runningStates[state.get(PROGRESS)] : idleState;
+        return (state.get(RUNNING)
+                ? runningCarriers.get(state.get(PROGRESS))
+                : idleCarriers).get(state.get(FACING));
     }
 
     /**

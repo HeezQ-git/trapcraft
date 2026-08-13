@@ -543,7 +543,7 @@ public final class TrapVisitors {
         TrapCity.receive(duty, TrapCity.Duty.INCOME);
         TrapHospitals.seen(world, ward);
         TrapCraft.LOGGER.info("somebody from out of town paid {}e at {}", fee + duty,
-                ward.name() == null ? "a ward" : ward.name());
+                ward.name() == null ? "oddziału" : ward.name());
         return false;
     }
 
@@ -580,15 +580,15 @@ public final class TrapVisitors {
 
     private static int report(net.minecraft.server.command.ServerCommandSource source) {
         MinecraftServer server = source.getServer();
-        net.minecraft.text.MutableText out = net.minecraft.text.Text.literal("Visitors  ")
+        net.minecraft.text.MutableText out = net.minecraft.text.Text.literal("Turyści  ")
                 .formatted(net.minecraft.util.Formatting.GOLD,
                         net.minecraft.util.Formatting.BOLD)
-                .append(net.minecraft.text.Text.literal(VISITS.size() + " in town, room for "
+                .append(net.minecraft.text.Text.literal("w mieście: " + VISITS.size() + ", limit "
                                 + room())
                         .formatted(net.minecraft.util.Formatting.GRAY));
         if (!TrapCity.founded()) {
             out.append(net.minecraft.text.Text.literal(
-                            "\n  No city. Nobody visits a place with no vault in it.")
+                            "\n  Brak miasta. Nikt nie odwiedza miejsca bez skarbca.")
                     .formatted(net.minecraft.util.Formatting.RED));
         } else {
             ServerWorld world = null;
@@ -601,11 +601,11 @@ public final class TrapVisitors {
             }
             BlockPos vault = TrapCity.vaultAt();
             BlockPos step = world == null ? null : doorstep(world, vault);
-            out.append(net.minecraft.text.Text.literal("\n  They come in above the vault at "
+            out.append(net.minecraft.text.Text.literal("\n  Wchodzą nad skarbcem na "
                             + vault.getX() + ", " + vault.getZ()
                             + (step == null
-                            ? " -- but there is nowhere to stand up there right now"
-                            : ", at ground level y" + step.getY()))
+                            ? " -- ale nie mają tam teraz gdzie stanąć"
+                            : ", na poziomie gruntu y" + step.getY()))
                     .formatted(step == null ? net.minecraft.util.Formatting.RED
                             : net.minecraft.util.Formatting.DARK_GRAY));
         }
@@ -613,18 +613,18 @@ public final class TrapVisitors {
         for (Visit visit : VISITS) {
             purse += visit.purse;
         }
-        out.append(net.minecraft.text.Text.literal("\n  " + purse
-                        + "e of out-of-town money between them"
-                        + (VISITS.isEmpty() ? "" : ", here for:"))
+        out.append(net.minecraft.text.Text.literal("\n  mają łącznie " + purse
+                        + "e kasy spoza miasta"
+                        + (VISITS.isEmpty() ? "" : ", przyjechali po:"))
                 .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         for (Visit visit : VISITS) {
             out.append(net.minecraft.text.Text.literal("\n    " + visit.purse + "e  "
-                            + (visit.busy ? "busy" : "walking") + "  " + visit.itinerary)
+                            + (visit.busy ? "zajęty" : "idzie") + "  " + visit.itinerary)
                     .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         }
         out.append(net.minecraft.text.Text.literal(
-                        "\n  One turns up every " + ARRIVE_TICKS / 20 + "s while there's room."
-                                + " The works bring more: lamps, the tram, roads, the school.")
+                        "\n  Jeden przyjeżdża co " + ARRIVE_TICKS / 20 + "s, dopóki jest miejsce."
+                                + " Inwestycje przyciągają więcej: latarnie, tramwaje, drogi, szkoła.")
                 .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         // What all this custom is worth to somebody with a drum in the cellar.
         //
@@ -637,9 +637,9 @@ public final class TrapVisitors {
         ServerPlayerEntity asking = source.getPlayer();
         if (asking != null) {
             int headroom = TrapLaw.washLimit(asking);
-            out.append(net.minecraft.text.Text.literal("\n  " + Math.max(0, headroom)
-                            + "e of your takings would still explain themselves"
-                            + (headroom > 0 ? "." : " -- the drum is ahead of the till."))
+            out.append(net.minecraft.text.Text.literal("\n  jeszcze " + Math.max(0, headroom)
+                            + "e twojego utargu ma pokrycie"
+                            + (headroom > 0 ? "." : " -- pralnia wyprzedziła sklepy."))
                     .formatted(headroom > 0 ? net.minecraft.util.Formatting.DARK_GRAY
                             : net.minecraft.util.Formatting.RED));
         }

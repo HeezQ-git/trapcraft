@@ -139,30 +139,30 @@ public final class TrapHeat {
         int tier = tierFor(heat);
         long cooling = cooldownLeft(world, tier);
 
-        var out = Text.literal("Heat  ").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal(heat + " here").formatted(
+        var out = Text.literal("Uwaga policji  ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal(heat + " pkt tutaj").formatted(
                         tier < 0 ? Formatting.GREEN : Formatting.RED))
-                .append(Text.literal("   (" + RADIUS * 2 + " blocks across, "
-                                + HEIGHT * 2 + " tall)").formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("   (" + RADIUS * 2 + " bloków wszerz, "
+                                + HEIGHT * 2 + " w pionie)").formatted(Formatting.DARK_GRAY))
                 .append(Text.literal("\n  " + (tier < 0
-                                ? "Nothing worth a visit. Next tier at " + THRESHOLDS[0] + "."
-                                : "Tier " + (tier + 1) + " -- " + squadOf(tier)))
+                                ? "Nic wartego wizyty. Pierwszy próg przy " + THRESHOLDS[0] + "."
+                                : "Próg " + (tier + 1) + " -- " + squadOf(tier)))
                         .formatted(tier < 0 ? Formatting.GRAY : Formatting.RED))
-                .append(Text.literal("\n  Thresholds " + joinInts(THRESHOLDS))
+                .append(Text.literal("\n  Progi: " + joinInts(THRESHOLDS))
                         .formatted(Formatting.DARK_GRAY))
-                .append(Text.literal("\n  Ripe in the open 3, hidden 2, growing "
-                        + "in the open 1, full rack 1.")
+                .append(Text.literal("\n  Dojrzała na widoku 3, ukryta 2, rosnąca "
+                        + "na widoku 1, pełna suszarka 1.")
                         .formatted(Formatting.DARK_GRAY));
         if (cooling > 0) {
-            out.append(Text.literal("\n  Cooling down for another "
+            out.append(Text.literal("\n  Przerwa jeszcze przez "
                     + cooling / 20 / 60 + "m " + cooling / 20 % 60 + "s.")
                     .formatted(Formatting.AQUA));
         }
         // The other way they come for you, which has nothing to do with the
         // farm underneath your feet and everything to do with who you are.
         int odds = TrapStickup.oddsPercent(player, 8, 3);
-        out.append(Text.literal("\n  Dealing in person: about " + odds
-                        + "% a handful of eight brings a crew.")
+        out.append(Text.literal("\n  Sprzedaż z ręki: około " + odds
+                        + "% szans, że ósemka towaru ściągnie napad.")
                 .formatted(odds >= 12 ? Formatting.RED : Formatting.DARK_GRAY));
         player.sendMessage(out, false);
         return 1;
@@ -174,8 +174,8 @@ public final class TrapHeat {
             return 0;
         }
         force(player.getWorld(), player.getBlockPos(), tier);
-        source.sendFeedback(() -> Text.literal("Sent a tier " + (tier + 1)
-                + " patrol: " + squadOf(tier)).formatted(Formatting.RED), false);
+        source.sendFeedback(() -> Text.literal("Wysłano patrol progu " + (tier + 1)
+                + ": " + squadOf(tier)).formatted(Formatting.RED), false);
         return 1;
     }
 
@@ -227,12 +227,12 @@ public final class TrapHeat {
     /** Guide-book copy, built from the arrays so the book can't disagree. */
     public static String squadOf(int tier) {
         StringBuilder out = new StringBuilder();
-        out.append(PILLAGERS[tier]).append(" pillager");
+        out.append(PILLAGERS[tier]).append(" grabieżców");
         if (VINDICATORS[tier] > 0) {
-            out.append(", ").append(VINDICATORS[tier]).append(" vind");
+            out.append(", ").append(VINDICATORS[tier]).append(" mścicieli");
         }
         if (RAVAGERS[tier] > 0) {
-            out.append(", ravager");
+            out.append(", niszczyciel");
         }
         return out.toString();
     }
@@ -463,10 +463,10 @@ public final class TrapHeat {
 
     /** Tells you roughly what's coming, so the tier is legible before it arrives. */
     private static final String[] WARNINGS = {
-            "Somebody's been asking about your farm.",
-            "Word's got round. They're coming for a look.",
-            "Your operation's on somebody's list.",
-            "They're bringing everything. Move the plants or hold the ground.",
+            "Ktoś wypytywał o twoją plantację.",
+            "Rozniosło się. Przyjdą się rozejrzeć.",
+            "Twój interes trafił na czyjąś listę.",
+            "Idą z całą siłą. Przenieś rośliny albo broń terenu.",
     };
 
     private static void warn(ServerWorld world, BlockPos pos, int tier) {

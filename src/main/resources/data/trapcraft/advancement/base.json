@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:morphine_base"
     },
-    "title": "Over A Fire",
-    "description": "Cook opium down to base. The pot brings no fire of its own.",
+    "title": "Nad ogniem",
+    "description": "Wygotuj opium do bazy morfinowej. Garnek sam ognia nie da.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

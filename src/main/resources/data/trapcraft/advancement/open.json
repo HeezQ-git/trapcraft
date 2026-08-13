@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:market_stall"
     },
-    "title": "Open For Business",
-    "description": "Set up a market stall.",
+    "title": "Otwarte",
+    "description": "Postaw własny stragan.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

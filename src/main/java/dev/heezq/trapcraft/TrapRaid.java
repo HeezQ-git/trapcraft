@@ -188,7 +188,7 @@ public final class TrapRaid {
                 for (ServerPlayerEntity player : world.getPlayers()) {
                     if (player.getBlockPos().isWithinDistance(pos, 64)) {
                         player.sendMessage(net.minecraft.text.Text.literal(
-                                        "They're coming through the wall.")
+                                        "Idą przez ścianę.")
                                 .formatted(net.minecraft.util.Formatting.RED), false);
                     }
                 }
@@ -274,10 +274,10 @@ public final class TrapRaid {
                 pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, 12, 0.3, 0.3, 0.3, 0.02);
         raider.swingHand(net.minecraft.util.Hand.MAIN_HAND);
 
-        Text line = Text.literal("They found it. ").formatted(Formatting.RED, Formatting.BOLD)
+        Text line = Text.literal("Znaleźli. ").formatted(Formatting.RED, Formatting.BOLD)
                 .append(Text.literal(taken + "x ").formatted(Formatting.WHITE))
-                .append(what == null ? Text.literal("product") : what)
-                .append(Text.literal(" gone from a chest at " + pos.getX() + " "
+                .append(what == null ? Text.literal("towar") : what)
+                .append(Text.literal(" zniknął ze skrzyni na " + pos.getX() + " "
                         + pos.getY() + " " + pos.getZ()).formatted(Formatting.GRAY));
         for (ServerPlayerEntity player : world.getPlayers()) {
             if (player.getBlockPos().isWithinDistance(pos, 96)) {

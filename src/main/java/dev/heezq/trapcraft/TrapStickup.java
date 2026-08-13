@@ -140,10 +140,10 @@ public final class TrapStickup {
         }
 
         TrapAwards.grant(player, "followed");
-        player.sendMessage(Text.literal("You were followed.")
+        player.sendMessage(Text.literal("Ktoś cię śledził.")
                 .formatted(Formatting.RED, Formatting.BOLD), false);
-        player.sendMessage(Text.literal(crew.size() + " of them, and they know what you're "
-                + "carrying.").formatted(Formatting.RED), false);
+        player.sendMessage(Text.literal("Jest ich " + crew.size() + " i wiedzą, co przy sobie "
+                + "masz.").formatted(Formatting.RED), false);
 
         world.playSound(null, where, SoundEvents.EVENT_RAID_HORN.value(),
                 SoundCategory.HOSTILE, 1.0F, 0.75F);

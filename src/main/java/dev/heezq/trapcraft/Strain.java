@@ -21,19 +21,19 @@ import java.util.function.Supplier;
  */
 public enum Strain implements StringIdentifiable {
     KUSH("kush", "Kush", 0x4a9a3c, 90, 2,
-            "Heavy body high. Slows you right down, but patches you up.",
+            "Spowolnienie 90s, regeneracja zdrowia 30s.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.SLOWNESS, 90 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.REGENERATION, 30 * 20, 0, false, true))),
 
     HAZE("haze", "Haze", 0x9ec43a, 60, 1,
-            "Light and quick. Speed, and spring in your step.",
+            "Szybkość 60s i wyższy skok 60s.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.SPEED, 60 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.JUMP_BOOST, 60 * 20, 0, false, true))),
 
     PURP("purp", "Purp", 0x7a4fa8, 120, 3,
-            "See in the dark. Costs you your balance for a bit.",
+            "Widzenie w ciemności 120s. Na start 20s mdłości.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.NIGHT_VISION, 120 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.NAUSEA, 20 * 20, 0, false, true))),
@@ -41,21 +41,21 @@ public enum Strain implements StringIdentifiable {
     // --- hybrids: only obtainable by cross-breeding -------------------------
 
     DIESEL("diesel", "Diesel", 0x7fa86a, 100, 2,
-            "Kush body, Haze legs. Somehow both at once.",
+            "Szybkość 100s, regeneracja 40s, odporność 60s.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.SPEED, 100 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.REGENERATION, 40 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.RESISTANCE, 60 * 20, 0, false, true))),
 
     MIDNIGHT("midnight", "Midnight", 0x4a4a8a, 140, 4,
-            "Sinks you into the floor and turns the lights on.",
+            "Widzenie w ciemności 140s, spowolnienie 100s, odporność 80s.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.NIGHT_VISION, 140 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.SLOWNESS, 100 * 20, 0, false, true),
                     new StatusEffectInstance(StatusEffects.RESISTANCE, 80 * 20, 0, false, true))),
 
     SUNSET("sunset", "Sunset", 0xc47f3a, 90, 2,
-            "Warm, weightless, and you can see in the dark.",
+            "Wyższy skok II 90s, widzenie w ciemności 90s, wolne spadanie 30s.",
             () -> List.of(
                     new StatusEffectInstance(StatusEffects.JUMP_BOOST, 90 * 20, 1, false, true),
                     new StatusEffectInstance(StatusEffects.NIGHT_VISION, 90 * 20, 0, false, true),
@@ -176,7 +176,7 @@ public enum Strain implements StringIdentifiable {
      * fields above, so the book can't quietly disagree with the code.
      */
     public String describe() {
-        return blurb + " Lasts " + seconds + "s.";
+        return blurb + " Efekt trwa " + seconds + "s.";
     }
 
     @Override

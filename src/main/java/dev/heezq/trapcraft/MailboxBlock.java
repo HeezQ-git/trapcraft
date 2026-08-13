@@ -1,10 +1,8 @@
 package dev.heezq.trapcraft;
 
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.LivingEntity;
@@ -21,12 +19,14 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 import java.util.List;
 
@@ -47,23 +47,22 @@ import java.util.List;
  * shorter and wrong in three places: a creative break would drop one, an
  * explosion would drop one, and silk touch would mean nothing.
  */
-public class MailboxBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
-    private final BlockState carrier;
+public class MailboxBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
+    private final Map<Direction, BlockState> carriers;
 
     public MailboxBlock(Settings settings) {
         super(settings);
-        // TRANSPARENT_BLOCK, not FULL_BLOCK. A post box on a post is mostly
+        // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. A post box on a post is mostly
         // daylight, and a hollow model on a solid carrier is the X-ray hole
         // check_models.py exists to catch.
-        this.carrier = TrapPolymer.requestOrFallback(
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/mailbox")),
-                () -> Blocks.OAK_FENCE.getDefaultState(), "mailbox");
+        this.carriers = carriers(
+                TrapPolymer.NON_SOLID, "mailbox",
+                () -> Blocks.OAK_FENCE.getDefaultState());
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return carrier;
+        return carriers.get(state.get(FACING));
     }
 
     @Override
@@ -130,9 +129,9 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
                     SoundCategory.BLOCKS, 0.8F, 1.1F);
             who.sendMessage(home == null
                     ? Text.literal("Picked it up.").formatted(Formatting.GRAY)
-                    : Text.literal("Picked up the post for ").formatted(Formatting.GRAY)
+                    : Text.literal("Zabrano skrzynkę domu ").formatted(Formatting.GRAY)
                             .append(Text.literal(home.name()).formatted(Formatting.GOLD))
-                            .append(Text.literal(". Put it wherever it should go.")
+                            .append(Text.literal(". Postaw ją tam, gdzie ma stać.")
                                     .formatted(Formatting.GRAY)), true);
             return ActionResult.SUCCESS;
         }
@@ -151,7 +150,7 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
         if (home.owner().equals(who.getUuid())) {
             int rent = TrapHomes.collect(who, home);
             if (rent > 0) {
-                who.sendMessage(Text.literal("Rent: ").formatted(Formatting.DARK_GRAY)
+                who.sendMessage(Text.literal("Czynsz: ").formatted(Formatting.DARK_GRAY)
                         .append(Text.literal("+" + rent + "e").formatted(Formatting.GREEN)),
                         false);
             }
@@ -190,13 +189,13 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
         TrapHomes.Home inside = TrapHomes.covering(ground, pos);
         if (inside != null) {
             if (!inside.owner().equals(who.getUuid()) && !who.hasPermissionLevel(2)) {
-                refuse(who, ground, pos, "That's inside " + inside.name() + ", "
-                        + inside.ownerName() + "'s. Their post, not yours.");
+                refuse(who, ground, pos, "To wnętrze domu " + inside.name() + ", "
+                        + " -- właściciel: " + inside.ownerName() + ". To nie twoja poczta.");
                 return null;
             }
             TrapHomes.reattach(inside, pos);
             good(ground, pos);
-            who.sendMessage(Text.literal("This is the post for ").formatted(Formatting.GREEN)
+            who.sendMessage(Text.literal("To skrzynka domu ").formatted(Formatting.GREEN)
                     .append(Text.literal(inside.name())
                             .formatted(Formatting.GOLD, Formatting.BOLD))
                     .append(Text.literal(" now.").formatted(Formatting.GRAY)), false);
@@ -207,12 +206,12 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
         if (no == null) {
             TrapHomes.Home fresh = TrapHomes.atMailbox(ground, pos);
             good(ground, pos);
-            who.sendMessage(Text.literal("On the register. ")
+            who.sendMessage(Text.literal("Zapisano w rejestrze. ")
                     .formatted(Formatting.GREEN, Formatting.BOLD)
-                    .append(Text.literal("Grade " + (fresh == null ? 0 : fresh.tier())
+                    .append(Text.literal("Klasa " + (fresh == null ? 0 : fresh.tier())
                             + ".").formatted(Formatting.GRAY))
-                    .append(Text.literal("\n  Now sneak-click to pick it up and nail it "
-                            + "outside -- the house stays measured where it is.")
+                    .append(Text.literal("\n  Teraz kucnij i kliknij, żeby ją zabrać i przybić "
+                            + "na zewnątrz -- dom zostaje zmierzony tam, gdzie jest.")
                             .formatted(Formatting.DARK_GRAY)), false);
             return fresh;
         }
@@ -235,10 +234,10 @@ public class MailboxBlock extends Block implements PolymerBlock, PolymerTextured
         TrapHomes.Home posted = TrapHomes.postedNear(who, ground, pos, LOOKS_FOR);
         if (posted != null) {
             BlockPos box = posted.mailbox();
-            refuse(who, ground, pos, "That's not a room, and " + posted.name()
-                    + " already has its post at " + box.getX() + " " + box.getY() + " "
-                    + box.getZ() + ". To MOVE that one, sneak-click it empty-handed and "
-                    + "put it here. To register another house, stand inside it and "
+            refuse(who, ground, pos, "To nie jest pokój, a " + posted.name()
+                    + " ma już skrzynkę na " + box.getX() + " " + box.getY() + " "
+                    + box.getZ() + ". Żeby ją PRZENIEŚĆ, kucnij i kliknij ją pustą ręką, "
+                    + "a potem postaw tutaj. Żeby zarejestrować kolejny dom, stań w jego "
                     + "click a box there.");
             return null;
         }

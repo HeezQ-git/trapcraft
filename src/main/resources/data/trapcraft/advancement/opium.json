@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:raw_opium"
     },
-    "title": "Weeping",
-    "description": "Score a batch of pods and collect what runs out.",
+    "title": "Nacinanie",
+    "description": "Natnij partię makówek i zbierz to, co z nich wypłynie.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

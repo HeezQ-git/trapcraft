@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:heroin"
     },
-    "title": "Timed It",
-    "description": "Pull the acetylator at peak for a Pure batch.",
+    "title": "W punkt",
+    "description": "Wyjmij towar z acetylatora dokładnie na szczycie czystości.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

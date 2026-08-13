@@ -294,6 +294,13 @@ def gather() -> None:
     city = java("TrapCity")
     press = java("LeafPressBlock")
 
+    clubs = java("TrapClubs")
+    DATA["top_tier"] = int(need(r"TOP_TIER = (\d+)", city, "TOP_TIER"))
+    DATA["tier_step"] = float(need(r"TIER_STEP = ([\d.]+)", city, "TIER_STEP"))
+    DATA["shop_rate"] = int(need(r"SHOP_RATE = (\d+)", city, "SHOP_RATE"))
+    DATA["house_rate"] = int(need(r"HOUSE_RATE = (\d+)", city, "HOUSE_RATE"))
+    DATA["club_door"] = ints("DOOR", clubs)
+
     DATA["strains"] = strains()
     DATA["quality"] = graded("Quality")
     DATA["purity"] = graded("Purity")
@@ -324,6 +331,10 @@ def gather() -> None:
     DATA["jam_from"] = int(need(r"JAM_FROM = (\d+)", math, "JAM_FROM"))
     DATA["wear_broken"] = int(need(r"WEAR_BROKEN = (\d+)", math, "WEAR_BROKEN"))
     DATA["wear_per_rounds"] = int(need(r"WEAR_PER_ROUNDS = (\d+)", math, "WEAR_PER_ROUNDS"))
+    DATA["served_edge_product"] = float(need(
+        r"SERVED_EDGE_PRODUCT = ([\d.]+)f", math, "SERVED_EDGE_PRODUCT"))
+    DATA["served_edge_food"] = float(need(
+        r"SERVED_EDGE_FOOD = ([\d.]+)f", math, "SERVED_EDGE_FOOD"))
 
     DATA["pace_ticks"] = ints("PACE_TICKS", crew)
     DATA["pace_cost"] = ints("PACE_COST", crew)
@@ -397,9 +408,20 @@ def gather() -> None:
     DATA["wage_multiple"] = int(need(r"WAGE_MULTIPLE = (\d+)", homes, "WAGE_MULTIPLE"))
     DATA["size_lift"] = float(need(r"SIZE_LIFT = ([\d.]+)f", homes, "SIZE_LIFT"))
     DATA["floor_per_head"] = int(need(r"FLOOR_PER_HEAD = (\d+)", homes, "FLOOR_PER_HEAD"))
+
+    wards = java("TrapHospitals")
+    DATA["ward_beds"] = int(need(r"MIN_BEDS = (\d+)", wards, "ward MIN_BEDS"))
+    DATA["ward_floor"] = int(need(r"MIN_FLOOR = (\d+)", wards, "ward MIN_FLOOR"))
+    DATA["ward_fee"] = int(need(r"FEE = (\d+)", wards, "ward FEE"))
+    DATA["ward_clinic_off"] = float(need(r"CLINIC_OFF = ([\d.]+)f", wards, "CLINIC_OFF"))
+    DATA["ward_stay"] = int(need(r"STAY_DAYS = (\d+)", wards, "STAY_DAYS"))
+    DATA["ward_lost"] = int(need(r"LOST_DAYS = (\d+)", wards, "LOST_DAYS"))
     DATA["comfortable"] = int(need(r"COMFORTABLE = (\d+)", math, "COMFORTABLE"))
     DATA["income_rate"] = int(need(
-        r'INCOME\("Income", "[^"]*",\s*(\d+)', city, "the income duty's opening rate"))
+        # Matched on the enum constant, not its display name: the display name
+        # is player-facing prose and gets translated, and pinning the scrape to
+        # it broke this script the day the mod went Polish.
+        r'INCOME\("[^"]*", "[^"]*",\s*(\d+)', city, "the income duty's opening rate"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
     DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
 
@@ -519,17 +541,17 @@ def esc(text: str) -> str:
 # Hand-picked, and hand-picked on purpose: these are editorial, not data. The
 # best writing in this project is in its comments, so the wiki quotes them.
 QUOTES = [
-    ("A win that hands over less than you put in is a loss wearing a party hat, "
-     "and a machine full of those is one nobody can tell they are losing at.",
+    ("Wygrana, która oddaje mniej, niż włożyłeś, to przegrana w czapeczce imprezowej, "
+     "a automat pełen takich to automat, na którym nikt nie zauważa, że przegrywa.",
      "TrapMath.java"),
-    ("A raid that only swings axes is a mob spawner with a story attached.",
+    ("Nalot, który tylko macha toporami, to spawner mobów z dopisaną fabułą.",
      "TrapRaid.java"),
-    ("The wage is the point. A crew is the first thing you own that can lose you "
-     "money by existing.", "TrapCrew.java"),
-    ("Company is the counterplay, which makes it a social mechanic rather than a "
-     "solo debuff.", "TrapParanoia.java"),
-    ("A price editor is a menu, and what this wants to be is a reason to walk "
-     "across town.", "TrapStalls.java"),
+    ("Chodzi właśnie o pensję. Ekipa to pierwsza rzecz, jaką posiadasz, a która może "
+     "kosztować cię pieniądze samym istnieniem.", "TrapCrew.java"),
+    ("Towarzystwo jest kontrą, co czyni z tego mechanikę społeczną, a nie debuff "
+     "dla samotnika.", "TrapParanoia.java"),
+    ("Edytor cen to menu, a to ma być powód, żeby przejść przez całe miasto.",
+     "TrapStalls.java"),
 ]
 
 
@@ -599,7 +621,7 @@ def strain_cards() -> str:
             f'<li>{esc(n)} <span class="dim">{secs}s'
             + (f" · {'I' * amp}" if amp > 1 else "") + "</span></li>"
             for n, secs, amp in s["effects"])
-        tag = "hybrid" if s["hybrid"] else "pure"
+        tag = "krzyżówka" if s["hybrid"] else "naturalna"
         cards.append(f"""
     <article class="strain reveal" style="--tint:{s['colour']}">
       <div class="strain-top">
@@ -610,8 +632,8 @@ def strain_cards() -> str:
       <p class="blurb">{esc(s['blurb'])}</p>
       <ul class="fx">{effects}</ul>
       <dl class="stat">
-        <div><dt>High</dt><dd>{s['seconds']}s</dd></div>
-        <div><dt>Level</dt><dd>{'I' * s['intensity']}</dd></div>
+        <div><dt>Czas efektu</dt><dd>{s['seconds']}s</dd></div>
+        <div><dt>Siła</dt><dd>{'I' * s['intensity']}</dd></div>
       </dl>
     </article>""")
     return '<div class="strain-grid">' + "".join(cards) + "</div>"
@@ -645,18 +667,18 @@ def build() -> str:
                   f'{d["pace_cost"][i]}e' if i else "—",
                   f'+{d["pace_wage"][i]}e']
                  for i in range(len(d["pace_ticks"]))]
-    job_rows = [[esc(j["name"]), f'{j["cost"]}e' if j["cost"] else "free",
+    job_rows = [[esc(j["name"]), f'{j["cost"]}e' if j["cost"] else "za darmo",
                  f'+{j["wage"]}e',
-                 f'<span class="dim">{esc(j["blurb"])} Wants {esc(j["needs"])}.</span>']
+                 f'<span class="dim">{esc(j["blurb"])} Potrzebuje: {esc(j["needs"])}.</span>']
                 for j in d["jobs"]]
     heat_rows = []
     for i, t in enumerate(d["heat_thresholds"]):
-        squad = f'{d["pillagers"][i]} pillager'
+        squad = f'{d["pillagers"][i]} grabieżców'
         if d["vindicators"][i]:
-            squad += f', {d["vindicators"][i]} vindicator'
+            squad += f', {d["vindicators"][i]} mścicieli'
         if d["ravagers"][i]:
-            squad += f', {d["ravagers"][i]} ravager'
-        heat_rows.append([f"Tier {i + 1}", f"{t}+", squad])
+            squad += f', {d["ravagers"][i]} niszczyciel'
+        heat_rows.append([f"Próg {i + 1}", f"{t}+", squad])
     slot_rows = [[f'{d["slot_sizes"][i]}×{d["slot_sizes"][i]}',
                   f'{d["slot_rtp"][i] * 100:.1f}%']
                  for i in range(len(d["slot_sizes"]))]
@@ -670,18 +692,18 @@ def build() -> str:
         for q, src in QUOTES)
 
     nav_items = [
-        ("00", "start", "Getting Started"),
-        ("01", "grow", "The Grow"), ("02", "cure", "Curing & Rolling"),
-        ("03", "blends", "Blends"), ("04", "high", "The High"),
-        ("05", "coca", "The Coca Line"),
-        ("05b", "poppy", "The Poppy Line"), ("05c", "habit", "The Habit"),
-        ("06", "market", "The Market"),
-        ("07", "stalls", "Stalls"), ("08", "city", "The City"),
-        ("08b", "homes", "Housing"),
-        ("09", "crew", "The Crew"),
-        ("10", "heat", "Heat & Raids"), ("11", "street", "The Street"),
-        ("12", "casino", "The House"), ("13", "commands", "Commands"),
-        ("14", "awards", "Advancements"),
+        ("00", "start", "Na start"),
+        ("01", "grow", "Uprawa"), ("02", "cure", "Suszenie i skręty"),
+        ("03", "blends", "Mieszanki"), ("04", "high", "Efekty"),
+        ("05", "coca", "Kokaina"),
+        ("05b", "poppy", "Heroina"), ("05c", "habit", "Nałóg"),
+        ("06", "market", "Rynek"),
+        ("07", "stalls", "Stragany"), ("08", "city", "Miasto"),
+        ("08b", "homes", "Mieszkania"),
+        ("09", "crew", "Ekipa"),
+        ("10", "heat", "Policja i naloty"), ("11", "street", "Ulica"),
+        ("12", "casino", "Kasyno"), ("13", "commands", "Komendy"),
+        ("14", "awards", "Osiągnięcia"),
     ]
     nav = "".join(
         f'<a href="#{slug}"><span class="n">{num}</span>{esc(title)}</a>'
@@ -689,114 +711,114 @@ def build() -> str:
 
     sections = []
 
-    sections.append(section("00", "start", "Getting Started", "first hour", f"""
-    <p class="lede">Seeds come from wandering traders — five emeralds, one strain each
-    — or from farmer villagers at journeyman. Traders also buy cured buds and joints,
-    which is enough to fund everything else.</p>
+    sections.append(section("00", "start", "Na start", "pierwsza godzina", f"""
+    <p class="lede">Nasiona kupisz od wędrownych handlarzy — pięć szmaragdów za jedną
+    odmianę — albo od rolników na poziomie czeladnika. Handlarze skupują też suszone
+    szyszki i skręty, a to wystarczy, żeby sfinansować całą resztę.</p>
     <ol class="chain">
-      <li><span class="step">01</span><strong>Get seeds</strong><span class="dim">trader, or a farmer villager</span></li>
-      <li><span class="step">02</span><strong>Plant on watered farmland</strong><span class="dim">light and open sky raise the grade</span></li>
-      <li><span class="step">03</span><strong>Build a drying rack</strong><span class="dim">8 sticks, 2 string</span></li>
-      <li><span class="step">04</span><strong>Roll it, or sell it cured</strong><span class="dim">+ paper</span></li>
-      <li><span class="step">05</span><strong>Read the handbooks</strong><span class="dim">/guide</span></li>
+      <li><span class="step">01</span><strong>Zdobądź nasiona</strong><span class="dim">handlarz albo rolnik</span></li>
+      <li><span class="step">02</span><strong>Posadź na podlanej roli</strong><span class="dim">światło i odkryte niebo podnoszą klasę</span></li>
+      <li><span class="step">03</span><strong>Zbuduj suszarkę</strong><span class="dim">8 patyków, 2 nici</span></li>
+      <li><span class="step">04</span><strong>Zwiń skręty albo sprzedaj susz</strong><span class="dim">+ papier</span></li>
+      <li><span class="step">05</span><strong>Przeczytaj poradniki</strong><span class="dim">/guide</span></li>
     </ol>
-    {craft_row([("drying_rack", "Drying Rack"), ("mixing_station", "Mixing Station"),
-                ("market_stall", "Market Stall"), ("ledger", "The Ledger"),
-                ("burner_phone", "Burner Phone"), ("leaf_press", "Leaf Press")])}
-    <p class="note">Hover a square to see what goes in it. Everything here is craftable
-    — nothing in this mod is creative-only.</p>"""))
+    {craft_row([("drying_rack", "Suszarka"), ("mixing_station", "Mieszalnik"),
+                ("market_stall", "Stragan"), ("ledger", "Spis skrzyń"),
+                ("burner_phone", "Telefon na kartę"), ("leaf_press", "Prasa do liści")])}
+    <p class="note">Najedź na kratkę, żeby zobaczyć, co się w niej znajduje. Wszystko
+    tutaj da się wykraftować — nic w tym modzie nie jest tylko z trybu kreatywnego.</p>"""))
 
-    sections.append(section("01", "grow", "The Grow", "six phenotypes, four stages", f"""
-    <p class="lede">Seeds go on farmland. Four stages, then right-click a full-grown
-    plant with an empty hand — you get buds, sometimes a seed, and the plant stays
-    and regrows.</p>
-    <p>Three strains are pure and grow from seed. The other three only exist by
-    <strong>cross-breeding</strong>: plant two different pure strains as neighbours
-    and a mature pair occasionally throws a hybrid seed.</p>
+    sections.append(section("01", "grow", "Uprawa", "sześć odmian, cztery fazy", f"""
+    <p class="lede">Nasiona sadzi się na zaoranej ziemi. Cztery fazy wzrostu, potem
+    kliknij dojrzałą roślinę PPM z pustą ręką — dostaniesz szyszki, czasem nasiono,
+    a roślina zostaje i odrasta.</p>
+    <p>Trzy odmiany są naturalne i rosną z nasion. Pozostałe trzy powstają wyłącznie
+    przez <strong>krzyżowanie</strong>: posadź dwie różne odmiany naturalne obok siebie,
+    a dojrzała para czasem wypuści nasiono krzyżówki.</p>
     {strain_cards()}
-    <h3 class="sub">How long</h3>
-    {table(["Ground", "Seed to ripe", "Why"], [
-        ["Watered farmland", f"~{wet_min} min", '<span class="dim">moisture 7 under the plant</span>'],
-        ["Dry ground", f"~{dry_min} min", '<span class="dim">twice as slow, and it costs you grade</span>'],
+    <h3 class="sub">Ile to trwa</h3>
+    {table(["Podłoże", "Od nasiona do zbioru", "Dlaczego"], [
+        ["Podlana zaorana ziemia", f"~{wet_min} min", '<span class="dim">wilgotność 7 pod rośliną</span>'],
+        ["Sucha ziemia", f"~{dry_min} min", '<span class="dim">dwa razy wolniej i niższa klasa</span>'],
     ])}
-    <p class="note">Water is worth three quality points <em>and</em> half the wait.
-    One definition of "watered" drives both, so they can never disagree.</p>
-    <h3 class="sub">Quality</h3>
-    <p>Grade is decided at harvest by the conditions the plant actually grew in:
-    hydration, light, open sky, and whether you rushed it with bone meal.</p>
-    {table(["Grade", "Potency", "Per bud"], quality_rows)}"""))
+    <p class="note">Woda to trzy punkty jakości <em>oraz</em> połowa czasu oczekiwania.
+    Zawsze podlewaj.</p>
+    <h3 class="sub">Jakość</h3>
+    <p>Klasa ustala się w chwili zbioru, na podstawie warunków, w jakich roślina
+    naprawdę rosła: nawodnienie, światło, odkryte niebo i to, czy przyspieszałeś
+    ją mączką kostną.</p>
+    {table(["Klasa", "Moc", "Za sztukę"], quality_rows)}"""))
 
-    sections.append(section("02", "cure", "Curing & Rolling", "patience, then paper", f"""
-    <p class="lede">Fresh buds are worth little. A drying rack turns them into
-    cured product over about {cure_min} minutes, and the rack is a decision rather
-    than a timer.</p>
-    {table(["Stage", "What it means"], [
-        ["0", '<span class="dim">soaking wet — refuses to be collected</span>'],
-        ["1–2", '<span class="dim">collectable, but a grade lost per stage short</span>'],
-        [str(d["ready"]), '<span class="acc">peak — full grade, double yield</span>'],
-        [str(d["max_dryness"]), '<span class="dim">overdried, one grade lost</span>'],
+    sections.append(section("02", "cure", "Suszenie i skręty", "cierpliwość, potem bibułka", f"""
+    <p class="lede">Świeże szyszki są mało warte. Suszarka zamienia je w gotowy towar
+    w mniej więcej {cure_min} minut, a moment zbioru to decyzja, nie zwykły timer.</p>
+    {table(["Faza", "Co to znaczy"], [
+        ["0", '<span class="dim">zupełnie mokre — nie da się zebrać</span>'],
+        ["1–2", '<span class="dim">da się zebrać, ale tracisz klasę za każdą brakującą fazę</span>'],
+        [str(d["ready"]), '<span class="acc">szczyt — pełna klasa i podwójny zbiór</span>'],
+        [str(d["max_dryness"]), '<span class="dim">przesuszone, jedna klasa w dół</span>'],
     ])}
-    <p>Peak gets a long grace period before it spoils. You should have to forget
-    about it, not lose it for stepping away.</p>
-    <h3 class="sub">Blends</h3>
-    <p>The mixing station takes two to four kinds of dried bud and makes something
-    that is none of them. Six strains taken two to four at a time is
-    <strong>203 distinct recipes</strong>, and a handful of them have names worth
-    finding. Whole stacks go in; it runs the lot in one click.</p>
-    <p class="note">Grade follows your <em>worst</em> slot. Averaging would let one
-    Fire bud launder three Swill ones.</p>"""))
+    <p>Szczyt ma długi zapas czasu, zanim towar się zepsuje. Masz o nim zapomnieć,
+    a nie tracić go za odejście od komputera na chwilę.</p>
+    <h3 class="sub">Mieszanki</h3>
+    <p>Mieszalnik bierze od dwóch do czterech rodzajów suszu i robi z nich coś, co nie
+    jest żadnym z nich. Sześć odmian brane po dwie do czterech daje
+    <strong>203 różne przepisy</strong>, a kilka z nich ma nazwy warte odkrycia.
+    Wrzucasz całe stacki; maszyna przerabia wszystko jednym kliknięciem.</p>
+    <p class="note">Klasa idzie z <em>najgorszego</em> slotu. Uśrednianie pozwoliłoby
+    jedną szyszką klasy Topowe przemycić trzy Słabe.</p>"""))
 
 
-    sections.append(section("03", "blends", "Blends", "203 recipes, six with names", f"""
-    <p class="lede">Two to four kinds of dried bud go into the mixing station and come
-    out as something that is none of them. Effects are the union of the parts, each
-    scaled by its share — a mix that is three-quarters Kush feels mostly like Kush.</p>
-    <p>Repeats count, so two Kush and a Purp is not the same as one of each. Six
-    strains taken two to four at a time, order irrelevant, is <strong>203 distinct
-    recipes</strong>. These ones do something the arithmetic would not give you:</p>
+    sections.append(section("03", "blends", "Mieszanki", "203 przepisy, sześć z nazwą", f"""
+    <p class="lede">Od dwóch do czterech rodzajów suszu wrzucasz do mieszalnika i wychodzi
+    z niego coś, co nie jest żadnym z nich. Efekty to suma składników, każdy przeskalowany
+    swoim udziałem — mieszanka w trzech czwartych z Kusha działa głównie jak Kush.</p>
+    <p>Powtórki się liczą, więc dwa Kush i jeden Purp to nie to samo, co po jednym
+    z każdego. Sześć odmian brane po dwie do czterech, bez znaczenia kolejności, daje
+    <strong>203 różne przepisy</strong>. Te poniżej dają więcej, niż wynikałoby z sumy:</p>
     {blend_rows()}
-    <p class="note">A blend's grade follows your <em>worst</em> slot, and the station
-    says so before you click. Mixing Fire with Swill makes Swill.</p>"""))
+    <p class="note">Klasa mieszanki idzie z <em>najgorszego</em> slotu, a mieszalnik mówi
+    ci to przed zatwierdzeniem. Zmieszanie klasy Topowe ze Słabymi da Słabe.</p>"""))
 
-    sections.append(section("04", "high", "The High", "three custom effects", f"""
-    <p class="lede">Baked and Wired are effects of their own, with their own icons and their own
-    rules — not a stack of borrowed ones wearing a new name.</p>
+    sections.append(section("04", "high", "Efekty", "trzy własne efekty", f"""
+    <p class="lede">Naćpany i Nakręcony to osobne efekty, z własnymi ikonami i własnymi
+    zasadami — nie zlepek pożyczonych efektów pod nową nazwą.</p>
     <div class="cards">
-      <div class="card reveal"><h4>Baked</h4><p>Burns saturation, then hunger — the
-      munchies. Heals you slowly while you are well fed, and chips your health if you
-      smoke on an empty stomach. Duration and level come from the strain and the grade.</p></div>
-      <div class="card reveal"><h4>Wired</h4><p>The coca line's effect. Speed and
-      resistance to sit down for; the comedown is the part you plan around.</p></div>
-      <div class="card reveal"><h4>Tolerance</h4><p>Builds as you smoke and damps
-      everything that follows, up to level {DATA['tol_max']}. One level wears off in
-      about {DATA['tol_mins']} minutes. Chain-smoking your own stock is a losing move.</p></div>
+      <div class="card reveal"><h4>Naćpany</h4><p>Zjada nasycenie, potem głód — czyli
+      klasyczna gastrofaza. Powoli cię leczy, dopóki jesteś najedzony, i odbiera zdrowie,
+      jeśli palisz na pusty żołądek. Czas trwania i poziom zależą od odmiany i klasy.</p></div>
+      <div class="card reveal"><h4>Nakręcony</h4><p>Efekt linii kokainowej. Szybkość
+      i odporność na dobry początek; zjazd na końcu to część, którą trzeba zaplanować.</p></div>
+      <div class="card reveal"><h4>Tolerancja</h4><p>Rośnie w miarę palenia i tłumi
+      wszystko, co przyjdzie potem, aż do poziomu {DATA['tol_max']}. Jeden poziom schodzi
+      w około {DATA['tol_mins']} minut. Palenie własnego towaru bez przerwy się nie opłaca.</p></div>
     </div>
-    <h3 class="sub">Ways to take it</h3>
-    {table(["Method", "What it does"], [
-        ["<strong>Joint</strong>", '<span class="dim">bud + paper. The portable one, and what customers buy.</span>'],
-        ["<strong>Bong</strong>", '<span class="dim">water bucket once, then a cured bud a hit. Water stays; the bowl does not.</span>'],
-        ["<strong>Gravity bong</strong>", '<span class="dim">water, bud, flint and steel, then pull. The heaviest hit in the mod.</span>'],
+    <h3 class="sub">Sposoby zażycia</h3>
+    {table(["Sposób", "Co robi"], [
+        ["<strong>Skręt</strong>", '<span class="dim">szyszka + papier. Przenośny, i to jego kupują klienci.</span>'],
+        ["<strong>Bong</strong>", '<span class="dim">raz wiadro wody, potem po jednej suszonej szyszce na wejście. Woda zostaje, szyszka nie.</span>'],
+        ["<strong>Tłok</strong>", '<span class="dim">woda, szyszka, krzesiwo, potem pociągnij. Najmocniejsze wejście w modzie.</span>'],
     ])}
-    {craft_row([("bong", "Bong"), ("gravity_bong", "Gravity Bong"),
-                ("joint_kush", "Joint"), ("blend_joint", "Blend Joint")])}
-    <p class="note">Hold right-click to smoke one. It plays out properly — the joint
-    goes to your mouth, and everybody nearby sees the smoke.</p>"""))
+    {craft_row([("bong", "Bong"), ("gravity_bong", "Tłok"),
+                ("joint_kush", "Skręt"), ("blend_joint", "Skręt mieszany")])}
+    <p class="note">Przytrzymaj PPM, żeby zapalić. Animacja jest pełna — skręt idzie do ust,
+    a wszyscy w pobliżu widzą dym.</p>"""))
 
-    sections.append(section("05", "coca", "The Coca Line", "longer chain, richer end", f"""
-    <p class="lede">A bush ripens in about {coca_min} minutes on any ground with
-    light. The value is not in the farming — it is in what happens next.</p>
+    sections.append(section("05", "coca", "Kokaina", "dłuższa produkcja, lepszy zarobek", f"""
+    <p class="lede">Krzak dojrzewa w około {coca_min} minut na dowolnej ziemi, byle było
+    światło. Wartość nie leży w samej uprawie — tylko w tym, co dzieje się dalej.</p>
     <ol class="chain">
-      <li><span class="step">01</span><strong>Bush</strong><span class="dim">2–4 leaves a harvest</span></li>
-      <li><span class="step">02</span><strong>Leaf press</strong><span class="dim">{d['leaves']} leaves → paste</span></li>
-      <li><span class="step">03</span><strong>Refiner</strong><span class="dim">paste + blaze powder</span></li>
-      <li><span class="step">04</span><strong>Powder</strong><span class="dim">purity from timing</span></li>
+      <li><span class="step">01</span><strong>Krzak</strong><span class="dim">2–4 liście na zbiór</span></li>
+      <li><span class="step">02</span><strong>Prasa do liści</strong><span class="dim">{d['leaves']} liści → pasta</span></li>
+      <li><span class="step">03</span><strong>Rafineria</strong><span class="dim">pasta + płonący proszek</span></li>
+      <li><span class="step">04</span><strong>Proszek</strong><span class="dim">czystość zależy od czasu</span></li>
     </ol>
-    <p>Purity is decided entirely by when you pull it. Too early and it is cut;
-    too late and it burns.</p>
-    {table(["Purity", "Potency", "Per unit"], purity_rows)}
-    <p class="note">Running coca and weed in the same place is
-    <strong>{round((d['mixed_trade'] - 1) * 100)}% more heat</strong> than the two
-    apart. Presses and refiners count as well as the plants. Two sheds beat one shed.</p>"""))
+    <p>Czystość zależy wyłącznie od tego, kiedy wyjmiesz towar. Za wcześnie — jest cięty,
+    za późno — spala się.</p>
+    {table(["Czystość", "Moc", "Za sztukę"], purity_rows)}
+    <p class="note">Koka i konopie w jednym miejscu to
+    <strong>{round((d['mixed_trade'] - 1) * 100)}% więcej uwagi policji</strong> niż obie
+    osobno. Prasy i rafinerie liczą się tak samo jak rośliny. Dwie osobne szopy biją jedną.</p>"""))
 
     poppy_min = round(minutes(d["poppy_rolls"]) * 3)
     dope_rows = [
@@ -804,45 +826,44 @@ def build() -> str:
          f'{round(g["emeralds"] * d["dope_price"])}e']
         for g in DATA["purity"]]
 
-    sections.append(section("05b", "poppy", "The Poppy Line",
-                            "three machines, and it can still come to nothing", f"""
-    <p class="lede">The long line. A poppy takes about {poppy_min} minutes to ripen —
-    slower than anything else you can plant — and it refuses to grow below
-    <strong>light {d['poppy_light']}</strong>, so unlike weed there is no cellar farm.
-    The one crop worth the most is the one you cannot hide.</p>
+    sections.append(section("05b", "poppy", "Heroina",
+                            "trzy maszyny, a i tak można wszystko stracić", f"""
+    <p class="lede">Najdłuższa produkcja. Mak dojrzewa około {poppy_min} minut — wolniej
+    niż cokolwiek innego, co da się posadzić — i nie urośnie poniżej
+    <strong>światła {d['poppy_light']}</strong>, więc w odróżnieniu od konopi nie ma tu
+    uprawy w piwnicy. Najcenniejsza roślina to ta, której nie da się ukryć.</p>
     <ol class="chain">
-      <li><span class="step">01</span><strong>Poppy</strong><span class="dim">{d['poppy_min']}–{d['poppy_max']} pods a harvest, full daylight</span></li>
-      <li><span class="step">02</span><strong>Scoring table</strong><span class="dim">{d['pods']} pods → raw opium</span></li>
-      <li><span class="step">03</span><strong>Wash pot</strong><span class="dim">{d['opium']} opium + {d['lime']} bone meal, over a live fire</span></li>
-      <li><span class="step">04</span><strong>Acetylator</strong><span class="dim">base + fermented spider eye</span></li>
-      <li><span class="step">05</span><strong>Dope</strong><span class="dim">purity from timing, and a batch you can lose</span></li>
+      <li><span class="step">01</span><strong>Mak</strong><span class="dim">{d['poppy_min']}–{d['poppy_max']} makówek na zbiór, pełne światło</span></li>
+      <li><span class="step">02</span><strong>Stół do nacinania</strong><span class="dim">{d['pods']} makówek → surowe opium</span></li>
+      <li><span class="step">03</span><strong>Garnek</strong><span class="dim">{d['opium']} opium + {d['lime']} mączki kostnej, nad ogniem</span></li>
+      <li><span class="step">04</span><strong>Acetylator</strong><span class="dim">baza + sfermentowane oko pająka</span></li>
+      <li><span class="step">05</span><strong>Heroina</strong><span class="dim">czystość zależy od czasu, a partię łatwo stracić</span></li>
     </ol>
     <div class="cards">
-      <div class="card reveal"><h4>The pot has no fire</h4><p>It only advances while
-      something under it is burning — a campfire, a lit furnace, lava. Let it go out and
-      nothing spoils, but nothing moves either. This step is a build, not a click.</p></div>
-      <div class="card reveal"><h4>The acetylator can beat you</h4><p>The refiner's worst
-      case is a bad grade. This one's is an empty machine: one step past peak and the
-      batch is gone — base, acid, pods and all. You get
-      <strong>{d['ac_grace']} steps</strong> of grace where the refiner gives five.</p></div>
+      <div class="card reveal"><h4>Garnek nie ma własnego ognia</h4><p>Postępuje tylko wtedy,
+      gdy coś pod nim płonie — ognisko, rozpalony piec, lawa. Jak zgaśnie, nic się nie psuje,
+      ale też nic się nie dzieje. Ten krok to budowa laboratorium, nie kliknięcie.</p></div>
+      <div class="card reveal"><h4>Acetylator potrafi cię pokonać</h4><p>Najgorsze, co może
+      zrobić rafineria, to niska klasa. Tutaj najgorsze to pusta maszyna: jeden krok za szczytem
+      i cała partia przepada — baza, kwas, makówki, wszystko. Masz
+      <strong>{d['ac_grace']} kroków</strong> zapasu tam, gdzie rafineria daje pięć.</p></div>
     </div>
-    {table(["Purity", "Potency", "Per unit"], dope_rows)}
-    <p>Roughly <strong>{d['dope_price']:.0f}x</strong> what powder of the same purity
-    fetches, off about twice the field and three times the wait. Priced off the powder
-    curve rather than invented, so the two refined lines cannot drift into an
-    arbitrage against each other.</p>
-    {craft_row([("scoring_table", "Scoring Table"), ("wash_pot", "Wash Pot"),
+    {table(["Czystość", "Moc", "Za sztukę"], dope_rows)}
+    <p>Mniej więcej <strong>{d['dope_price']:.0f}x</strong> tego, co daje proszek o tej samej
+    czystości, przy dwa razy większym polu i trzy razy dłuższym czekaniu. Cena liczona
+    z krzywej proszku, a nie wymyślona, żeby obie linie nie rozjechały się w arbitraż.</p>
+    {craft_row([("scoring_table", "Stół do nacinania"), ("wash_pot", "Garnek"),
                 ("acetylator", "Acetylator")])}
-    <p class="note">Seeds are the gate: one per wandering trader visit at 26 emeralds,
-    or a rare find in an outpost, a mansion or a bastion. The plant reseeds itself often
-    enough that you only ever have to get one.</p>
-    <h3 class="sub">Nod</h3>
-    <p>The third shape a high takes here, and the only one whose bill arrives somewhere
-    else. Nothing hurts, you heal, you do not get hungry — and you cannot run, fight or
-    mine while it lasts. Take a second dose on top of a live one and you go over: it will
-    not kill you, and it will cost you the next few minutes.</p>
-    <p class="note">Weed bills you <em>now</em>, in hunger. Coke bills you
-    <em>after</em>, in the crash. Dope bills you <em>later</em> — see below.</p>"""))
+    <p class="note">Wąskim gardłem są nasiona: jedno na wizytę wędrownego handlarza za 26
+    szmaragdów albo rzadki łup z posterunku, rezydencji lub bastionu. Roślina wysiewa się
+    sama na tyle często, że wystarczy zdobyć jedno.</p>
+    <h3 class="sub">Odlot</h3>
+    <p>Trzecia forma haju w tym modzie i jedyna, której rachunek przychodzi gdzie indziej.
+    Nic cię nie boli, regenerujesz zdrowie, nie chce ci się jeść — i przez cały czas nie
+    możesz biegać, walczyć ani kopać. Weź drugą działkę, zanim zejdzie pierwsza, i masz
+    przedawkowanie: nie zabije cię, ale zabierze kilka minut.</p>
+    <p class="note">Trawa bierze zapłatę <em>od razu</em>, głodem. Koka <em>po fakcie</em>,
+    zjazdem. Heroina <em>później</em> — patrz niżej.</p>"""))
 
     def clean_min(decay):
         return round(d["drug_max"] / decay)
@@ -851,300 +872,326 @@ def build() -> str:
         return round(d["drug_max"] / hook)
 
     habit_rows = [
-        ["<strong>Weed</strong>", f'{d["weed_hook"]:.1f}', f'{to_max(d["weed_hook"])}',
+        ["<strong>Trawa</strong>", f'{d["weed_hook"]:.1f}', f'{to_max(d["weed_hook"])}',
          f'{d["weed_period"]} min', f'{clean_min(d["weed_decay"])} min'],
-        ["<strong>Cocaine</strong>", f'{d["coke_hook"]:.1f}', f'{to_max(d["coke_hook"])}',
+        ["<strong>Kokaina</strong>", f'{d["coke_hook"]:.1f}', f'{to_max(d["coke_hook"])}',
          f'{d["coke_period"]} min', f'{clean_min(d["coke_decay"])} min'],
-        ['<strong class="acc">Heroin</strong>', f'{d["dope_hook"]:.1f}',
+        ['<strong class="acc">Heroina</strong>', f'{d["dope_hook"]:.1f}',
          f'{to_max(d["dope_hook"])}', f'{d["dope_period"]} min',
          f'{clean_min(d["dope_decay"])} min'],
     ]
 
-    sections.append(section("05c", "habit", "The Habit",
-                            "a meter per strain, on both sides of the counter", f"""
-    <p class="lede">Tolerance answers "how much does the next one do for me" and wears
-    off in minutes. This answers the other question, the one that outlives a session:
-    how much do you <em>need</em> it. Two meters, deliberately.</p>
-    <p>Every strain has its own. A Purp habit wants Purp — a shed full of Kush is no help
-    at all, which makes a monoculture farm a liability and gives the six phenotypes a
-    reason to exist beyond their effect lists. Cocaine and heroin have one meter each.</p>
-    <h3 class="sub">Pressure, not a timer</h3>
-    <p class="formula"><code>pressure = (meter ÷ {round(d['drug_max'])})
-    × min(1, time since your last hit ÷ that drug's period)</code></p>
-    <p>Both factors have to be large for the product to be. A light habit is not merely
-    slow to hurt you — it is <em>incapable</em> of it, because its first factor caps the
-    result below the band it would need to reach. Being ill is something you have to have
-    earned.</p>
-    {table(["Band", "Needs a meter of", "What it does"], [
-        ['<span class="dim">Itching</span>', f'{round(d["itch_at"] * d["drug_max"])}+',
-         '<span class="dim">the nag, and nothing else</span>'],
-        ['<span class="acc">Craving</span>', f'{round(d["crave_at"] * d["drug_max"])}+',
-         '<span class="dim">your hands stop working</span>'],
-        ['<strong>Withdrawal</strong>', f'{round(d["sick_at"] * d["drug_max"])}+',
-         '<span class="dim">everything stops working — and dope bleeds you</span>'],
+    sections.append(section("05c", "habit", "Nałóg",
+                            "osobny licznik na odmianę, po obu stronach lady", f"""
+    <p class="lede">Tolerancja odpowiada na pytanie "ile da mi następna działka" i schodzi
+    w kilka minut. To jest odpowiedź na inne pytanie, takie, które przeżywa sesję:
+    jak bardzo tego <em>potrzebujesz</em>. Dwa osobne liczniki, celowo.</p>
+    <p>Każda odmiana ma własny licznik. Nałóg na Purp domaga się Purpa — szopa pełna Kusha
+    nic nie da, przez co monokultura staje się problemem, a sześć odmian ma sens większy
+    niż tylko lista efektów. Kokaina i heroina mają po jednym liczniku.</p>
+    <h3 class="sub">Presja, nie odliczanie</h3>
+    <p class="formula"><code>presja = (licznik ÷ {round(d['drug_max'])})
+    × min(1, czas od ostatniej działki ÷ okres tej używki)</code></p>
+    <p>Oba czynniki muszą być wysokie, żeby wynik był wysoki. Lekki nałóg nie tylko wolno
+    zaczyna szkodzić — on <em>nie jest w stanie</em> tego zrobić, bo pierwszy czynnik
+    ogranicza wynik poniżej progu, który musiałby osiągnąć. Na chorobę trzeba sobie
+    zapracować.</p>
+    {table(["Poziom", "Wymaga licznika", "Co robi"], [
+        ['<span class="dim">Swędzi</span>', f'{round(d["itch_at"] * d["drug_max"])}+',
+         '<span class="dim">tylko komunikaty, nic więcej</span>'],
+        ['<span class="acc">Głód</span>', f'{round(d["crave_at"] * d["drug_max"])}+',
+         '<span class="dim">przestają działać ci ręce</span>'],
+        ['<strong>Odstawienie</strong>', f'{round(d["sick_at"] * d["drug_max"])}+',
+         '<span class="dim">nic nie działa — a heroina dodatkowo odbiera zdrowie</span>'],
     ])}
-    {table(["Drug", "Per hit", "Hits to max", "Craving ripens in", "Clean in"],
+    {table(["Używka", "Za działkę", "Działek do maksa", "Głód wraca po", "Czysty po"],
            habit_rows)}
-    <p class="note">Strong grades count for more than one hit. Withdrawal never kills —
-    it stops biting before it can.</p>
-    <h3 class="sub">Getting out</h3>
-    <p>Time, and time only. The meter bleeds off on its own and bleeds
-    <strong>twice as fast while you are properly sick</strong>, so riding out the worst
-    of it is the cure and quietly nursing a small habit is the slow road. Nerve tonic
-    holds the symptoms off without touching the meter: a way to get an afternoon's work
-    done, not a way to get clean.</p>
-    <p class="note">Taking the thing you crave clears it on the spot and pays a bonus —
-    scaled by how bad it had got. The worse it gets, the better the fix feels. That is
-    the trap, and it is meant to be.</p>
-    <h3 class="sub">The other side of the counter</h3>
-    <p>They get hooked too, and they get hooked on <em>you</em>. Every hand-over builds a
-    client list — weighted by the drug, so dope moves it about eight times faster per
-    unit than a joint does. What it buys is customers who turn up sooner, ask for the
-    strong stuff specifically, and take more each visit; and tenants who start asking for
-    bags instead of joints.</p>
-    <p class="note">Both meters read from <code>/addiction</code>. Stop selling and the
-    client list fades.</p>"""))
+    <p class="note">Mocniejsze klasy liczą się za więcej niż jedną działkę. Odstawienie nigdy
+    nie zabija — przestaje szkodzić, zanim zdąży.</p>
+    <h3 class="sub">Jak z tego wyjść</h3>
+    <p>Tylko czas. Licznik spada sam, a spada
+    <strong>dwa razy szybciej, kiedy naprawdę chorujesz</strong>, więc przetrzymanie
+    najgorszego jest lekarstwem, a ciche podtrzymywanie małego nałogu to droga na skróty
+    donikąd. Lek na nerwy wycisza objawy, nie ruszając licznika: sposób na przepracowanie
+    popołudnia, a nie na wyjście z nałogu.</p>
+    <p class="note">Wzięcie tego, czego ci brakuje, kasuje objawy natychmiast i daje premię —
+    tym większą, im gorzej było. Im gorzej, tym lepiej działa działka. Na tym polega
+    pułapka i tak ma być.</p>
+    <h3 class="sub">Druga strona lady</h3>
+    <p>NPC też się uzależniają — i to od <em>ciebie</em>. Każda transakcja buduje listę
+    klientów, ważoną rodzajem towaru: heroina przesuwa ją jakieś osiem razy szybciej na
+    sztukę niż skręt. Zyskujesz klientów, którzy podchodzą częściej, proszą konkretnie
+    o mocny towar i biorą więcej za jednym razem; oraz lokatorów, którzy zaczynają pytać
+    o działki zamiast o skręty.</p>
+    <p class="note">Oba liczniki widać w <code>/addiction</code>. Przestaniesz sprzedawać
+    i lista klientów zanika.</p>"""))
 
-    sections.append(section("06", "market", "The Market", "a price list that breathes", f"""
-    <p class="lede">{d['categories']} shelves and over a thousand lines, priced by three
-    forces multiplied together — and every one of them moves for a reason you caused.</p>
+    sections.append(section("06", "market", "Rynek", "cennik, który żyje", f"""
+    <p class="lede">{d['categories']} półek i ponad tysiąc pozycji, wycenianych przez trzy
+    czynniki mnożone przez siebie — a każdy z nich rusza się z powodu, który sam wywołałeś.</p>
     <div class="cards">
-      <div class="card reveal"><h4>Supply</h4><p>The money in circulation, sampled
-      from what players are carrying <em>and</em> what is sat in their chests. Every
-      emerald spent leaves it; every payout enters it. A jackpot really is
-      inflationary.</p></div>
-      <div class="card reveal"><h4>Drift</h4><p>Each line walks its own path between
-      random targets, eased so it arrives gently. Come back in a minute and copper has
-      moved — in the direction it was already going. Up to ±{round(d['drift'] * 100)}%.</p></div>
-      <div class="card reveal"><h4>Order flow</h4><p>Buying pushes a price up, selling
-      pushes it down, and it fades over the following minutes. Clear the shelf and the
-      last one costs more than the first.</p></div>
+      <div class="card reveal"><h4>Podaż pieniądza</h4><p>Ilość kasy w obiegu, liczona
+      z tego, co gracze noszą przy sobie <em>oraz</em> co leży w ich skrzyniach. Każdy wydany
+      szmaragd ją zmniejsza, każda wypłata zwiększa. Duża wygrana naprawdę napędza
+      inflację.</p></div>
+      <div class="card reveal"><h4>Dryf</h4><p>Każda pozycja idzie własną drogą między losowymi
+      celami, wygładzoną tak, żeby docierała łagodnie. Wróć za minutę i miedź się przesunęła —
+      w kierunku, w którym już szła. Do ±{round(d['drift'] * 100)}%.</p></div>
+      <div class="card reveal"><h4>Twoje transakcje</h4><p>Kupowanie podbija cenę, sprzedawanie
+      ją zbija, a efekt zanika przez kolejne minuty. Wykup całą półkę, a ostatnia sztuka będzie
+      droższa od pierwszej.</p></div>
     </div>
-    <p>Prices never drop below <strong>{d['index_min']:.2f}×</strong> or climb past
-    <strong>{d['index_max']:.2f}×</strong> of normal — and "normal" is whatever the
-    last few hours looked like, not whatever the first day looked like. A good week
-    becomes the new normal instead of leaving everything dear forever.</p>
-    <p class="note">The counter buys back at {round(d['sell_rate'] * 100)}% — wide on
-    purpose. The shop is a convenience, not an income.</p>"""))
+    <p>Ceny nigdy nie spadną poniżej <strong>{d['index_min']:.2f}×</strong> ani nie przekroczą
+    <strong>{d['index_max']:.2f}×</strong> normy — a "norma" to to, jak wyglądało kilka
+    ostatnich godzin, a nie pierwszy dzień. Dobry tydzień staje się nową normą, zamiast
+    zostawiać wszystko drogie na zawsze.</p>
+    <p class="note">Lada odkupuje po {round(d['sell_rate'] * 100)}% — celowo z dużym spreadem.
+    Sklep NPC to wygoda, nie źródło dochodu.</p>"""))
 
-    sections.append(section("07", "stalls", "Stalls", "the reason to walk across town", f"""
-    <p class="lede">The stall you place is yours. Put a chest directly underneath it
-    and everything inside goes on sale to everybody else at
-    {round(d['stall_rate'] * 100)}% of the market price.</p>
-    {table(["Route", "Grower gets", "Builder pays", "Lost"], [
-        ["The counter", f"{round(100 * d['sell_rate'])}e", "100e",
-         '<span class="warn">55e to nobody</span>'],
-        ["A stall", f'<span class="acc">{round(100 * d["stall_rate"] * (1 - d["stall_fee"]))}e</span>',
+    sections.append(section("07", "stalls", "Stragany", "powód, żeby przejść przez miasto", f"""
+    <p class="lede">Stragan, który postawisz, należy do ciebie. Postaw pod nim skrzynię,
+    a wszystko w jej środku trafia na sprzedaż dla innych graczy po
+    {round(d['stall_rate'] * 100)}% ceny rynkowej.</p>
+    {table(["Sposób", "Sprzedający dostaje", "Kupujący płaci", "Przepada"], [
+        ["Lada NPC", f"{round(100 * d['sell_rate'])}e", "100e",
+         '<span class="warn">55e w powietrze</span>'],
+        ["Stragan", f'<span class="acc">{round(100 * d["stall_rate"] * (1 - d["stall_fee"]))}e</span>',
          f'<span class="acc">{round(100 * d["stall_rate"])}e</span>',
-         f'{round(100 * d["stall_rate"] * d["stall_fee"])}e pitch fee'],
+         f'{round(100 * d["stall_rate"] * d["stall_fee"])}e opłaty za miejsce'],
     ])}
-    <p>Both sides beat the counter and neither takes anything from the other — the
-    spread that used to evaporate is split between you. There is
-    <strong>no price editor</strong>: prices follow the market, so a stall is never
-    stale and the only decision left is what to stock.</p>
-    <p class="note">The market screen tells you when a neighbour has a line cheaper,
-    with their name and coordinates. <code>/stalls</code> lists the lot.</p>"""))
+    <p>Obie strony wychodzą lepiej niż na ladzie i żadna nie traci na rzecz drugiej —
+    marża, która wcześniej znikała, dzieli się między was. <strong>Nie ma edytora cen</strong>:
+    ceny idą za rynkiem, więc stragan nigdy nie jest nieaktualny, a jedyna decyzja to,
+    co w nim trzymać.</p>
+    <p class="note">Ekran rynku mówi ci, kiedy sąsiad ma coś taniej — z nazwą i koordynatami.
+    <code>/stalls</code> pokazuje wszystkie.</p>"""))
 
-    sections.append(section("08", "city", "The City", "the public purse", f"""
-    <p class="lede">Nothing is taxed until somebody crafts a <strong>city vault</strong> and
-    puts it down, and no house can be registered either — there is nobody to register it
-    with. Put one down and both start, server-wide, with an announcement.</p>
-    <p>There is one vault and one purse. Every duty anybody pays goes into it, and
-    <strong>anybody may spend it</strong> — every withdrawal is announced to everyone on the
-    server. That is a decision, not an oversight: three friends can agree what the money is
-    for in ten seconds, and a voting interface would be a menu standing where a conversation
-    should be.</p>
-    <p class="note">Breaking the vault spends nothing. The money is in the city's books, not
-    in the block — it just means nobody can reach it, or file a house, until one is stood up
-    again.</p>
-    <h3 class="sub">What is taxed</h3>
-    {table(["Duty", "On", "Starts at", "Band"], [
+    sections.append(section("08", "city", "Miasto", "kasa publiczna", f"""
+    <p class="lede">Nic nie jest opodatkowane, dopóki ktoś nie zrobi i nie postawi
+    <strong>skarbca miasta</strong>. Bez niego nie da się też zarejestrować domu — nie ma
+    komu. Postaw go i obie rzeczy ruszają, na całym serwerze, z ogłoszeniem na czacie.</p>
+    <p>Jest jeden skarbiec i jedna wspólna kasa. Trafia do niej każdy zapłacony podatek i
+    <strong>wypłacić z niej może każdy</strong> — każda wypłata jest ogłaszana wszystkim na
+    serwerze. To decyzja projektowa, nie przeoczenie: trzech znajomych ustali w dziesięć
+    sekund, na co idzie kasa, a interfejs do głosowania byłby menu postawionym tam, gdzie
+    powinna być rozmowa.</p>
+    <p class="note">Rozbicie skarbca niczego nie wydaje. Pieniądze są w księgach miasta, nie
+    w bloku — po prostu nikt nie ma do nich dostępu i nie da się zarejestrować domu, dopóki
+    skarbiec nie stanie z powrotem.</p>
+    <h3 class="sub">Co jest opodatkowane</h3>
+    {table(["Podatek", "Od czego", "Start", "Widełki"], [
         [esc(x["name"]), f'<span class="dim">{esc(x["blurb"])}</span>',
          f'{x["start"]}%', f'{x["floor"]}–{x["ceiling"]}%'] for x in d["duties"]])}
-    <p>Buying pays a duty on top of the shelf price — and the shelf price you see already
-    includes it, at the counter and at a neighbour's stall alike. Being paid has income duty
-    taken out of it. Every stake laid on a casino floor pays gaming duty, win or lose, which
-    is the only version that cannot be dodged by a lucky night.</p>
-    <p class="note"><strong>Nothing sold to customers or dealers is taxed at all.</strong>
-    That is not an oversight either — the black market pays better per hour precisely because
-    it pays nothing to anybody, and that is a problem worth having.</p>
-    <h3 class="sub">What the purse buys</h3>
-    <p>A treasury with no sink is a scoreboard. Each of these is bought once, permanently, by
-    anybody, from the vault — and announced, the same rule as a withdrawal and for the same
-    reason.</p>
-    {table(["Public work", "Does", "Costs"], [
-        [esc(w["name"]), f'<span class="dim">{esc(w["blurb"])}</span>', f'{w["cost"]}e']
+    <p>Kupując, płacisz podatek doliczony do ceny półkowej — a cena, którą widzisz, już go
+    zawiera, zarówno przy ladzie, jak i na cudzym straganie. Z każdej wypłaty potrącany jest
+    podatek dochodowy. Każdy zakład postawiony w kasynie płaci podatek od gier, niezależnie
+    od wyniku, i tylko tego nie da się ominąć szczęśliwym wieczorem.</p>
+    <p class="note"><strong>Sprzedaż klientom z ulicy i dilerom nie jest opodatkowana wcale.</strong>
+    To też nie jest przeoczenie — czarny rynek płaci lepiej na godzinę właśnie dlatego, że
+    nie płaci nikomu nic, i to jest problem wart posiadania.</p>
+    <h3 class="sub">Wpłacanie do kasy</h3>
+    <p>Skarbiec był przez długi czas kranem działającym w jedną stronę: dało się z niego
+    <em>brać</em>, a jedyne, co go zasilało, to podatki ściągane z transakcji zrobionych przez
+    kogoś innego. Inwestycje miejskie stały więc za kasą, która napełniała się kilkoma
+    procentami cudzych wypłat.</p>
+    <p>Przycisk <strong>Wpłać</strong> jest obok kasy. Kliknięcie wrzuca porcję, PPM wrzuca
+    wszystko, co masz przy sobie. To najkrótsza droga między skrzynią pełną szmaragdów
+    a miastem, w którym warto mieszkać.</p>
+    <h3 class="sub">Opłaty stałe</h3>
+    <p>Posiadanie kosztuje codziennie, z twojej kieszeni do wspólnej kasy:
+    <strong>{d['shop_rate']}e za sklep</strong> i <strong>{d['house_rate']}e za każdą klasę</strong>
+    każdego wynajmowanego domu. Sklep i wynajęty dom były kiedyś jedynymi biznesami w grze
+    zupełnie bez kosztów — kasyno płaci za utrzymanie, ekipa chce pensji, a właściciel
+    mieszkań po prostu bogacił się każdego ranka bez końca.</p>
+    <p class="note">Tylko kiedy jesteś online i zawsze najwyżej za jeden dzień. Tydzień
+    nieobecności to jeden dzień do zapłaty, a nie dług.</p>
+    <h3 class="sub">Na co idzie kasa miasta</h3>
+    <p>Skarbiec bez odpływu to tylko tablica wyników. Każda inwestycja ma do
+    <strong>{d['top_tier']} poziomów</strong>, każdy kosztuje {d['tier_step']}× więcej od
+    poprzedniego, a inwestycja działa dalej, kiedy zbierasz na kolejny poziom. Kupić może
+    każdy, przy skarbcu, i wszyscy dostają info — ta sama zasada co przy wypłacie i z tego
+    samego powodu.</p>
+    {table(["Inwestycja", "Co daje", "Koszt"], [
+        [esc(w["name"]), f'<span class="dim">{esc(w["blurb"])}</span>',
+         f'{w["cost"]}e, potem ×{d["tier_step"]}']
         for w in d["works"]])}
-    <p class="note">Every one of them only makes sense for a <em>city</em>. The roads are the
-    one thing in the game that rewards building near each other; the watch is the city
-    answering the thing that makes farms dangerous; the exchange pays everybody, including
-    whoever never leaves their farm; and the school, the clinic and the tramway each make the
-    people living in your houses worth more — better paid, slower to give up on a place, and
-    more of them out shopping at once.</p>
-    <h3 class="sub">Shops the town walks into</h3>
-    <p>A <strong>market shelf</strong> over a chest or barrel sells what is in it — not to
-    players, but to the city. Townspeople come out of the housing, walk to the building, take
-    a lot off the shelf and pay <strong>{round(d['retail'] * 100)}%</strong> of the market
-    price, which is about double what the counter gives for the same crate. The duty on the
-    sale goes straight to the purse.</p>
-    <p>A <strong>shop till</strong> is the shop. Put one down and every market shelf within
-    {d['shop_reach']} blocks joins it — no wand, no attaching, a shelf simply belongs to the
-    nearest till. One name, one price policy, one cash register for the whole building, and
-    stock is any chest or barrel under the till <em>or</em> under any of its shelves, so a back
-    room and a stocked counter both work.</p>
-    <p>Prices are yours: from {min(d['markups'])}% to {max(d['markups'])}% of what the town
-    expects to pay. Cheap brings more of them through the door; dear takes more off each one.
-    Opening the till pays you the takings.</p>
-    <h3 class="sub">Somebody behind the counter</h3>
-    <p>Hire a <strong>shopkeeper</strong> at the till for {d['keeper_wage']}e a day, taken out
-    of the takings. They stand at the counter, the shop draws far more custom, and — the real
-    reason — <strong>it keeps trading while you are anywhere on the server</strong> instead of
-    only when you happen to be stood nearby.</p>
-    <p class="note">Not while you are logged off. A shop that held its chunk loaded forever
-    would be a chunk loader you buy for {d['keeper_wage']}e a day, and a server full of them is
-    somebody else's tick budget. The crew works the same way for the same reason.</p>
-    <p class="note">If the till cannot make the wage, they walk out and you are told. A
-    shopkeeper is paid out of the shop, not out of your pocket, so a shop that sells nothing
-    cannot quietly bleed you.</p>
-    <h3 class="sub">Over the counter</h3>
-    <p>Shelves sell <strong>joints, cured buds and powder</strong> as well as groceries — at
-    {round(d['legal_rate'] * 100)}% of the street price, but <strong>clean</strong>: paid in
-    real emeralds, declared, taxed, and nobody carries heat for it. Half again as much on the
-    street, dirty, and it has to go through a drum. The safest money is the slowest.</p>
-    <p><strong>How much custom you get is the population</strong> — the sum of the housing
-    grades. So the loop closes: houses make people, people shop, shopping pays the farmer and
-    the city, and the purse pays for more of the town. Nobody has to be told to build houses;
-    the shop tells them. <code>/shops</code> lists the counters and the head count.</p>
-    <p class="note">Townspeople buy food far more often than anything else, which is both true
-    and the reason this is built for whoever is doing the farming.</p>
-    <h3 class="sub">The revenue office</h3>
-    <p>Everything legal pays duty and everything illegal pays nothing, which on its own just
-    means drugs are better. The office is the other end of that: it reads what came in against
-    what you declared, and over <strong>{d['looks_away']}e a day it cannot account for</strong>
-    it assesses you for {round(d['assessment'] * 100)}% of the excess. Cannot pay? The debt
-    stands and you carry heat until it is settled — <code>/law pay</code>.</p>
-    <h3 class="sub">Dirty money</h3>
-    <p>The street does not pay in emeralds. Customers and dealers pay in <strong>dirty
-    emeralds</strong> — an item, not a balance. No shop takes them, no wage comes out of them,
-    and the market does not know they exist. They are not money yet.</p>
-    <p>They stack and pack like the real thing: <strong>nine to a block and back again</strong>,
-    and a big payout arrives as blocks already. The awkward part of dirty money is meant to be
-    that it has to be washed, not that a week off the street is sixteen stacks to carry. The
-    drum takes blocks too, each counting as nine.</p>
-    <p>They become money in a <strong>laundry drum</strong>: right-click it holding them,
-    {d['wash_min']} at a minimum and <strong>{d['wash_max']}</strong> to a load, then wait —
-    {d['wash_each'] / 20:g} seconds an emerald, so about
-    {d['wash_max'] * d['wash_each'] // 1200} minutes for a full drum. Take it out and you get
-    clean emeralds with <strong>up to {round(d['wash_cut'] * 100)}%</strong> gone down the
-    drain: the cut is rolled, so you never know quite how much. That is the moment those
-    emeralds enter the money supply at all.</p>
-    <p class="note">Time is per emerald rather than per load, so a drum is a throughput and not
-    a free multiplier — and adding more restarts the clock, so load it all and walk away. If one
-    is not enough, build another.</p>
-    <p>Washing also clears the day's exposure — but only up to <strong>what your businesses
-    could plausibly have taken</strong>. A shop that sold nothing explains nothing, however
-    much its owner would like it to. A real business is the licence to launder and its size is
-    the limit, which is why a market shelf and a casino floor are worth owning for a reason
-    other than what they earn.</p>
-    <h3 class="sub">Acts</h3>
-    <p>The council passes laws when the city needs them and repeals them when it does not.
-    Reactive, never random — a rule that arrives for no reason is weather, and nobody plays
-    around weather. <code>/law</code> hands you the constitution, written fresh the moment you
-    ask.</p>
-    {table(["Act", "Passes when"], [[esc(a["name"]), f'<span class="dim">{esc(a["blurb"])}</span>']
+    <p class="note">Każda z nich ma sens tylko dla <em>miasta</em>. Drogi to jedyna rzecz
+    w grze, która nagradza budowanie blisko siebie; straż miejska to odpowiedź miasta na to,
+    co czyni plantacje niebezpiecznymi; giełda płaci wszystkim, także temu, kto nigdy nie
+    wychodzi ze swojej farmy; a szkoła, przychodnia i tramwaje sprawiają, że ludzie mieszkający
+    w twoich domach są warci więcej — lepiej zarabiają, dłużej znoszą złe warunki i więcej
+    z nich naraz chodzi na zakupy.</p>
+    <h3 class="sub">Sklepy, do których przychodzi miasto</h3>
+    <p><strong>Półka sklepowa</strong> to lada, którą zapełniasz jak skrzynię — kliknij PPM
+    własną półkę i włóż towar. Sprzedaje to, co na niej leży, i nie tylko graczom:
+    mieszkańcy wychodzą z domów, idą do budynku, biorą partię z półki i płacą
+    <strong>{round(d['retail'] * 100)}%</strong> ceny rynkowej, czyli mniej więcej dwa razy
+    tyle, co daje lada NPC za tę samą skrzynkę. Podatek od sprzedaży idzie prosto do kasy
+    miasta.</p>
+    <p><strong>Kasa sklepowa</strong> to jest sklep. Postaw ją, a każda półka w promieniu
+    {d['shop_reach']} bloków podłącza się sama — bez różdżki, bez łączenia; półka po prostu
+    należy do najbliższej kasy. Jedna nazwa, jedna polityka cenowa, jedna kasa na cały
+    budynek, a towar to wszystko, co leży na półkach — plus dowolna skrzynia lub beczka pod
+    kasą <em>albo</em> pod którąkolwiek z półek, więc zaplecze i zapełniona lada działają
+    tak samo.</p>
+    <p>Ceny ustalasz sam: od {min(d['markups'])}% do {max(d['markups'])}% tego, ile miasto
+    spodziewa się zapłacić. Tanio przyciąga więcej ludzi, drogo zabiera więcej od każdego.
+    Otwarcie kasy wypłaca ci utarg.</p>
+    <h3 class="sub">Ktoś za ladą</h3>
+    <p>Przy kasie możesz nająć <strong>sprzedawcę</strong> za {d['keeper_wage']}e dziennie,
+    płatne z utargu. Stoi za ladą, sklep przyciąga dużo więcej klientów, a — i to jest
+    prawdziwy powód — <strong>handluje dalej, kiedy jesteś gdziekolwiek na serwerze</strong>,
+    a nie tylko wtedy, gdy akurat stoisz obok.</p>
+    <p class="note">Ale nie po twoim wylogowaniu. Sklep trzymający swój chunk wczytany na
+    stałe byłby chunk loaderem za {d['keeper_wage']}e dziennie, a serwer pełen takich to
+    czyjś budżet tickowy. Ekipa działa tak samo i z tego samego powodu.</p>
+    <p class="note">Jeśli kasa nie ma na pensję, sprzedawca odchodzi i dostajesz o tym info.
+    Sprzedawcę opłaca sklep, nie twoja kieszeń, więc sklep, który nic nie sprzedaje, nie
+    będzie cię po cichu drenował.</p>
+    <h3 class="sub">Towar spod lady, legalnie</h3>
+    <p>Półki sprzedają też <strong>skręty, susz i proszek</strong> obok zwykłych zakupów — po
+    {round(d['legal_rate'] * 100)}% ceny ulicznej, ale <strong>na czysto</strong>: płatne
+    prawdziwymi szmaragdami, zgłoszone, opodatkowane i nikt nie zbiera za to uwagi policji.
+    Na ulicy dostaniesz o połowę więcej, ale brudną kasą, którą trzeba przepuścić przez
+    pralnię. Najbezpieczniejsze pieniądze to te najwolniejsze.</p>
+    <p><strong>Liczba klientów to liczba mieszkańców</strong> — suma klas twoich domów.
+    Pętla się domyka: domy dają ludzi, ludzie robią zakupy, zakupy płacą rolnikowi i miastu,
+    a kasa miasta finansuje rozbudowę. Nikomu nie trzeba mówić, żeby budował domy — mówi mu
+    to sklep. <code>/shops</code> pokazuje wszystkie sklepy i liczbę mieszkańców.</p>
+    <p class="note">Mieszkańcy kupują jedzenie znacznie częściej niż cokolwiek innego, co jest
+    zarówno prawdą, jak i powodem, dla którego to wszystko jest zbudowane pod kogoś, kto
+    zajmuje się uprawą.</p>
+    <h3 class="sub">Urząd skarbowy</h3>
+    <p>Wszystko legalne płaci podatek, a wszystko nielegalne nie płaci nic, co samo w sobie
+    znaczy tylko tyle, że narkotyki są lepsze. Urząd to druga strona tego równania:
+    porównuje wpływy z tym, co zgłosiłeś, i powyżej <strong>{d['looks_away']}e dziennie bez
+    pokrycia</strong> nalicza ci {round(d['assessment'] * 100)}% nadwyżki. Nie masz czym
+    zapłacić? Dług zostaje, a policja ma cię na oku, dopóki go nie uregulujesz —
+    <code>/law pay</code>.</p>
+    <h3 class="sub">Brudne pieniądze</h3>
+    <p>Ulica nie płaci szmaragdami. Klienci i dilerzy płacą <strong>brudnymi
+    szmaragdami</strong> — to przedmiot, nie saldo. Żaden sklep ich nie przyjmie, nie zapłacisz
+    nimi pensji, a rynek nie wie, że istnieją. To jeszcze nie są pieniądze.</p>
+    <p>Stackują się i pakują jak prawdziwe: <strong>dziewięć na blok i z powrotem</strong>,
+    a duża wypłata przychodzi od razu w blokach. Uciążliwość brudnej kasy ma polegać na tym,
+    że trzeba ją wyprać, a nie na tym, że tydzień pracy to szesnaście stacków do niesienia.
+    Bęben przyjmuje też bloki, każdy liczony za dziewięć.</p>
+    <p>Pieniędzmi stają się w <strong>bębnie pralniczym</strong>: kliknij go PPM, trzymając je
+    w ręce, minimum {d['wash_min']}, maksimum <strong>{d['wash_max']}</strong> na wsad, potem
+    czekaj — {d['wash_each'] / 20:g} sekundy na szmaragd, czyli około
+    {d['wash_max'] * d['wash_each'] // 1200} minut na pełny bęben. Wyjmujesz czyste szmaragdy,
+    z których <strong>do {round(d['wash_cut'] * 100)}%</strong> przepadło: prowizja jest
+    losowana, więc nigdy nie wiesz dokładnie ile. Dopiero w tym momencie te szmaragdy w ogóle
+    trafiają do obiegu pieniądza.</p>
+    <p class="note">Czas liczy się na szmaragd, a nie na wsad, więc bęben to przepustowość,
+    a nie darmowy mnożnik — a dorzucanie w trakcie zeruje licznik, więc wrzuć wszystko naraz
+    i odejdź. Jak jeden nie wystarcza, postaw drugi.</p>
+    <p>Pranie zmniejsza też dzienną ekspozycję wobec urzędu — ale tylko do wysokości
+    <strong>tego, co twoje biznesy realistycznie mogły utargować</strong>. Sklep, który nic
+    nie sprzedał, niczego nie wyjaśnia, choćby właściciel bardzo chciał. Prawdziwy biznes
+    jest licencją na pranie, a jego wielkość jest limitem — dlatego półka sklepowa i sala
+    kasyna są warte posiadania z innego powodu niż to, ile same zarabiają.</p>
+    <h3 class="sub">Ustawy</h3>
+    <p>Rada uchwala prawo, kiedy miasto tego potrzebuje, i uchyla, kiedy potrzeba mija.
+    Zawsze w reakcji, nigdy losowo — przepis, który pojawia się bez powodu, to pogoda,
+    a wokół pogody nikt nie planuje. <code>/law</code> daje ci konstytucję, spisaną na
+    świeżo w chwili, gdy o nią poprosisz.</p>
+    {table(["Ustawa", "Wchodzi w życie, gdy"], [[esc(a["name"]), f'<span class="dim">{esc(a["blurb"])}</span>']
                                     for a in d["acts"]])}
-    <h3 class="sub">The budget</h3>
-    <p>Rates move on their own every {d['budget_days']} days and the change is announced with
-    its reason. Under {d['broke']}e in the purse and everything goes up; over {d['flush']}e and
-    everything comes down; otherwise each rate wanders a point either way inside its band.
-    <code>/city</code> prints the current table and what each duty has raised.</p>"""))
+    <h3 class="sub">Budżet</h3>
+    <p>Stawki zmieniają się same co {d['budget_days']} dni, a zmiana jest ogłaszana wraz
+    z powodem. Poniżej {d['broke']}e w kasie wszystko idzie w górę; powyżej {d['flush']}e
+    wszystko schodzi w dół; w innym razie każda stawka błądzi o punkt w obie strony wewnątrz
+    swoich widełek. <code>/city</code> wypisuje aktualną tabelę i to, ile zebrał każdy
+    podatek.</p>"""))
 
-    sections.append(section("08b", "homes", "Housing", "a room the city can see", f"""
-    <p class="lede">Craft a mailbox, stand it <strong>inside</strong> a room once and
-    right-click it. It walks the walls and tells you what you have built — and once it
-    passes, that room is an address.</p>
-    <p>Then the box belongs <strong>outside</strong>. <strong>Sneak + right-click
-    empty-handed</strong> and it comes into your hand carrying the address, so you can
-    nail it up by the door or out on the street. Mining it works too. The survey stays
-    pinned to the spot it was first taken from; the box is only where the post goes.</p>
-    <p class="note">A box that has lost its address is not a problem: put a blank one
-    back inside the house and it takes the job again, or stand one outside and it serves
-    your nearest house that has no post. <code>/homes demolish</code> takes the house
-    you are standing in off the register.</p>
-    <h3 class="sub">Sealed means sealed</h3>
-    <p><strong>Doors count as walls</strong>, which is what makes a bedroom with the door
-    shut still part of your house: every door on the edge gets probed on its own, and one
-    that opens onto something small is another room, while one that opens onto the world
-    is your front door. Stairs and ladders make upstairs work with no extra thought.</p>
-    <p class="note">A sealed void with no way in is not a house, so walling off a cavern
-    to inflate the floor area does nothing.</p>
-    <h3 class="sub">The five musts</h3>
-    <p>Miss any of these and it is not a house at all, whatever else is in it:
-    sealed · {d['min_floor']} squares of floor · a bed · a door onto the street · a light.</p>
-    <h3 class="sub">Size is a lid, not a bonus</h3>
-    <p>This is the part worth knowing. Floor area does not earn points — it decides the
-    <strong>highest grade the place is allowed</strong>, and nothing else can lift it.
-    A cupboard with a bed, a table, a chest, a furnace and a torch is a grade one, however
-    neatly it is fitted out.</p>
-    {table(["Floor", "Highest grade allowed"], [
-        [f"{d['floor_steps'][i]}+ squares", str(i + 1)] for i in range(len(d['floor_steps']))
+    sections.append(section("08b", "homes", "Mieszkania", "pokój, który miasto widzi", f"""
+    <p class="lede">Zrób skrzynkę pocztową, postaw ją raz <strong>w środku</strong> pokoju
+    i kliknij PPM. Obejdzie ściany i powie ci, co zbudowałeś — a jeśli przejdzie kontrolę,
+    ten pokój staje się adresem.</p>
+    <p>Potem skrzynka należy <strong>na zewnątrz</strong>. <strong>Kucnij i kliknij PPM
+    pustą ręką</strong>, a trafi ci do ręki razem z adresem, więc możesz przybić ją przy
+    drzwiach albo na ulicy. Rozbicie jej też działa. Pomiar zostaje przypięty do miejsca,
+    w którym został zrobiony po raz pierwszy; skrzynka to tylko miejsce, gdzie trafia poczta.</p>
+    <p class="note">Skrzynka, która zgubiła adres, to żaden problem: postaw pustą z powrotem
+    w domu, a przejmie zadanie, albo postaw jedną na zewnątrz, a obsłuży twój najbliższy dom
+    bez poczty. <code>/homes demolish</code> zdejmuje z rejestru dom, w którym stoisz.</p>
+    <h3 class="sub">Szczelny znaczy szczelny</h3>
+    <p><strong>Drzwi liczą się jak ściany</strong> — i właśnie dlatego sypialnia z zamkniętymi
+    drzwiami nadal należy do twojego domu: każde drzwi na granicy są sprawdzane osobno,
+    a te prowadzące do czegoś małego to kolejny pokój, podczas gdy te prowadzące na świat
+    to drzwi wejściowe. Schody i drabiny sprawiają, że piętro działa bez żadnych dodatkowych
+    zabiegów.</p>
+    <p class="note">Zamknięta pustka bez wejścia nie jest domem, więc zamurowanie jaskini,
+    żeby sztucznie zawyżyć metraż, nic nie daje.</p>
+    <h3 class="sub">Pięć wymogów</h3>
+    <p>Brak choćby jednego i to w ogóle nie jest dom, cokolwiek innego w nim stoi:
+    szczelny · {d['min_floor']} kratek podłogi · łóżko · drzwi na ulicę · światło.</p>
+    <h3 class="sub">Metraż to sufit, nie bonus</h3>
+    <p>To najważniejsza rzecz do zapamiętania. Powierzchnia nie daje punktów — ustala
+    <strong>najwyższą klasę, na jaką dom może się załapać</strong>, i nic innego tego nie
+    podniesie. Komórka z łóżkiem, stołem, skrzynią, piecem i pochodnią to klasa 1, choćby
+    była wykończona idealnie.</p>
+    {table(["Podłoga", "Najwyższa możliwa klasa"], [
+        [f"{d['floor_steps'][i]}+ kratek", str(i + 1)] for i in range(len(d['floor_steps']))
     ])}
-    <p class="note">Floor means squares you could stand on, so <strong>every storey
-    counts</strong> and a cathedral ceiling counts once. Three storeys of a modest cottage
-    gets there as surely as one big hall.</p>
-    <h3 class="sub">Then it is points</h3>
-    {table(["Worth", "For"], [
-        ["0–2", f"built, not dug — {round(d['shell_steps'][0] * 100)}% then "
-                f"{round(d['shell_steps'][1] * 100)}% of the shell made of worked material"],
-        ["0–3", f"fittings — a crafting table, storage, a furnace, a market stall and a "
-                f"window; two earns one, four earns two, all {d['fittings']} earns three"],
-        ["0–2", f"character — {d['decor_steps'][0]} then {d['decor_steps'][1]} different "
-                f"kinds of block in the place"],
-        ["0–2", f"lighting — measured at head height, brighter than {d['dark_at']}; "
-                f"a fifth of the floor dim earns one, a twentieth earns two"],
+    <p>Podłoga to kratki, na których dałoby się stanąć, więc <strong>liczy się każde
+    piętro</strong>, a wysoki sufit liczy się raz. Trzy piętra skromnego domku dojdą tam
+    równie pewnie, co jedna wielka hala.</p>
+    <h3 class="sub">Potem liczą się punkty</h3>
+    {table(["Punkty", "Za co"], [
+        ["0–2", f"zbudowane, nie wykopane — {round(d['shell_steps'][0] * 100)}%, potem "
+                f"{round(d['shell_steps'][1] * 100)}% ścian z obrobionych materiałów"],
+        ["0–3", f"wyposażenie — stół rzemieślniczy, skrzynia, piec, stragan i "
+                f"okno; dwa dają punkt, cztery dwa, wszystkie {d['fittings']} dają trzy"],
+        ["0–2", f"wystrój — {d['decor_steps'][0]}, potem {d['decor_steps'][1]} różnych "
+                f"rodzajów bloków w środku"],
+        ["0–2", f"oświetlenie — mierzone na wysokości głowy, jaśniej niż {d['dark_at']}; "
+                f"jedna piąta ciemnej podłogi daje punkt, jedna dwudziesta dwa"],
     ])}
-    <p>Every two points is a grade, up to <strong>{d['top_tier']}</strong> — and then the
-    floor caps it. The mailbox always tells you the single next thing to do, so you never
-    have to read the table.</p>
-    <p class="note">Dirt, sand, gravel, plain stone, cobble, logs and leaves are what the
-    world hands you and count as dug. Everything you crafted, smelted, cut or dyed counts
-    as built — including anything a mod ships as decoration.</p>
-    <p class="note">Two houses cannot share ground — flats side by side are fine, and so is
-    one above another. A house reaches at most {d['span']} blocks from its mailbox, and it
-    re-measures itself every couple of minutes, so knocking a wall through or taking the
-    bed out shows up on its own. <code>/homes</code> lists everybody's.</p>
-    <h3 class="sub">How many live there</h3>
-    <p>A house can hold more than one person. Three things decide how many, and
-    <strong>whichever is smallest wins</strong>:</p>
-    <p>one bed each · {d['floor_per_head']} squares of floor each · a good enough grade.</p>
-    <p>So a fourth bed in a small grade-two room houses nobody extra — you need the space and
-    the grade as well. One person always fits, however rough the place is.</p>
-    <p class="note">This matters because everything else counts <em>people</em>, not houses.
-    Every shopper at your till, every gambler on your casino floor and every emerald of income
-    tax is per person. A four-bed house is four people coming through your door.</p>
+    <p>Każde dwa punkty to jedna klasa, do <strong>{d['top_tier']}</strong> — a potem
+    metraż i tak ustala sufit. Skrzynka zawsze mówi ci jedną konkretną rzecz do zrobienia,
+    więc nigdy nie musisz czytać tej tabeli.</p>
+    <p class="note">Ziemia, piasek, żwir, goły kamień, bruk, kłody i liście to rzeczy, które
+    daje świat, i liczą się jako wykopane. Wszystko, co wykraftowałeś, wytopiłeś, przyciąłeś
+    albo zabarwiłeś, liczy się jako zbudowane — łącznie z tym, co inne mody dają jako ozdoby.</p>
+    <p class="note">Dwa domy nie mogą dzielić tego samego miejsca — mieszkania obok siebie są
+    OK, jedno nad drugim też. Dom sięga najwyżej {d['span']} bloków od swojej skrzynki
+    i mierzy się od nowa co kilka minut, więc wybicie ściany albo zabranie łóżka wychodzi na
+    jaw samo. <code>/homes</code> pokazuje domy wszystkich graczy.</p>
+    <h3 class="sub">Ilu tam mieszka</h3>
+    <p>W domu może mieszkać więcej niż jedna osoba. Decydują trzy rzeczy, a
+    <strong>wygrywa najmniejsza z nich</strong>:</p>
+    <p>jedno łóżko na osobę · {d['floor_per_head']} kratek podłogi na osobę · odpowiednio
+    wysoka klasa.</p>
+    <p>Czwarte łóżko w małym pokoju klasy 2 nie da ci więc nikogo więcej — potrzeba też
+    miejsca i klasy. Jedna osoba zmieści się zawsze, jakkolwiek marne byłoby to lokum.</p>
+    <p class="note">To ważne, bo wszystko inne liczy <em>ludzi</em>, a nie domy. Każdy klient
+    przy twojej kasie, każdy gracz na sali twojego kasyna i każdy szmaragd podatku dochodowego
+    liczy się na osobę. Dom na cztery łóżka to czterech ludzi wchodzących do twojego sklepu.</p>
 
-    <h3 class="sub">Payday</h3>
-    <p>Your residents go out to work and get paid once a day, based on the grade of the house
-    they live in. <strong>This is the only way new money comes into the town.</strong></p>
-    <p>The city taxes their wages first — {d['income_rate']}% to start — and that goes to the
-    vault. Whatever is left goes into the <strong>town purse</strong>.</p>
-    <p>Rent is then paid <em>out of that purse</em>, into your mailbox, the same day. So the
-    wage is anchored to the rent table — <strong>{d['wage_multiple']}× the rent</strong> at the
-    bottom of every grade — which guarantees a resident always clears their own landlord and
-    leaves something over to spend.</p>
-    <h3 class="sub">Size counts too</h3>
-    <p>The grade decides the money. On top of that, <strong>a bigger house of the same grade is
-    worth more than a smaller one</strong>.</p>
-    <p>Without that, size would only count in jumps: {d['floor_steps'][3]} squares of floor makes
-    a grade four, and so does {d['floor_steps'][4] - 1}, so the last sixty blocks you laid would
-    have earned nobody anything.</p>
-    <p>A house at the biggest end of its grade earns <strong>halfway towards the next grade</strong>
-    — never the whole way, so moving up a grade is always better than just building wider. Adding
-    floor can never make anyone earn less.</p>
-    <p><strong>Rent goes up the same way.</strong> Rent and wages are the same figure seen twice:
-    what a resident gets paid, and what they hand you for the room. So a big house both earns its
-    resident more and pays you more rent. Per resident, per day:</p>
-    {table(["Grade", "Floor", "Earns (small → big)", "Rent to you (small → big)"],
+    <h3 class="sub">Wypłata</h3>
+    <p>Twoi lokatorzy chodzą do pracy i raz dziennie dostają wypłatę, zależną od klasy domu,
+    w którym mieszkają. <strong>To jedyny sposób, w jaki do miasta trafiają nowe pieniądze.</strong></p>
+    <p>Miasto najpierw pobiera podatek od ich pensji — na start {d['income_rate']}% — i ten
+    trafia do skarbca. Reszta idzie do <strong>portfela mieszkańców</strong>.</p>
+    <p>Czynsz jest potem płacony <em>z tego portfela</em> do twojej skrzynki, tego samego dnia.
+    Pensja jest więc zakotwiczona w tabeli czynszów — <strong>{d['wage_multiple']}× czynsz</strong>
+    na dolnym progu każdej klasy — co gwarantuje, że lokator zawsze spłaci właściciela i zostanie
+    mu jeszcze coś do wydania.</p>
+    <h3 class="sub">Metraż też się liczy</h3>
+    <p>Klasa ustala podstawę. Do tego <strong>większy dom tej samej klasy jest wart więcej niż
+    mniejszy</strong>.</p>
+    <p>Bez tego metraż liczyłby się tylko skokowo: {d['floor_steps'][3]} kratek podłogi daje
+    klasę 4 i {d['floor_steps'][4] - 1} też, więc ostatnie sześćdziesiąt bloków, które położyłeś,
+    nikomu by nic nie dało.</p>
+    <p>Dom na górnej granicy swojej klasy zarabia <strong>w połowie drogi do następnej
+    klasy</strong> — nigdy całej, więc awans klasy zawsze bije samo poszerzanie. Dokładanie
+    podłogi nigdy nie sprawi, że ktoś zarobi mniej.</p>
+    <p><strong>Czynsz rośnie tak samo.</strong> Czynsz i pensja to ta sama liczba widziana dwa
+    razy: ile lokator dostaje i ile oddaje ci za pokój. Duży dom daje więc zarówno wyższą pensję
+    lokatorowi, jak i wyższy czynsz tobie. Na lokatora, na dzień:</p>
+    {table(["Klasa", "Podłoga", "Zarabia (mały → duży)", "Czynsz dla ciebie (mały → duży)"],
            [[str(i),
              f"{d['floor_steps'][i - 1]}–{band_top(i) - 1}" if i < d['top_tier']
              else f"{d['floor_steps'][i - 1]}+",
@@ -1153,201 +1200,267 @@ def build() -> str:
              f"{rent_at(i, d['floor_steps'][i - 1])}e → "
              f"{rent_at(i, band_top(i) if i >= d['top_tier'] else band_top(i) - 1)}e"]
             for i in range(1, len(d['rent']))])}
-    <p class="note">The top grade has no band above it to reach towards, so it gets one more of
-    its own width — a palace out-earns a mansion, and past {band_top(d['top_tier'])} squares you
-    have hit the ceiling of the whole ladder.</p>
-    <p class="note">And a bigger house holds more people, so size pays twice: the household total
-    is this figure times the number of heads.</p>
-    <p class="note">You collect rent by opening the mailbox — there is no second thing to
-    click. A tenant who somehow cannot make rent pays <em>none</em> of it rather than part;
-    the mood slide below is what eventually moves them out.</p>
+    <p class="note">Najwyższa klasa nie ma nad sobą kolejnej, do której mogłaby dążyć, więc
+    dostaje jeszcze jeden zakres własnej szerokości — pałac zarabia więcej niż rezydencja,
+    a powyżej {band_top(d['top_tier'])} kratek trafiasz na sufit całej drabinki.</p>
+    <p class="note">Większy dom mieści też więcej ludzi, więc metraż płaci dwa razy: suma dla
+    gospodarstwa to ta liczba razy liczba lokatorów.</p>
+    <p class="note">Czynsz odbierasz, otwierając skrzynkę pocztową — nie ma drugiej rzeczy do
+    klikania. Lokator, który z jakiegoś powodu nie ma na czynsz, nie płaci <em>nic</em>, a nie
+    część; to spadek nastroju opisany niżej ostatecznie go wyprowadza.</p>
 
-    <h3 class="sub">The town purse — why this matters to you</h3>
-    <p>That leftover money is what your shops and casinos get paid with. <strong>The town can
-    only spend what it has earned.</strong> If the purse is empty, people stay home — fewer
-    customers at your shelves and fewer gamblers at your machines.</p>
-    <p>What counts is how much there is <em>per person</em>. Around {d['comfortable']}e each
-    means a comfortable town that shops normally, and more than that means it shops harder, up
-    to a limit. Twenty people sharing a purse are well off; two hundred sharing the same purse
-    are not.</p>
-    <p>So the whole thing is a loop:</p>
-    <p class="note"><strong>better houses → better-paid residents → more customers in your shop
-    → more tax in the vault → public works → a better city.</strong> Build well and you get paid
-    three times: the rent, the tax that pays for the city, and the money those people spend with
-    you. <code>/city</code> shows the purse.</p>
-    <h3 class="sub">Mood, and the letters</h3>
-    <p>Tenants hold a mood out of 100. Dark corners and a falling grade wear it down, and
-    <strong>an unhappy tenant pays less before they pay nothing</strong> — so a slide shows up
-    in the money before it shows up as an empty house. Under {d['mood_leaving']} they are
-    packing.</p>
-    <p>They write, and the letters are in the mailbox: <em>"The light on the landing has
-    gone."</em> <em>"There's something growing next door. I can smell it."</em> That is the
-    whole tutorial for this system, and it needed no page.</p>
-    <h3 class="sub">They are your customers too</h3>
-    <p>Right-click a resident <strong>empty-handed</strong> and they tell you what they fancy —
-    a strain's joints, cured buds, or powder — and what they will pay for it. Hold it and click
-    them again and they buy, in <strong>dirty emeralds</strong>, exactly like a customer at the
-    door. The fancy and the price are rolled fresh most days, and somebody who likes where they
-    live pays a little over.</p>
-    <p>They gamble, too. A resident living near a wired machine walks in and plays it rather
-    than a stranger appearing from nowhere — the same person who pays your rent, going home
-    afterwards. Which is an argument for building the casino where people actually live. Their
-    stake comes out of the same purse their wages went into, and what they win goes back to it.</p>
-    <p>And they go to work. About one townsperson in three that you see is walking to a job
-    rather than to a counter — a shop till, a stall, a casino floor, the vault. A town's jobs
-    are whatever has actually been built, so a village of houses and nothing else has nobody
-    commuting. It is scenery: the wage was already paid from the housing register, whether or
-    not anyone was stood there watching.</p>
-    <h3 class="sub">Not next door</h3>
-    <p>A grow within scanning distance of somebody's front room empties it. A small one leaves
-    them miserable and paying two fifths; anything bigger and they go. <strong>The plantation
-    and the apartment block cannot be the same place</strong> — that tension is what the whole
-    city design was built around, and it is the only thing in the mod that makes the two halves
-    of it argue over the same ground.</p>"""))
+    <h3 class="sub">Portfel mieszkańców — dlaczego to twoja sprawa</h3>
+    <p>Ta reszta pieniędzy to właśnie to, czym płacą twoje sklepy i kasyna. <strong>Miasto może
+    wydać tylko tyle, ile zarobiło.</strong> Jeśli portfel jest pusty, ludzie siedzą w domach —
+    mniej klientów przy twoich półkach i mniej graczy przy twoich automatach.</p>
+    <p>Liczy się to, ile przypada <em>na osobę</em>. Około {d['comfortable']}e na głowę oznacza
+    miasto, które robi zakupy normalnie, a więcej niż tyle — że kupuje ostrzej, do pewnego
+    limitu. Dwadzieścia osób dzielących ten portfel ma się dobrze; dwieście osób dzielących ten
+    sam portfel już nie.</p>
+    <p>Całość jest więc pętlą:</p>
+    <p class="note"><strong>lepsze domy → lepiej opłacani lokatorzy → więcej klientów w twoim
+    sklepie → więcej podatku w skarbcu → inwestycje miejskie → lepsze miasto.</strong> Buduj
+    dobrze, a zarobisz trzy razy: na czynszu, na podatku, który finansuje miasto, i na
+    pieniądzach, które ci ludzie zostawiają u ciebie. <code>/city</code> pokazuje stan kasy.</p>
+    <h3 class="sub">Nastrój i listy</h3>
+    <p>Lokatorzy mają nastrój w skali do 100. Ciemne kąty i spadająca klasa go obniżają, a
+    <strong>niezadowolony lokator najpierw płaci mniej, a dopiero potem przestaje płacić</strong>
+    — spadek widać więc w pieniądzach, zanim zobaczysz go jako pusty dom. Poniżej
+    {d['mood_leaving']} zaczyna się pakować.</p>
+    <p>Piszą do ciebie, a listy leżą w skrzynce: <em>"Zgasło światło na korytarzu."</em>
+    <em>"Obok coś rośnie. Czuć to w powietrzu."</em> To jest cały samouczek tego systemu
+    i nie potrzebował ani jednej strony instrukcji.</p>
+    <h3 class="sub">Są też twoimi klientami</h3>
+    <p>Kliknij lokatora PPM <strong>z pustą ręką</strong>, a powie ci, na co ma ochotę — skręty
+    konkretnej odmiany, susz albo proszek — i ile za to zapłaci. Weź to do ręki, kliknij go
+    ponownie, a kupi, płacąc <strong>brudnymi szmaragdami</strong>, dokładnie jak klient z ulicy.
+    Ochota i cena losują się na nowo prawie każdego dnia, a ktoś, komu się dobrze mieszka, płaci
+    trochę więcej.</p>
+    <p>Grają też w kasynie. Lokator mieszkający blisko podłączonego automatu wchodzi i gra na
+    nim zamiast obcego pojawiającego się znikąd — ta sama osoba, która płaci ci czynsz i wraca
+    potem do domu. To argument, żeby budować kasyno tam, gdzie ludzie faktycznie mieszkają. Ich
+    stawka pochodzi z tego samego portfela, do którego trafiła ich pensja, a wygrana do niego
+    wraca.</p>
+    <p>I chodzą do pracy. Mniej więcej co trzeci mieszkaniec, którego widzisz, idzie do pracy,
+    a nie do sklepu — do kasy sklepowej, na stragan, na salę kasyna, do skarbca. Miejsca pracy
+    w mieście to to, co faktycznie zostało zbudowane, więc wioska z samych domów nie ma nikogo
+    dojeżdżającego. To scenografia: pensja i tak została wypłacona z rejestru mieszkań,
+    niezależnie od tego, czy ktoś stał i patrzył.</p>
+    <h3 class="sub">Nie po sąsiedzku</h3>
+    <p>Uprawa w zasięgu skanowania czyjegoś salonu wyludnia go. Mała zostawia lokatorów
+    nieszczęśliwymi i płacącymi dwie piąte czynszu; cokolwiek większego i się wyprowadzają.
+    <strong>Plantacja i blok mieszkalny nie mogą być w tym samym miejscu</strong> — na tym
+    napięciu zbudowany jest cały projekt miasta i to jedyna rzecz w modzie, która sprawia,
+    że obie jego połowy kłócą się o ten sam teren.</p>
 
-    sections.append(section("09", "crew", "The Crew", "somebody to do the picking", f"""
-    <p class="lede">{d['hire']}e to take somebody on, then {d['wage']}e every five
-    minutes <strong>they are working</strong>, harvest or no harvest. {d['max_hands']}
-    hands is all one operation will carry.</p>
-    <p>They work <strong>daylight only</strong> by default — at dusk they find a bed inside
-    the patch and turn in — and the clock stops with them, so nights cost nothing. Put one
-    <strong>on nights</strong> from the board and they never stop: +{round((d['night_rate'] - 1) * 100)}%
-    on the wage <em>and</em> a clock that runs all night, so about twice the packets an hour
-    for about twice the work. They
-    stop for a breather every {d['jobs_per_shift']} jobs, and the breather is a share
-    of the shift rather than a flat minute, so a quick hand rests as briefly as it
-    works. They will not tread your farmland back into dirt, pull a rack early, or
-    bone-meal your own crops.</p>
-    <p>The patch stays awake wherever you are, as long as you are logged in — you do
-    not have to stand over anybody. If one wanders off or something eats it, the
-    <strong>whip</strong> on the crew board drags it back, and puts a trained
-    replacement down if the body is gone.</p>
-    <p>Every hand has <strong>its own spot</strong> — wherever you were standing when you
-    took them on — and it moves. Walk to the new field, open the board, and
-    <strong>Work here instead</strong> moves the spot and the person with it, across
-    worlds if you like. They forget the old bed and the old chest and find new ones.</p>
-    <h3 class="sub">Pace</h3>
-    {table(["Rung", "A job every", "Costs", "Wage"], pace_rows)}
-    <h3 class="sub">Jobs</h3>
-    {table(["Job", "Costs", "Wage", "What they do"], job_rows)}
-    <p>The times above are what you would measure with a stopwatch, breather included
-    — not the raw pass rate.</p>
-    <h3 class="sub">One chest</h3>
-    <p>This is the thing people get wrong. A hand uses <strong>the nearest container to their
-    spot</strong> — that one and no other — for everything: what it harvests into, and what it
-    draws from. Rolling wants <strong>cured buds and paper in that chest</strong>; fresh buds
-    off the plant will not do and no crafting table is involved. A different container nearer
-    their spot quietly becomes the one they use.</p>
-    <p class="note">The crew board names the chest it is actually using and marks any taught
-    job the chest cannot currently back, so you never have to guess which of the two it is.</p>
-    <h3 class="sub">Crews on file</h3>
-    <p><code>/crew save &lt;name&gt;</code> writes down who works where and everything
-    they know; <code>/crew load &lt;name&gt;</code> buys the lot back onto the same
-    patches for what it cost the first time. <code>/crew plans</code> lists them. If a
-    crew ever walks over wages it files itself under <code>walkout</code> on the way
-    out, so nothing is ever really lost — only paid for twice.</p>
-    <p class="note">Everything you teach them puts the wage up. A hand you cannot keep
-    busy is a hand losing you money. Miss a payday and you get a notice rather than a
-    walkout: {d['grace']} paydays on nothing, about two days, and paying one packet
-    writes the arrears off.</p>"""))
+    <h3 class="sub">Kiedy któregoś ugryzą</h3>
+    <p>Zombie, które wejdzie przez okno, zamienia lokatora w zombie. Ta osoba jest wtedy
+    <strong>chora</strong>: nic nie zarabia, nie płaci czynszu i nie robi zakupów — gospodarstwu
+    brakuje jednej pensji, dopóki nie wyzdrowieje. Twoja skrzynka mówi kto i na jak długo.</p>
+    <p>Zrób <strong>szpital</strong> i postaw go w budynku, dokładnie tak jak stawiasz skrzynkę
+    w pokoju. Kliknij, a obejdzie ściany i oceni miejsce. Oddział wymaga więcej niż dom:</p>
+    <p>{d['ward_beds']} łóżka · {d['ward_floor']} kratek podłogi · szczelny, z drzwiami ·
+    <strong>ani jednego ciemnego kąta</strong> · {round(d['shell_steps'][1] * 100)}% zbudowane,
+    a nie wykopane · szafka na zaopatrzenie.</p>
+    <p><strong>Łóżka to przepustowość.</strong> Oddział z trzema łóżkami leczy trzy osoby
+    naraz; czwarta czeka, chora, aż zwolni się łóżko. Ugryziony w dowolnym miejscu miasta
+    trafia do najbliższego otwartego oddziału z wolnym łóżkiem i wraca do domu po
+    {d['ward_stay']} dniu.</p>
+    <h3 class="sub">Płaci za to miasto</h3>
+    <p>To pierwsza rzecz, która zabiera pieniądze ze skarbca <em>bez czyjejkolwiek decyzji</em>.
+    Lekarze dostają <strong>{d['ward_fee']}e dziennie za pacjenta</strong>, z kasy miasta do
+    portfela mieszkańców — więc wraca to do ciebie przez drzwi twojego sklepu.
+    <strong>Przychodnia</strong> zbija każdy rachunek o
+    {round((1 - d['ward_clinic_off']) * 100)}%.</p>
+    <p class="note">Pusta kasa miasta oznacza, że nikt nie jest leczony. Chorzy zostają chorzy,
+    gospodarstwo dalej nic nie zarabia, a po {d['ward_lost']} dniach umierają — a jeśli to był
+    lokator, wraz z nim znika najem. Miasto bez szpitala to ta sama historia, tylko bez łóżka
+    do czekania. To jest argument za utrzymywaniem skarbca przy pieniądzach i jedyny w tym
+    modzie, którego stawką jest pogrzeb.</p>"""))
 
-    sections.append(section("10", "heat", "Heat & Raids", "being seen costs something", f"""
-    <p class="lede">A grow in the open gets noticed. Heat is measured over a
-    {d['heat_radius']}-block radius: ripe plants count 3, hidden 2, growing 1, occupied
-    racks 1, presses and refiners 2.</p>
-    {table(["Tier", "Heat", "Who turns up"], heat_rows)}
-    <p>Past the top tier the squad stops growing but the <strong>clock keeps
-    shortening</strong> — twice the cap is twice as often, down to a floor. Building the
-    biggest field that fits is no longer free.</p>
-    <h3 class="sub">They search</h3>
-    <p>A raid does not just swing axes. Raiders walk to your containers, open them, and
-    take product — so hiding a stash underground is worth doing, splitting it across two
-    buildings is worth doing, and standing between them and the chest is worth doing.</p>
-    <p class="note">Sealing the grow in buys time, not safety. If they cannot find a way
-    round they come through the wall. Obsidian stops them; dirt does not.</p>
+    sections.append(section("08b", "clubs", "Kluby nocne", "jeden pokój, jedna decyzja", f"""
+    <p class="lede"><strong>Budka klubowa</strong> postawiona w pokoju robi z tego pokoju klub.
+    Nic nie ocenia budynku i nigdy nie będzie — klub to jedyne miejsce, gdzie liczy się
+    wyłącznie gust, a lista wymagań mówiąca, że brakuje dwóch lamp, byłaby modem projektującym
+    klub za ciebie. Zostaw im miejsce do stania, a sami znajdą drogę do środka.</p>
+    <h3 class="sub">Wstęp</h3>
+    <p>Cena biletu to jedyne pokrętło i jest to prawdziwa decyzja:
+    <strong>od {d['club_door'][0]}e do {d['club_door'][-1]}e</strong>, cztery progi. Tanio
+    zapełnia salę i daje grosze od głowy; drogo to pusta sala za cztery razy większą kasę.
+    Które jest lepsze, zależy od tego, ilu ludzi tu naprawdę mieszka — a miasto rośnie, więc
+    odpowiedź się zmienia.</p>
+    {table(["Wstęp", "Cena", "Przyciąga"], [
+        ["Dla każdego", f"{d['club_door'][0]}e", "wszystkich, którzy nie śpią"],
+        ["Tania noc", f"{d['club_door'][1]}e", "większość z nich"],
+        ["Normalny bilet", f"{d['club_door'][2]}e", "tych z pieniędzmi"],
+        ["Tylko dla członków", f"{d['club_door'][3]}e", "nielicznych, płacących sporo"]])}
+    <h3 class="sub">Kto przychodzi</h3>
+    <p>Twoi właśni lokatorzy, z twoich własnych domów — ci sami ludzie, którzy płacą ci czynsz,
+    z tej samej puli co gracze w kasynie i klienci sklepów. <strong>Wieczór w klubie to wieczór,
+    kiedy ktoś nie siedzi w domu</strong>, nie stoi przy automacie i nie robi zakupów. Jedna
+    osoba jest zawsze w jednym miejscu, a każdy lokal w mieście konkuruje o tych samych
+    sąsiadów.</p>
+    <p>Przychodzą wyłącznie po zmroku. Idą pieszo, jeśli mieszkają na tyle blisko, żeby NPC
+    zaplanował trasę, a jeśli nie — po prostu pojawiają się przy drzwiach. Płacą raz przy
+    wejściu, tańczą przez chwilę, potem wracają do domu i siedzą tam jakiś czas, zanim znów
+    najdzie ich ochota.</p>
+    <p class="note"><strong>Pełna sala robi hałas w okolicy.</strong> Cztery osoby w środku
+    i policja zaczyna się interesować — klub to najgłośniejsza rzecz, jaką możesz mieć, i to
+    jest koszt, którego nie mierzy się w szmaragdach.</p>
+    <p>Utarg leży w kasie, dopóki go nie odbierzesz. Rozbicie budki wysypie go na ziemię,
+    zamiast go skasować.</p>
+    """))
+
+    sections.append(section("09", "crew", "Ekipa", "ktoś, kto zbierze za ciebie", f"""
+    <p class="lede">{d['hire']}e za zatrudnienie, potem {d['wage']}e za każde pięć minut,
+    <strong>kiedy pracują</strong>, niezależnie od tego, czy coś zebrali. {d['max_hands']}
+    osób to maksimum dla jednej ekipy.</p>
+    <p>Domyślnie pracują <strong>tylko za dnia</strong> — o zmroku szukają łóżka na działce
+    i kładą się spać — a licznik pensji staje razem z nimi, więc noce nic nie kosztują.
+    Przestaw kogoś <strong>na nocną zmianę</strong> z tablicy, a nie przestanie pracować
+    w ogóle: +{round((d['night_rate'] - 1) * 100)}% do pensji <em>oraz</em> licznik chodzący
+    całą noc, czyli mniej więcej dwa razy więcej wypłat na godzinę za dwa razy więcej pracy.
+    Robią sobie przerwę co {d['jobs_per_shift']} czynności, a przerwa jest ułamkiem zmiany,
+    a nie stałą minutą, więc szybki robotnik odpoczywa tak krótko, jak pracuje. Nie zdepczą
+    twojej zaoranej ziemi, nie ściągną suszu z suszarki za wcześnie ani nie użyją mączki
+    na twoich uprawach.</p>
+    <p>Działka działa niezależnie od tego, gdzie jesteś, byle byś był zalogowany — nie musisz
+    nad nikim stać. Jeśli ktoś się zapodzieje albo coś go zje, <strong>bat</strong> na tablicy
+    ekipy ściąga go z powrotem, a jeśli ciała nie ma — stawia wyszkolone zastępstwo.</p>
+    <p>Każdy ma <strong>własne miejsce pracy</strong> — tam, gdzie stałeś, gdy go zatrudniałeś —
+    i da się je przenieść. Idź na nowe pole, otwórz tablicę i <strong>Pracuj tutaj</strong>
+    przenosi miejsce razem z człowiekiem, także między wymiarami. Zapominają stare łóżko
+    i starą skrzynię, i znajdują nowe.</p>
+    <h3 class="sub">Tempo</h3>
+    {table(["Poziom", "Czynność co", "Koszt", "Pensja"], pace_rows)}
+    <h3 class="sub">Zawody</h3>
+    {table(["Zawód", "Koszt", "Pensja", "Co robi"], job_rows)}
+    <p>Powyższe czasy to to, co zmierzyłbyś stoperem, razem z przerwą — a nie surowy odstęp
+    między przebiegami.</p>
+    <h3 class="sub">Jedna skrzynia</h3>
+    <p>To jest rzecz, którą wszyscy mylą. Robotnik korzysta z <strong>pojemnika najbliższego
+    swojemu miejscu pracy</strong> — tego jednego i żadnego innego — do wszystkiego: tam wkłada
+    plony i stamtąd bierze materiały. Skręcanie wymaga <strong>suszonych szyszek i papieru
+    w tej skrzyni</strong>; świeże szyszki prosto z rośliny nie wystarczą, a stół rzemieślniczy
+    nie jest w to zamieszany. Inny pojemnik postawiony bliżej po cichu staje się tym używanym.</p>
+    <p class="note">Tablica ekipy pokazuje, z której skrzyni faktycznie korzysta, i oznacza
+    każdy wyuczony zawód, którego skrzynia aktualnie nie jest w stanie obsłużyć, więc nigdy
+    nie musisz zgadywać, o którą z dwóch chodzi.</p>
+    <h3 class="sub">Zapisane ekipy</h3>
+    <p><code>/crew save &lt;nazwa&gt;</code> zapisuje, kto gdzie pracuje i co umie;
+    <code>/crew load &lt;nazwa&gt;</code> odkupuje całość na te same działki za tyle, ile
+    kosztowało za pierwszym razem. <code>/crew plans</code> pokazuje listę. Jeśli ekipa
+    kiedykolwiek odejdzie przez brak wypłat, zapisuje się sama pod nazwą <code>walkout</code>,
+    więc nic naprawdę nie przepada — po prostu płacisz drugi raz.</p>
+    <p class="note">Wszystko, czego ich uczysz, podnosi pensję. Robotnik, którego nie masz czym
+    zająć, to strata pieniędzy. Za spóźnioną wypłatę dostajesz ostrzeżenie, a nie odejście:
+    {d['grace']} wypłat na zero, czyli około dwóch dni, a zapłacenie jednej umarza całe
+    zaległości.</p>"""))
+
+    sections.append(section("10", "heat", "Policja i naloty", "bycie widzianym kosztuje", f"""
+    <p class="lede">Uprawa na widoku zostaje zauważona. Uwaga policji liczona jest w promieniu
+    {d['heat_radius']} bloków: dojrzałe rośliny liczą się po 3, ukryte po 2, rosnące po 1,
+    zajęte suszarki po 1, prasy i rafinerie po 2.</p>
+    {table(["Próg", "Punkty", "Kto przychodzi"], heat_rows)}
+    <p>Powyżej najwyższego progu oddział przestaje rosnąć, ale <strong>przerwy między nalotami
+    dalej się skracają</strong> — dwa razy więcej punktów niż limit to dwa razy częściej, aż do
+    dolnej granicy. Budowanie największego pola, jakie się mieści, przestało być darmowe.</p>
+    <h3 class="sub">Przeszukują</h3>
+    <p>Nalot to nie tylko machanie toporami. Napastnicy podchodzą do twoich pojemników,
+    otwierają je i zabierają towar — więc chowanie zapasu pod ziemią ma sens, rozdzielenie go
+    na dwa budynki ma sens, i stanięcie im na drodze też ma sens.</p>
+    <p class="note">Zamurowanie uprawy kupuje czas, nie bezpieczeństwo. Jak nie znajdą drogi
+    dookoła, wejdą przez ścianę. Obsydian ich zatrzymuje, ziemia nie.</p>
     {quotes}"""))
 
-    sections.append(section("11", "street", "The Street", "paranoia, phones and people", f"""
-    <p class="lede">Everything that is not a product line.</p>
+    sections.append(section("11", "street", "Ulica", "paranoja, telefony i ludzie", f"""
+    <p class="lede">Wszystko, co nie jest linią produkcyjną.</p>
     <div class="cards">
-      <div class="card reveal"><h4>Paranoia</h4><p>A meter that builds from heat, how
-      high you are, darkness, night and being alone — and decays in daylight, sober, or
-      <em>near another player</em>. Four tiers, from noises behind you to a motionless
-      figure at render distance. None of it is real. Nothing is ever
-      spawned, nothing touches your build, and nobody else can see it.</p></div>
-      <div class="card reveal"><h4>Contracts</h4><p>A burner phone is a job board:
-      the same five deliveries all day, so you can look at the board in the
-      morning and plan around it. Jobs are advertised cold and the heat premium is settled at the drop —
-      you are paid for risk you actually ran. Capped at {d['payout_ceiling']}e.</p></div>
-      <div class="card reveal"><h4>Reputation</h4><p>It lives on the phone itself, so lending
-      somebody your phone lends them your name — and losing it loses the standing
-      with it. Capped at {d['rep_max']}, because it feeds four multipliers at
-      once and three of them used to be unbounded.</p></div>
-      <div class="card reveal"><h4>Dealers</h4><p>The first thing you own that works
-      while you are not there. They take a cut, sell far better at night than at noon,
-      get in each other's way if you crowd a patch, and the cheap ones get robbed.</p></div>
-      <div class="card reveal"><h4>The Ledger</h4><p>Book, compass and two amethyst.
-      Reads every container within 32 blocks — shulker boxes included — and draws a line
-      of light to whichever chest holds what you clicked.</p></div>
-      <div class="card reveal"><h4>Stickups</h4><p>The farm raid comes for the plants.
-      This comes for <em>you</em>, at the moment you hand product over in person. It is
-      the price of dealing yourself instead of paying somebody else to.</p></div>
+      <div class="card reveal"><h4>Paranoja</h4><p>Licznik, który rośnie od uwagi policji,
+      poziomu odurzenia, ciemności, nocy i samotności — a spada w świetle dnia, na trzeźwo
+      albo <em>w pobliżu innego gracza</em>. Cztery poziomy, od dźwięków za plecami po
+      nieruchomą postać na granicy zasięgu widzenia. Nic z tego nie jest prawdziwe. Nic nie
+      jest spawnowane, nic nie dotyka twojej budowli i nikt inny tego nie widzi.</p></div>
+      <div class="card reveal"><h4>Zlecenia</h4><p>Telefon na kartę to tablica ogłoszeń:
+      te same pięć dostaw przez cały dzień, więc możesz rano spojrzeć na listę i zaplanować
+      wokół niej. Zlecenia są wyceniane na zimno, a premia za uwagę policji rozliczana przy
+      odbiorze — płacą ci za ryzyko, które naprawdę podjąłeś. Limit: {d['payout_ceiling']}e.</p></div>
+      <div class="card reveal"><h4>Reputacja</h4><p>Siedzi w samym telefonie, więc pożyczenie
+      komuś telefonu to pożyczenie mu swojego nazwiska — a zgubienie go to utrata pozycji
+      razem z nim. Limit: {d['rep_max']}, bo zasila naraz cztery mnożniki, a trzy z nich były
+      kiedyś nieograniczone.</p></div>
+      <div class="card reveal"><h4>Dilerzy</h4><p>Pierwsza rzecz, jaką posiadasz, a która działa,
+      kiedy ciebie nie ma. Biorą prowizję, sprzedają dużo lepiej nocą niż w południe, wchodzą
+      sobie w drogę, jeśli stłoczysz ich w jednym miejscu, a tani dają się okradać.</p></div>
+      <div class="card reveal"><h4>Spis skrzyń</h4><p>Książka, kompas i dwa ametysty.
+      Czyta każdy pojemnik w promieniu 32 bloków — łącznie z shulkerami — i rysuje świetlną
+      linię do skrzyni, w której leży to, co kliknąłeś.</p></div>
+      <div class="card reveal"><h4>Napady</h4><p>Nalot na farmę przychodzi po rośliny. To
+      przychodzi po <em>ciebie</em>, w chwili gdy osobiście przekazujesz towar. To cena za
+      handlowanie samemu, zamiast opłacenia kogoś innego.</p></div>
     </div>"""))
 
-    sections.append(section("12", "casino", "The House", "seven games and a vault", f"""
-    <p class="lede">A casino is a bankroll and a set of machines wired to it. The
-    bankroll lives in the ledger, not on the card — the card is the key, so a machine
-    can pay a winner at four in the morning while the owner is offline.</p>
-    {table(["Cabinet", "Return to player"], slot_rows)}
-    <p>Roulette is a <strong>single-zero wheel</strong>: {d['roulette_pockets']} pockets,
-    and every bet on the table carries the same edge, so the choice is purely how you
-    want to lose it. The Climb pays {d['climb_return'] * 100:.1f}% at
-    <em>every</em> rung — there is no correct place to stop, which makes it nerve rather
-    than arithmetic.</p>
-    <h3 class="sub">Where the punters come from</h3>
-    <p><strong>The town.</strong> Punters are people and people live in houses, so trade
-    scales with the housed population up to {d['pull_at']} grades — and a floor with no city
-    behind it gets only the {round(d['pull_floor'] * 100)}% who were walking past. Reputation
-    and addiction still do the rest, and they still have to be earned.</p>
-    <h3 class="sub">Machines wear out, and it shows</h3>
-    <p>Every cabinet gains a wear point about one round in {d['wear_per_rounds']}, and dies at
-    {d['wear_broken']}. Past <strong>{d['jam_from']}</strong> it starts swallowing money and
-    sending punters back out of the door, so the hammer pays for itself in trade rather than
-    in tidiness. The card shows the worst cabinet on the floor and you get told the moment one
-    crosses the line.</p>
-    <p class="note">A floor is a business, not a tap. Punters have to be served from
-    your own stash, a pit boss costs a flat wage against a proportional skim, and an
-    unattended floor earns very close to nothing.</p>"""))
+    sections.append(section("12", "casino", "Kasyno", "siedem gier i skarbiec", f"""
+    <p class="lede">Kasyno to skarbiec i zestaw podłączonych do niego automatów. Pieniądze
+    leżą w księgach, a nie na karcie — karta jest tylko kluczem, więc automat może wypłacić
+    wygraną o czwartej nad ranem, kiedy właściciel jest offline.</p>
+    {table(["Plansza", "Zwrot dla gracza"], slot_rows)}
+    <p>Ruletka ma <strong>jedno zero</strong>: {d['roulette_pockets']} pól, a każdy zakład
+    na stole ma tę samą przewagę kasyna, więc wybór to wyłącznie kwestia tego, jak chcesz
+    przegrać. Wspinaczka zwraca {d['climb_return'] * 100:.1f}% na <em>każdym</em> szczeblu —
+    nie ma dobrego momentu na przerwanie, przez co to kwestia nerwów, a nie matematyki.</p>
+    <h3 class="sub">Skąd biorą się gracze</h3>
+    <p><strong>Z miasta.</strong> Gracze to ludzie, a ludzie mieszkają w domach, więc obrót
+    rośnie razem z liczbą mieszkańców aż do {d['pull_at']} klas — a kasyno bez miasta za
+    plecami dostaje tylko {round(d['pull_floor'] * 100)}% z tych, którzy akurat przechodzili
+    obok. Reputacja i uzależnienie robią resztę i wciąż trzeba na nie zapracować.</p>
+    <h3 class="sub">Automaty się zużywają i widać to</h3>
+    <p>Każdy automat zbiera punkt zużycia mniej więcej raz na {d['wear_per_rounds']} rund
+    i pada przy {d['wear_broken']}. Powyżej <strong>{d['jam_from']}</strong> zaczyna połykać
+    pieniądze i odsyłać graczy z powrotem do drzwi, więc młot zwraca się w obrocie, a nie
+    w porządku na sali. Karta pokazuje najgorszy automat na sali i dostajesz info w chwili,
+    gdy któryś przekroczy granicę.</p>
+    <h3 class="sub">Bar to twoja przewaga</h3>
+    <p>Sam automat zostawia jakieś trzy procent, a haracz, części i okazjonalny oszust
+    zjadają to w całości — sala jadąca wyłącznie na tabeli wypłat zarabia mniej więcej nic.
+    Płaci <strong>to, co jest za ladą baru</strong>. Każdy wchodzący dostaje kolejkę z twojego
+    zapasu, a ktoś po czterech rundach na twoim własnym towarze gra gorzej, niż grał na
+    wejściu: <strong>{round(d['served_edge_product'] * 100)} punktów</strong> mniej odzyskuje,
+    wobec {round(d['served_edge_food'] * 100)} u gracza karmionego chlebem. Pusty bar oznacza
+    trzeźwych graczy grających zgodnie z tabelą, po jednej grze każdy, i pustoszejącą salę.</p>
+    <p class="note">Sala to biznes, nie kran. Graczy trzeba obsługiwać własnym towarem, szef
+    sali kosztuje stałą pensję przeciwko proporcjonalnym kradzieżom, a sala bez opieki zarabia
+    prawie zero.</p>"""))
 
     cmd_rows = [
-        ["<code>/wiki</code>", "This page, as a clickable link in chat"],
+        ["<code>/wiki</code>", "Ta strona, jako klikalny link na czacie"],
         ["<code>/guide</code>",
-         "Seven handbooks — grower, refiner, street, crew, casino, city, housing"],
-        ["<code>/guide housing</code>", "Houses, grades, and where a resident's money comes from"],
-        ["<code>/market</code>", "Why everything costs what it costs"],
-        ["<code>/stalls</code>", "Who is selling, and where"],
-        ["<code>/city</code>", "The purse, the current duties, and what each has raised"],
-        ["<code>/law</code>", "The constitution, written the moment you ask"],
-        ["<code>/homes</code>", "Every house on the register, and its grade"],
-        ["<code>/shops</code>", "Every market shelf, and how many townspeople there are"],
-        ["<code>/homes demolish</code>", "Take the house you're stood in off the register"],
-        ["<code>/homes evict</code>", "Clear a tenant standing about with no house behind them"],
-        ["<code>/crew</code>", "The crew board — hire, train, pay"],
-        ["<code>/heat</code>", "How hot this spot is, and what it would bring"],
-        ["<code>/paranoia</code>", "Turn the whole thing off, per player"],
-        ["<code>/earnings</code>", "Today's takings, everybody, by job"],
-        ["<code>/sethome · /home · /spawn · /back</code>", "Getting about"],
+         "Dziewięć poradników — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania"],
+        ["<code>/guide housing</code>", "Domy, klasy i skąd lokatorzy biorą pieniądze"],
+        ["<code>/market</code>", "Dlaczego wszystko kosztuje tyle, ile kosztuje"],
+        ["<code>/stalls</code>", "Kto sprzedaje i gdzie"],
+        ["<code>/city</code>", "Kasa miasta, aktualne podatki i ile każdy zebrał"],
+        ["<code>/law</code>", "Prawo miasta, spisane w chwili, gdy o nie poprosisz"],
+        ["<code>/homes</code>", "Każdy dom w rejestrze i jego klasa"],
+        ["<code>/shops</code>", "Wszystkie sklepy i liczba mieszkańców"],
+        ["<code>/homes demolish</code>", "Zdejmij z rejestru dom, w którym stoisz"],
+        ["<code>/homes evict</code>", "Usuń lokatora kręcącego się bez domu"],
+        ["<code>/crew</code>", "Tablica ekipy — zatrudnianie, szkolenie, pensje"],
+        ["<code>/heat</code>", "Jak gorąco jest w tym miejscu i co z tego wyniknie"],
+        ["<code>/paranoia</code>", "Wyłącz całość, osobno dla każdego gracza"],
+        ["<code>/earnings</code>", "Dzisiejsze zarobki wszystkich, według źródła"],
+        ["<code>/sethome · /home · /spawn · /back</code>", "Przemieszczanie się"],
     ]
-    sections.append(section("13", "commands", "Commands", "everything answers only you", f"""
-    <p class="lede">Every command answers only the person who typed it, so nothing you run gets
-    announced to everybody else.</p>
-    {table(["Command", "What it does"], cmd_rows)}"""))
+    sections.append(section("13", "commands", "Komendy", "każda odpowiada tylko tobie", f"""
+    <p class="lede">Każda komenda odpowiada wyłącznie osobie, która ją wpisała, więc nic, co
+    uruchomisz, nie jest ogłaszane reszcie serwera.</p>
+    {table(["Komenda", "Co robi"], cmd_rows)}"""))
 
-    sections.append(section("14", "awards", "Advancements",
-                            f"{len(d['awards'])} of them", f"""
-    <p class="lede">These are proper advancements — they turn up in your advancements screen like
-    any others, with a toast when you earn one.</p>
-    {table(["Name", "How", "Kind"], award_rows)}"""))
+    sections.append(section("14", "awards", "Osiągnięcia",
+                            f"jest ich {len(d['awards'])}", f"""
+    <p class="lede">To są prawdziwe osiągnięcia — pojawiają się w ekranie osiągnięć jak
+    wszystkie inne, razem z powiadomieniem, gdy je zdobędziesz.</p>
+    {table(["Nazwa", "Jak zdobyć", "Rodzaj"], award_rows)}"""))
 
     body = "".join(sections)
 
@@ -1356,14 +1469,14 @@ def build() -> str:
 
 
 TEMPLATE = """<!doctype html>
-<html lang="en">
+<html lang="pl">
 <script>document.documentElement.className='js'</script>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TrapCraft — Field Manual</title>
-<meta name="description" content="TrapCraft: growing, curing, refining, the market,
-stalls, crew, heat and the casino. Everything in the game, in one place.">
+<title>TrapCraft — Poradnik terenowy</title>
+<meta name="description" content="TrapCraft: uprawa, suszenie, rafinacja, rynek,
+stragany, ekipa, policja i kasyno. Cała gra w jednym miejscu.">
 <meta name="theme-color" content="#0c0b0a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1699,34 +1812,34 @@ footer a:hover {{ text-decoration: underline; }}
 <div class="wrap">
   <nav class="rail">
     <div class="rail-in">
-      <div class="brand"><b>TrapCraft</b><span>field manual</span></div>
+      <div class="brand"><b>TrapCraft</b><span>poradnik terenowy</span></div>
       {nav}
     </div>
   </nav>
 
   <div>
     <header class="hero">
-      <p class="eyebrow">Everything in the game · in one place</p>
-      <h1>Everything<em>is somebody&#39;s business.</em></h1>
-      <p>A market that breathes, a floor that wears out, hands on wages, and a raid
-      that searches your chests. The complete reference — generated from the mod&#39;s
-      own source, so it cannot go stale.</p>
+      <p class="eyebrow">Cała gra · w jednym miejscu</p>
+      <h1>Wszystko<em>jest czyimś interesem.</em></h1>
+      <p>Rynek, który żyje, sala kasyna, która się zużywa, ludzie na pensji i nalot,
+      który przeszukuje twoje skrzynie. Pełna dokumentacja — generowana wprost ze
+      źródeł moda, więc nie może się zdezaktualizować.</p>
       <div class="figs">
-        <div><b>{lines}</b><span>priced lines</span></div>
-        <div><b>{strains}</b><span>strains</span></div>
-        <div><b>203</b><span>blends</span></div>
-        <div><b>{awards}</b><span>advancements</span></div>
+        <div><b>{lines}</b><span>wycenionych pozycji</span></div>
+        <div><b>{strains}</b><span>odmian</span></div>
+        <div><b>203</b><span>mieszanek</span></div>
+        <div><b>{awards}</b><span>osiągnięć</span></div>
       </div>
     </header>
 
     <main>{sections}</main>
 
     <footer>
-      <p>Every price, timing and grade on this page comes straight out of the game,
-      so the page changes when the game does. If a number here looks wrong, it is
-      the game that moved.</p>
-      <p>There are five handbooks inside the game too — type <code>/guide</code>.
-      Same numbers, fewer words, and you can read them without leaving the farm.</p>
+      <p>Każda cena, każdy czas i każda klasa na tej stronie pochodzą wprost z gry,
+      więc strona zmienia się razem z nią. Jeśli któraś liczba wygląda źle, to
+      znaczy, że zmieniła się gra.</p>
+      <p>W samej grze są też poradniki — wpisz <code>/guide</code>. Te same liczby,
+      mniej słów, i można je czytać bez wychodzenia z plantacji.</p>
     </footer>
   </div>
 </div>

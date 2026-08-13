@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.serialization.MapCodec;
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -19,12 +18,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Step one of the coca line: leaves in, paste out.
@@ -34,7 +37,7 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * there's no window to miss here; pressing is the boring reliable step, and
  * the actual decision lives in the refiner.
  */
-public class LeafPressBlock extends Block implements PolymerTexturedBlock {
+public class LeafPressBlock extends TurnableBlock implements PolymerTexturedBlock {
     public static final MapCodec<LeafPressBlock> CODEC = createCodec(LeafPressBlock::new);
 
     public static final BooleanProperty LOADED = BooleanProperty.of("loaded");
@@ -54,24 +57,21 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
     public static final int LEAVES_PER_BATCH = 5;
     private static final int STEP_TICKS = 600;   // 30s a step, 90s total
 
-    private final BlockState emptyState;
-    private final BlockState[] workingStates = new BlockState[DONE + 1];
+    private final Map<Direction, BlockState> emptyCarriers;
+    private final List<Map<Direction, BlockState>> workingCarriers = new ArrayList<>();
 
     public LeafPressBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.stateManager.getDefaultState()
+        this.setDefaultState(getDefaultState()
                 .with(LOADED, false).with(PROGRESS, 0));
 
-        this.emptyState = TrapPolymer.requestOrFallback(
-                BlockModelType.FULL_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/leaf_press_empty")),
-                () -> Blocks.SMOOTH_STONE.getDefaultState(), "leaf_press_empty");
+        // Four carriers per model rather than one: a press with a screw handle
+        // on the front is worth turning to face the room.
+        this.emptyCarriers = carriers(BlockModelType.FULL_BLOCK, "leaf_press_empty",
+                () -> Blocks.SMOOTH_STONE.getDefaultState());
         for (int step = 0; step <= DONE; step++) {
-            String name = "leaf_press_" + step;
-            this.workingStates[step] = TrapPolymer.requestOrFallback(
-                    BlockModelType.FULL_BLOCK,
-                    PolymerBlockModel.of(Identifier.of("trapcraft:block/" + name)),
-                    () -> Blocks.SMOOTH_STONE.getDefaultState(), name);
+            this.workingCarriers.add(carriers(BlockModelType.FULL_BLOCK,
+                    "leaf_press_" + step, () -> Blocks.SMOOTH_STONE.getDefaultState()));
         }
     }
 
@@ -82,6 +82,7 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+        super.appendProperties(builder);
         builder.add(LOADED, PROGRESS);
     }
 
@@ -245,6 +246,8 @@ public class LeafPressBlock extends Block implements PolymerTexturedBlock {
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return state.get(LOADED) ? workingStates[state.get(PROGRESS)] : emptyState;
+        return (state.get(LOADED)
+                ? workingCarriers.get(state.get(PROGRESS))
+                : emptyCarriers).get(state.get(FACING));
     }
 }

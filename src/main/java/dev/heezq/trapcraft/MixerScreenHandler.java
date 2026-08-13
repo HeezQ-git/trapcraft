@@ -180,18 +180,18 @@ public class MixerScreenHandler extends ScreenHandler {
         help.set(DataComponentTypes.CUSTOM_NAME,
                 plain("Mixing Station").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD));
         help.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("1.", Formatting.YELLOW).append(plain(" Put " + Blend.MIN_PARTS + " to "
-                        + Blend.MAX_PARTS + " kinds of dried bud in the").formatted(Formatting.GRAY)),
-                line("    four slots. Whole stacks are fine.", Formatting.GRAY),
-                line("2.", Formatting.YELLOW).append(plain(" Click the jar on the right.")
+                line("1.", Formatting.YELLOW).append(plain(" Włóż od " + Blend.MIN_PARTS + " do "
+                        + Blend.MAX_PARTS + " rodzajów suszu w cztery").formatted(Formatting.GRAY)),
+                line("    sloty. Całe stacki są OK.", Formatting.GRAY),
+                line("2.", Formatting.YELLOW).append(plain(" Kliknij słoik po prawej.")
                         .formatted(Formatting.GRAY)),
                 Text.empty(),
-                line("It runs the whole load at once, as many", Formatting.WHITE),
-                line("jars as the shortest slot allows.", Formatting.WHITE),
+                line("Przerabia cały wsad naraz -- tyle słoików,", Formatting.WHITE),
+                line("ile pozwoli najmniej zapełniony slot.", Formatting.WHITE),
                 Text.empty(),
-                line("Repeats count. Two Kush and a Purp is", Formatting.DARK_GRAY),
-                line("not the same as one of each.", Formatting.DARK_GRAY),
-                line("Grade follows your WORST slot.", Formatting.DARK_GRAY),
+                line("Powtórki się liczą. Dwa Kush i Purp to", Formatting.DARK_GRAY),
+                line("nie to samo, co po jednym z każdego.", Formatting.DARK_GRAY),
+                line("Klasa idzie z NAJGORSZEGO slotu.", Formatting.DARK_GRAY),
                 line("Some combinations have names.", Formatting.DARK_GRAY))));
         display.setStack(HELP_SLOT, help);
 
@@ -206,9 +206,9 @@ public class MixerScreenHandler extends ScreenHandler {
             empty.set(DataComponentTypes.CUSTOM_NAME,
                     plain("Nothing to mix yet").formatted(Formatting.GRAY, Formatting.BOLD));
             empty.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line(count == 0 ? "The slots are empty."
+                    line(count == 0 ? "Sloty są puste."
                                     : count < Blend.MIN_PARTS
-                                    ? "One kind of bud isn't a mix. Add another."
+                                    ? "Jeden rodzaj suszu to nie mieszanka. Dodaj drugi."
                                     : "Only dried buds go in here.",
                             Formatting.GRAY),
                     line(count + " of " + Blend.MAX_PARTS + " slots filled",
@@ -221,7 +221,7 @@ public class MixerScreenHandler extends ScreenHandler {
             List<Text> lore = new ArrayList<>(
                     result.getOrDefault(DataComponentTypes.LORE, LoreComponent.DEFAULT).lines());
             lore.add(Text.empty());
-            lore.add(line("Click to mix", Formatting.YELLOW, Formatting.BOLD));
+            lore.add(line("Kliknij, żeby zmieszać", Formatting.YELLOW, Formatting.BOLD));
             lore.add(line("Makes " + jars, Formatting.WHITE)
                     .append(plain(", using " + (jars * count) + " buds.")
                             .formatted(Formatting.DARK_GRAY)));

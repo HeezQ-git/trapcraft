@@ -268,7 +268,7 @@ public final class TrapDealers {
         OFFERS.put(boss.getUuid(), offers);
         DRAWN.put(boss.getUuid(), boss.getServer().getTicks());
         if (paid) {
-            boss.sendMessage(Text.literal("Asked around again.").formatted(Formatting.GRAY),
+            boss.sendMessage(Text.literal("Popytano jeszcze raz.").formatted(Formatting.GRAY),
                     false);
         }
     }
@@ -286,7 +286,7 @@ public final class TrapDealers {
     /** @return why it didn't happen, or null if it did */
     public static String hire(ServerPlayerEntity boss, Dealer offer) {
         if (of(boss).size() >= MAX_DEALERS) {
-            return "You can't run more than " + MAX_DEALERS + " at once.";
+            return "Nie możesz mieć więcej niż " + MAX_DEALERS + " dilerów naraz.";
         }
         int cost = TrapMath.dealerHireCost(offer.level,
                 TrapContracts.repOf(TrapContracts.findPhone(boss)));
@@ -300,7 +300,7 @@ public final class TrapDealers {
         save();
 
         boss.sendMessage(Text.literal(offer.name).formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal(" is on. Call them in and load them up.")
+                .append(Text.literal(" jest w ekipie. Wezwij go i załaduj towarem.")
                         .formatted(Formatting.GRAY)), false);
         TrapAwards.grant(boss, "network");
         return null;
@@ -317,7 +317,7 @@ public final class TrapDealers {
         sendHome(boss.getServer(), dealer);
         BOOK.remove(dealer);
         save();
-        boss.sendMessage(Text.literal(dealer.name + " is done. Gear and takings returned.")
+        boss.sendMessage(Text.literal(dealer.name + " kończy. Towar i utarg wracają do ciebie.")
                 .formatted(Formatting.GRAY), false);
     }
 
@@ -331,7 +331,7 @@ public final class TrapDealers {
             // wipe, whatever -- the record would otherwise wedge forever with
             // no way to call him back.
             if (findBody(boss.getServer(), dealer) != null) {
-                return dealer.name + " is already here.";
+                return dealer.name + " już tu jest.";
             }
             dealer.mob = null;
         }
@@ -383,7 +383,7 @@ public final class TrapDealers {
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 spot.getX() + 0.5, spot.getY() + 1.5, spot.getZ() + 0.5, 8, 0.3, 0.3, 0.3, 0.01);
         boss.sendMessage(Text.literal(dealer.name).formatted(Formatting.GOLD)
-                .append(Text.literal(" turned up. Right-click to open the book.")
+                .append(Text.literal(" przyszedł. Kliknij PPM, żeby otworzyć zeszyt.")
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -427,8 +427,8 @@ public final class TrapDealers {
         save();
         boss.sendMessage(Text.literal(dealer.name).formatted(Formatting.GOLD)
                 .append(Text.literal(dealer.stock.isEmpty()
-                                ? " went back out. They've got nothing to sell, mind."
-                                : " went back out with " + dealer.carrying() + " on them.")
+                                ? " wrócił na ulicę. Tylko nie ma czego sprzedawać."
+                                : " wrócił na ulicę z towarem: " + dealer.carrying() + ".")
                         .formatted(dealer.stock.isEmpty()
                                 ? Formatting.RED : Formatting.GRAY)), false);
     }

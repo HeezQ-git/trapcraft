@@ -628,6 +628,63 @@ class SurveyTest {
         assertEquals(0, HomeSurvey.moodTarget(0, 0, -1), "nobody stays in a condemned house");
     }
 
+    /** An empty house is a wait, and the grade is how long a wait. */
+    @Test
+    void betterHousesAreTakenSooner() {
+        assertEquals(0f, HomeSurvey.lettingOdds(0), "nobody moves into a condemned house");
+        float last = 0f;
+        for (int tier = 1; tier <= HomeSurvey.TOP_TIER; tier++) {
+            float odds = HomeSurvey.lettingOdds(tier);
+            assertTrue(odds > last, "grade " + tier + " must fill faster than the one below");
+            assertTrue(odds > 0f && odds < 1f,
+                    "it has to stay a roll, not a certainty: grade " + tier + " is " + odds);
+            last = odds;
+        }
+        // The whole point of the wait: a hovel is days behind a palace.
+        assertTrue(1f / HomeSurvey.lettingOdds(1) - 1f / HomeSurvey.lettingOdds(
+                        HomeSurvey.TOP_TIER) > 2f,
+                "the gap between worst and best has to be worth building for");
+    }
+
+    /**
+     * The notice, which is asked rather than remembered.
+     *
+     * Two things have to hold or the mechanic is broken in a way no session
+     * would show up: the answer must never change for a given house and day --
+     * that is what makes it survive a restart when nothing on disk records it
+     * -- and consecutive days must be independent, because a seed the RNG
+     * barely scrambles would have tenants quitting in runs and whole streets
+     * emptying on the same morning.
+     */
+    @Test
+    void aTenantCanJustGiveNotice() {
+        int houses = 200;
+        int days = 500;
+        int quits = 0;
+        int runs = 0;
+        for (int house = 0; house < houses; house++) {
+            long who = house * 7919L - 3;   // ids are all over the place; so is this
+            for (int day = 0; day < days; day++) {
+                boolean today = HomeSurvey.quitting(who, day);
+                assertEquals(today, HomeSurvey.quitting(who, day),
+                        "the same house on the same day must answer the same way, or a "
+                                + "restart cancels a notice that is already on the mailbox");
+                if (today) {
+                    quits++;
+                    if (HomeSurvey.quitting(who, day + 1)) {
+                        runs++;
+                    }
+                }
+            }
+        }
+        float rate = quits / (float) (houses * days);
+        assertTrue(Math.abs(rate - HomeSurvey.QUIT_ODDS) < 0.005f,
+                "notices should land near " + HomeSurvey.QUIT_ODDS + " a day, got " + rate);
+        assertTrue(runs / (float) (houses * days) < 0.005f,
+                "two notices back to back should be as rare as chance, got " + runs
+                        + " -- a seed that is not stirred quits in runs");
+    }
+
     @Test
     void moodMovesADayAtATime() {
         assertEquals(HomeSurvey.MOOD_START + HomeSurvey.MOOD_STEP,

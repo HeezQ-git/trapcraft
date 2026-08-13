@@ -73,7 +73,7 @@ public final class TrapShops {
     /** What the owner may set their prices to, against the standard rate. */
     public static final int[] MARKUP = {75, 90, 100, 115, 135};
     public static final String[] MARKUP_NAME = {
-            "Cut-price", "Keen", "Going rate", "Dear", "Daylight robbery"};
+            "Bardzo tanio", "Tanio", "Cena rynkowa", "Drogo", "Zdzierstwo"};
 
     private static final int CHECK_INTERVAL = 20 * 20;
     private static final float PULL = 0.06f;
@@ -99,6 +99,16 @@ public final class TrapShops {
     private static final int PATIENCE = 20 * 20;
     private static final int COUNTER = 3;
     private static final int LEAVE_TICKS = 20 * 8;
+    /**
+     * How long somebody is at work, in world ticks.
+     *
+     * A quarter of a day, and it is a span rather than a moment because the
+     * body is gone for the whole of it -- see {@link TrapHomes#goToWork}. The
+     * exact number matters less than it looks: they come back on the housing
+     * register's next pass over their house, so a big town is a few seconds
+     * over rather than to the tick.
+     */
+    private static final int SHIFT_TICKS = 20 * 60 * 5;
 
     /** One business: a till, a name, a price policy and a cash register. */
     public static final class Shop {
@@ -354,15 +364,15 @@ public final class TrapShops {
         }
         SHOPS.add(new Shop(world.getRegistryKey().getValue().toString(), pos.toImmutable(),
                 owner.getUuid(), owner.getGameProfile().getName(),
-                owner.getGameProfile().getName() + "'s shop"));
+                "Sklep " + owner.getGameProfile().getName()));
         save();
-        owner.sendMessage(Text.literal("Shop open. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal("Put market shelves within " + REACH + " blocks and "
-                        + "they join it. Open a shelf and fill it -- that's your stock.")
+        owner.sendMessage(Text.literal("Sklep otwarty. ").formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal("Postaw półki w promieniu " + REACH + " bloków, a same "
+                        + "się podłączą. Otwórz półkę i włóż towar.")
                         .formatted(Formatting.GRAY)), false);
         if (!TrapCity.founded()) {
-            owner.sendMessage(Text.literal("There's no city yet, so there's nobody to "
-                    + "shop here.").formatted(Formatting.DARK_GRAY), false);
+            owner.sendMessage(Text.literal("Nie ma jeszcze miasta, więc nie ma komu "
+                    + "tu kupować.").formatted(Formatting.DARK_GRAY), false);
         }
     }
 
@@ -386,12 +396,12 @@ public final class TrapShops {
         save();
         Shop shop = ownerOf(shelf);
         owner.sendMessage(shop == null
-                ? Text.literal("A shelf with no shop. ").formatted(Formatting.YELLOW)
-                        .append(Text.literal("Put a shop till within " + REACH
-                                + " blocks and it'll join.").formatted(Formatting.GRAY))
-                : Text.literal("Joined ").formatted(Formatting.GREEN)
+                ? Text.literal("Półka bez sklepu. ").formatted(Formatting.YELLOW)
+                        .append(Text.literal("Postaw kasę sklepową w promieniu " + REACH
+                                + " bloków, a się podłączy.").formatted(Formatting.GRAY))
+                : Text.literal("Podłączono do ").formatted(Formatting.GREEN)
                         .append(Text.literal(shop.name).formatted(Formatting.GOLD))
-                        .append(Text.literal(". Right-click it to stock it.")
+                        .append(Text.literal(". Kliknij PPM, żeby ją zapełnić.")
                                 .formatted(Formatting.GRAY)), false);
     }
 
@@ -469,7 +479,7 @@ public final class TrapShops {
             shop.lastPaid = -1;
             sendHome(owner.getServer(), shop);
             save();
-            return "They've gone home. The counter is yours again.";
+            return "Poszedł do domu. Lada znowu jest twoja.";
         }
         // Their first day starts NOW. Without this line lastPaid is whatever it
         // was -- the day they last walked out, or -1 -- so the wage round ten
@@ -486,11 +496,11 @@ public final class TrapShops {
             stand(world, shop);
         }
         save();
-        return "Hired. " + KEEPER_WAGE + "e a day out of your own pocket, and the shop "
-                + "keeps trading while you're anywhere on the server."
+        return "Zatrudniony. " + KEEPER_WAGE + "e dziennie z twojej kieszeni, a sklep "
+                + "handluje, kiedy jesteś gdziekolwiek na serwerze."
                 + (TrapMarket.wealthOf(owner) < KEEPER_WAGE
-                ? "  Today's free -- but you're carrying " + TrapMarket.wealthOf(owner)
-                + "e, and they walk out tomorrow unless you can make " + KEEPER_WAGE
+                ? "  Dziś za darmo -- ale masz przy sobie " + TrapMarket.wealthOf(owner)
+                + "e i jutro odejdzie, jeśli nie zapłacisz " + KEEPER_WAGE
                 + "e." : "");
     }
 
@@ -561,17 +571,17 @@ public final class TrapShops {
                 if (TrapMarket.wealthOf(boss) < KEEPER_WAGE) {
                     shop.staffed = false;
                     sendHome(server, shop);
-                    boss.sendMessage(Text.literal("Your shopkeeper walked out of ")
+                    boss.sendMessage(Text.literal("Twój sprzedawca odszedł ze sklepu ")
                             .formatted(Formatting.RED)
                             .append(Text.literal(shop.name).formatted(Formatting.GOLD))
-                            .append(Text.literal(" -- you couldn't make their "
+                            .append(Text.literal(" -- nie zapłaciłeś mu "
                                     + KEEPER_WAGE + "e.").formatted(Formatting.GRAY)), false);
                     save();
                     continue;
                 }
                 TrapMarket.take(boss, KEEPER_WAGE);
                 TrapLedger.record(boss, TrapLedger.Source.STALL, -KEEPER_WAGE);
-                boss.sendMessage(Text.literal("Shopkeeper's wage: ")
+                boss.sendMessage(Text.literal("Pensja sprzedawcy: ")
                         .formatted(Formatting.DARK_GRAY)
                         .append(Text.literal("-" + KEEPER_WAGE + "e")
                                 .formatted(Formatting.RED))
@@ -636,17 +646,17 @@ public final class TrapShops {
                     .getPlayerManager().getPlayer(shop.owner);
             if (!shop.toldSick && boss != null) {
                 boss.sendMessage(Text.literal(turned.getCustomName() == null
-                                ? "Your shopkeeper" : turned.getCustomName().getString())
+                                ? "Twój sprzedawca" : turned.getCustomName().getString())
                         .formatted(Formatting.GOLD)
                         .append(ward == null
-                                ? Text.literal(" has been bitten, and there's no hospital "
-                                        + "in this city to take them to. No work and no "
-                                        + "wage until somebody cures them.")
+                                ? Text.literal(" został ugryziony, a w mieście nie ma "
+                                        + "szpitala. Nie pracuje i nie zarabia, "
+                                        + "dopóki go ktoś nie wyleczy.")
                                         .formatted(Formatting.RED)
-                                : Text.literal(" has been bitten. Taken to " + ward.name()
-                                        + " -- back behind the counter in "
-                                        + TrapHospitals.STAY_DAYS + " day, and earning "
-                                        + "you nothing until then.")
+                                : Text.literal(" został ugryziony. Trafił do " + ward.name()
+                                        + " -- wróci za ladę za "
+                                        + TrapHospitals.STAY_DAYS + " dzień i do tego "
+                                        + "czasu nic nie zarabia.")
                                         .formatted(Formatting.GRAY)), false);
             }
             shop.toldSick = true;
@@ -983,14 +993,14 @@ public final class TrapShops {
     public static String buy(ServerPlayerEntity buyer, Shop shop, Line line) {
         ServerWorld world = (ServerWorld) buyer.getWorld();
         if (buyer.getUuid().equals(shop.owner)) {
-            return "It's your own shop.";
+            return "To twój własny sklep.";
         }
         int duty = TrapCity.dutyOn(line.price(), line.duty());
         if (TrapMarket.wealthOf(buyer) < line.price() + duty) {
-            return "That's " + (line.price() + duty) + "e, and you haven't got it.";
+            return "To kosztuje " + (line.price() + duty) + "e, a tyle nie masz.";
         }
         if (!take(world, shop, line)) {
-            return "They've sold out of that.";
+            return "Tego już nie ma na stanie.";
         }
 
         // collect, not take: every emerald here is moving, not leaving. The
@@ -1017,11 +1027,11 @@ public final class TrapShops {
 
         ServerPlayerEntity owner = buyer.getServer().getPlayerManager().getPlayer(shop.owner);
         if (owner != null) {
-            owner.sendMessage(Text.literal("Sold ").formatted(Formatting.GREEN)
+            owner.sendMessage(Text.literal("Sprzedano ").formatted(Formatting.GREEN)
                     .append(Text.literal(line.count() + "x " + line.label())
                             .formatted(Formatting.WHITE))
-                    .append(Text.literal(" to " + buyer.getGameProfile().getName()
-                            + " -- " + line.price() + "e in the till.")
+                    .append(Text.literal(" dla " + buyer.getGameProfile().getName()
+                            + " -- " + line.price() + "e w kasie.")
                             .formatted(Formatting.GRAY)), false);
         }
         return null;
@@ -1223,7 +1233,7 @@ public final class TrapShops {
                                 VillagerEntity shopper) {
         String who = plainName(shopper);
         shopper.addCommandTag(TAG);
-        shopper.setCustomName(Text.literal(kind == Trip.WORK ? who + "  ·  on shift" : who)
+        shopper.setCustomName(Text.literal(kind == Trip.WORK ? who + "  ·  w pracy" : who)
                 .formatted(Formatting.AQUA));
         shopper.setCustomNameVisible(true);
         // Up, if they were in bed. A shift starts at dawn and the schedule
@@ -1351,7 +1361,10 @@ public final class TrapShops {
                     TrapHomes.stayIn(shopper, shopper.getWorld().getTime()
                             + TrapFloor.NIGHT_OFF
                             + shopper.getWorld().getRandom().nextInt(TrapFloor.NIGHT_OFF));
-                    TrapHomes.sendHome((ServerWorld) shopper.getWorld(), shopper);
+                    // Put on their doorstep, not walked out of the shop they
+                    // are standing in -- see TrapHomes#putHome for what that
+                    // walk actually does to a villager indoors.
+                    TrapHomes.putHome((ServerWorld) shopper.getWorld(), shopper);
                 }
                 gone.add(row.getKey());
             }
@@ -1360,11 +1373,19 @@ public final class TrapShops {
     }
 
     /**
-     * They got to work. That is the entire event.
+     * They got to work, and then they are at work.
      *
      * No money moves here and none should: the wage was paid at payday off the
      * housing register, and paying again on arrival would mean a town that
      * earns more when somebody happens to be stood in the chunk watching.
+     *
+     * What DID happen here was eight seconds of standing at the counter and
+     * then a walk home, and a walk home that starts inside somebody's shop is
+     * a villager pathing at a shelf it cannot get round: they drift through
+     * the back of the building and spend the rest of the day lost in it, which
+     * from the street looks like the town wandering into your house. Somebody
+     * on shift is at work instead -- off the register's books and out of the
+     * world until the shift ends.
      */
     private static void clockOn(MinecraftServer server, VillagerEntity shopper,
                                 BlockPos site) {
@@ -1373,7 +1394,10 @@ public final class TrapShops {
                 site.getY() + 1.3, site.getZ() + 0.5, 6, 0.4, 0.3, 0.4, 0.01);
         world.playSound(null, site, SoundEvents.ENTITY_VILLAGER_WORK_MASON,
                 SoundCategory.NEUTRAL, 0.5F, 1.0F);
-        leave(server, shopper);
+        if (TrapHomes.goToWork(shopper, world.getTime() + SHIFT_TICKS)) {
+            return;
+        }
+        leave(server, shopper);   // not one of ours: they walk off like anybody else
     }
 
     private static void buy(MinecraftServer server, VillagerEntity shopper,
@@ -1432,12 +1456,12 @@ public final class TrapShops {
 
         ServerPlayerEntity owner = server.getPlayerManager().getPlayer(shop.owner);
         if (owner != null) {
-            owner.sendMessage(Text.literal("Sold ").formatted(Formatting.GRAY)
+            owner.sendMessage(Text.literal("Sprzedano ").formatted(Formatting.GRAY)
                     .append(Text.literal(line.count() + "x " + line.label())
                             .formatted(Formatting.WHITE))
-                    .append(Text.literal(" -- " + line.price() + "e in the till")
+                    .append(Text.literal(" -- " + line.price() + "e w kasie")
                             .formatted(Formatting.GREEN))
-                    .append(Text.literal(duty > 0 ? ", " + duty + "e duty" : "")
+                    .append(Text.literal(duty > 0 ? ", " + duty + "e podatku" : "")
                             .formatted(Formatting.DARK_GRAY)), true);
         }
         leave(server, shopper);
@@ -1489,23 +1513,23 @@ public final class TrapShops {
 
     private static void directory(ServerPlayerEntity who) {
         if (SHOPS.isEmpty()) {
-            who.sendMessage(Text.literal("Nobody's opened a shop yet.")
+            who.sendMessage(Text.literal("Nikt jeszcze nie otworzył sklepu.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         int people = TrapHomes.population();
-        who.sendMessage(Text.literal("The Shops").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("   " + people + " townspeople")
+        who.sendMessage(Text.literal("Sklepy").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("   mieszkańców: " + people)
                         .formatted(people > 0 ? Formatting.GREEN : Formatting.RED))
-                .append(Text.literal(people > 0 ? "" : "  -- build houses, or nobody comes")
+                .append(Text.literal(people > 0 ? "" : "  -- zbuduj domy, inaczej nikt nie przyjdzie")
                         .formatted(Formatting.DARK_GRAY)), false);
         for (Shop shop : SHOPS) {
             who.sendMessage(Text.literal("  " + shop.name).formatted(Formatting.WHITE)
-                    .append(Text.literal("  " + shelvesOf(shop).size() + " shelves")
+                    .append(Text.literal("  półek: " + shelvesOf(shop).size())
                             .formatted(Formatting.GRAY))
                     .append(Text.literal("  " + shop.markupName().toLowerCase(
                             java.util.Locale.ROOT)).formatted(Formatting.AQUA))
-                    .append(Text.literal("  " + shop.sold + " sold  "
+                    .append(Text.literal("  sprzedano: " + shop.sold + "  "
                             + shop.pos.getX() + " " + shop.pos.getY() + " " + shop.pos.getZ())
                             .formatted(Formatting.DARK_GRAY)), false);
         }

@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:heroin"
     },
-    "title": "The Long Line",
-    "description": "Three machines, and it can still come to nothing.",
+    "title": "Długa droga",
+    "description": "Trzy maszyny, a i tak można wszystko stracić.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -1,10 +1,8 @@
 package dev.heezq.trapcraft;
 
 import eu.pb4.polymer.blocks.api.BlockModelType;
-import eu.pb4.polymer.blocks.api.PolymerBlockModel;
 import eu.pb4.polymer.blocks.api.PolymerTexturedBlock;
 import eu.pb4.polymer.core.api.block.PolymerBlock;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,11 +13,13 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import xyz.nucleoid.packettweaker.PacketContext;
+
+import java.util.Map;
 
 /**
  * The other table in the casino.
@@ -30,26 +30,25 @@ import xyz.nucleoid.packettweaker.PacketContext;
  *
  * The game is in {@link RouletteScreenHandler}; this is the furniture.
  */
-public class RouletteBlock extends Block implements PolymerBlock, PolymerTexturedBlock {
-    private final BlockState carrier;
+public class RouletteBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
+    private final Map<Direction, BlockState> carriers;
 
     public RouletteBlock(Settings settings) {
         super(settings);
-        this.carrier = TrapPolymer.requestOrFallback(
-                // TRANSPARENT_BLOCK, not FULL_BLOCK. The carrier is what the
+        this.carriers = carriers(
+                // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the
                 // client believes about this block, and believing a table with
                 // legs is a solid cube makes it cull the faces of whatever is
                 // underneath -- so you stand on a floor above a cave and see
                 // straight through into it. Any model that doesn't fill the
                 // cube has to say so.
-                BlockModelType.TRANSPARENT_BLOCK,
-                PolymerBlockModel.of(Identifier.of("trapcraft:block/roulette")),
-                () -> Blocks.GREEN_TERRACOTTA.getDefaultState(), "roulette");
+                TrapPolymer.NON_SOLID, "roulette",
+                () -> Blocks.GREEN_TERRACOTTA.getDefaultState());
     }
 
     @Override
     public BlockState getPolymerBlockState(BlockState state, PacketContext context) {
-        return carrier;
+        return carriers.get(state.get(FACING));
     }
 
     /** Break as wood: it's a table, whatever the felt says. */

@@ -90,31 +90,31 @@ public class WalletScreenHandler extends ScreenHandler {
 
         ItemStack purse = new ItemStack(Items.EMERALD);
         purse.set(DataComponentTypes.CUSTOM_NAME,
-                plain("On you: ").formatted(Formatting.GRAY)
+                plain("Przy sobie: ").formatted(Formatting.GRAY)
                         .append(plain(loose + "e").formatted(Formatting.WHITE, Formatting.BOLD)));
         purse.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Loose emeralds and blocks in your bag.", Formatting.DARK_GRAY))));
+                line("Luźne szmaragdy i bloki w ekwipunku.", Formatting.DARK_GRAY))));
         display.setStack(PURSE_SLOT, purse);
 
         ItemStack pouch = new ItemStack(Items.EMERALD_BLOCK);
         pouch.set(DataComponentTypes.CUSTOM_NAME,
-                plain("In the wallet: ").formatted(Formatting.GRAY)
+                plain("W portfelu: ").formatted(Formatting.GRAY)
                         .append(plain(balance + "e").formatted(Formatting.GREEN, Formatting.BOLD)));
         pouch.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("No limit. Put in as much as you like.", Formatting.GRAY),
+                line("Bez limitu. Włóż ile chcesz.", Formatting.GRAY),
                 Text.empty(),
                 line("This money is still spendable.", Formatting.WHITE),
-                line("Shops and machines draw from it once", Formatting.DARK_GRAY),
-                line("your pockets are empty.", Formatting.DARK_GRAY))));
+                line("Sklepy i automaty biorą z niego, gdy", Formatting.DARK_GRAY),
+                line("skończą ci się szmaragdy w ekwipunku.", Formatting.DARK_GRAY))));
         display.setStack(WALLET_SLOT, pouch);
 
         ItemStack deposit = new ItemStack(loose > 0 ? Items.HOPPER : Items.GRAY_DYE);
         deposit.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Put everything in").formatted(Formatting.YELLOW, Formatting.BOLD));
+                plain("Włóż wszystko").formatted(Formatting.YELLOW, Formatting.BOLD));
         deposit.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(loose > 0
-                                ? "Sweeps all " + loose + "e out of your bag."
-                                : "Nothing in your bag to put in.",
+                                ? "Przenosi wszystkie " + loose + "e z ekwipunku."
+                                : "Nie masz nic w ekwipunku.",
                         loose > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
                 line("Blocks count as nine.", Formatting.DARK_GRAY))));
         display.setStack(DEPOSIT_SLOT, deposit);
@@ -125,23 +125,23 @@ public class WalletScreenHandler extends ScreenHandler {
             ItemStack button = new ItemStack(affordable ? Items.EMERALD : Items.GRAY_DYE);
             button.setCount(Math.min(64, Math.max(1, step)));
             button.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("Take " + step + "e")
+                    plain("Wypłać " + step + "e")
                             .formatted(affordable ? Formatting.WHITE : Formatting.DARK_GRAY,
                                     Formatting.BOLD));
             button.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line(affordable ? "Click to withdraw." : "Not that much in there.",
+                    line(affordable ? "Kliknij, żeby wypłacić." : "Nie ma tam tyle.",
                             affordable ? Formatting.GRAY : Formatting.DARK_GRAY),
-                    line("Shift-click for " + step * 10 + "e.", Formatting.DARK_GRAY))));
+                    line("Shift+LPM wypłaca " + step * 10 + "e.", Formatting.DARK_GRAY))));
             display.setStack(STEP_SLOTS[i], button);
         }
 
         ItemStack all = new ItemStack(balance > 0 ? Items.CHEST : Items.GRAY_DYE);
         all.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Empty it out").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Opróżnij portfel").formatted(Formatting.GOLD, Formatting.BOLD));
         all.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(balance > 0 ? "Takes the whole " + balance + "e." : "Already empty.",
+                line(balance > 0 ? "Wypłaca całe " + balance + "e." : "Już jest pusty.",
                         balance > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
-                line("Comes out as blocks where it'd be silly not to.",
+                line("Duże kwoty wychodzą w blokach.",
                         Formatting.DARK_GRAY))));
         display.setStack(TAKE_ALL_SLOT, all);
 
@@ -173,12 +173,12 @@ public class WalletScreenHandler extends ScreenHandler {
                 deny();
             } else {
                 chime(1.2F);
-                owner.sendMessage(plain("Put ").formatted(Formatting.GRAY)
+                owner.sendMessage(plain("Włożono ").formatted(Formatting.GRAY)
                         .append(plain(put + "e").formatted(Formatting.GREEN))
-                        .append(plain(" away. That's ").formatted(Formatting.GRAY))
+                        .append(plain(". Teraz w portfelu jest ").formatted(Formatting.GRAY))
                         .append(plain(WalletItem.balanceOf(wallet) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD))
-                        .append(plain(" in the wallet.").formatted(Formatting.GRAY)), false);
+                        .append(plain(".").formatted(Formatting.GRAY)), false);
             }
             paint();
             return;
@@ -212,7 +212,7 @@ public class WalletScreenHandler extends ScreenHandler {
         int got = WalletItem.withdraw(owner, wallet, wanted);
         if (got <= 0) {
             deny();
-            owner.sendMessage(plain("Nothing in the wallet to take out.")
+            owner.sendMessage(plain("W portfelu nie ma nic do wypłaty.")
                     .formatted(Formatting.GRAY), false);
         } else {
             chime(0.9F);

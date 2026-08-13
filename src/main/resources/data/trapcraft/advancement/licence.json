@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:casino_card"
     },
-    "title": "Licensed",
-    "description": "Get your hands on a casino licence.",
+    "title": "Z licencją",
+    "description": "Zdobądź licencję kasyna.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

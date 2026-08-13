@@ -59,17 +59,17 @@ public class MailboxScreenHandler extends ScreenHandler {
     }
 
     private static final List<Tick> LIST = List.of(
-            new Tick("Somewhere to sleep", Items.RED_BED, "A bed. Not optional."),
-            new Tick("Somewhere to make things", Items.CRAFTING_TABLE, "A crafting table."),
-            new Tick("Somewhere to put things", Items.CHEST, "A chest or a barrel."),
-            new Tick("Somewhere to cook", Items.FURNACE, "A furnace, smoker or blast furnace."),
-            new Tick("Somewhere to shop", Items.EMERALD, "A market stall, indoors."),
-            new Tick("A window", Items.GLASS,
-                    "Glass, panes, or anything a mod calls a window."),
-            new Tick("Lighting", Items.TORCH, "Head height, brighter than "
-                    + HomeSurvey.DARK_AT + ", at night. Ceiling torches count."),
-            new Tick("Character", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " different "
-                    + "kinds of block, up to "
+            new Tick("Miejsce do spania", Items.RED_BED, "Łóżko. Obowiązkowe."),
+            new Tick("Miejsce do pracy", Items.CRAFTING_TABLE, "Stół rzemieślniczy."),
+            new Tick("Miejsce na rzeczy", Items.CHEST, "Skrzynia albo beczka."),
+            new Tick("Miejsce do gotowania", Items.FURNACE, "Piec, wędzarnia albo piec hutniczy."),
+            new Tick("Miejsce na zakupy", Items.EMERALD, "Stragan, w środku budynku."),
+            new Tick("Okno", Items.GLASS,
+                    "Szkło, szyby albo cokolwiek, co mod nazywa oknem."),
+            new Tick("Oświetlenie", Items.TORCH, "Na wysokości głowy, jaśniej niż "
+                    + HomeSurvey.DARK_AT + ", w nocy. Pochodnie na suficie się liczą."),
+            new Tick("Wystrój", Items.FLOWER_POT, HomeSurvey.DECOR_STEPS[0] + " różnych "
+                    + "rodzajów bloków, maks. "
                     + HomeSurvey.DECOR_STEPS[HomeSurvey.DECOR_STEPS.length - 1] + "."));
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
@@ -111,38 +111,38 @@ public class MailboxScreenHandler extends ScreenHandler {
         }
 
         display.setStack(GRADE_SLOT, grade());
-        display.setStack(FLOOR_SLOT, count(Items.OAK_PLANKS, "Floor",
-                reading.floor() + " squares",
+        display.setStack(FLOOR_SLOT, count(Items.OAK_PLANKS, "Podłoga",
+                reading.floor() + " kratek",
                 reading.floor() < HomeSurvey.MIN_FLOOR
-                        ? "Under " + HomeSurvey.MIN_FLOOR + ". Too small to be a house."
-                        : "Room for grade " + reading.roomFor()
-                        + (reading.roomFor() >= HomeSurvey.TOP_TIER ? ". As big as it needs."
-                        : "; " + nextStep() + " squares would allow "
+                        ? "Poniżej " + HomeSurvey.MIN_FLOOR + ". Za mało na dom."
+                        : "Pozwala na klasę " + reading.roomFor()
+                        + (reading.roomFor() >= HomeSurvey.TOP_TIER ? ". Wystarczająco duży."
+                        : "; " + nextStep() + " kratek pozwoliłoby na "
                         + (reading.roomFor() + 1) + "."),
                 reading.floor() >= HomeSurvey.MIN_FLOOR));
-        display.setStack(SEALED_SLOT, count(Items.BRICKS, "Shell",
-                reading.sealed() ? "Sealed" : reading.clash() ? "Somebody else's"
-                        : reading.buried() ? "Bricked in" : "Open",
-                reading.sealed() ? "Walls, floor and a roof, all present."
-                        : reading.clash() ? "It runs into another house."
+        display.setStack(SEALED_SLOT, count(Items.BRICKS, "Szczelność",
+                reading.sealed() ? "Szczelny" : reading.clash() ? "Cudzy dom"
+                        : reading.buried() ? "Zamurowany" : "Dziurawy",
+                reading.sealed() ? "Ściany, podłoga i dach - wszystko jest."
+                        : reading.clash() ? "Nachodzi na inny dom."
                         : reading.buried()
-                        ? "The spot it's measured from is solid now. Stand the "
-                        + "box in the room and it will re-measure from there."
-                        : "It leaks. Measured from " + where(reading.measuredFrom())
-                        + ", got as far as " + where(reading.leak()) + ".",
+                        ? "Punkt pomiaru jest teraz zamurowany. Postaw skrzynkę "
+                        + "w środku pokoju, a zmierzy od nowa."
+                        : "Jest dziura. Pomiar od " + where(reading.measuredFrom())
+                        + ", wyciek do " + where(reading.leak()) + ".",
                 reading.sealed()));
-        display.setStack(WAYS_SLOT, count(Items.OAK_DOOR, "Ways in",
-                reading.exits() + (reading.exits() == 1 ? " door" : " doors"),
-                reading.exits() > 0 ? "Onto the street."
-                        : "No door to the outside at all.",
+        display.setStack(WAYS_SLOT, count(Items.OAK_DOOR, "Wejścia",
+                reading.exits() + (reading.exits() == 1 ? " drzwi" : " drzwi"),
+                reading.exits() > 0 ? "Wychodzą na zewnątrz."
+                        : "Brak drzwi na zewnątrz.",
                 reading.exits() > 0));
-        display.setStack(SHELL_SLOT, count(Items.BRICK, "Built, not dug",
+        display.setStack(SHELL_SLOT, count(Items.BRICK, "Zbudowane, nie wykopane",
                 Math.round(reading.finished() * 100) + "%",
                 reading.finished() >= HomeSurvey.SHELL_STEPS[1]
-                        ? "Properly made."
-                        : "Dirt, sand, gravel, plain stone and cobble don't count. "
-                        + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% earns a point, "
-                        + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "% earns two.",
+                        ? "Porządnie wykonane."
+                        : "Ziemia, piasek, żwir, kamień i bruk się nie liczą. "
+                        + Math.round(HomeSurvey.SHELL_STEPS[0] * 100) + "% daje punkt, "
+                        + Math.round(HomeSurvey.SHELL_STEPS[1] * 100) + "% daje dwa.",
                 reading.finished() >= HomeSurvey.SHELL_STEPS[0]));
         display.setStack(AGAIN_SLOT, again());
 
@@ -151,17 +151,17 @@ public class MailboxScreenHandler extends ScreenHandler {
                 HomeSurvey.lightPoints(reading.dark(), reading.floor()) > 0,
                 reading.kinds() >= HomeSurvey.DECOR_STEPS[0]};
         String[] detail = {
-                reading.bed() ? "There." : "Missing.",
-                reading.crafting() ? "There." : "Missing.",
-                reading.storage() ? "There." : "Missing.",
-                reading.cooking() ? "There." : "Missing.",
-                reading.stall() ? "There." : "Missing.",
-                reading.window() ? "There." : "Missing.",
-                reading.dark() == 0 ? "Every square lit."
-                        : reading.dark() + " dim of " + reading.floor()
+                reading.bed() ? "Jest." : "Brakuje.",
+                reading.crafting() ? "Jest." : "Brakuje.",
+                reading.storage() ? "Jest." : "Brakuje.",
+                reading.cooking() ? "Jest." : "Brakuje.",
+                reading.stall() ? "Jest." : "Brakuje.",
+                reading.window() ? "Jest." : "Brakuje.",
+                reading.dark() == 0 ? "Każda kratka oświetlona."
+                        : reading.dark() + " ciemnych z " + reading.floor()
                         + (HomeSurvey.lightPoints(reading.dark(), reading.floor()) > 0
-                        ? "  -- good enough" : "  -- too many"),
-                reading.kinds() + " kinds of block"};
+                        ? "  -- wystarczy" : "  -- za dużo"),
+                reading.kinds() + " rodzajów bloków"};
         for (int i = 0; i < LIST.size(); i++) {
             display.setStack(LIST_FROM + i, tick(LIST.get(i), got[i], detail[i]));
         }
@@ -180,30 +180,30 @@ public class MailboxScreenHandler extends ScreenHandler {
                 plain(home.name()).formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(tier == 0
-                ? line("Not fit to live in.", Formatting.RED)
-                : line("Grade " + tier + " of " + HomeSurvey.TOP_TIER,
+                ? line("Nie nadaje się do mieszkania.", Formatting.RED)
+                : line("Klasa " + tier + " z " + HomeSurvey.TOP_TIER,
                 Formatting.GREEN, Formatting.BOLD));
-        lore.add(line(home.ownerName() + "'s", Formatting.DARK_GRAY));
+        lore.add(line("Właściciel: " + home.ownerName(), Formatting.DARK_GRAY));
         if (reading.sealed()) {
             lore.add(Text.empty());
-            lore.add(line(reading.points() + " of " + HomeSurvey.topPoints()
-                    + " points, two to a grade", Formatting.GRAY));
+            lore.add(line(reading.points() + " z " + HomeSurvey.topPoints()
+                    + " punktów, dwa punkty na klasę", Formatting.GRAY));
             // The lid, said plainly. Fittings are a shopping list; a shopping
             // list is not a building, and this is the line that says so.
             lore.add(reading.cramped()
-                    ? line("Too small for better. " + nextStep()
-                    + " squares of floor allows grade " + (reading.roomFor() + 1) + ".",
+                    ? line("Za mały na wyższą klasę. " + nextStep()
+                    + " kratek podłogi pozwoli na klasę " + (reading.roomFor() + 1) + ".",
                     Formatting.YELLOW)
-                    : line("Floor allows up to grade " + reading.roomFor() + ".",
+                    : line("Metraż pozwala na klasę do " + reading.roomFor() + ".",
                     Formatting.DARK_GRAY));
         }
         lore.add(Text.empty());
-        lore.add(line("Surveyed from " + home.anchor().getX() + " "
+        lore.add(line("Zmierzone od " + home.anchor().getX() + " "
                 + home.anchor().getY() + " " + home.anchor().getZ(), Formatting.DARK_GRAY));
-        lore.add(line("That spot is the house. This box", Formatting.DARK_GRAY));
-        lore.add(line("can go anywhere you like -- and if you", Formatting.DARK_GRAY));
-        lore.add(line("rebuild, stand it inside and it", Formatting.DARK_GRAY));
-        lore.add(line("re-measures from there.", Formatting.DARK_GRAY));
+        lore.add(line("To miejsce JEST domem. Skrzynkę", Formatting.DARK_GRAY));
+        lore.add(line("możesz postawić gdzie chcesz. Jeśli", Formatting.DARK_GRAY));
+        lore.add(line("przebudujesz, postaw ją w środku,", Formatting.DARK_GRAY));
+        lore.add(line("a zmierzy dom od nowa.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -237,60 +237,85 @@ public class MailboxScreenHandler extends ScreenHandler {
     private ItemStack tenant() {
         String who = home.tenant();
         int mood = home.mood();
+        // Notice overrules the mood everywhere on this tag: somebody perfectly
+        // happy can still be walking out tomorrow, and a cake over a mailbox
+        // that empties in the morning is the screen lying to its landlord.
+        boolean going = TrapHomes.leaving(home);
         ItemStack tag = new ItemStack(who == null ? Items.BARRIER
-                : mood < HomeSurvey.MOOD_LEAVING ? Items.WITHER_ROSE
+                : going || mood < HomeSurvey.MOOD_LEAVING ? Items.WITHER_ROSE
                 : mood >= HomeSurvey.MOOD_MAX ? Items.CAKE : Items.BREAD);
         tag.set(DataComponentTypes.CUSTOM_NAME, who == null
-                ? plain("Nobody lives here").formatted(Formatting.RED, Formatting.BOLD)
+                ? plain("Nikt tu nie mieszka").formatted(Formatting.RED, Formatting.BOLD)
                 : plain(who).formatted(Formatting.AQUA, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         if (who == null) {
             lore.add(line(reading.tier() > 0
-                            ? "Somebody will turn up. Give it a day."
-                            : "Nobody will, while it's graded nothing.",
+                            ? "Ktoś może się wprowadzić lada dzień --"
+                            : "Nikt się nie wprowadzi bez klasy domu.",
                     reading.tier() > 0 ? Formatting.GRAY : Formatting.RED));
+            if (reading.tier() > 0) {
+                lore.add(line("im lepszy dom, tym szybciej.", Formatting.DARK_GRAY));
+            }
         } else {
-            lore.add(line("Mood  ", Formatting.DARK_GRAY)
-                    .append(plain(mood + " of " + HomeSurvey.MOOD_MAX)
+            lore.add(line("Nastrój  ", Formatting.DARK_GRAY)
+                    .append(plain(mood + " z " + HomeSurvey.MOOD_MAX)
                             .formatted(mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED
                                     : Formatting.WHITE)));
-            lore.add(line(mood < HomeSurvey.MOOD_LEAVING ? "Packing."
-                            : mood < 50 ? "Fed up."
-                            : mood < HomeSurvey.MOOD_MAX ? "Settled enough."
-                            : "Very happy here.",
-                    mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED : Formatting.GRAY));
+            lore.add(line(going ? "Wypowiedział. Jutro go nie ma."
+                            : mood < HomeSurvey.MOOD_LEAVING ? "Pakuje się."
+                            : mood < 50 ? "Ma dość."
+                            : mood < HomeSurvey.MOOD_MAX ? "W miarę zadowolony."
+                            : "Bardzo zadowolony.",
+                    going || mood < HomeSurvey.MOOD_LEAVING ? Formatting.RED : Formatting.GRAY));
             lore.add(Text.empty());
             int heads = reading.household();
             // Off rateOf, not the bare RENT row: size lifts the rate inside a
             // grade, so the flat table understates what a big house is owed
             // and this line would read as "pays 60e of 42e".
             int full = Math.round(HomeSurvey.rateOf(reading.tier(), reading.floor()) * heads);
-            lore.add(line("Pays  ", Formatting.DARK_GRAY)
+            lore.add(line("Płaci  ", Formatting.DARK_GRAY)
                     .append(plain(HomeSurvey.rentDue(reading.tier(), mood, heads,
-                            reading.floor()) + "e a day").formatted(Formatting.GREEN))
-                    .append(plain("  of " + full + "e").formatted(Formatting.DARK_GRAY)));
+                            reading.floor()) + "e dziennie").formatted(Formatting.GREEN))
+                    .append(plain("  z " + full + "e").formatted(Formatting.DARK_GRAY)));
             // Rent is per person now, so the number on this screen is
             // meaningless without saying how many people are behind it --
             // and "put another bed in" is the most useful thing it can say.
-            lore.add(line(heads == 1 ? "One tenant. Another bed and the floor"
-                            : heads + " living here, " + HomeSurvey.RENT[Math.min(reading.tier(),
-                                    HomeSurvey.RENT.length - 1)] + "e each.",
+            lore.add(line(heads == 1 ? "Jeden lokator. Kolejne łóżko i metraż"
+                            : "Mieszka tu " + heads + ", po " + HomeSurvey.RENT[Math.min(reading.tier(),
+                                    HomeSurvey.RENT.length - 1)] + "e.",
                     Formatting.DARK_GRAY));
-            lore.add(line(heads == 1 ? "for them is another rent."
-                            : "More beds and more room, more rent.", Formatting.DARK_GRAY));
-            lore.add(line("An unhappy tenant pays less before", Formatting.DARK_GRAY));
-            lore.add(line("they pay nothing at all.", Formatting.DARK_GRAY));
+            lore.add(line(heads == 1 ? "dla niego to kolejny czynsz."
+                            : "Więcej łóżek i miejsca, więcej czynszu.", Formatting.DARK_GRAY));
+            lore.add(line("Niezadowolony lokator płaci mniej,", Formatting.DARK_GRAY));
+            lore.add(line("a potem przestaje płacić w ogóle.", Formatting.DARK_GRAY));
+            // Anybody of theirs in a hospital bed, before the shopping list:
+            // it is the reason the rent line above is short this week, and a
+            // landlord staring at a number that has halved needs to be told
+            // why on the same screen.
+            for (TrapHospitals.Patient ill : TrapHospitals.illAt(home.id())) {
+                lore.add(Text.empty());
+                TrapHospitals.Ward ward = ill.ward() == null ? null
+                        : TrapHospitals.byId(ill.ward());
+                lore.add(line(ill.who(), Formatting.RED, Formatting.BOLD)
+                        .append(plain(ward == null ? " został ugryziony"
+                                : " leży w " + ward.name()).formatted(Formatting.GRAY)));
+                lore.add(ward == null
+                        ? line("Żaden szpital go nie przyjmie. " + ill.untreated() + " z "
+                                + TrapHospitals.LOST_DAYS + " dni.", Formatting.RED)
+                        : line("Wraca jutro. Do tego czasu nic nie zarabia.",
+                                Formatting.DARK_GRAY));
+            }
             lore.add(Text.empty());
             TrapHomes.Craving wants = home.craving();
             lore.add(wants == null
-                    ? line("Not after anything today.", Formatting.DARK_GRAY)
-                    : line("Wants ", Formatting.GRAY)
+                    ? line("Dzisiaj niczego nie chce.", Formatting.DARK_GRAY)
+                    : line("Chce ", Formatting.GRAY)
                     .append(plain(wants.count() + "x " + wants.label())
                             .formatted(Formatting.WHITE))
-                    .append(plain("  for " + wants.price() + "e")
+                    .append(plain("  za " + wants.price() + "e")
                             .formatted(Formatting.GREEN)));
             if (wants != null) {
-                lore.add(line("Find them and right-click, holding it.",
+                lore.add(line("Znajdź go i kliknij PPM, trzymając to.",
                         Formatting.DARK_GRAY));
             }
         }
@@ -303,24 +328,24 @@ public class MailboxScreenHandler extends ScreenHandler {
         List<String> letters = home.letters();
         ItemStack tag = new ItemStack(letters.isEmpty() ? Items.PAPER : Items.WRITTEN_BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The post").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Poczta").formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         if (letters.isEmpty()) {
-            lore.add(line("Nothing through the door.", Formatting.DARK_GRAY));
+            lore.add(line("Nic nie przyszło.", Formatting.DARK_GRAY));
         } else {
             for (String letter : letters) {
                 lore.add(line("\"" + letter + "\"", Formatting.WHITE));
             }
         }
         lore.add(Text.empty());
-        lore.add(line("Rent lands in here. Opening this", Formatting.DARK_GRAY));
-        lore.add(line("screen already took it.", Formatting.DARK_GRAY));
+        lore.add(line("Czynsz trafia tutaj. Otwarcie tego", Formatting.DARK_GRAY));
+        lore.add(line("okna już go odebrało.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
     private static String where(net.minecraft.util.math.BlockPos pos) {
-        return pos == null ? "nowhere"
+        return pos == null ? "nigdzie"
                 : pos.getX() + " " + pos.getY() + " " + pos.getZ();
     }
 
@@ -335,12 +360,12 @@ public class MailboxScreenHandler extends ScreenHandler {
     private ItemStack again() {
         ItemStack tag = new ItemStack(Items.SPYGLASS);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Look again").formatted(Formatting.YELLOW, Formatting.BOLD));
+                plain("Sprawdź ponownie").formatted(Formatting.YELLOW, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Walks the walls and re-grades.", Formatting.GRAY),
+                line("Obchodzi ściany i przelicza klasę.", Formatting.GRAY),
                 Text.empty(),
-                line("It does this by itself every couple", Formatting.DARK_GRAY),
-                line("of minutes anyway.", Formatting.DARK_GRAY))));
+                line("I tak robi to samo co kilka", Formatting.DARK_GRAY),
+                line("minut.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -356,58 +381,58 @@ public class MailboxScreenHandler extends ScreenHandler {
         String say;
         if (!reading.sealed()) {
             say = reading.clash()
-                    ? "Move over. This runs into a place already on the register."
+                    ? "Przesuń się. Ten dom nachodzi na inny, już zarejestrowany."
                     : reading.buried()
-                    ? "It's measured from " + where(reading.measuredFrom())
-                    + ", and that's solid now. Stand this box inside the room."
+                    ? "Pomiar idzie od " + where(reading.measuredFrom())
+                    + ", a tam jest teraz blok. Postaw skrzynkę w środku pokoju."
                     // "Find the hole" on its own is a shrug. The leak point is
                     // on the far side of whatever gap the fill went through, so
                     // it is a direction rather than a chore.
-                    : "It leaks. Measured from " + where(reading.measuredFrom())
-                    + " and got out to " + where(reading.leak())
-                    + " -- the gap is between those two.";
+                    : "Jest dziura. Pomiar od " + where(reading.measuredFrom())
+                    + " wyszedł aż do " + where(reading.leak())
+                    + " -- szpara jest między tymi punktami.";
         } else if (reading.floor() < HomeSurvey.MIN_FLOOR) {
-            say = "Make it bigger. " + HomeSurvey.MIN_FLOOR + " squares of floor, minimum.";
+            say = "Powiększ go. Minimum " + HomeSurvey.MIN_FLOOR + " kratek podłogi.";
         } else if (reading.exits() == 0) {
-            say = "Put a door in it.";
+            say = "Wstaw drzwi.";
         } else if (!reading.bed()) {
-            say = "Put a bed in it.";
+            say = "Wstaw łóżko.";
         } else if (reading.lights() == 0) {
-            say = "Light it. Nobody sleeps in the dark.";
+            say = "Oświetl go. Nikt nie śpi po ciemku.";
         } else if (reading.cramped()) {
             // Size first once it is the binding constraint, because every
             // other suggestion would be a waste of the player's evening.
-            say = "Build it BIGGER. " + nextStep() + " squares of floor -- another room, "
-                    + "or another storey -- allows grade " + (reading.roomFor() + 1) + ".";
+            say = "Zbuduj WIĘKSZY. " + nextStep() + " kratek podłogi -- kolejny pokój "
+                    + "albo piętro -- da klasę " + (reading.roomFor() + 1) + ".";
         } else if (reading.finished() < HomeSurvey.SHELL_STEPS[0]) {
-            say = "Stop building out of dirt. Planks, bricks, anything you made.";
+            say = "Przestań budować z ziemi. Deski, cegły, cokolwiek obrobionego.";
         } else if (HomeSurvey.lightPoints(reading.dark(), reading.floor()) < 2) {
-            say = reading.dark() + " dim " + (reading.dark() == 1 ? "square" : "squares")
-                    + " of " + reading.floor() + ". A lamp in the darkest corner will do it.";
+            say = "Ciemnych kratek: " + reading.dark() + " z " + reading.floor()
+                    + ". Lampa w najciemniejszym kącie załatwi sprawę.";
         } else if (reading.fittings() < HomeSurvey.FITTINGS) {
-            say = "Fit it out -- a table, a chest, a furnace, a stall, a window.";
+            say = "Umebluj go -- stół, skrzynia, piec, stragan, okno.";
         } else if (reading.finished() < HomeSurvey.SHELL_STEPS[1]) {
             // Name the blocks. A percentage on its own reads as an accusation
             // nobody can answer -- you look round a house made of stone brick
             // and planks, get told it is 83% worked, and conclude the mod is
             // broken. The three commonest offenders turn it into a job.
-            say = "Finish the shell. " + Math.round(HomeSurvey.SHELL_STEPS[1] * 100)
-                    + "% worked material, you're at " + Math.round(reading.finished() * 100)
+            say = "Dokończ ściany. Potrzeba " + Math.round(HomeSurvey.SHELL_STEPS[1] * 100)
+                    + "% obrobionych bloków, masz " + Math.round(reading.finished() * 100)
                     + "%." + (reading.roughest().isEmpty() ? ""
-                            : " Mostly " + reading.roughest() + ".");
+                            : " Głównie " + reading.roughest() + ".");
         } else if (reading.kinds() < nextDecor(reading.kinds())) {
-            say = "Decorate. " + nextDecor(reading.kinds()) + " kinds of block, you have "
+            say = "Udekoruj. Potrzeba " + nextDecor(reading.kinds()) + " rodzajów bloków, masz "
                     + reading.kinds() + ".";
         } else if (reading.roomFor() < HomeSurvey.TOP_TIER) {
-            say = "More room. " + nextStep() + " squares of floor is the last step.";
+            say = "Więcej miejsca. " + nextStep() + " kratek podłogi to ostatni próg.";
         } else {
-            say = "Nothing. This is as good as a house gets.";
+            say = "Nic. Lepszego domu się nie da zrobić.";
         }
 
         ItemStack tag = new ItemStack(reading.tier() >= HomeSurvey.TOP_TIER
                 ? Items.GOLDEN_APPLE : Items.WRITABLE_BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Next").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Co dalej").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(say, Formatting.WHITE))));
         return tag;

@@ -79,12 +79,12 @@ public class CasinoCardItem extends Item implements PolymerItem {
     public static void restamp(ItemStack card, TrapHouse.House house) {
         if (house == null) {
             card.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("Blank Licence").formatted(Formatting.GRAY, Formatting.BOLD));
+                    plain("Niepodpisana licencja").formatted(Formatting.GRAY, Formatting.BOLD));
             card.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                     line("Unsigned.", Formatting.DARK_GRAY),
                     Text.empty(),
-                    line("Right-click the air to open a casino.", Formatting.YELLOW),
-                    line("Name it in an anvil first if you want", Formatting.DARK_GRAY),
+                    line("Kliknij PPM w powietrze, żeby otworzyć kasyno.", Formatting.YELLOW),
+                    line("Najpierw nazwij licencję na kowadle, jeśli", Formatting.DARK_GRAY),
                     line("it called something.", Formatting.DARK_GRAY))));
             return;
         }
@@ -98,31 +98,42 @@ public class CasinoCardItem extends Item implements PolymerItem {
 
         int machines = TrapHouse.machineCount(house);
         List<Text> lore = new ArrayList<>();
-        lore.add(plain("Vault  ").formatted(Formatting.GRAY)
+        lore.add(plain("Skarbiec  ").formatted(Formatting.GRAY)
                 .append(plain(house.balance + "e")
                         .formatted(house.balance > 0 ? Formatting.GREEN : Formatting.RED,
                                 Formatting.BOLD)));
-        lore.add(line(machines + (machines == 1 ? " machine" : " machines") + " on the floor",
+        lore.add(line("automatów na sali: " + machines,
                 Formatting.DARK_GRAY));
         // The gauge that was never there. Wear has been accumulating on every
         // cabinet since the day this mod shipped and nothing anywhere showed
         // it, so "do the machines break?" was a question the game gave its
         // owner no way to answer. They do, at 100.
+        // Read off the WHOLE floor, not off its worst cabinet. On the single
+        // worst it is a gauge that works on a floor of four and is broken on a
+        // floor of fifty: one dead machine out of fifty-one pins it at 0% and
+        // it never moves again, so an owner whose room averages 44 is told the
+        // place is in pieces and has no way to tell a bad night from a bad
+        // year. The average is also the number the house screen shows and the
+        // number the floor's name is actually judged on -- see
+        // TrapMath.houseRepTarget -- so the two now agree. The worst is still
+        // named, because the hammer needs somewhere to go.
+        int worn = TrapHouse.averageWear(house);
         int worst = TrapHouse.worstWear(house);
         if (machines > 0) {
             lore.add(line("Condition  ", Formatting.GRAY)
-                    .append(plain((100 - worst) + "%")
-                            .formatted(worst >= TrapMath.JAM_FROM ? Formatting.RED
+                    .append(plain((100 - worn) + "%")
+                            .formatted(worn >= TrapMath.JAM_FROM ? Formatting.RED
                                     : Formatting.WHITE))
                     .append(plain(worst >= TrapMath.JAM_FROM
-                                    ? "  worst cabinet is turning people away"
+                                    ? "  average -- worst cabinet " + (100 - worst)
+                                    + "%, turning people away"
                                     : "  all sound").formatted(Formatting.DARK_GRAY)));
         }
         int town = TrapHomes.population();
         lore.add(line("Trade  ", Formatting.GRAY)
                 .append(plain(String.format("%.2fx", house.pull()))
                         .formatted(Formatting.WHITE))
-                .append(plain("  from " + town + (town == 1 ? " townsperson" : " townspeople"))
+                .append(plain("  od " + town + " mieszkańców")
                         .formatted(town >= TrapMath.PULL_AT ? Formatting.DARK_GRAY
                                 : Formatting.RED)));
         if (house.handle > 0) {
@@ -137,11 +148,11 @@ public class CasinoCardItem extends Item implements PolymerItem {
         if (machines == 0) {
             lore.add(line("Right-click a machine to wire it up.", Formatting.YELLOW));
         } else if (house.balance <= 0) {
-            lore.add(line("Empty. Your machines won't take a bet.", Formatting.RED));
+            lore.add(line("Pusty. Twoje automaty nie przyjmą zakładu.", Formatting.RED));
         }
-        lore.add(line("Right-click the air for the counting room.", Formatting.YELLOW));
+        lore.add(line("Kliknij PPM w powietrze, żeby otworzyć kantorek.", Formatting.YELLOW));
         lore.add(Text.empty());
-        lore.add(line("Whoever holds this owns the house.", Formatting.DARK_GRAY));
+        lore.add(line("Kto trzyma licencję, ten jest właścicielem.", Formatting.DARK_GRAY));
         card.set(DataComponentTypes.LORE, new LoreComponent(lore));
     }
 
@@ -204,7 +215,7 @@ public class CasinoCardItem extends Item implements PolymerItem {
     private void open(ServerPlayerEntity owner, ItemStack card) {
         Text named = card.get(DataComponentTypes.CUSTOM_NAME);
         String wanted = named == null ? "" : named.getString().trim();
-        String name = wanted.isBlank() || wanted.equals("Blank Licence")
+        String name = wanted.isBlank() || wanted.equals("Niepodpisana licencja")
                 ? owner.getGameProfile().getName() + "'s"
                 : wanted;
 
@@ -224,8 +235,8 @@ public class CasinoCardItem extends Item implements PolymerItem {
         owner.sendMessage(plain("").append(plain(house.name)
                         .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(plain(" is open.").formatted(Formatting.GRAY)), false);
-        owner.sendMessage(plain("Put money in the vault, then right-click your machines "
-                + "with this card to wire them up.").formatted(Formatting.DARK_GRAY), false);
+        owner.sendMessage(plain("Wpłać kasę do skarbca, a potem kliknij automaty PPM "
+                + "tą licencją, żeby je podłączyć.").formatted(Formatting.DARK_GRAY), false);
     }
 
     private static MutableText plain(String text) {

@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:nerve_tonic"
     },
-    "title": "Hooked",
-    "description": "Let a meter get all the way to withdrawal.",
+    "title": "Uzależniony",
+    "description": "Doprowadź licznik nałogu aż do odstawienia.",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

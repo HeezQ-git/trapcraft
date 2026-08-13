@@ -181,12 +181,19 @@ public final class TrapMath {
     /**
      * How much of the gap to the current supply the anchor closes each beat.
      *
-     * Beats are thirty seconds, so this is a half-life of about thirty-five
+     * Beats are thirty seconds, so this is a half-life of about seventy
      * minutes of play. Slow enough that a jackpot is still being felt an hour
      * later -- which is the entire point of having an index -- and fast enough
      * that a session can watch a shock arrive and go.
+     *
+     * Lower means hotter: the anchor lags further behind a growing supply, so
+     * a server that keeps earning reads as inflation instead of as the new
+     * normal. A supply growing g per beat holds the index at about
+     * 1 + g/(2*DRAG), so halving this roughly doubles the reading. Was 0.010
+     * until 2026-08-12, where a world growing ~20% an hour sat at 108% and
+     * looked to the people living in it like a broken gauge.
      */
-    public static final float BASELINE_DRAG = 0.010f;
+    public static final float BASELINE_DRAG = 0.005f;
     /** How hard a given change in the money supply pushes prices. */
     public static final float INDEX_SENSITIVITY = 0.5f;
     /** How far the index may swing on supply alone. */
@@ -394,6 +401,27 @@ public final class TrapMath {
             return new int[]{0, amount};
         }
         return new int[]{amount / 9, amount % 9};
+    }
+
+    /**
+     * What a hand tips into a laundry drum out of a chest holding both.
+     *
+     * Blocks first, and whole ones only: a block is nine and there is no such
+     * thing as tipping in a third of one, so a drum with four spaces left takes
+     * loose emeralds even with a stack of blocks sitting next to them. Greedy
+     * on the blocks is never worse than the alternative -- nine in one go
+     * cannot overshoot a gap that had room for it.
+     *
+     * Returns {blocks, loose}, which is what comes OUT of the chest; the drum
+     * gets {@code blocks * 9 + loose}. Those two disagreeing is money appearing
+     * or vanishing, which is why this is here and not inline at the drum.
+     */
+    public static int[] drumLoad(int blocks, int loose, int room) {
+        if (room <= 0) {
+            return new int[]{0, 0};
+        }
+        int lots = Math.min(Math.max(blocks, 0), room / 9);
+        return new int[]{lots, Math.min(Math.max(loose, 0), room - lots * 9)};
     }
 
     // --- the slot machine -----------------------------------------------------
@@ -1707,6 +1735,39 @@ public final class TrapMath {
     public static final int DRY_BAR_REP = 28;
 
     /**
+     * Points off a punter's return for what they were handed at the door.
+     *
+     * Somebody four rounds in is not playing the game they walked in playing.
+     * They chase, they stay in on a hand they should have dropped, and they
+     * cannot count anything. Nothing about the machine changes -- the plate on
+     * the cabinet is still honest -- the person in front of it does.
+     *
+     * This is what makes the bar a business rather than a bar tab. Product
+     * bought VOLUME and nothing else (see {@link #SERVED_PRODUCT}), and volume
+     * against a three percent plate is nothing at all once the lights, the
+     * cut, the parts and the occasional card counter have been paid: a
+     * modelled floor of four machines with product behind the counter and
+     * nobody watching the door ran at +21e a day, which is zero with a wide
+     * error bar round it. Four points of return is the difference between that
+     * and a room worth opening, and it is paid for out of the farm -- in
+     * product that could have gone to a dealer instead.
+     *
+     * Never applied to a loose spell. Running loose is a promise to lose money
+     * for six minutes, and a promise with an asterisk on it is not one.
+     */
+    public static final float SERVED_EDGE_PRODUCT = 0.04f;
+    public static final float SERVED_EDGE_FOOD = 0.01f;
+
+    /** What the door has taken off this punter's return. */
+    public static float servedEdge(int servedTier) {
+        return switch (servedTier) {
+            case 2 -> SERVED_EDGE_PRODUCT;
+            case 1 -> SERVED_EDGE_FOOD;
+            default -> 0f;
+        };
+    }
+
+    /**
      * Rounds this punter is good for, given what they were handed at the door.
      *
      * A dry bar is not a small penalty. Somebody who walks into a room with
@@ -2608,5 +2669,44 @@ public final class TrapMath {
         merged.forEach((key, cell) -> rows.add(new Tally<>(key, cell[0], cell[1])));
         rows.sort(Comparator.comparingInt((Tally<T> row) -> row.total()).reversed());
         return rows;
+    }
+
+    /**
+     * Turn a box built facing north through `spin` degrees about Y.
+     *
+     * Returns {x0, y0, z0, x1, y1, z1} in the 0..16 model grid. Lives here
+     * rather than in {@link TurnableBlock} for the usual reason: it is the one
+     * part of turning a block that can be silently WRONG rather than
+     * obviously broken, and here it can be tested without a game.
+     *
+     * The direction has to match what the model does, which is a vanilla
+     * blockstate y-rotation: clockwise seen from above, so north goes to east.
+     * Get the sign backwards and a bong you can see poking out to the right is
+     * one you have to click on the left -- nothing throws, nothing logs, and
+     * the only symptom is players missing the block.
+     */
+    public static double[] turn(int spin, double x0, double y0, double z0,
+                                double x1, double y1, double z1) {
+        return switch (((spin % 360) + 360) % 360) {
+            case 90 -> new double[] {16 - z1, y0, x0, 16 - z0, y1, x1};
+            case 180 -> new double[] {16 - x1, y0, 16 - z1, 16 - x0, y1, 16 - z0};
+            case 270 -> new double[] {z0, y0, 16 - x1, z1, y1, 16 - x0};
+            default -> new double[] {x0, y0, z0, x1, y1, z1};
+        };
+    }
+
+    // --- giving it away ---------------------------------------------------------
+
+    /**
+     * Move a donation dial by one step, and keep it inside the purse.
+     *
+     * Here rather than on the screen for the usual reason: this clamp is the
+     * only thing standing between a stepper and a number the city cannot
+     * cover, and it does its arithmetic in long precisely so a dial nudged
+     * past two billion wraps to nothing instead of to a fortune.
+     */
+    public static int stepped(int amount, int step, long cap) {
+        long ceiling = Math.max(0L, Math.min(cap, Integer.MAX_VALUE));
+        return (int) Math.max(0L, Math.min((long) amount + step, ceiling));
     }
 }

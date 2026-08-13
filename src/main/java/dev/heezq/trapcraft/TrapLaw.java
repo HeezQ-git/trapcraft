@@ -78,7 +78,7 @@ public final class TrapLaw {
             if (server.getTicks() % 200 != 0) {
                 return;
             }
-            long now = server.getOverworld().getTimeOfDay() / 24000L;
+            long now = TrapMarket.today(server);
             if (day < 0) {
                 day = now;
                 return;
@@ -194,17 +194,17 @@ public final class TrapLaw {
                 OWED.merge(player.getUuidAsString(), short_, Integer::sum);
             }
             save();
-            player.sendMessage(Text.literal("THE REVENUE OFFICE")
+            player.sendMessage(Text.literal("URZĄD SKARBOWY")
                     .formatted(Formatting.RED, Formatting.BOLD)
-                    .append(Text.literal("\n  " + exposure + "e came in yesterday that the "
-                            + "city cannot account for.").formatted(Formatting.GRAY))
-                    .append(Text.literal("\n  Assessed " + bill + "e"
-                            + (paid > 0 ? ", took " + paid + "e" : "")
-                            + (short_ > 0 ? ", " + short_ + "e outstanding." : "."))
+                    .append(Text.literal("\n  Wczoraj wpłynęło " + exposure + "e, których miasto "
+                            + "nie potrafi wytłumaczyć.").formatted(Formatting.GRAY))
+                    .append(Text.literal("\n  Naliczono " + bill + "e"
+                            + (paid > 0 ? ", pobrano " + paid + "e" : "")
+                            + (short_ > 0 ? ", zaległość " + short_ + "e." : "."))
                             .formatted(Formatting.WHITE))
                     .append(Text.literal(short_ > 0
-                                    ? "\n  You are being watched until it is paid."
-                                    : "\n  Run it through a shop next time: /wash")
+                                    ? "\n  Policja ma cię na oku, dopóki nie zapłacisz."
+                                    : "\n  Następnym razem przepuść to przez sklep: /wash")
                             .formatted(short_ > 0 ? Formatting.RED : Formatting.DARK_GRAY)),
                     false);
         }
@@ -230,11 +230,11 @@ public final class TrapLaw {
     public static String settle(ServerPlayerEntity who) {
         int owed = owedBy(who);
         if (owed <= 0) {
-            return "You don't owe the office anything.";
+            return "Nie masz zaległości w urzędzie.";
         }
         int paid = Math.min(owed, TrapMarket.wealthOf(who));
         if (paid <= 0) {
-            return "You haven't got it. They can wait; they always can.";
+            return "Nie masz tyle. Urząd poczeka, zawsze czeka.";
         }
         TrapMarket.collect(who, paid);
         TrapCity.receive(paid, TrapCity.Duty.INCOME);
@@ -245,10 +245,10 @@ public final class TrapLaw {
             OWED.put(who.getUuidAsString(), owed - paid);
         }
         save();
-        who.sendMessage(Text.literal(paid >= owed ? "Square with the office. "
-                        : "Paid " + paid + "e. ").formatted(Formatting.GREEN)
-                .append(Text.literal(paid >= owed ? "Nobody's watching you."
-                                : (owed - paid) + "e still outstanding.")
+        who.sendMessage(Text.literal(paid >= owed ? "Rozliczone z urzędem. "
+                        : "Wpłacono " + paid + "e. ").formatted(Formatting.GREEN)
+                .append(Text.literal(paid >= owed ? "Nikt cię już nie obserwuje."
+                                : "Zostało " + (owed - paid) + "e zaległości.")
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -340,8 +340,8 @@ public final class TrapLaw {
         }
         save();
         if (gross > cover) {
-            who.sendMessage(Text.literal("  " + (gross - cover) + "e of that has nothing "
-                    + "behind it. Open a shop, or expect a letter.")
+            who.sendMessage(Text.literal("  " + (gross - cover) + "e z tego nie ma pokrycia "
+                    + "w obrocie. Otwórz sklep albo czekaj na wezwanie.")
                     .formatted(Formatting.DARK_GRAY), false);
         }
     }
@@ -359,74 +359,74 @@ public final class TrapLaw {
      */
     public static ItemStack constitution() {
         List<RawFilteredPair<Text>> pages = new ArrayList<>();
-        pages.add(page(title("THE CONSTITUTION\n\n")
+        pages.add(page(title("PRAWO MIASTA\n\n")
                 .append(body(TrapCity.founded()
-                        ? "The law of this city, as it stands today.\n\n"
-                        : "There is no city. Nothing below is in force.\n\n"))
-                .append(hint("Ask again after a budget."))));
+                        ? "Przepisy obowiązujące dzisiaj w tym mieście.\n\n"
+                        : "Nie ma miasta. Nic poniżej nie obowiązuje.\n\n"))
+                .append(hint("Sprawdź ponownie po zmianie budżetu."))));
 
-        MutableText rates = title("DUTIES\n\n");
+        MutableText rates = title("PODATKI\n\n");
         for (TrapCity.Duty duty : TrapCity.Duty.values()) {
             rates.append(body(duty.display() + "  " + TrapCity.chargedRate(duty) + "%\n"));
         }
         pages.add(page(rates.append(Text.literal("\n"))
-                .append(hint("Nothing sold to customers or dealers is taxed."))));
+                .append(hint("Sprzedaż klientom z ulicy i dilerom jest wolna od podatku."))));
 
-        MutableText acts = title("ACTS IN FORCE\n\n");
+        MutableText acts = title("OBOWIĄZUJĄCE USTAWY\n\n");
         boolean any = false;
         for (TrapCity.Act act : TrapCity.Act.values()) {
             if (TrapCity.inForce(act)) {
                 any = true;
                 acts.append(body(act.display() + "\n"))
-                        .append(hint("  " + act.blurb() + ". Day "
+                        .append(hint("  " + act.blurb() + ". Dzień "
                                 + TrapCity.passedOn(act) + ".\n"));
             }
         }
-        pages.add(page(any ? acts : acts.append(body("None. The council is quiet.\n\n"))
-                .append(hint("They pass themselves when the city needs them."))));
+        pages.add(page(any ? acts : acts.append(body("Brak. Rada milczy.\n\n"))
+                .append(hint("Uchwalają się same, gdy miasto tego potrzebuje."))));
 
         // One page per work. Four names and four prices crammed onto one page
         // wrapped into an unreadable column and, worse, never said what any of
         // them DID or where you buy them -- which is the only thing somebody
         // reading a constitution about public works wants to know.
-        pages.add(page(title("PUBLIC WORKS\n\n")
-                .append(body("Things the purse buys for the whole town.\n\n"))
-                .append(body("Anybody may buy one, at the vault. Everybody is "
-                        + "told who did.\n\n"))
-                .append(hint("The purse holds " + TrapCity.treasury() + "e."))));
+        pages.add(page(title("INWESTYCJE MIEJSKIE\n\n")
+                .append(body("Rzeczy kupowane z kasy miasta dla wszystkich.\n\n"))
+                .append(body("Kupić może każdy, przy skarbcu. Wszyscy "
+                        + "dostają info kto.\n\n"))
+                .append(hint("W kasie jest " + TrapCity.treasury() + "e."))));
         for (TrapCity.Work work : TrapCity.Work.values()) {
             pages.add(page(title(work.display().toUpperCase(java.util.Locale.ROOT) + "\n\n")
                     .append(body(work.blurb() + ".\n\n"))
                     .append(TrapCity.built(work)
-                            ? body("BUILT. Nothing more to pay.\n\n")
-                            : body(work.cost() + "e out of the purse.\n\n"))
-                    .append(hint(TrapCity.built(work) ? "In force."
+                            ? body("ZBUDOWANE. Nic więcej do zapłaty.\n\n")
+                            : body(work.cost() + "e z kasy miasta.\n\n"))
+                    .append(hint(TrapCity.built(work) ? "Działa."
                             : TrapCity.treasury() >= work.cost()
-                            ? "The purse could cover it today."
-                            : "The purse is " + (work.cost() - TrapCity.treasury())
-                            + "e short."))));
+                            ? "Kasa miasta ma na to dzisiaj."
+                            : "Kasie miasta brakuje " + (work.cost() - TrapCity.treasury())
+                            + "e."))));
         }
 
-        pages.add(page(title("THE REVENUE OFFICE\n\n")
-                .append(body("It reads what came in and what you declared.\n\n"))
-                .append(body("Over " + LOOKS_AWAY + "e a day unexplained and it "
-                        + "assesses you.\n\n"))
-                .append(warn("Owe it and you are watched until you pay."))));
+        pages.add(page(title("URZĄD SKARBOWY\n\n")
+                .append(body("Porównuje twoje wpływy z tym, co zgłosiłeś.\n\n"))
+                .append(body("Powyżej " + LOOKS_AWAY + "e dziennie bez pokrycia "
+                        + "nalicza ci podatek.\n\n"))
+                .append(warn("Zaległość = policja ma cię na oku, aż zapłacisz."))));
 
-        pages.add(page(title("DIRTY MONEY\n\n")
-                .append(body("The street pays in dirty emeralds.\n\n"))
-                .append(body("No shop takes them. No wage comes out of "
-                        + "them. They are not money yet.\n\n"))
-                .append(hint("They become money in a laundry drum."))));
+        pages.add(page(title("BRUDNE PIENIĄDZE\n\n")
+                .append(body("Ulica płaci brudnymi szmaragdami.\n\n"))
+                .append(body("Żaden sklep ich nie weźmie i nie zapłacisz "
+                        + "nimi pensji. To jeszcze nie pieniądze.\n\n"))
+                .append(hint("Pieniędzmi stają się w bębnie pralniczym."))));
 
-        pages.add(page(title("THE DRUM\n\n")
-                .append(body("Put them in, wait, take them out.\n\n"))
-                .append(body(Math.round(WASH_CUT * 100) + "% goes down the "
-                        + "drain.\n\n"))
-                .append(warn("Wash more than your shops could have taken and "
-                        + "the office still asks."))));
+        pages.add(page(title("BĘBEN PRALNICZY\n\n")
+                .append(body("Włóż, poczekaj, wyjmij.\n\n"))
+                .append(body("Do " + Math.round(WASH_CUT * 100) + "% wsadu "
+                        + "przepada.\n\n"))
+                .append(warn("Wypierzesz więcej, niż mogły utargować twoje "
+                        + "sklepy, i urząd i tak zapyta."))));
 
-        return book("The Constitution", pages);
+        return book("Prawo miasta", pages);
     }
 
     // --- commands -------------------------------------------------------------
@@ -442,7 +442,7 @@ public final class TrapLaw {
                                     return 0;
                                 }
                                 who.getInventory().offerOrDrop(constitution());
-                                who.sendMessage(Text.literal("The law, as it stands.")
+                                who.sendMessage(Text.literal("Prawo w obecnym brzmieniu.")
                                         .formatted(Formatting.GRAY), true);
                                 return 1;
                             })
@@ -465,7 +465,7 @@ public final class TrapLaw {
     /** The council changed something; anybody holding a book gets told. */
     public static void lawChanged(MinecraftServer server) {
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            player.sendMessage(Text.literal("  The constitution has moved. ")
+            player.sendMessage(Text.literal("  Prawo miasta się zmieniło. ")
                     .formatted(Formatting.DARK_GRAY)
                     .append(Text.literal("/law").formatted(Formatting.GREEN)
                             .styled(style -> style.withClickEvent(

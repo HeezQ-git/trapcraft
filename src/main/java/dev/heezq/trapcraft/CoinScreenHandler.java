@@ -100,7 +100,7 @@ public class CoinScreenHandler extends ScreenHandler {
             display.setStack(row * 9 + SELL_COL, sellTag(coin, mine, beat));
         }
 
-        display.setStack(BACK_SLOT, button(Items.ARROW, "Back to the desk", Formatting.GRAY));
+        display.setStack(BACK_SLOT, button(Items.ARROW, "Powrót do lady", Formatting.GRAY));
         display.setStack(SPEND_SLOT, spendTag(beat));
         display.setStack(PURSE_SLOT, purseTag());
         sendContentUpdates();
@@ -135,7 +135,7 @@ public class CoinScreenHandler extends ScreenHandler {
                     + "% chance of going to nothing", Formatting.DARK_GRAY));
             lore.add(line("in any given day. It does happen.", Formatting.DARK_GRAY));
         } else {
-            lore.add(line("Won't rug. Won't make you rich either.", Formatting.DARK_GRAY));
+            lore.add(line("Nie padnie. Ale też cię nie wzbogaci.", Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -178,10 +178,10 @@ public class CoinScreenHandler extends ScreenHandler {
                     + Math.max(1, (mine.lockedUntil() - beat) / 2) + " min",
                     Formatting.GOLD));
             lore.add(line("Pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
-                    + "% extra when it comes free.", Formatting.DARK_GRAY));
+                    + "% premii, gdy blokada minie.", Formatting.DARK_GRAY));
         } else if (mine.lockedUntil() > 0) {
             lore.add(Text.empty());
-            lore.add(line("Term's up. Selling pays the "
+            lore.add(line("Blokada minęła. Sprzedaż wypłaca "
                     + Math.round(TrapCoins.LOCK_BONUS * 100) + "% bonus.", Formatting.GOLD));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -196,22 +196,22 @@ public class CoinScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(lock ? Items.IRON_BARS
                 : can ? Items.LIME_STAINED_GLASS_PANE : Items.GRAY_STAINED_GLASS_PANE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(lock ? "LOCK " + spend + "e" : "BUY " + spend + "e")
+                plain(lock ? "BLOKADA " + spend + "e" : "KUP " + spend + "e")
                         .formatted(lock ? Formatting.GOLD
                                 : can ? Formatting.GREEN : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(line(units > 0 ? "About " + units + " units at " + money(price)
                 : "Not enough for a single unit.", Formatting.GRAY));
-        lore.add(line("Spread is " + Math.round(TrapMath.COIN_SPREAD * 100)
-                + "% each way.", Formatting.DARK_GRAY));
+        lore.add(line("Spread wynosi " + Math.round(TrapMath.COIN_SPREAD * 100)
+                + "% w każdą stronę.", Formatting.DARK_GRAY));
         if (lock) {
             lore.add(Text.empty());
-            lore.add(line("Can't be sold for "
-                    + TrapCoins.LOCK_BEATS / 2 + " minutes.", Formatting.GRAY));
+            lore.add(line("Nie do sprzedania przez "
+                    + TrapCoins.LOCK_BEATS / 2 + " minut.", Formatting.GRAY));
             lore.add(line("Pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
-                    + "% extra for the wait.", Formatting.GOLD));
-            lore.add(line("A rug doesn't care that you locked it.", Formatting.RED));
+                    + "% premii za czekanie.", Formatting.GOLD));
+            lore.add(line("Blokada nie chroni przed spadkiem do zera.", Formatting.RED));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -231,7 +231,7 @@ public class CoinScreenHandler extends ScreenHandler {
                         .formatted(locked ? Formatting.DARK_GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(locked ? "Not until the term is up." : "Sells the whole holding.",
+                line(locked ? "Dopiero po upływie blokady." : "Sprzedaje cały pakiet.",
                         Formatting.GRAY))));
         return tag;
     }
@@ -240,11 +240,11 @@ public class CoinScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(Items.EMERALD,
                 Math.max(1, Math.min(64, SPENDS[spendChoice] / 32)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Click size: ").formatted(Formatting.GRAY)
+                plain("Wartość kliknięcia: ").formatted(Formatting.GRAY)
                         .append(plain(SPENDS[spendChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Click to change what one buy spends.", Formatting.DARK_GRAY),
+                line("Kliknij, żeby zmienić kwotę jednego zakupu.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Portfolio  ", Formatting.GRAY)
                         .append(plain(TrapCoins.portfolio(trader, beat) + "e")
@@ -255,7 +255,7 @@ public class CoinScreenHandler extends ScreenHandler {
     private ItemStack purseTag() {
         ItemStack tag = new ItemStack(Items.GOLD_NUGGET);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Purse: ").formatted(Formatting.GRAY)
+                plain("Kasa: ").formatted(Formatting.GRAY)
                         .append(plain(TrapMarket.wealthOf(trader) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         return tag;
@@ -309,7 +309,7 @@ public class CoinScreenHandler extends ScreenHandler {
         int units = (int) (spend / (price * (1.0f + TrapMath.COIN_SPREAD)));
         if (units <= 0) {
             deny();
-            trader.sendMessage(plain("That won't buy a single unit of " + coin.ticker() + ".")
+            trader.sendMessage(plain("Za to nie kupisz nawet jednej sztuki " + coin.ticker() + ".")
                     .formatted(Formatting.GRAY), false);
             return;
         }
@@ -320,7 +320,7 @@ public class CoinScreenHandler extends ScreenHandler {
             return;
         }
         chime(1.2F);
-        trader.sendMessage(plain("Bought ").formatted(Formatting.GRAY)
+        trader.sendMessage(plain("Kupiono ").formatted(Formatting.GRAY)
                 .append(plain(units + " " + coin.ticker()).formatted(Formatting.WHITE))
                 .append(plain(" at " + money(price)).formatted(Formatting.DARK_GRAY))
                 .append(plain(lock ? "   locked in" : "").formatted(Formatting.GOLD)), false);
@@ -334,12 +334,12 @@ public class CoinScreenHandler extends ScreenHandler {
         }
         if (paid == -1) {
             deny();
-            trader.sendMessage(plain("That one's locked. Wait it out.")
+            trader.sendMessage(plain("Ta pozycja jest zablokowana. Poczekaj.")
                     .formatted(Formatting.GRAY), false);
             return;
         }
         chime(0.9F);
-        trader.sendMessage(plain("Sold out of ").formatted(Formatting.GRAY)
+        trader.sendMessage(plain("Sprzedano całość: ").formatted(Formatting.GRAY)
                 .append(plain(coin.ticker()).formatted(Formatting.WHITE))
                 .append(plain(" for ").formatted(Formatting.GRAY))
                 .append(plain(paid + "e").formatted(Formatting.GREEN, Formatting.BOLD)), false);

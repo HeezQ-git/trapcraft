@@ -66,14 +66,14 @@ public class BurnerPhoneItem extends Item implements PolymerItem {
 
         Contract active = phone.get(TrapComponents.contract);
         if (active != null) {
-            player.sendMessage(Text.literal("You've already got a job on.")
+            player.sendMessage(Text.literal("Masz już przyjęte zlecenie.")
                     .formatted(Formatting.GRAY), true);
             return ActionResult.SUCCESS;
         }
 
         List<Contract> jobs = TrapContracts.board(server, player, TrapContracts.repOf(phone));
         if (jobs.isEmpty()) {
-            player.sendMessage(Text.literal("No signal out here.")
+            player.sendMessage(Text.literal("Tu nie ma zasięgu.")
                     .formatted(Formatting.GRAY), true);
             server.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 0.6F, 0.6F);
@@ -90,7 +90,7 @@ public class BurnerPhoneItem extends Item implements PolymerItem {
         player.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) ->
                         new ContractScreenHandler(syncId, inventory, jobs, phone),
-                Text.literal("Jobs  ·  " + TrapContracts.repOf(phone) + " rep")
+                Text.literal("Zlecenia  ·  reputacja " + TrapContracts.repOf(phone))
                         .formatted(Formatting.DARK_GREEN)));
         return ActionResult.SUCCESS;
     }
