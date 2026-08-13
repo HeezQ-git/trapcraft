@@ -105,7 +105,7 @@ public class RefinerBlock extends TurnableBlock implements PolymerTexturedBlock 
             // have to juggle two stacks to use the machine.
             int slot = player.getInventory().getSlotWithStack(new ItemStack(Items.BLAZE_POWDER));
             if (slot < 0 && !player.isCreative()) {
-                player.sendMessage(Text.literal("Needs blaze powder")
+                player.sendMessage(Text.literal("Potrzebny płonący proszek")
                         .formatted(Formatting.RED), true);
                 return ActionResult.SUCCESS;
             }

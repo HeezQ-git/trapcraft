@@ -270,8 +270,8 @@ public class HouseScreenHandler extends ScreenHandler {
                 lore.add(line("  ...i jeszcze " + (where.size() - 8), Formatting.DARK_GRAY));
             }
             lore.add(Text.empty());
-            lore.add(line("Right-click a wired machine again", Formatting.DARK_GRAY));
-            lore.add(line("to cut it loose.", Formatting.DARK_GRAY));
+            lore.add(line("Kliknij PPM podłączony automat jeszcze", Formatting.DARK_GRAY));
+            lore.add(line("raz, żeby go odłączyć.", Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -370,21 +370,31 @@ public class HouseScreenHandler extends ScreenHandler {
                         : "  Trzyma się nieźle.",
                 wear >= 60 ? Formatting.RED : Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        int broken = 0;
-        for (String where : TrapHouse.machinesOf(house)) {
-            if (TrapHouse.wearAt(where) >= TrapMath.WEAR_BROKEN) {
-                String[] parts = where.split(" ");
-                if (broken < 6) {
-                    lore.add(line("  ZEPSUTY  " + parts[1] + ", " + parts[2]
-                            + ", " + parts[3], Formatting.RED));
-                }
-                broken++;
-            }
+        // A work list, not a death list. This used to name only the cabinets
+        // already at 100, which is the one moment the hammer is too late --
+        // and the machines at 80-96, which are the ones actually turning
+        // punters away at the door, were nowhere on the screen. With nothing
+        // to aim at, the job becomes walking the whole floor hitting
+        // everything, and since wear lands somewhere every few seconds every
+        // cabinet always has a point or two on it and always answers
+        // "Naprawione". That is a treadmill, and it is what this list is for.
+        //
+        // Worst first, so the six that fit are the six worth walking to.
+        List<String> worn = new ArrayList<>(TrapHouse.machinesOf(house));
+        worn.removeIf(where -> TrapHouse.wearAt(where) < TrapMath.JAM_FROM);
+        worn.sort((a, b) -> TrapHouse.wearAt(b) - TrapHouse.wearAt(a));
+        for (int i = 0; i < Math.min(6, worn.size()); i++) {
+            String[] parts = worn.get(i).split(" ");
+            int at = TrapHouse.wearAt(worn.get(i));
+            boolean dead = at >= TrapMath.WEAR_BROKEN;
+            lore.add(line("  " + (dead ? "ZEPSUTY" : "zużyty " + at) + "  "
+                            + parts[1] + ", " + parts[2] + ", " + parts[3],
+                    dead ? Formatting.RED : Formatting.YELLOW));
         }
-        if (broken == 0) {
-            lore.add(line("Nic nie jest zepsute.", Formatting.GREEN));
-        } else if (broken > 6) {
-            lore.add(line("  ...i jeszcze " + (broken - 6), Formatting.RED));
+        if (worn.isEmpty()) {
+            lore.add(line("Nic nie wymaga młota.", Formatting.GREEN));
+        } else if (worn.size() > 6) {
+            lore.add(line("  ...i jeszcze " + (worn.size() - 6), Formatting.RED));
         }
         lore.add(Text.empty());
         int stock = TrapHouse.barStock(house);
@@ -400,8 +410,18 @@ public class HouseScreenHandler extends ScreenHandler {
             lore.add(line("  i wyjdą, a z nimi twoja reputacja.", Formatting.RED));
         }
         lore.add(Text.empty());
-        lore.add(line("Uderz automat Miner's Hammer, żeby go", Formatting.YELLOW));
-        lore.add(line("naprawić. Części opłaca kasyno.", Formatting.DARK_GRAY));
+        // PRAWYM, and it says so. The repair is a UseBlockCallback, but every
+        // line of text said "uderz" -- and the Miner's Hammer left-click is a
+        // 3x3 breaker, so following the instructions took out the cabinet and
+        // its eight neighbours.
+        lore.add(line("Kliknij automat PRAWYM z młotem", Formatting.YELLOW));
+        lore.add(line("górniczym. Części opłaca kasyno.", Formatting.DARK_GRAY));
+        lore.add(line("Lewym rozwalisz go razem z sąsiadami.", Formatting.RED));
+        lore.add(Text.empty());
+        lore.add(line("Poniżej " + TrapMath.JAM_FROM + " zużycia nikogo nie odsyła.",
+                Formatting.DARK_GRAY));
+        lore.add(line("Naprawa liczy się wtedy tylko do średniej", Formatting.DARK_GRAY));
+        lore.add(line("wyżej, czyli do reputacji.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
@@ -477,7 +497,7 @@ public class HouseScreenHandler extends ScreenHandler {
                 chime(1.2F);
                 owner.sendMessage(plain("Wpłacono ").formatted(Formatting.GRAY)
                         .append(plain(put + "e").formatted(Formatting.GREEN))
-                        .append(plain(". The vault holds ").formatted(Formatting.GRAY))
+                        .append(plain(". W skarbcu jest teraz ").formatted(Formatting.GRAY))
                         .append(plain(house.balance + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD))
                         .append(plain(".").formatted(Formatting.GRAY)), false);
@@ -504,7 +524,7 @@ public class HouseScreenHandler extends ScreenHandler {
                     owner.sendMessage(plain(no).formatted(Formatting.GRAY), false);
                 } else {
                     chime(1.3F);
-                    owner.sendMessage(plain("They start tonight.")
+                    owner.sendMessage(plain("Zaczyna dziś wieczorem.")
                             .formatted(Formatting.GREEN), false);
                 }
             }
@@ -563,9 +583,9 @@ public class HouseScreenHandler extends ScreenHandler {
             chime(0.9F);
             owner.sendMessage(plain("Wypłacono ").formatted(Formatting.GRAY)
                     .append(plain(got + "e").formatted(Formatting.GREEN))
-                    .append(plain(got < wanted ? " -- that was the lot. " : " out. ")
+                    .append(plain(got < wanted ? " -- to było wszystko. " : ". ")
                             .formatted(Formatting.GRAY))
-                    .append(plain(house.balance + "e behind the tables")
+                    .append(plain("Za stołami zostało " + house.balance + "e")
                             .formatted(Formatting.DARK_GRAY)), false);
         }
         CasinoCardItem.restamp(card, house);

@@ -87,13 +87,13 @@ public class NetworkScreenHandler extends ScreenHandler {
     private ItemStack help() {
         ItemStack tag = new ItemStack(Items.BOOK);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The Network").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Siatka dilerów").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Górny rząd: twoi. Kliknij, żeby wezwać.", Formatting.GRAY),
-                line("Bottom row: hiring tonight.", Formatting.GRAY),
+                line("Dolny rząd: chętni do pracy.", Formatting.GRAY),
                 Text.empty(),
                 line("Sprzedają, kiedy cię nie ma. Najlepiej w", Formatting.WHITE),
-                line("night, worst around noon.", Formatting.WHITE),
+                line("nocy, najgorzej koło południa.", Formatting.WHITE),
                 Text.empty(),
                 line("Każdy kolejny diler w tej samej okolicy", Formatting.DARK_GRAY),
                 line("sprzedaje mniej niż poprzedni.", Formatting.DARK_GRAY),
@@ -110,13 +110,13 @@ public class NetworkScreenHandler extends ScreenHandler {
                 plain("Popytaj").formatted(can ? Formatting.AQUA : Formatting.DARK_GRAY,
                         Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(TrapDealers.REROLL_COST + "e for three new faces.", Formatting.GRAY),
+                line(TrapDealers.REROLL_COST + "e za trzy nowe osoby.", Formatting.GRAY),
                 Text.empty(),
                 line("Lista odświeża się sama co", Formatting.DARK_GRAY),
-                line("ten minutes or so anyway.", Formatting.DARK_GRAY),
+                line("jakieś dziesięć minut i tak.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Wysoka reputacja przyciąga lepszych ludzi.", Formatting.WHITE),
-                line("Yours: " + rep() + " rep.", Formatting.DARK_GRAY))));
+                line("Twoja: " + rep() + ".", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -131,12 +131,12 @@ public class NetworkScreenHandler extends ScreenHandler {
                 plain(dealer.name).formatted(Formatting.GOLD, Formatting.BOLD)
                         .append(plain("  L" + dealer.level).formatted(Formatting.WHITE)));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Ma przy sobie " + dealer.carrying() + " in "
+        lore.add(line("Ma przy sobie " + dealer.carrying() + " z "
                 + dealer.slots() + " slots", Formatting.GRAY));
-        lore.add(line("Takings  ", Formatting.DARK_GRAY)
+        lore.add(line("Utarg  ", Formatting.DARK_GRAY)
                 .append(plain(dealer.earnings + "e").formatted(Formatting.GREEN)));
         lore.add(line(dealer.stock.isEmpty()
-                        ? "Idle -- nothing to sell." : "Out working.",
+                        ? "Bezczynny -- nie ma czego sprzedawać." : "W trasie.",
                 dealer.stock.isEmpty() ? Formatting.RED : Formatting.DARK_GRAY));
         // They do level up on their own, off what they sell -- but with no
         // number on the screen the only way to find out was to wait long
@@ -149,9 +149,9 @@ public class NetworkScreenHandler extends ScreenHandler {
         // Your rep is in this number, because it is in the real one. Quoting
         // the rate a nobody would get would make the screen wrong for exactly
         // the people who worked hardest on it.
-        lore.add(line("Shifts about " + Math.round(
+        lore.add(line("Sprzedaje około " + Math.round(
                         TrapMath.dealerRate(dealer.level, mine.size(), 0, rep()) * 30)
-                + " an hour at this level.", Formatting.DARK_GRAY));
+                + " na godzinę na tym poziomie.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(here
                 ? line("Już stoi przed tobą.", Formatting.DARK_GRAY)
@@ -173,21 +173,21 @@ public class NetworkScreenHandler extends ScreenHandler {
                                 .formatted(can ? Formatting.GOLD : Formatting.DARK_GRAY)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 cost < full
-                        ? line("Wants " + cost + "e up front  ", Formatting.GOLD)
+                        ? line("Chce " + cost + "e z góry  ", Formatting.GOLD)
                         .append(plain("(było " + full + ", reputacja pomaga)")
                                 .formatted(Formatting.DARK_GRAY))
-                        : line("Wants " + cost + "e up front.", Formatting.GOLD),
-                line("Keeps " + Math.round(TrapMath.dealerCut(offer.level) * 100)
+                        : line("Chce " + cost + "e z góry.", Formatting.GOLD),
+                line("Zatrzymuje " + Math.round(TrapMath.dealerCut(offer.level) * 100)
                         + "% tego, co sprzedadzą.", Formatting.GRAY),
-                line("Nosi " + TrapMath.dealerSlots(offer.level) + " slots.",
+                line("Slotów: " + TrapMath.dealerSlots(offer.level) + ".",
                         Formatting.GRAY),
                 Text.empty(),
                 line(offer.level < 3
-                                ? "Green. Gets robbed more often."
-                                : "Been at it a while. Rarely gets touched.",
+                                ? "Zielony. Częściej go okradają."
+                                : "Doświadczony. Rzadko go ruszają.",
                         offer.level < 3 ? Formatting.RED : Formatting.DARK_GRAY),
                 Text.empty(),
-                line(can ? "Click to take them on."
+                line(can ? "Kliknij, żeby go zatrudnić."
                                 : mine.size() >= TrapDealers.MAX_DEALERS
                                 ? "Nie masz już miejsca." : "Nie stać cię.",
                         can ? Formatting.YELLOW : Formatting.DARK_GRAY))));

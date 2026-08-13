@@ -96,7 +96,7 @@ public class ScoringTableBlock extends TurnableBlock implements PolymerTexturedB
         }
         if (stack.getCount() < PODS_PER_BATCH) {
             if (!world.isClient) {
-                player.sendMessage(Text.literal("Needs " + PODS_PER_BATCH + " pods")
+                player.sendMessage(Text.literal("Potrzeba " + PODS_PER_BATCH + " makówek")
                         .formatted(Formatting.RED), true);
             }
             return ActionResult.SUCCESS;

@@ -97,7 +97,7 @@ public class LeafPressBlock extends TurnableBlock implements PolymerTexturedBloc
         }
         if (stack.getCount() < LEAVES_PER_BATCH) {
             if (!world.isClient) {
-                player.sendMessage(Text.literal("Needs " + LEAVES_PER_BATCH + " leaves")
+                player.sendMessage(Text.literal("Potrzeba " + LEAVES_PER_BATCH + " liści")
                         .formatted(Formatting.RED), true);
             }
             return ActionResult.SUCCESS;

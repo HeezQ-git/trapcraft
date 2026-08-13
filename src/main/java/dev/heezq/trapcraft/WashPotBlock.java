@@ -125,7 +125,7 @@ public class WashPotBlock extends TurnableBlock implements PolymerTexturedBlock 
         }
         if (!world.isClient) {
             if (stack.getCount() < OPIUM_PER_BATCH) {
-                player.sendMessage(Text.literal("Needs " + OPIUM_PER_BATCH + " opium")
+                player.sendMessage(Text.literal("Potrzeba " + OPIUM_PER_BATCH + " opium")
                         .formatted(Formatting.RED), true);
                 return ActionResult.SUCCESS;
             }
@@ -133,14 +133,14 @@ public class WashPotBlock extends TurnableBlock implements PolymerTexturedBlock 
             // refiner's blaze powder, so no machine in the mod asks you to
             // juggle two stacks.
             if (!player.isCreative() && countLime(player) < LIME_PER_BATCH) {
-                player.sendMessage(Text.literal("Needs " + LIME_PER_BATCH + " bone meal for lime")
+                player.sendMessage(Text.literal("Potrzeba " + LIME_PER_BATCH + " mączki kostnej na wapno")
                         .formatted(Formatting.RED), true);
                 return ActionResult.SUCCESS;
             }
             if (!heated(world, pos)) {
                 // Said out loud rather than left as a silent stall: a machine
                 // that takes your goods and then does nothing is a bug report.
-                player.sendMessage(Text.literal("Nothing burning under it")
+                player.sendMessage(Text.literal("Pod spodem nic się nie pali")
                         .formatted(Formatting.RED), true);
                 return ActionResult.SUCCESS;
             }

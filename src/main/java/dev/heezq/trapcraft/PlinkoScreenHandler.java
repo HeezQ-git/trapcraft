@@ -185,7 +185,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
         }
         int paths = TrapMath.plinkoPaths(slot);
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Lands here " + paths + " times in 256.", Formatting.GRAY),
+                line("Trafia tu " + paths + " razy na 256.", Formatting.GRAY),
                 line("Płaci " + multiplier(pays) + " stawki.", Formatting.DARK_GRAY))));
         return tag;
     }
@@ -213,13 +213,13 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
                         .formatted(falling() ? Formatting.GRAY : Formatting.GOLD, Formatting.BOLD));
 
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Nothing is decided in advance here.", Formatting.WHITE));
+        lore.add(line("Nic nie jest tu ustalane z góry.", Formatting.WHITE));
         lore.add(line("Osiem rzutów monetą, a ty patrzysz.", Formatting.GRAY));
         lore.add(Text.empty());
         lore.add(line("Środek wypada najczęściej i płaci najmniej.", Formatting.DARK_GRAY));
-        lore.add(line("The edges land once in 256 each.", Formatting.DARK_GRAY));
+        lore.add(line("Skrajne pola trafiają raz na 256.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line("The house keeps about "
+        lore.add(line("Kasyno zatrzymuje około "
                 + Math.round((1 - TrapMath.plinkoReturnToPlayer()) * 100)
                 + "% over time.", Formatting.DARK_GRAY));
         if (!history.isEmpty()) {

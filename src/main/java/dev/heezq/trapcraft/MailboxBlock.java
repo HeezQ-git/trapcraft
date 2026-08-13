@@ -83,9 +83,9 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
         }
         TrapHomes.reattach(home, pos);
         if (placer instanceof ServerPlayerEntity who) {
-            who.sendMessage(Text.literal("The post for ").formatted(Formatting.GRAY)
+            who.sendMessage(Text.literal("Poczta domu ").formatted(Formatting.GRAY)
                     .append(Text.literal(home.name()).formatted(Formatting.GOLD))
-                    .append(Text.literal(" goes here now.").formatted(Formatting.GRAY)), true);
+                    .append(Text.literal(" trafia teraz tutaj.").formatted(Formatting.GRAY)), true);
         }
         ground.playSound(null, pos, SoundEvents.BLOCK_LANTERN_PLACE,
                 SoundCategory.BLOCKS, 0.8F, 1.2F);
@@ -128,7 +128,7 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
             ground.playSound(null, pos, SoundEvents.BLOCK_LANTERN_BREAK,
                     SoundCategory.BLOCKS, 0.8F, 1.1F);
             who.sendMessage(home == null
-                    ? Text.literal("Picked it up.").formatted(Formatting.GRAY)
+                    ? Text.literal("Podniesiono.").formatted(Formatting.GRAY)
                     : Text.literal("Zabrano skrzynkę domu ").formatted(Formatting.GRAY)
                             .append(Text.literal(home.name()).formatted(Formatting.GOLD))
                             .append(Text.literal(". Postaw ją tam, gdzie ma stać.")
@@ -195,10 +195,10 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
             }
             TrapHomes.reattach(inside, pos);
             good(ground, pos);
-            who.sendMessage(Text.literal("To skrzynka domu ").formatted(Formatting.GREEN)
+            who.sendMessage(Text.literal("Od teraz to skrzynka domu ").formatted(Formatting.GREEN)
                     .append(Text.literal(inside.name())
                             .formatted(Formatting.GOLD, Formatting.BOLD))
-                    .append(Text.literal(" now.").formatted(Formatting.GRAY)), false);
+                    .append(Text.literal(".").formatted(Formatting.GRAY)), false);
             return inside;
         }
 
@@ -220,10 +220,10 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
         if (spare != null) {
             TrapHomes.reattach(spare, pos);
             good(ground, pos);
-            who.sendMessage(Text.literal("Post for ").formatted(Formatting.GREEN)
+            who.sendMessage(Text.literal("Poczta domu ").formatted(Formatting.GREEN)
                     .append(Text.literal(spare.name())
                             .formatted(Formatting.GOLD, Formatting.BOLD))
-                    .append(Text.literal(" arrives here now.").formatted(Formatting.GRAY)), false);
+                    .append(Text.literal(" przychodzi teraz tutaj.").formatted(Formatting.GRAY)), false);
             return spare;
         }
 
@@ -238,7 +238,7 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
                     + " ma już skrzynkę na " + box.getX() + " " + box.getY() + " "
                     + box.getZ() + ". Żeby ją PRZENIEŚĆ, kucnij i kliknij ją pustą ręką, "
                     + "a potem postaw tutaj. Żeby zarejestrować kolejny dom, stań w jego "
-                    + "click a box there.");
+                    + "i kliknij tam skrzynką.");
             return null;
         }
 

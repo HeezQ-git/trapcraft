@@ -78,8 +78,8 @@ public class WalletItem extends Item implements PolymerItem {
                 Text.literal(held + "e").formatted(Formatting.GREEN, Formatting.BOLD)
                         .styled(style -> style.withItalic(false)),
                 Text.literal(held == 0
-                                ? "Empty. Right-click to fill it."
-                                : held / PER_BLOCK + " blocks and " + held % PER_BLOCK + " loose")
+                                ? "Pusty. Kliknij PPM, żeby go napełnić."
+                                : held / PER_BLOCK + " bloków i " + held % PER_BLOCK + " luzem")
                         .formatted(Formatting.DARK_GRAY)
                         .styled(style -> style.withItalic(false)))));
     }

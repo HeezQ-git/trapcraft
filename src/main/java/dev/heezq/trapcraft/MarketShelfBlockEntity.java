@@ -56,7 +56,7 @@ public class MarketShelfBlockEntity extends LockableContainerBlockEntity {
 
     @Override
     protected Text getContainerName() {
-        return Text.literal("Shelf");
+        return Text.literal("Półka");
     }
 
     @Override

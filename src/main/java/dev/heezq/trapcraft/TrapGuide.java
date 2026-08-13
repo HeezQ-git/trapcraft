@@ -1067,16 +1067,24 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("9. ZUŻYCIE\n\n"))
-                .append(body("Automaty się psują. Zepsuty nie przyjmuje "
-                        + "zakładów.\n\n"))
-                .append(body("Napraw go, uderzając przedmiotem "))
+                .append(body("Zepsuty automat nie bierze zakładów.\n\n"))
+                .append(body("Napraw PRAWYM klikiem, w ręce "))
                 .append(item("Młot górniczy"))
-                .append(body("."))));
+                .append(body(".\n"))
+                .append(hint("Lewym go rozwalisz."))));
 
+        // Was "Naprawa przed awarią jest tańsza niż po", which is simply
+        // untrue -- the bill is wear x REPAIR_COST_PER_POINT and nothing else,
+        // so a hundred repairs at 1 cost exactly what one at 100 costs. The
+        // hint was teaching the treadmill: walk the floor, hit everything,
+        // get told "Naprawione" every time, come back and do it again.
         pages.add(page(Text.empty()
                 .append(title("9b. NAPRAWA\n\n"))
-                .append(body("Naprawę opłaca skarbiec kasyna.\n\n"))
-                .append(hint("Naprawa przed awarią jest tańsza niż po."))));
+                .append(body("Płaci skarbiec: "
+                        + TrapMath.REPAIR_COST_PER_POINT
+                        + "e za punkt zużycia.\n\n"))
+                .append(hint("Wcześniej nie taniej. Poniżej "
+                        + TrapMath.JAM_FROM + " automat gra normalnie."))));
 
         pages.add(page(Text.empty()
                 .append(title("10. SZEF SALI\n\n"))
@@ -1750,7 +1758,7 @@ public final class TrapGuide {
 
     private static ItemStack book(String title, List<RawFilteredPair<Text>> pages) {
         WrittenBookContentComponent content = new WrittenBookContentComponent(
-                RawFilteredPair.of(title), "The Trap House", 0, pages, true);
+                RawFilteredPair.of(title), "Trap House", 0, pages, true);
         ItemStack stack = new ItemStack(Items.WRITTEN_BOOK);
         stack.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, content);
         return stack;

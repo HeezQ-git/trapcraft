@@ -218,7 +218,7 @@ public final class TrapCity {
         int cost = nextCost(work);
         if (cost < 0) {
             return work.display() + " jest ukończone -- nie ma poziomu " + (TOP_TIER + 1)
-                    + "th one to build.";
+                    + ". poziom do zbudowania.";
         }
         if (treasury < cost) {
             return (level(work) == 0 ? work.display() : "Kolejny poziom: " + work.display())
@@ -524,7 +524,7 @@ public final class TrapCity {
             return "Nie ma miasta, któremu można to dać.";
         }
         if (amount <= 0) {
-            return "Nothing to give.";
+            return "Nie ma czego przekazać.";
         }
         int held = TrapMarket.wealthOf(who);
         if (held < amount) {
@@ -698,10 +698,10 @@ public final class TrapCity {
         String why;
         int move;
         if (treasury < BROKE) {
-            why = "The purse is empty. Rates up.";
+            why = "Kasa miasta pusta. Podatki w górę.";
             move = 2;
         } else if (treasury > FLUSH) {
-            why = "The purse is full. Rates down.";
+            why = "Kasa miasta pełna. Podatki w dół.";
             move = -1;
         } else {
             why = "Rachunki się zgadzają. Drobne korekty.";

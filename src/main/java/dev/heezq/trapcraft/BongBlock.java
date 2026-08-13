@@ -131,7 +131,7 @@ public class BongBlock extends TurnableBlock implements PolymerTexturedBlock {
         if (strain != null && !state.get(LOADED)) {
             if (!state.get(WATER)) {
                 if (!world.isClient) {
-                    player.sendMessage(Text.literal("Needs water").formatted(Formatting.RED), true);
+                    player.sendMessage(Text.literal("Potrzebna woda").formatted(Formatting.RED), true);
                 }
                 return ActionResult.SUCCESS;
             }

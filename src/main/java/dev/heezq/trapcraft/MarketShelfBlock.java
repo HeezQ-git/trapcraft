@@ -108,7 +108,7 @@ public class MarketShelfBlock extends TurnableBlock
             who.sendMessage(Text.literal("Półka bez sklepu. ")
                     .formatted(Formatting.YELLOW)
                     .append(Text.literal("Postaw kasę sklepową w promieniu " + TrapShops.REACH
-                            + " blocks of it.").formatted(Formatting.GRAY)), false);
+                            + " bloków od niej.").formatted(Formatting.GRAY)), false);
         }
         // The owner opens the shelf and fills it, like any chest; everybody
         // else gets the shop window. One counter, two sides of it.
@@ -122,7 +122,7 @@ public class MarketShelfBlock extends TurnableBlock
                         (syncId, inventory, ignored) ->
                                 GenericContainerScreenHandler.createGeneric9x3(
                                         syncId, inventory, stock),
-                        Text.literal(shop == null ? "Shelf" : shop.name())
+                        Text.literal(shop == null ? "Półka" : shop.name())
                                 .formatted(Formatting.GOLD)));
             }
             return ActionResult.SUCCESS;

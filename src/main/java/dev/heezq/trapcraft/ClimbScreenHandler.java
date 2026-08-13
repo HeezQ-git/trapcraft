@@ -384,7 +384,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                 SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.9F, 1.3F);
         player.getWorld().spawnParticles(ParticleTypes.TOTEM_OF_UNDYING,
                 player.getX(), player.getY() + 1.3, player.getZ(), 30, 0.5, 0.5, 0.5, 0.25);
-        player.sendMessage(plain("Zszedłeś ze szczebla " + rung + " with ")
+        player.sendMessage(plain("Zszedłeś ze szczebla " + rung + " z ")
                 .formatted(Formatting.GRAY)
                 .append(plain(won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
                 .append(plain(net >= 0 ? "   net +" + net : "   net " + net)
@@ -417,10 +417,10 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
             int lost = STAKES[stakeChoice];
             int had = rung > 0
                     ? Math.round(lost * TrapMath.climbMultiplier(ladder, rung)) : 0;
-            player.sendMessage(plain("Wrong door on rung " + (rung + 1) + ". ")
+            player.sendMessage(plain("Złe drzwi na szczeblu " + (rung + 1) + ". ")
                     .formatted(Formatting.GRAY)
                     .append(plain("-" + lost + "e").formatted(Formatting.RED))
-                    .append(plain(had > 0 ? "   you were holding " + had + "e" : "")
+                    .append(plain(had > 0 ? "   miałeś już " + had + "e" : "")
                             .formatted(Formatting.DARK_GRAY)), false);
             reset();
             repaint();

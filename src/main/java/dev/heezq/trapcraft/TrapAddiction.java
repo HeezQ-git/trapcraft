@@ -287,8 +287,8 @@ public final class TrapAddiction {
         world.playSound(null, player.getBlockPos(), SoundEvents.BLOCK_BEACON_ACTIVATE,
                 SoundCategory.PLAYERS, 0.35F, 1.6F);
         player.sendMessage(Text.literal("Już lepiej. ").formatted(Formatting.GREEN)
-                .append(Text.literal("The " + drug.display() + " " + was.label()
-                        + " lets go.").formatted(Formatting.DARK_GRAY)), true);
+                .append(Text.literal("Puszcza: " + drug.display() + " (" + was.label()
+                        + ").").formatted(Formatting.DARK_GRAY)), true);
     }
 
     // --- the other side of the counter ---------------------------------------

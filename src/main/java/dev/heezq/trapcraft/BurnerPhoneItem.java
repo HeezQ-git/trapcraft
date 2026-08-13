@@ -60,7 +60,7 @@ public class BurnerPhoneItem extends Item implements PolymerItem {
                     SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundCategory.PLAYERS, 0.5F, 1.2F);
             player.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                     (syncId, inventory, ignored) -> new NetworkScreenHandler(syncId, inventory),
-                    Text.literal("The Network").formatted(Formatting.GOLD, Formatting.BOLD)));
+                    Text.literal("Siatka dilerów").formatted(Formatting.GOLD, Formatting.BOLD)));
             return ActionResult.SUCCESS;
         }
 

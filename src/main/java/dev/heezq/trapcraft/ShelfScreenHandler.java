@@ -121,8 +121,8 @@ public class ShelfScreenHandler extends ScreenHandler {
         lore.add(Text.empty());
         lore.add(line(line.duty() == TrapCity.Duty.LUXURY
                         ? "Sprzedane przez ladę: czyste i zgłoszone."
-                        : "Ordinary goods, at " + shop.markupName().toLowerCase(
-                                java.util.Locale.ROOT) + " prices.",
+                        : "Zwykły towar, ceny " + shop.markupName().toLowerCase(
+                                java.util.Locale.ROOT) + ".",
                 Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(line(can ? "Kliknij, żeby kupić jedną sztukę." : "Nie stać cię.",
@@ -137,7 +137,7 @@ public class ShelfScreenHandler extends ScreenHandler {
                 plain("Półki są puste").formatted(Formatting.GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Brak towaru albo nic, czego ktokolwiek", Formatting.GRAY),
-                line("would put a price on.", Formatting.GRAY),
+                line("na co rynek ma cenę.", Formatting.GRAY),
                 Text.empty(),
                 line("Wróć, kiedy uzupełnią zapas.", Formatting.DARK_GRAY))));
         return tag;

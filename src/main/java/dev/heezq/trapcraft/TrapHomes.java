@@ -545,7 +545,7 @@ public final class TrapHomes {
                 owner.getGameProfile().getName(), dimension, pos.toImmutable());
         home.mailbox = pos.toImmutable();
         home.box = box;
-        home.name = spare(owner.getGameProfile().getName() + "'s place");
+        home.name = spare("Dom gracza " + owner.getGameProfile().getName());
         HOMES.add(home);
         // Graded off the survey already in hand rather than by calling
         // measure(), which would walk the same walls a second time and then
@@ -1053,7 +1053,7 @@ public final class TrapHomes {
         save();
         ServerPlayerEntity owner = server.getPlayerManager().getPlayer(home.owner);
         if (owner != null) {
-            owner.sendMessage(Text.literal(home.name + " is empty. ")
+            owner.sendMessage(Text.literal(home.name + " jest pusty. ")
                     .formatted(Formatting.RED, Formatting.BOLD)
                     .append(Text.literal(who + " " + why + ".").formatted(Formatting.GRAY)),
                     false);

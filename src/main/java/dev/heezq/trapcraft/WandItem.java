@@ -63,7 +63,53 @@ public class WandItem extends Item implements PolymerItem {
 
     /** Which wand this is. Everything but the cast is shared. */
     public enum Kind {
-        BOOST, HARVEST, PROSPECT, BUILDER, STORM
+        BOOST, HARVEST, PROSPECT, BUILDER, STORM;
+
+        /**
+         * Two lines on the stack itself, so the wand explains itself wherever
+         * it is looked at: in a hand, in a chest, and on the shelf where
+         * somebody is deciding whether it is worth eighteen thousand.
+         *
+         * The figures come from the constants below rather than being typed
+         * out again, for the same reason the guide book reads them: a tooltip
+         * that quotes a range the wand no longer has is worse than no tooltip.
+         */
+        public List<Text> blurb() {
+            return switch (this) {
+                case BOOST -> lines("Rzuca cię tam, gdzie patrzysz.",
+                        "Skradanie: przeskok o " + BLINK_RANGE + " bloków.");
+                case HARVEST -> lines("Zbiera dojrzałe plony "
+                                + (HARVEST_RADIUS * 2 + 1) + "x" + (HARVEST_RADIUS * 2 + 1)
+                                + " wokół ciebie.",
+                        "Sadzi je z powrotem, plon idzie do plecaka.");
+                case PROSPECT -> lines("Podświetla rudy w promieniu "
+                                + PROSPECT_RADIUS + " bloków.",
+                        "Przez kamień. Widzisz je tylko ty.");
+                case BUILDER -> lines("Dokłada do " + BUILDER_REACH
+                                + " takich samych bloków w bok.",
+                        "Bierze je z twojego plecaka.");
+                case STORM -> lines("Piorun tam, gdzie patrzysz. Zasięg "
+                                + STORM_RANGE + " bloków.",
+                        "Nie podpala. Bije tylko potwory.");
+            };
+        }
+
+        /**
+         * Grey and upright.
+         *
+         * Lore is dark purple italics unless the line says otherwise --
+         * fillStyle only fills what is UNSET -- so both have to be stated or
+         * the description arrives looking like a magic item's flavour text
+         * instead of the instructions it is.
+         */
+        private static List<Text> lines(String... said) {
+            List<Text> lore = new ArrayList<>();
+            for (String line : said) {
+                lore.add(Text.literal(line).formatted(Formatting.GRAY)
+                        .styled(style -> style.withItalic(false)));
+            }
+            return lore;
+        }
     }
 
     // --- the numbers, which the guide book quotes rather than retypes --------

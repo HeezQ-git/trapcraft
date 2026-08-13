@@ -482,7 +482,7 @@ public final class TrapContracts {
                                 .withColor(contract.productColour()))
                         .append(Text.literal(", " + contract.formValue().label.toLowerCase(
                                         java.util.Locale.ROOT) + ", "
-                                        + contract.gradeName() + " or better. "
+                                        + contract.gradeName() + " lub lepsza. "
                                         + "Masz " + carrying + ".")
                                 .formatted(Formatting.GRAY)),
                 false);
@@ -563,11 +563,11 @@ public final class TrapContracts {
                 SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 0.8F, 1.5F);
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER,
                 player.getX(), player.getEyeY(), player.getZ(), 20, 0.5, 0.5, 0.5, 0.02);
-        player.sendMessage(Text.literal("Paid. " + paid + " emeralds, +"
+        player.sendMessage(Text.literal("Zapłacone. " + paid + " szmaragdów, +"
                         + contract.rep() + " rep.").formatted(Formatting.GREEN)
                 .append(Text.literal(heatTier > 0
                                 ? "  (+" + (paid - contract.payout()) + " za wysoką uwagę policji)"
-                                : "  (cold run, no premium)")
+                                : "  (spokojny kurs, bez premii)")
                         .formatted(Formatting.DARK_GRAY)), false);
         // A drop is the biggest handover in the mod and the one with a paper
         // trail leading back to a phone, so it rolls on the whole quantity.

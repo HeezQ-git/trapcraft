@@ -812,7 +812,7 @@ public final class TrapCrew {
         mob.refreshPositionAndAngles(stand, yaw, 0.0F);
         mob.setPersistent();
         mob.setAiDisabled(false);
-        mob.setCustomName(Text.literal("Hand").formatted(Formatting.YELLOW));
+        mob.setCustomName(Text.literal("Robotnik").formatted(Formatting.YELLOW));
         mob.setCustomNameVisible(true);
         // NITWIT, and not merely "no profession". A professionless villager
         // takes a job from any workstation it wanders past and becomes a
@@ -1239,7 +1239,7 @@ public final class TrapCrew {
         }
         save();
         boss.sendMessage(Text.literal("Ekipa wróciła. ").formatted(Formatting.GREEN, Formatting.BOLD)
-                .append(Text.literal(put + (put == 1 ? " hand" : " hands") + " na swoich starych "
+                .append(Text.literal(put + (put == 1 ? " osoba" : " osób") + " na swoich starych "
                         + "działkach, wyszkolonych. Suma pensji: "
                         + payrollOf(boss) + "e.").formatted(Formatting.GRAY)), false);
         return null;
@@ -1446,7 +1446,7 @@ public final class TrapCrew {
         }
         boss.openHandledScreen(new net.minecraft.screen.SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, p) -> new CrewScreenHandler(syncId, inventory),
-                Text.literal("The Crew").formatted(Formatting.GOLD)));
+                Text.literal("Ekipa").formatted(Formatting.GOLD)));
         return 1;
     }
 
@@ -2419,7 +2419,7 @@ public final class TrapCrew {
                             .styled(style -> style.withClickEvent(
                                     new net.minecraft.text.ClickEvent.SuggestCommand(
                                             "/crew load " + WALKOUT))))
-                    .append(Text.literal(" buys them back.").formatted(Formatting.GRAY)), false);
+                    .append(Text.literal(" przywraca ekipę.").formatted(Formatting.GRAY)), false);
         }
     }
 

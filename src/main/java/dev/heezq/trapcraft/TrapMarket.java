@@ -279,7 +279,7 @@ public final class TrapMarket {
         if (server == null) {
             return;
         }
-        Text line = Text.literal("Market  ").formatted(Formatting.GOLD, Formatting.BOLD)
+        Text line = Text.literal("Rynek  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(up
                                 ? "Ktoś właśnie dostał wypłatę. Ceny rosną."
                                 : "Dużo pieniędzy właśnie zniknęło. Ceny spadają.")

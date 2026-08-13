@@ -111,10 +111,10 @@ public class SellScreenHandler extends ScreenHandler {
 
         ItemStack info = new ItemStack(Items.BOOK);
         info.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The Counter").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain("Lada skupu").formatted(Formatting.GOLD, Formatting.BOLD));
         info.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Wrzuć cokolwiek. Shift+LPM działa.", Formatting.GRAY),
-                line("Then hit SELL.", Formatting.GRAY),
+                line("Potem kliknij SPRZEDAJ.", Formatting.GRAY),
                 Text.empty(),
                 line("Towar z listy idzie po cenie rynkowej.", Formatting.DARK_GRAY),
                 line("Reszta wyceniana jest na miejscu,", Formatting.DARK_GRAY),
@@ -241,9 +241,9 @@ public class SellScreenHandler extends ScreenHandler {
             }
             till();
             MutableText line = plain("Sold ").formatted(Formatting.GRAY)
-                    .append(plain(sold + " item" + (sold == 1 ? "" : "s"))
+                    .append(plain(sold + " szt.")
                             .formatted(Formatting.WHITE))
-                    .append(plain(" for ").formatted(Formatting.GRAY))
+                    .append(plain(" za ").formatted(Formatting.GRAY))
                     .append(plain(paid + "e").formatted(Formatting.GREEN, Formatting.BOLD));
             int named = 0;
             for (Map.Entry<String, int[]> row : receipt.entrySet()) {

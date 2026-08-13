@@ -92,7 +92,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
         return switch (side) {
             case 0 -> "Heads";
             case 1 -> "Tails";
-            default -> "The Edge";
+            default -> "Kant";
         };
     }
 
@@ -123,7 +123,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
 
         ItemStack tag = new ItemStack(face);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(spinning > 0 ? "..." : result < 0 ? "Call it" : faceName(result))
+                plain(spinning > 0 ? "..." : result < 0 ? "Obstaw" : faceName(result))
                         .formatted(result == 2 ? Formatting.LIGHT_PURPLE
                                         : spinning > 0 ? Formatting.GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
@@ -153,7 +153,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                                 Formatting.BOLD));
         float pays = rim ? TrapMath.TOSS_EDGE_PAY : TrapMath.TOSS_SIDE_PAY;
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Pays " + (rim ? String.valueOf((int) pays) : String.format("%.2f", pays))
+                line("Płaci " + (rim ? String.valueOf((int) pays) : String.format("%.2f", pays))
                         + "x  ->  " + Math.round(STAKES[stakeChoice] * pays) + "e",
                         Formatting.GOLD),
                 line(rim ? "Czasem staje na kancie." : "Mniej więcej jeden do jednego.",
@@ -310,17 +310,17 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                 result == 2 ? Formatting.LIGHT_PURPLE
                         : result == 0 ? Formatting.GOLD : Formatting.WHITE, Formatting.BOLD);
         if (won <= 0) {
-            player.sendMessage(plain("It came down ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Wypadł ").formatted(Formatting.GRAY)
                     .append(face)
-                    .append(plain(". You called " + faceName(called) + ".   ")
+                    .append(plain(". Obstawiałeś " + faceName(called) + ".   ")
                             .formatted(Formatting.GRAY))
                     .append(plain("-" + stake + "e").formatted(Formatting.RED)), false);
         } else {
-            player.sendMessage(plain("It came down ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Wypadł ").formatted(Formatting.GRAY)
                     .append(face)
                     .append(plain(".   ").formatted(Formatting.GRAY))
                     .append(plain("+" + won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
-                    .append(plain(result == 2 ? "   ON THE RIM." : "")
+                    .append(plain(result == 2 ? "   NA KANCIE." : "")
                             .formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)), false);
         }
         result = -1;

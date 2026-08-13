@@ -81,11 +81,11 @@ public class CasinoCardItem extends Item implements PolymerItem {
             card.set(DataComponentTypes.CUSTOM_NAME,
                     plain("Niepodpisana licencja").formatted(Formatting.GRAY, Formatting.BOLD));
             card.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line("Unsigned.", Formatting.DARK_GRAY),
+                    line("Niepodpisana.", Formatting.DARK_GRAY),
                     Text.empty(),
                     line("Kliknij PPM w powietrze, żeby otworzyć kasyno.", Formatting.YELLOW),
                     line("Najpierw nazwij licencję na kowadle, jeśli", Formatting.DARK_GRAY),
-                    line("it called something.", Formatting.DARK_GRAY))));
+                    line("chcesz mu nadać własną nazwę.", Formatting.DARK_GRAY))));
             return;
         }
 
@@ -125,9 +125,9 @@ public class CasinoCardItem extends Item implements PolymerItem {
                             .formatted(worn >= TrapMath.JAM_FROM ? Formatting.RED
                                     : Formatting.WHITE))
                     .append(plain(worst >= TrapMath.JAM_FROM
-                                    ? "  average -- worst cabinet " + (100 - worst)
-                                    + "%, turning people away"
-                                    : "  all sound").formatted(Formatting.DARK_GRAY)));
+                                    ? "  średnio -- najgorszy automat " + (100 - worst)
+                                    + "%, odstrasza graczy"
+                                    : "  wszystkie sprawne").formatted(Formatting.DARK_GRAY)));
         }
         int town = TrapHomes.population();
         lore.add(line("Trade  ", Formatting.GRAY)
@@ -140,13 +140,13 @@ public class CasinoCardItem extends Item implements PolymerItem {
             // Net of upkeep and the cut. The gross figure flattered a
             // ten-machine floor by a third, and a business you are judging by
             // the wrong number is one you cannot make decisions about.
-            lore.add(line("Kept " + house.profit() + "e of " + house.handle
-                    + "e played  (" + house.edge() + "% after costs)",
+            lore.add(line("Zysk " + house.profit() + "e z " + house.handle
+                    + "e obrotu  (" + house.edge() + "% po kosztach)",
                     house.profit() >= 0 ? Formatting.DARK_GRAY : Formatting.RED));
         }
         lore.add(Text.empty());
         if (machines == 0) {
-            lore.add(line("Right-click a machine to wire it up.", Formatting.YELLOW));
+            lore.add(line("Kliknij PPM automat, żeby go podłączyć.", Formatting.YELLOW));
         } else if (house.balance <= 0) {
             lore.add(line("Pusty. Twoje automaty nie przyjmą zakładu.", Formatting.RED));
         }
@@ -234,7 +234,7 @@ public class CasinoCardItem extends Item implements PolymerItem {
 
         owner.sendMessage(plain("").append(plain(house.name)
                         .formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(plain(" is open.").formatted(Formatting.GRAY)), false);
+                .append(plain(" jest otwarte.").formatted(Formatting.GRAY)), false);
         owner.sendMessage(plain("Wpłać kasę do skarbca, a potem kliknij automaty PPM "
                 + "tą licencją, żeby je podłączyć.").formatted(Formatting.DARK_GRAY), false);
     }

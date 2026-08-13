@@ -30,10 +30,10 @@ public record Contract(int strain, int minGrade, int quantity,
      * rewrite every live job on the server into a different one.
      */
     public enum Form {
-        BUDS("Cured buds only"),
-        JOINTS("Rolled joints only"),
-        EITHER("Buds or joints"),
-        POWDER("Refined powder only");
+        BUDS("Tylko suszone szyszki"),
+        JOINTS("Tylko skręty"),
+        EITHER("Susz albo skręty"),
+        POWDER("Tylko oczyszczony proszek");
 
         public final String label;
 
@@ -103,7 +103,7 @@ public record Contract(int strain, int minGrade, int quantity,
      * stops a cocaine job being advertised as Purple Haze.
      */
     public String productName() {
-        return takesPowder() ? "Powder" : strainValue().display();
+        return takesPowder() ? "Proszek" : strainValue().display();
     }
 
     public int productColour() {

@@ -102,7 +102,7 @@ public final class TrapParanoia {
     private static final Map<UUID, ServerBossBar> BARS = new HashMap<>();
 
     private static final String[] TIER_WORDS = {
-            "You feel watched.",
+            "Czujesz, że ktoś cię obserwuje.",
             "Coś się poruszyło. Jesteś tego pewien.",
             "Nie wiesz już, co jest prawdziwe.",
             "Oni tu są. Są tu już od dłuższego czasu.",

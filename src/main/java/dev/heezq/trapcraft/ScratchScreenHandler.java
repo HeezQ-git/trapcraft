@@ -178,13 +178,13 @@ public class ScratchScreenHandler extends ScreenHandler {
                 line("Kup kartę i klikaj pola.", Formatting.GRAY),
                 line("Trzy takie same płacą. Więcej płaci więcej.", Formatting.GRAY),
                 Text.empty(),
-                line("Three in a row, column or corner-to-", Formatting.WHITE),
-                line("corner pays DOUBLE.", Formatting.WHITE),
+                line("Trzy w rzędzie, kolumnie albo po", Formatting.WHITE),
+                line("przekątnej płacą PODWÓJNIE.", Formatting.WHITE),
                 Text.empty(),
                 line("Jedna nagroda na kartę -- najwyższa.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Około " + Math.round(TrapMath.SCRATCH_MEASURED_WIN_RATE * 100)
-                        + " cards in 100 pay something,", Formatting.DARK_GRAY),
+                        + " kart na 100 coś wypłaca,", Formatting.DARK_GRAY),
                 line("a większość z nich zwraca mniej, niż", Formatting.DARK_GRAY),
                 line("kosztowała karta. Kasyno bierze około "
                         + Math.round((1 - TrapMath.SCRATCH_MEASURED_RTP) * 100) + "%.",
@@ -197,7 +197,7 @@ public class ScratchScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain("Tabela wypłat").formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Three of...", Formatting.DARK_GRAY));
+        lore.add(line("Trzy takie same...", Formatting.DARK_GRAY));
         for (int face = TrapMath.SCRATCH_FACES - 1; face >= 1; face--) {
             lore.add(plain("  " + faceName(face)).formatted(faceColour(face))
                     .append(plain("   " + trim(TrapMath.SCRATCH_PRIZES[face]) + "x")
@@ -207,7 +207,7 @@ public class ScratchScreenHandler extends ScreenHandler {
         lore.add(line("Cztery takie  x" + trim(TrapMath.SCRATCH_SIZES[4]), Formatting.GRAY));
         lore.add(line("Pięć takich  x" + trim(TrapMath.SCRATCH_SIZES[5]), Formatting.GRAY));
         lore.add(line("Sześć lub więcej   x" + trim(TrapMath.SCRATCH_SIZES[6]), Formatting.GRAY));
-        lore.add(line("In a line     x" + trim(TrapMath.SCRATCH_LINE_BONUS), Formatting.GRAY));
+        lore.add(line("W linii     x" + trim(TrapMath.SCRATCH_LINE_BONUS), Formatting.GRAY));
         lore.add(Text.empty());
         lore.add(line("Wszystko jako wielokrotność ceny karty.", Formatting.DARK_GRAY));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -250,7 +250,7 @@ public class ScratchScreenHandler extends ScreenHandler {
                         can ? Formatting.GRAY : Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Karta była już taka, zanim zacząłeś", Formatting.DARK_GRAY),
-                line("touched it. Order changes nothing.", Formatting.DARK_GRAY))));
+                line("ją zdrapywać. Kolejność nic nie zmienia.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -420,7 +420,7 @@ public class ScratchScreenHandler extends ScreenHandler {
         int net = won - paid;
         player.sendMessage(plain(count + "x ").formatted(Formatting.WHITE)
                 .append(plain(faceName(face)).formatted(faceColour(face), Formatting.BOLD))
-                .append(plain(lined ? "  IN A LINE" : "")
+                .append(plain(lined ? "  W LINII" : "")
                         .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(plain("   ").formatted(Formatting.GRAY))
                 .append(plain("+" + won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
@@ -466,9 +466,9 @@ public class ScratchScreenHandler extends ScreenHandler {
         int won = Math.round(paid * TrapMath.scratchPay(card));
         if (won > 0) {
             TrapHouse.payout(player, house, won);
-            player.sendMessage(plain("You left ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Zostawiłeś ").formatted(Formatting.GRAY)
                     .append(plain(won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
-                    .append(plain(" on the counter. Posted on.")
+                    .append(plain(" na ladzie. Wysłano pocztą.")
                             .formatted(Formatting.GRAY)), false);
         }
     }

@@ -76,8 +76,8 @@ public final class TrapDealers {
             "Slim", "Dez", "Marco", "Rae", "Tunde", "Vic", "Nell", "Baz",
             "Kiro", "Ade", "Sana", "Pip", "Ozzy", "Mira", "Fitz", "Lex"};
     private static final String[] LAST = {
-            "the Quiet", "Two-Phones", "the Clock", "Nightshift", "No-Show",
-            "the Ghost", "Halfpipe", "Sunday", "the Mouse", "Rainman"};
+            "Cichy", "Dwa Telefony", "Zegarek", "Nocna Zmiana", "Duch",
+            "Widmo", "Rampa", "Niedziela", "Myszka", "Deszczowy"};
 
     /**
      * One dealer on the books.
@@ -276,7 +276,7 @@ public final class TrapDealers {
     /** @return why it didn't happen, or null if the board turned over */
     public static String payToReroll(ServerPlayerEntity boss) {
         if (TrapMarket.wealthOf(boss) < REROLL_COST) {
-            return "Asking around costs " + REROLL_COST + "e.";
+            return "Popytanie kosztuje " + REROLL_COST + "e.";
         }
         TrapMarket.take(boss, REROLL_COST);
         reroll(boss, true);
@@ -291,7 +291,7 @@ public final class TrapDealers {
         int cost = TrapMath.dealerHireCost(offer.level,
                 TrapContracts.repOf(TrapContracts.findPhone(boss)));
         if (TrapMarket.wealthOf(boss) < cost) {
-            return offer.name + " wants " + cost + "e up front.";
+            return offer.name + " chce " + cost + "e z góry.";
         }
         TrapMarket.take(boss, cost);
         BOOK.add(offer);
@@ -343,11 +343,11 @@ public final class TrapDealers {
         BlockPos spot = TrapSpawn.near(world, boss.getBlockPos().add(
                 world.getRandom().nextInt(7) - 3, 0, world.getRandom().nextInt(7) - 3));
         if (spot == null) {
-            return "Nowhere here for them to stand.";
+            return "Nie ma tu gdzie go postawić.";
         }
         VillagerEntity body = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
         if (body == null) {
-            return "Couldn't reach them.";
+            return "Nie udało się do niego dotrzeć.";
         }
         body.refreshPositionAndAngles(spot, boss.getYaw(), 0.0F);
         body.setPersistent();
@@ -376,7 +376,7 @@ public final class TrapDealers {
         dealer.calledAt = boss.getServer().getTicks();
         if (!world.spawnEntity(body)) {
             dealer.mob = null;
-            return "Couldn't reach them.";
+            return "Nie udało się do niego dotrzeć.";
         }
         world.playSound(null, spot, SoundEvents.ENTITY_VILLAGER_AMBIENT,
                 SoundCategory.NEUTRAL, 0.9F, 1.0F);
@@ -523,8 +523,8 @@ public final class TrapDealers {
             if (boss != null) {
                 boss.sendMessage(Text.literal(dealer.name).formatted(Formatting.GOLD,
                                 Formatting.BOLD)
-                        .append(Text.literal(" moved up to level " + dealer.level + ". Room for "
-                                + TrapMath.dealerSlots(dealer.level) + " slots now.")
+                        .append(Text.literal(" moved up to level " + dealer.level + ". Miejsce na "
+                                + TrapMath.dealerSlots(dealer.level) + " slotów.")
                                 .formatted(Formatting.GREEN)), false);
                 TrapAwards.grant(boss, "kingpin");
             }
@@ -546,11 +546,11 @@ public final class TrapDealers {
 
         if (boss != null) {
             boss.sendMessage(Text.literal(dealer.name).formatted(Formatting.RED, Formatting.BOLD)
-                    .append(Text.literal(" got jumped. Lost ").formatted(Formatting.GRAY))
+                    .append(Text.literal(" został napadnięty. Stracił ").formatted(Formatting.GRAY))
                     .append(Text.literal(taken + "x ").formatted(Formatting.WHITE))
                     .append(what)
                     .append(Text.literal(dealer.level < 3
-                                    ? ".  A better dealer gets robbed less." : ".")
+                                    ? ".  Lepszy diler jest okradany rzadziej." : ".")
                             .formatted(Formatting.DARK_GRAY)), false);
         }
         return true;

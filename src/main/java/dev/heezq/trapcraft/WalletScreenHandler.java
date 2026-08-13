@@ -103,7 +103,7 @@ public class WalletScreenHandler extends ScreenHandler {
         pouch.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Bez limitu. Włóż ile chcesz.", Formatting.GRAY),
                 Text.empty(),
-                line("This money is still spendable.", Formatting.WHITE),
+                line("Tymi pieniędzmi normalnie płacisz.", Formatting.WHITE),
                 line("Sklepy i automaty biorą z niego, gdy", Formatting.DARK_GRAY),
                 line("skończą ci się szmaragdy w ekwipunku.", Formatting.DARK_GRAY))));
         display.setStack(WALLET_SLOT, pouch);
@@ -116,7 +116,7 @@ public class WalletScreenHandler extends ScreenHandler {
                                 ? "Przenosi wszystkie " + loose + "e z ekwipunku."
                                 : "Nie masz nic w ekwipunku.",
                         loose > 0 ? Formatting.GRAY : Formatting.DARK_GRAY),
-                line("Blocks count as nine.", Formatting.DARK_GRAY))));
+                line("Bloki liczą się po dziewięć.", Formatting.DARK_GRAY))));
         display.setStack(DEPOSIT_SLOT, deposit);
 
         for (int i = 0; i < STEPS.length; i++) {
@@ -216,11 +216,11 @@ public class WalletScreenHandler extends ScreenHandler {
                     .formatted(Formatting.GRAY), false);
         } else {
             chime(0.9F);
-            owner.sendMessage(plain("Took ").formatted(Formatting.GRAY)
+            owner.sendMessage(plain("Wypłacono ").formatted(Formatting.GRAY)
                     .append(plain(got + "e").formatted(Formatting.GREEN))
-                    .append(plain(got < wanted ? " -- that was the lot. " : " out. ")
+                    .append(plain(got < wanted ? " -- to było wszystko. " : ". ")
                             .formatted(Formatting.GRAY))
-                    .append(plain(WalletItem.balanceOf(wallet) + "e left")
+                    .append(plain("W portfelu zostało " + WalletItem.balanceOf(wallet) + "e")
                             .formatted(Formatting.DARK_GRAY)), false);
         }
         paint();

@@ -192,7 +192,7 @@ public class MixerScreenHandler extends ScreenHandler {
                 line("Powtórki się liczą. Dwa Kush i Purp to", Formatting.DARK_GRAY),
                 line("nie to samo, co po jednym z każdego.", Formatting.DARK_GRAY),
                 line("Klasa idzie z NAJGORSZEGO slotu.", Formatting.DARK_GRAY),
-                line("Some combinations have names.", Formatting.DARK_GRAY))));
+                line("Niektóre składy mają własne nazwy.", Formatting.DARK_GRAY))));
         display.setStack(HELP_SLOT, help);
 
         ItemStack arrow = new ItemStack(Items.ARROW);
@@ -204,12 +204,12 @@ public class MixerScreenHandler extends ScreenHandler {
         if (blend == null) {
             ItemStack empty = new ItemStack(Items.GLASS_BOTTLE);
             empty.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("Nothing to mix yet").formatted(Formatting.GRAY, Formatting.BOLD));
+                    plain("Nie ma jeszcze czego mieszać").formatted(Formatting.GRAY, Formatting.BOLD));
             empty.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                     line(count == 0 ? "Sloty są puste."
                                     : count < Blend.MIN_PARTS
                                     ? "Jeden rodzaj suszu to nie mieszanka. Dodaj drugi."
-                                    : "Only dried buds go in here.",
+                                    : "Tu wchodzi tylko suszony towar.",
                             Formatting.GRAY),
                     line(count + " of " + Blend.MAX_PARTS + " slots filled",
                             Formatting.DARK_GRAY))));
@@ -222,16 +222,15 @@ public class MixerScreenHandler extends ScreenHandler {
                     result.getOrDefault(DataComponentTypes.LORE, LoreComponent.DEFAULT).lines());
             lore.add(Text.empty());
             lore.add(line("Kliknij, żeby zmieszać", Formatting.YELLOW, Formatting.BOLD));
-            lore.add(line("Makes " + jars, Formatting.WHITE)
+            lore.add(line("Wyjdzie: " + jars, Formatting.WHITE)
                     .append(plain(", using " + (jars * count) + " buds.")
                             .formatted(Formatting.DARK_GRAY)));
             Quality best = bestLoaded();
             if (best.index() > blend.grade()) {
                 // The one thing about this machine that surprises people.
-                lore.add(line("Your best slot is " + best.display() + ", so "
-                        + (best.index() - blend.grade()) + " grade"
-                        + (best.index() - blend.grade() > 1 ? "s" : "")
-                        + " go to waste.", Formatting.RED));
+                lore.add(line("Najlepszy slot to " + best.display() + ", więc marnujesz "
+                        + (best.index() - blend.grade()) + " klas jakości.",
+                        Formatting.RED));
             }
             result.set(DataComponentTypes.LORE, new LoreComponent(lore));
             display.setStack(RESULT_SLOT, result);

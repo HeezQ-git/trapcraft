@@ -515,7 +515,7 @@ public final class TrapLaw {
     private static ItemStack book(String name, List<RawFilteredPair<Text>> pages) {
         ItemStack stack = new ItemStack(Items.WRITTEN_BOOK);
         stack.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, new WrittenBookContentComponent(
-                RawFilteredPair.of(name), "The City", 0, pages, true));
+                RawFilteredPair.of(name), "Miasto", 0, pages, true));
         return stack;
     }
 

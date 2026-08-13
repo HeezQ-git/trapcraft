@@ -123,17 +123,17 @@ public class CoinScreenHandler extends ScreenHandler {
         lore.add(line(coin.name(), Formatting.GRAY)
                 .append(plain("   " + coin.risk().label).formatted(coin.risk().colour)));
         lore.add(line(TrapCoins.sparkline(coin, beat, 120, 16), Formatting.DARK_AQUA));
-        lore.add(line("Last hour  ", Formatting.DARK_GRAY)
+        lore.add(line("Ostatnia godzina  ", Formatting.DARK_GRAY)
                 .append(plain((hour >= 0 ? "+" : "") + hour + "%")
                         .formatted(hour >= 0 ? Formatting.GREEN : Formatting.RED)));
         lore.add(Text.empty());
         if (dead) {
-            lore.add(line("RUGGED.", Formatting.DARK_RED, Formatting.BOLD));
-            lore.add(line("It went to nothing. It relists eventually.", Formatting.GRAY));
+            lore.add(line("PADŁA.", Formatting.DARK_RED, Formatting.BOLD));
+            lore.add(line("Spadła do zera. Kiedyś wróci na listę.", Formatting.GRAY));
         } else if (coin.risk().rugChance > 0) {
-            lore.add(line("Roughly " + Math.round(coin.risk().rugChance * 100)
-                    + "% chance of going to nothing", Formatting.DARK_GRAY));
-            lore.add(line("in any given day. It does happen.", Formatting.DARK_GRAY));
+            lore.add(line("Około " + Math.round(coin.risk().rugChance * 100)
+                    + "% szans, że spadnie do zera", Formatting.DARK_GRAY));
+            lore.add(line("w dowolnym dniu. To się zdarza.", Formatting.DARK_GRAY));
         } else {
             lore.add(line("Nie padnie. Ale też cię nie wzbogaci.", Formatting.DARK_GRAY));
         }
@@ -146,7 +146,7 @@ public class CoinScreenHandler extends ScreenHandler {
         if (mine == null) {
             ItemStack none = new ItemStack(Items.GRAY_DYE);
             none.set(DataComponentTypes.CUSTOM_NAME,
-                    plain("Not in").formatted(Formatting.DARK_GRAY));
+                    plain("Brak pozycji").formatted(Formatting.DARK_GRAY));
             return none;
         }
         int worth = TrapMath.coinSellValue(coin.price(beat), mine.units());
@@ -156,28 +156,28 @@ public class CoinScreenHandler extends ScreenHandler {
         ItemStack tag = new ItemStack(profit >= 0 ? Items.EMERALD : Items.REDSTONE);
         tag.setCount(Math.max(1, Math.min(64, mine.units())));
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(mine.units() + " units  ").formatted(Formatting.WHITE)
+                plain(mine.units() + " szt.  ").formatted(Formatting.WHITE)
                         .append(plain((profit >= 0 ? "+" : "") + percent + "%")
                                 .formatted(profit >= 0 ? Formatting.GREEN : Formatting.RED,
                                         Formatting.BOLD)));
 
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Paid    ", Formatting.DARK_GRAY)
+        lore.add(line("Zapłacono  ", Formatting.DARK_GRAY)
                 .append(plain(mine.spent() + "e").formatted(Formatting.WHITE))
-                .append(plain("   " + money(mine.average()) + " each")
+                .append(plain("   po " + money(mine.average()))
                         .formatted(Formatting.DARK_GRAY)));
-        lore.add(line("Worth   ", Formatting.DARK_GRAY)
+        lore.add(line("Wartość   ", Formatting.DARK_GRAY)
                 .append(plain(worth + "e").formatted(Formatting.WHITE)));
-        lore.add(line((profit >= 0 ? "Up      " : "Down    "), Formatting.DARK_GRAY)
+        lore.add(line((profit >= 0 ? "Zysk    " : "Strata  "), Formatting.DARK_GRAY)
                 .append(plain(Math.abs(profit) + "e")
                         .formatted(profit >= 0 ? Formatting.GREEN : Formatting.RED,
                                 Formatting.BOLD)));
         if (mine.locked(beat)) {
             lore.add(Text.empty());
-            lore.add(line("Locked for another "
+            lore.add(line("Zablokowane jeszcze przez "
                     + Math.max(1, (mine.lockedUntil() - beat) / 2) + " min",
                     Formatting.GOLD));
-            lore.add(line("Pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
+            lore.add(line("Wypłaci " + Math.round(TrapCoins.LOCK_BONUS * 100)
                     + "% premii, gdy blokada minie.", Formatting.DARK_GRAY));
         } else if (mine.lockedUntil() > 0) {
             lore.add(Text.empty());
@@ -201,15 +201,15 @@ public class CoinScreenHandler extends ScreenHandler {
                                 : can ? Formatting.GREEN : Formatting.DARK_GRAY,
                                 Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line(units > 0 ? "About " + units + " units at " + money(price)
-                : "Not enough for a single unit.", Formatting.GRAY));
+        lore.add(line(units > 0 ? "Około " + units + " szt. po " + money(price)
+                : "Za mało nawet na jedną sztukę.", Formatting.GRAY));
         lore.add(line("Spread wynosi " + Math.round(TrapMath.COIN_SPREAD * 100)
                 + "% w każdą stronę.", Formatting.DARK_GRAY));
         if (lock) {
             lore.add(Text.empty());
             lore.add(line("Nie do sprzedania przez "
                     + TrapCoins.LOCK_BEATS / 2 + " minut.", Formatting.GRAY));
-            lore.add(line("Pays " + Math.round(TrapCoins.LOCK_BONUS * 100)
+            lore.add(line("Wypłaci " + Math.round(TrapCoins.LOCK_BONUS * 100)
                     + "% premii za czekanie.", Formatting.GOLD));
             lore.add(line("Blokada nie chroni przed spadkiem do zera.", Formatting.RED));
         }
@@ -227,7 +227,7 @@ public class CoinScreenHandler extends ScreenHandler {
         int worth = TrapMath.coinSellValue(coin.price(beat), mine.units());
         ItemStack tag = new ItemStack(locked ? Items.IRON_BARS : Items.HOPPER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(locked ? "Locked" : "SELL " + worth + "e")
+                plain(locked ? "Zablokowane" : "SPRZEDAJ " + worth + "e")
                         .formatted(locked ? Formatting.DARK_GRAY : Formatting.GOLD,
                                 Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
@@ -282,7 +282,7 @@ public class CoinScreenHandler extends ScreenHandler {
         if (index == BACK_SLOT) {
             trader.openHandledScreen(new net.minecraft.screen.SimpleNamedScreenHandlerFactory(
                     (id, inventory, ignored) -> new ShopScreenHandler(id, inventory),
-                    plain("The Market").formatted(Formatting.GOLD, Formatting.BOLD)));
+                    plain("Rynek").formatted(Formatting.GOLD, Formatting.BOLD)));
             return;
         }
 
@@ -322,8 +322,8 @@ public class CoinScreenHandler extends ScreenHandler {
         chime(1.2F);
         trader.sendMessage(plain("Kupiono ").formatted(Formatting.GRAY)
                 .append(plain(units + " " + coin.ticker()).formatted(Formatting.WHITE))
-                .append(plain(" at " + money(price)).formatted(Formatting.DARK_GRAY))
-                .append(plain(lock ? "   locked in" : "").formatted(Formatting.GOLD)), false);
+                .append(plain(" po " + money(price)).formatted(Formatting.DARK_GRAY))
+                .append(plain(lock ? "   z blokadą" : "").formatted(Formatting.GOLD)), false);
         paint();
     }
 
@@ -341,7 +341,7 @@ public class CoinScreenHandler extends ScreenHandler {
         chime(0.9F);
         trader.sendMessage(plain("Sprzedano całość: ").formatted(Formatting.GRAY)
                 .append(plain(coin.ticker()).formatted(Formatting.WHITE))
-                .append(plain(" for ").formatted(Formatting.GRAY))
+                .append(plain(" za ").formatted(Formatting.GRAY))
                 .append(plain(paid + "e").formatted(Formatting.GREEN, Formatting.BOLD)), false);
         paint();
     }

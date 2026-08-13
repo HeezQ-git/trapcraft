@@ -316,6 +316,16 @@ public class ShopScreenHandler extends ScreenHandler {
                         .append(plain("  x" + entry.count()).formatted(Formatting.DARK_GRAY)));
 
         List<Text> lore = new ArrayList<>();
+        // An item that describes itself keeps that description on the shelf.
+        // The tag rewrites the lore wholesale, so without this the wands --
+        // the one listing where WHAT IT DOES is the thing being decided, not
+        // the price -- would be five identical sticks at five different
+        // numbers.
+        LoreComponent says = tag.get(DataComponentTypes.LORE);
+        if (says != null && !says.lines().isEmpty()) {
+            lore.addAll(says.lines());
+            lore.add(Text.empty());
+        }
         float flow = TrapMarket.pressureOf(entry);
         // Prices on the shelf are what you actually hand over, duty included.
         // A ticket that says one number and a till that charges another is how
@@ -609,7 +619,7 @@ public class ShopScreenHandler extends ScreenHandler {
         shopper.sendMessage(plain("Kupiono ").formatted(Formatting.GRAY)
                 .append(plain((affordable * entry.count()) + "x ").formatted(Formatting.WHITE))
                 .append(plain(name(entry)).formatted(Formatting.WHITE))
-                .append(plain(" for ").formatted(Formatting.GRAY))
+                .append(plain(" za ").formatted(Formatting.GRAY))
                 .append(plain((cost + duty) + "e").formatted(Formatting.GREEN))
                 .append(plain(duty > 0 ? "   w tym " + duty + "e podatku (" + band.display()
                         .toLowerCase(java.util.Locale.ROOT) + ")" : "")
@@ -647,7 +657,7 @@ public class ShopScreenHandler extends ScreenHandler {
         shopper.sendMessage(plain("Sprzedano ").formatted(Formatting.GRAY)
                 .append(plain(entry.count() + "x ").formatted(Formatting.WHITE))
                 .append(plain(name(entry)).formatted(Formatting.WHITE))
-                .append(plain(" for ").formatted(Formatting.GRAY))
+                .append(plain(" za ").formatted(Formatting.GRAY))
                 .append(plain((each - duty) + "e").formatted(Formatting.GOLD))
                 .append(plain(duty > 0 ? "   po " + duty + "e podatku dochodowego" : "")
                         .formatted(Formatting.DARK_GRAY)), false);

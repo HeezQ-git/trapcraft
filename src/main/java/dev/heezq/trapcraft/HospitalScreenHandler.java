@@ -225,7 +225,7 @@ public class HospitalScreenHandler extends ScreenHandler {
         lore.add(line("Kasa miasta: " + TrapCity.treasury() + "e", TrapCity.treasury()
                 >= TrapHospitals.bill() ? Formatting.GREEN : Formatting.RED));
         lore.add(TrapCity.built(TrapCity.Work.CLINIC)
-                ? line("The Clinic is built: " + Math.round((1 - TrapHospitals.CLINIC_OFF) * 100)
+                ? line("Przychodnia zbudowana: " + Math.round((1 - TrapHospitals.CLINIC_OFF) * 100)
                         + "% taniej za każde leczenie.", Formatting.GREEN)
                 : line("Zbuduj Przychodnię, a każdy rachunek spadnie o "
                         + Math.round((1 - TrapHospitals.CLINIC_OFF) * 100) + "%.",
@@ -261,12 +261,12 @@ public class HospitalScreenHandler extends ScreenHandler {
     private ItemStack again() {
         ItemStack tag = new ItemStack(Items.SPYGLASS);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Look again").formatted(Formatting.YELLOW, Formatting.BOLD));
+                plain("Sprawdź ponownie").formatted(Formatting.YELLOW, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Obchodzi ściany i sprawdza od nowa.", Formatting.GRAY),
                 Text.empty(),
                 line("I tak robi to samo co kilka", Formatting.DARK_GRAY),
-                line("of minutes anyway.", Formatting.DARK_GRAY))));
+                line("minut.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -308,7 +308,7 @@ public class HospitalScreenHandler extends ScreenHandler {
             TrapHospitals.rename(ward, named.getString());
             who.getWorld().playSound(null, who.getBlockPos(), SoundEvents.BLOCK_ANVIL_USE,
                     SoundCategory.PLAYERS, 0.6F, 1.4F);
-            who.sendMessage(plain("Now known as ").formatted(Formatting.GRAY)
+            who.sendMessage(plain("Nowa nazwa: ").formatted(Formatting.GRAY)
                     .append(plain(ward.name()).formatted(Formatting.GOLD)), true);
             paint();
         }

@@ -149,7 +149,7 @@ public class PlinkoBlock extends TurnableBlock implements PolymerBlock, PolymerT
         TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new PlinkoScreenHandler(syncId, inventory, house),
-                TrapHouse.sign(Text.literal("The Drop").formatted(Formatting.AQUA, Formatting.BOLD), house)));
+                TrapHouse.sign(Text.literal("Plinko").formatted(Formatting.AQUA, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

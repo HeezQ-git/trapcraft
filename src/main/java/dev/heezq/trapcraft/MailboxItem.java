@@ -127,14 +127,14 @@ public class MailboxItem extends BlockItem implements PolymerItem {
         stack.set(DataComponentTypes.CUSTOM_NAME,
                 plain(home.name()).formatted(Formatting.GOLD, Formatting.BOLD));
         stack.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Klasa " + home.tier() + ", " + home.ownerName() + "'s",
+                line("Klasa " + home.tier() + ", właściciel: " + home.ownerName(),
                         home.tier() == 0 ? Formatting.RED : Formatting.GREEN),
-                line("Surveyed at " + home.anchor().getX() + " " + home.anchor().getY()
+                line("Zmierzone na " + home.anchor().getX() + " " + home.anchor().getY()
                         + " " + home.anchor().getZ(), Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Postaw ją gdziekolwiek -- przy drzwiach,", Formatting.GRAY),
                 line("na ulicy, gdzie chcesz. Poczta", Formatting.GRAY),
-                line("should go. The house stays where it is.", Formatting.GRAY))));
+                line("trafia tam, gdzie ją postawisz. Dom zostaje na miejscu.", Formatting.GRAY))));
     }
 
     private static MutableText plain(String text) {

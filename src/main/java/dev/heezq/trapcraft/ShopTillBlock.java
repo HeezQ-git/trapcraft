@@ -92,8 +92,8 @@ public class ShopTillBlock extends TurnableBlock implements PolymerBlock, Polyme
         // charges, and nothing they can change.
         if (!shop.owner().equals(who.getUuid())) {
             who.sendMessage(Text.literal(shop.name()).formatted(Formatting.GOLD, Formatting.BOLD)
-                    .append(Text.literal("   " + shop.ownerName() + "'s, "
-                            + TrapShops.shelvesOf(shop).size() + " shelves, prices "
+                    .append(Text.literal("   właściciel: " + shop.ownerName() + ", półek: "
+                            + TrapShops.shelvesOf(shop).size() + ", ceny "
                             + shop.markupName().toLowerCase(java.util.Locale.ROOT))
                             .formatted(Formatting.GRAY)), false);
             return ActionResult.SUCCESS;

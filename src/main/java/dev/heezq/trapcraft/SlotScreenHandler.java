@@ -383,34 +383,34 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
         }
         List<Row> rows = new ArrayList<>();
         if (size >= 5) {
-            rows.add(new Row("Five in a line", TrapMath.PAY_RUN5));
+            rows.add(new Row("Pięć w linii", TrapMath.PAY_RUN5));
         }
         if (present.contains("Four Corners")) {
-            rows.add(new Row("Four Corners", TrapMath.PAY_CORNERS));
+            rows.add(new Row("Cztery rogi", TrapMath.PAY_CORNERS));
         }
         if (present.contains("Diamond")) {
-            rows.add(new Row("Diamond", TrapMath.PAY_DIAMOND));
+            rows.add(new Row("Romb", TrapMath.PAY_DIAMOND));
         }
         if (present.contains("Zed")) {
-            rows.add(new Row("Zed  Z", TrapMath.PAY_ZED));
+            rows.add(new Row("Zetka  Z", TrapMath.PAY_ZED));
         }
         if (size >= 4) {
-            rows.add(new Row("Four in a line", TrapMath.PAY_RUN4));
+            rows.add(new Row("Cztery w linii", TrapMath.PAY_RUN4));
         }
         if (present.contains("Star")) {
-            rows.add(new Row("Star  X", TrapMath.PAY_CROSS));
+            rows.add(new Row("Gwiazda  X", TrapMath.PAY_CROSS));
         }
         if (present.contains("Cross")) {
-            rows.add(new Row("Cross  +", TrapMath.PAY_PLUS));
+            rows.add(new Row("Krzyż  +", TrapMath.PAY_PLUS));
         }
         if (present.contains("Block")) {
-            rows.add(new Row("Block  2x2", TrapMath.PAY_SQUARE));
+            rows.add(new Row("Kwadrat  2x2", TrapMath.PAY_SQUARE));
         }
         if (size >= 3) {
-            rows.add(new Row("Three in a line", TrapMath.PAY_RUN3));
+            rows.add(new Row("Trzy w linii", TrapMath.PAY_RUN3));
         }
         if (TrapMath.slotRunFloor(size) == 2) {
-            rows.add(new Row("Two in a line", TrapMath.PAY_RUN2));
+            rows.add(new Row("Dwa w linii", TrapMath.PAY_RUN2));
         }
         // Sorted rather than hand-ordered, so retuning a pay can never leave
         // the cabinet advertising them out of order.

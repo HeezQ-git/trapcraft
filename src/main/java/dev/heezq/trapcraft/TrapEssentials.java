@@ -117,7 +117,7 @@ public final class TrapEssentials {
                 p.getAbilities().allowFlying = on;
                 if (!on) p.getAbilities().flying = false;
                 p.sendAbilitiesUpdate();
-                return "fly " + (on ? "on" : "off") + " for " + p.getNameForScoreboard();
+                return "latanie " + (on ? "wł." : "wył.") + " dla " + p.getNameForScoreboard();
             });
 
             homeCommands(dispatcher);
@@ -139,12 +139,12 @@ public final class TrapEssentials {
                 .requires(s -> s.hasPermissionLevel(perm))
                 .executes(c -> {
                     ServerPlayerEntity self = c.getSource().getPlayer();
-                    if (self == null) return err(c.getSource(), "players only");
+                    if (self == null) return err(c.getSource(), "tylko dla graczy");
                     return ok(c.getSource(), action.apply(self));
                 })
                 .then(CommandManager.argument("targets", EntityArgumentType.players())
                         .executes(c -> {
-                            String last = "nobody matched";
+                            String last = "nikogo nie znaleziono";
                             for (ServerPlayerEntity p : EntityArgumentType.getPlayers(c, "targets")) {
                                 last = action.apply(p);
                             }
@@ -160,22 +160,22 @@ public final class TrapEssentials {
                         .executes(c -> {
                             GameMode mode = mode(StringArgumentType.getString(c, "mode"));
                             ServerPlayerEntity self = c.getSource().getPlayer();
-                            if (mode == null) return err(c.getSource(), "modes: c s a sp (or 0-3)");
-                            if (self == null) return err(c.getSource(), "players only");
+                            if (mode == null) return err(c.getSource(), "tryby: c s a sp (albo 0-3)");
+                            if (self == null) return err(c.getSource(), "tylko dla graczy");
                             self.changeGameMode(mode);
                             return ok(c.getSource(), name(mode));
                         })
                         .then(CommandManager.argument("targets", EntityArgumentType.players())
                                 .executes(c -> {
                                     GameMode mode = mode(StringArgumentType.getString(c, "mode"));
-                                    if (mode == null) return err(c.getSource(), "modes: c s a sp (or 0-3)");
+                                    if (mode == null) return err(c.getSource(), "tryby: c s a sp (albo 0-3)");
                                     int n = 0;
                                     for (ServerPlayerEntity p : EntityArgumentType.getPlayers(c, "targets")) {
                                         p.changeGameMode(mode);
                                         tell(p, name(mode));
                                         n++;
                                     }
-                                    return ok(c.getSource(), name(mode) + " for " + n);
+                                    return ok(c.getSource(), name(mode) + " dla " + n);
                                 }))));
     }
 
@@ -196,9 +196,9 @@ public final class TrapEssentials {
                         .suggests((c, b) -> CommandSource.suggestMatching(myHomes(c.getSource()), b))
                         .executes(c -> {
                             ServerPlayerEntity p = c.getSource().getPlayer();
-                            if (p == null) return err(c.getSource(), "players only");
+                            if (p == null) return err(c.getSource(), "tylko dla graczy");
                             String name = StringArgumentType.getString(c, "name");
-                            if (mine(p).remove(name) == null) return err(c.getSource(), "no home '" + name + "'");
+                            if (mine(p).remove(name) == null) return err(c.getSource(), "nie ma domu '" + name + "'");
                             save();
                             return ok(c.getSource(), "deleted " + name);
                         })));
@@ -209,7 +209,7 @@ public final class TrapEssentials {
     private static void travelCommands(CommandDispatcher<ServerCommandSource> d) {
         simple(d, "spawn", 0, c -> {
             ServerPlayerEntity p = c.getSource().getPlayer();
-            if (p == null) return err(c.getSource(), "players only");
+            if (p == null) return err(c.getSource(), "tylko dla graczy");
             ServerWorld w = c.getSource().getServer().getOverworld();
             BlockPos s = w.getSpawnPos();
             teleport(p, w, s.getX() + 0.5, s.getY(), s.getZ() + 0.5, p.getYaw(), p.getPitch());
@@ -218,9 +218,9 @@ public final class TrapEssentials {
 
         simple(d, "back", 0, c -> {
             ServerPlayerEntity p = c.getSource().getPlayer();
-            if (p == null) return err(c.getSource(), "players only");
+            if (p == null) return err(c.getSource(), "tylko dla graczy");
             Loc l = back.get(p.getUuid());
-            if (l == null) return err(c.getSource(), "nowhere to go back to");
+            if (l == null) return err(c.getSource(), "nie ma dokąd wrócić");
             return goTo(c.getSource(), p, l, "back");
         });
     }
@@ -270,27 +270,27 @@ public final class TrapEssentials {
 
     private static int setHome(ServerCommandSource src, String name) {
         ServerPlayerEntity p = src.getPlayer();
-        if (p == null) return err(src, "players only");
-        if (name.length() > 16) return err(src, "name too long");
+        if (p == null) return err(src, "tylko dla graczy");
+        if (name.length() > 16) return err(src, "nazwa za długa");
         Map<String, Loc> mine = mine(p);
-        if (mine.size() >= MAX_HOMES && !mine.containsKey(name)) return err(src, "max " + MAX_HOMES + " homes");
+        if (mine.size() >= MAX_HOMES && !mine.containsKey(name)) return err(src, "max " + MAX_HOMES + " domów");
         mine.put(name, Loc.of(p));
         save();
-        return ok(src, "home '" + name + "' set");
+        return ok(src, "dom '" + name + "' set");
     }
 
     private static int goHome(ServerCommandSource src, String name) {
         ServerPlayerEntity p = src.getPlayer();
-        if (p == null) return err(src, "players only");
+        if (p == null) return err(src, "tylko dla graczy");
         Loc l = mine(p).get(name);
-        if (l == null) return err(src, "no home '" + name + "' -- /sethome first");
+        if (l == null) return err(src, "nie ma domu '" + name + "' -- /sethome first");
         return goTo(src, p, l, name);
     }
 
     private static int goTo(ServerCommandSource src, ServerPlayerEntity p, Loc l, String label) {
         Identifier id = Identifier.tryParse(l.world);
         ServerWorld w = id == null ? null : src.getServer().getWorld(RegistryKey.of(RegistryKeys.WORLD, id));
-        if (w == null) return err(src, "that world is gone");
+        if (w == null) return err(src, "tego świata już nie ma");
         teleport(p, w, l.x, l.y, l.z, l.yaw, l.pitch);
         return ok(src, label);
     }

@@ -258,7 +258,7 @@ public class ShopScreen extends ScreenHandler {
                 plain("Półki są puste").formatted(Formatting.RED, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Kliknij PPM którąś ze swoich półek", Formatting.GRAY),
-                line("it. It holds stock like a chest.", Formatting.GRAY),
+                line("i włóż towar. Działa jak skrzynia.", Formatting.GRAY),
                 Text.empty(),
                 line("Jedzenie, bloki, narzędzia -- a także skręty,", Formatting.DARK_GRAY),
                 line("susz i proszek: legalnie i z podatkiem.", Formatting.DARK_GRAY))));
@@ -287,7 +287,7 @@ public class ShopScreen extends ScreenHandler {
                 TrapShops.rename(shop, named.getString());
                 who.getWorld().playSound(null, who.getBlockPos(),
                         SoundEvents.BLOCK_ANVIL_USE, SoundCategory.PLAYERS, 0.6F, 1.4F);
-                who.sendMessage(plain("Now trading as ").formatted(Formatting.GRAY)
+                who.sendMessage(plain("Nowa nazwa: ").formatted(Formatting.GRAY)
                         .append(plain(shop.name()).formatted(Formatting.GOLD)), true);
             }
             paint();

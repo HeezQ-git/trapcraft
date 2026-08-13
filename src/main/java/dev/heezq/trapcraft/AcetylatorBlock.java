@@ -121,7 +121,7 @@ public class AcetylatorBlock extends TurnableBlock implements PolymerTexturedBlo
         if (!world.isClient) {
             int slot = player.getInventory().getSlotWithStack(new ItemStack(ACID));
             if (slot < 0 && !player.isCreative()) {
-                player.sendMessage(Text.literal("Needs a fermented spider eye")
+                player.sendMessage(Text.literal("Potrzebne sfermentowane oko pająka")
                         .formatted(Formatting.RED), true);
                 return ActionResult.SUCCESS;
             }

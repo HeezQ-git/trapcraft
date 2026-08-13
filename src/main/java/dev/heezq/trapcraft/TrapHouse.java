@@ -304,6 +304,22 @@ public final class TrapHouse {
         return worn >= TrapMath.WEAR_BROKEN;
     }
 
+    /**
+     * Forget wear on something that was never supposed to have any.
+     *
+     * The bar. It is wired like a machine, and for a long time
+     * {@link TrapFloor} seated punters at it, so counters wore out and
+     * eventually read as broken cabinets -- at coordinates the owner was told
+     * to take a hammer to, where the hammer does nothing, because the mend
+     * path only answers on a machine. Called from the beat, which already
+     * knows a bar when it sees one.
+     */
+    public static void unwear(String wire) {
+        if (WEAR.remove(wire) != null) {
+            save();
+        }
+    }
+
     /** What putting this one right would cost. */
     public static int repairCost(World world, BlockPos pos) {
         return wearAt(world, pos) * TrapMath.REPAIR_COST_PER_POINT;
@@ -1178,7 +1194,7 @@ public final class TrapHouse {
     public static String comp(House house, int machines) {
         if (house.compCooldown > 0) {
             return "Dopiero co to zrobiłeś. Odczekaj "
-                    + house.compCooldown / 2 + " minutes.";
+                    + house.compCooldown / 2 + " minut.";
         }
         int cost = Math.max(TrapMath.COMP_COST_PER_MACHINE,
                 machines * TrapMath.COMP_COST_PER_MACHINE);
@@ -1207,7 +1223,7 @@ public final class TrapHouse {
             return "Automaty już chodzą na luzie.";
         }
         if (house.looseCooldown > 0) {
-            return "Not yet. Another " + house.looseCooldown / 2 + " minutes.";
+            return "Jeszcze nie. Odczekaj " + house.looseCooldown / 2 + " minut.";
         }
         if (house.balance < TrapMath.FLOAT_PER_MACHINE) {
             return "Nie przy tak pustym skarbcu. To celowa strata.";

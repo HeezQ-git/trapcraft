@@ -63,7 +63,7 @@ public final class TrapLedger {
         STALL(true, "stall"),
         CASINO(true, "casino"),
         CONTRACT(true, "contracts"),
-        CREW(true, "crew wages"),
+        CREW(true, "pensje ekipy"),
         RENT(true, "rent"),
         TAX(true, "tax"),
         INVEST(true, "investments"),
@@ -261,7 +261,7 @@ public final class TrapLedger {
             out.append(String.format("%12d", net(TODAY.get(name))));
         }
         out.append('\n');
-        out.append("  ").append(String.format("%-14s", "of which black"));
+        out.append("  ").append(String.format("%-14s", "w tym na czarno"));
         for (String name : names) {
             out.append(String.format("%12d", undeclaredOf(TODAY.get(name))));
         }
@@ -314,7 +314,7 @@ public final class TrapLedger {
                     .formatted(Formatting.WHITE)
                     .append(Text.literal(net(row) + "e").formatted(
                             net(row) >= 0 ? Formatting.GREEN : Formatting.RED))
-                    .append(Text.literal("  (" + undeclaredOf(row) + "e black)")
+                    .append(Text.literal("  (" + undeclaredOf(row) + "e na czarno)")
                             .formatted(Formatting.DARK_GRAY))
                     .append(Text.literal("\n    " + detail).formatted(Formatting.DARK_GRAY)),
                     false);

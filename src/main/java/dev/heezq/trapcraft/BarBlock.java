@@ -66,8 +66,8 @@ public class BarBlock extends TurnableBlock implements PolymerBlock, PolymerText
         }
         TrapHouse.House house = TrapHouse.at(world, pos);
         if (house == null) {
-            keeper.sendMessage(Text.literal("Not wired to anything. Right-click it "
-                    + "holding a casino card.").formatted(Formatting.GRAY), false);
+            keeper.sendMessage(Text.literal("Nie podłączony do niczego. Kliknij PPM, "
+                    + "trzymając licencję kasyna.").formatted(Formatting.GRAY), false);
             world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
                     SoundCategory.BLOCKS, 0.6F, 0.6F);
             return ActionResult.SUCCESS;

@@ -87,9 +87,9 @@ public class ContractScreenHandler extends ScreenHandler {
                     field("Wants", job.formValue().label,
                             job.formValue() == Contract.Form.EITHER
                                     ? Formatting.WHITE : Formatting.YELLOW),
-                    field("Klasa", job.gradeName() + " or better",
+                    field("Klasa", job.gradeName() + " lub lepsza",
                             job.gradeColour()),
-                    field("Odległość", distance + " blocks", Formatting.WHITE),
+                    field("Odległość", distance + " bloków", Formatting.WHITE),
                     field("Termin", String.format("%d:%02d", seconds / 60, seconds % 60),
                             seconds <= 300 ? Formatting.RED : Formatting.WHITE),
                     rule(),

@@ -71,9 +71,8 @@ public class LedgerScreenHandler extends ScreenHandler {
                             .formatted(Formatting.WHITE)
                             .styled(style -> style.withItalic(false)));
             entry.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    Text.literal(row.containers() + (row.containers() == 1
-                                    ? " container" : " containers")
-                                    + "  ·  nearest " + describeNearest(positions))
+                    Text.literal("pojemników: " + row.containers()
+                                    + "  ·  najbliższy " + describeNearest(positions))
                             .formatted(Formatting.DARK_GRAY)
                             .styled(style -> style.withItalic(false)),
                     Text.literal("Kliknij, żeby namierzyć")
@@ -117,7 +116,7 @@ public class LedgerScreenHandler extends ScreenHandler {
         if (bearing.isEmpty()) {
             bearing.append("here");
         }
-        return (int) Math.sqrt(bestDistance) + " blocks " + bearing;
+        return (int) Math.sqrt(bestDistance) + " bloków " + bearing;
     }
 
     /**

@@ -110,9 +110,9 @@ public class DealerScreenHandler extends ScreenHandler {
     private void paint() {
         ItemStack bar = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
         bar.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Locked").formatted(Formatting.DARK_GRAY));
+                plain("Zablokowane").formatted(Formatting.DARK_GRAY));
         bar.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Opens at a higher level.", Formatting.DARK_GRAY))));
+                line("Odblokuje się na wyższym poziomie.", Formatting.DARK_GRAY))));
         for (int index = dealer.slots(); index < BARS; index++) {
             if (pockets.getStack(index).isEmpty()) {
                 pockets.setStack(index, bar.copy());
@@ -126,19 +126,19 @@ public class DealerScreenHandler extends ScreenHandler {
         who.set(DataComponentTypes.CUSTOM_NAME,
                 plain(dealer.name).formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> about = new ArrayList<>();
-        about.add(line("Level " + dealer.level + " of " + TrapMath.DEALER_MAX_LEVEL,
+        about.add(line("Poziom " + dealer.level + " z " + TrapMath.DEALER_MAX_LEVEL,
                 Formatting.WHITE));
-        about.add(line("Nosi " + dealer.slots() + " slots  ·  holding "
+        about.add(line("Slotów: " + dealer.slots() + "  ·  w torbie "
                 + dealer.carrying(), Formatting.GRAY));
-        about.add(line("Keeps " + Math.round(TrapMath.dealerCut(dealer.level) * 100)
+        about.add(line("Zatrzymuje " + Math.round(TrapMath.dealerCut(dealer.level) * 100)
                 + "% tego, co sprzeda.", Formatting.GRAY));
         about.add(Text.empty());
         about.add(dealer.level >= TrapMath.DEALER_MAX_LEVEL
                 ? line("Maksymalny poziom.", Formatting.GOLD)
                 : line("jeszcze " + dealer.toNextLevel() + " sprzedaży do poziomu "
                         + (dealer.level + 1) + ".", Formatting.DARK_GRAY));
-        about.add(line("Robbed about "
-                + String.format("%.1f", robbedPerHour() * 100) + "% of hours.",
+        about.add(line("Okradany mniej więcej "
+                + String.format("%.1f", robbedPerHour() * 100) + "% czasu.",
                 dealer.level < 3 ? Formatting.RED : Formatting.DARK_GRAY));
         about.add(Text.empty());
         about.add(line("Najlepiej sprzedają nocą.", Formatting.DARK_GRAY));
@@ -154,9 +154,9 @@ public class DealerScreenHandler extends ScreenHandler {
         takings.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(dealer.earnings > 0 ? "Kliknij, żeby odebrać." : "Jeszcze nic.",
                         dealer.earnings > 0 ? Formatting.YELLOW : Formatting.DARK_GRAY),
-                line("Already net of their cut.", Formatting.DARK_GRAY),
+                line("Już po potrąceniu jego prowizji.", Formatting.DARK_GRAY),
                 Text.empty(),
-                line(dealer.sold + " sold all told.", Formatting.DARK_GRAY))));
+                line("Sprzedał łącznie: " + dealer.sold + ".", Formatting.DARK_GRAY))));
         chrome.setStack(TAKINGS, takings);
 
         ItemStack out = new ItemStack(Items.CLOCK);
@@ -169,7 +169,7 @@ public class DealerScreenHandler extends ScreenHandler {
 
         ItemStack go = new ItemStack(Items.BARRIER);
         go.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Let them go").formatted(Formatting.RED, Formatting.BOLD));
+                plain("Zwolnij").formatted(Formatting.RED, Formatting.BOLD));
         go.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Zwolnienie na stałe.", Formatting.GRAY),
                 line("Towar i utarg wracają do ciebie.", Formatting.DARK_GRAY),
@@ -229,7 +229,7 @@ public class DealerScreenHandler extends ScreenHandler {
                 SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 0.6F, 1.6F);
         boss.sendMessage(plain("Took ").formatted(Formatting.GRAY)
                 .append(plain(paid + "e").formatted(Formatting.GREEN, Formatting.BOLD))
-                .append(plain(" off " + dealer.name + ".").formatted(Formatting.GRAY)), false);
+                .append(plain(" od " + dealer.name + ".").formatted(Formatting.GRAY)), false);
         if (paid >= 1000) {
             TrapAwards.grant(boss, "network");
         }

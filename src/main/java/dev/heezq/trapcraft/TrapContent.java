@@ -219,7 +219,7 @@ public final class TrapContent {
         lore.add(Text.literal(parts.toString())
                 .formatted(net.minecraft.util.Formatting.GRAY)
                 .styled(style -> style.withItalic(false)));
-        lore.add(Text.literal(blend.quality().display() + " grade  ·  "
+        lore.add(Text.literal("klasa " + blend.quality().display() + "  ·  "
                         + String.format("%.2fx", blend.potency()))
                 .formatted(blend.quality().colour())
                 .styled(style -> style.withItalic(false)));
@@ -389,7 +389,12 @@ public final class TrapContent {
                     settings.maxCount(1)
                             .rarity(net.minecraft.util.Rarity.EPIC)
                             .component(net.minecraft.component.DataComponentTypes
-                                    .ENCHANTMENT_GLINT_OVERRIDE, true),
+                                    .ENCHANTMENT_GLINT_OVERRIDE, true)
+                            // A default component rather than something written
+                            // on at purchase: one minted by /give or taken from
+                            // the creative tab describes itself too.
+                            .component(net.minecraft.component.DataComponentTypes.LORE,
+                                    new net.minecraft.component.type.LoreComponent(kind.blurb())),
                     model)));
         }
     }
@@ -1100,7 +1105,7 @@ public final class TrapContent {
             world.playSound(null, user.getX(), user.getY(), user.getZ(),
                     SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 1.0F, 0.5F);
             if (user instanceof net.minecraft.server.network.ServerPlayerEntity actor) {
-                actor.sendMessage(Text.literal("Too much, too soon.")
+                actor.sendMessage(Text.literal("Za dużo, za szybko.")
                         .formatted(net.minecraft.util.Formatting.DARK_RED,
                                 net.minecraft.util.Formatting.BOLD), false);
                 // Still counts. Going over is not a lucky escape from the

@@ -345,6 +345,13 @@ public final class TrapFloor {
                 // variety or capacity or a floor of ten bars would look
                 // magnificent on paper.
                 if (!TrapHouse.isMachine(world.getBlockState(pos).getBlock())) {
+                    // ...and it must not be worn out either. maybeArrive spent
+                    // months seating punters at bars, so the live floor has
+                    // counters carrying 86-100 wear that no hammer can touch --
+                    // the mend path is gated on isMachine as well. Cleared from
+                    // the beat rather than by hand, so a world already carrying
+                    // the damage heals itself on the next half-minute.
+                    TrapHouse.unwear(wire.getKey());
                     continue;
                 }
                 machines++;
@@ -647,8 +654,15 @@ public final class TrapFloor {
             }
             ServerWorld world = worldOf(server, at);
             BlockPos pos = TrapHouse.posOf(at);
+            // isMachine, because the bar is wired too. Without it a punter was
+            // sent to stand at the counter and bet against a shelf: it took
+            // their stake at returnOf's 0.97 fallback, held a seat, wore out
+            // like a cabinet and eventually read as a broken machine nobody
+            // could fix. freeWire and beat both ask this; this was the one
+            // path that did not.
             if (world == null || pos == null
-                    || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+                    || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)
+                    || !TrapHouse.isMachine(world.getBlockState(pos).getBlock())) {
                 return;
             }
             if (occupant(world, pos) == null && !TrapHouse.broken(world, pos)) {
@@ -1428,7 +1442,7 @@ public final class TrapFloor {
                             + ", bar " + TrapHouse.barStock(house) + "  ->  "
                             + String.format("%.2f", house.pull()) + "x"
                             + (house.pitBoss ? "  [boss]" : "")
-                            + (house.loose() ? "  [LOOSE " + house.looseBeats / 2 + "m]" : ""))
+                            + (house.loose() ? "  [LUZ " + house.looseBeats / 2 + "m]" : ""))
                     .formatted(house.loose() ? Formatting.GOLD : Formatting.DARK_GRAY));
         }
         Text shown = out;

@@ -762,7 +762,7 @@ public final class TrapHospitals {
         patient.untreated++;
         TrapHomes.sicken(home, UNTREATED_MOOD);
         if (patient.untreated < LOST_DAYS) {
-            home.write(patient.who + " is no better. Day " + patient.untreated + ".");
+            home.write(patient.who + " nie czuje się lepiej. Dzień " + patient.untreated + ".");
             save();
             return;
         }
@@ -877,11 +877,11 @@ public final class TrapHospitals {
         }
         if (reading.beds() < MIN_BEDS) {
             return reading.beds() == 0 ? "Nie ma w środku łóżka."
-                    : "One bed is a spare room. A ward needs " + MIN_BEDS + ".";
+                    : "Jedno łóżko to pokój gościnny. Oddział potrzebuje " + MIN_BEDS + ".";
         }
         if (reading.dark() > 0) {
             return reading.dark() + " dark " + (reading.dark() == 1 ? "corner" : "corners")
-                    + ". Nobody operates by candlelight.";
+                    + ". Nikt tu nie operuje przy świeczce.";
         }
         if (reading.finished() < MIN_SHELL) {
             return "Wykończenie " + Math.round(reading.finished() * 100) + "%. Oddział musi "
@@ -996,11 +996,11 @@ public final class TrapHospitals {
             ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ward.owner);
             if (owner != null) {
                 owner.sendMessage(ward.open
-                        ? Text.literal(ward.name + " is open again. ")
+                        ? Text.literal(ward.name + " znowu działa. ")
                                 .formatted(Formatting.GREEN)
-                                .append(Text.literal(ward.beds + " beds.")
+                                .append(Text.literal(ward.beds + " łóżek.")
                                         .formatted(Formatting.GRAY))
-                        : Text.literal(ward.name + " has been closed: ")
+                        : Text.literal(ward.name + " zostało zamknięte: ")
                                 .formatted(Formatting.RED)
                                 .append(Text.literal(String.valueOf(fault(reading)))
                                         .formatted(Formatting.GRAY)), false);

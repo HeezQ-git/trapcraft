@@ -114,7 +114,7 @@ public class StallScreenHandler extends ScreenHandler {
                 .append(plain(duty == 0 ? "" : "   inc " + duty + "e duty")
                         .formatted(Formatting.DARK_GRAY))
                 .append(plain("   counter " + counter + "e").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("You save " + (counter - price - duty) + "e a lot.", Formatting.AQUA));
+        lore.add(line("Oszczędzasz " + (counter - price - duty) + "e na partii.", Formatting.AQUA));
         lore.add(Text.empty());
         lore.add(line("partii na straganie: " + held / entry.count(), Formatting.GRAY));
         lore.add(Text.empty());
@@ -130,7 +130,7 @@ public class StallScreenHandler extends ScreenHandler {
                 plain("Stragan jest pusty").formatted(Formatting.GRAY, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Stragan sprzedaje to, co leży w skrzyni", Formatting.GRAY),
-                line("directly underneath it.", Formatting.GRAY),
+                line("bezpośrednio pod nim.", Formatting.GRAY),
                 Text.empty(),
                 line("Tylko rzeczy, które mają cenę rynkową.", Formatting.DARK_GRAY))));
         return tag;
@@ -139,15 +139,15 @@ public class StallScreenHandler extends ScreenHandler {
     private ItemStack sign(int lines) {
         ItemStack tag = new ItemStack(Items.OAK_SIGN);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain(stall.ownerName() + "'s stall").formatted(Formatting.GOLD, Formatting.BOLD));
+                plain(stall.ownerName() + " -- stragan").formatted(Formatting.GOLD, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(lines + " line" + (lines == 1 ? "" : "s") + " for sale",
+                line("pozycji na sprzedaż: " + lines,
                         Formatting.GRAY),
                 Text.empty(),
-                line("Everything here is " + Math.round((1 - TrapMath.STALL_RATE) * 100)
+                line("Wszystko tutaj jest " + Math.round((1 - TrapMath.STALL_RATE) * 100)
                         + "% poniżej ceny rynkowej.", Formatting.WHITE),
                 line("Większość zostaje u sprzedawcy, reszta", Formatting.DARK_GRAY),
-                line("pitch fee. You both do better than", Formatting.DARK_GRAY),
+                line("opłaty za miejsce. Obaj wychodzicie lepiej", Formatting.DARK_GRAY),
                 line("niż na ladzie u NPC.", Formatting.DARK_GRAY),
                 Text.empty(),
                 line("/stalls pokazuje pozostałe stragany.", Formatting.DARK_GRAY))));

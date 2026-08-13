@@ -64,7 +64,7 @@ public class ClimbBlock extends TurnableBlock implements PolymerBlock, PolymerTe
         TrapHouse.House house = TrapHouse.at(world, pos);
         gambler.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new ClimbScreenHandler(syncId, inventory, house),
-                TrapHouse.sign(Text.literal("The Climb").formatted(Formatting.GOLD, Formatting.BOLD), house)));
+                TrapHouse.sign(Text.literal("Wspinaczka").formatted(Formatting.GOLD, Formatting.BOLD), house)));
         return ActionResult.SUCCESS;
     }
 }

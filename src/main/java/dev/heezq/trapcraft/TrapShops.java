@@ -1261,7 +1261,7 @@ public final class TrapShops {
     /** What they are called with any errand's total taken back off. */
     private static String plainName(VillagerEntity body) {
         if (body.getCustomName() == null) {
-            return "Somebody";
+            return "Ktoś";
         }
         String shown = body.getCustomName().getString();
         int cut = shown.indexOf("  ·  ");

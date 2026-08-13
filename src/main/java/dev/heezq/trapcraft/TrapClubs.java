@@ -79,7 +79,7 @@ public final class TrapClubs {
      */
     public static final int[] DOOR = {8, 16, 32, 64};
     public static final String[] DOOR_NAME = {
-            "Free-for-all", "Cheap night", "Proper door", "Members only"};
+            "Dla każdego", "Tania noc", "Normalny bilet", "Tylko dla członków"};
 
     /** One club. */
     public static final class Club {
@@ -235,7 +235,7 @@ public final class TrapClubs {
         Club club = new Club(UUID.randomUUID(), owner.getUuid(),
                 owner.getGameProfile().getName(),
                 world.getRegistryKey().getValue().toString(), pos.toImmutable());
-        club.name = spare(owner.getGameProfile().getName() + "'s club");
+        club.name = spare("Klub gracza " + owner.getGameProfile().getName());
         CLUBS.add(club);
         save();
         owner.sendMessage(Text.literal("Wstęp za ").formatted(Formatting.LIGHT_PURPLE)
@@ -411,7 +411,7 @@ public final class TrapClubs {
 
     private static String plainName(VillagerEntity body) {
         if (body.getCustomName() == null) {
-            return "Somebody";
+            return "Ktoś";
         }
         String shown = body.getCustomName().getString();
         int cut = shown.indexOf("  ·  ");

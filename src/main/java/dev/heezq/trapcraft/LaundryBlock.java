@@ -155,8 +155,8 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
     public static String washLabel(int load) {
         int seconds = washTicks(load) / 20;
         return seconds < 90 ? seconds + "s"
-                : seconds % 60 == 0 ? seconds / 60 + " minutes"
-                : String.format("%.1f minutes", seconds / 60.0f);
+                : seconds % 60 == 0 ? seconds / 60 + " min"
+                : String.format("%.1f min", seconds / 60.0f);
     }
 
     @Override
@@ -241,8 +241,8 @@ public class LaundryBlock extends Block implements PolymerBlock, PolymerTextured
         start(world, pos, state, lots * each);
         int load = state.get(LOAD) + lots * each;
         who.sendMessage(load < MIN_LOAD
-                ? Text.literal(load + " in. It wants at least " + MIN_LOAD
-                        + " before it'll run.").formatted(Formatting.GRAY)
+                ? Text.literal("W środku " + load + ". Potrzeba co najmniej " + MIN_LOAD
+                        + ", żeby ruszył.").formatted(Formatting.GRAY)
                 : Text.literal("W bębnie: " + load + ". ").formatted(Formatting.GRAY)
                         .append(Text.literal(washLabel(load))
                                 .formatted(Formatting.WHITE))

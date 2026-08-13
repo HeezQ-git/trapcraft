@@ -88,11 +88,11 @@ public class HospitalBlock extends TurnableBlock implements PolymerBlock, Polyme
                     SoundCategory.BLOCKS, 0.8F, 1.3F);
             ground.spawnParticles(ParticleTypes.HAPPY_VILLAGER, pos.getX() + 0.5,
                     pos.getY() + 1.2, pos.getZ() + 0.5, 30, 0.4, 0.5, 0.4, 0.05);
-            who.sendMessage(Text.literal("Open. ").formatted(Formatting.GREEN, Formatting.BOLD)
+            who.sendMessage(Text.literal("Otwarty. ").formatted(Formatting.GREEN, Formatting.BOLD)
                     .append(Text.literal((ward == null ? 0 : ward.beds())
                             + " łóżek. Każdy ugryziony w tym mieście trafia tutaj, a kasa "
                             + "miasta płaci lekarzom " + TrapHospitals.bill()
-                            + "e a day to treat them.").formatted(Formatting.GRAY)), false);
+                            + "e dziennie za leczenie.").formatted(Formatting.GRAY)), false);
             open(who, ground, pos, ward);
             return ActionResult.SUCCESS;
         }
@@ -107,7 +107,7 @@ public class HospitalBlock extends TurnableBlock implements PolymerBlock, Polyme
         who.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) ->
                         new HospitalScreenHandler(syncId, inventory, ward, pos),
-                Text.literal(ward == null ? "Not a hospital yet" : ward.name())
+                Text.literal(ward == null ? "To jeszcze nie szpital" : ward.name())
                         .formatted(ward == null ? Formatting.GRAY : Formatting.WHITE)));
     }
 

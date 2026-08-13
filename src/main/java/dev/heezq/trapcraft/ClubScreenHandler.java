@@ -82,7 +82,7 @@ public class ClubScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.CUSTOM_NAME, plain(club.name())
                 .formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(club.ownerName() + "'s", Formatting.DARK_GRAY),
+                line("Właściciel: " + club.ownerName(), Formatting.DARK_GRAY),
                 Text.empty(),
                 line("gości od otwarcia: " + club.through(), Formatting.GRAY),
                 line("utarg od otwarcia: " + club.turnover() + "e", Formatting.GRAY),
@@ -98,10 +98,10 @@ public class ClubScreenHandler extends ScreenHandler {
                 plain(club.doorName() + "  --  " + club.door() + "e")
                         .formatted(Formatting.GOLD, Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
-        lore.add(line("What it costs to get in.", Formatting.GRAY));
+        lore.add(line("Tyle kosztuje wejście.", Formatting.GRAY));
         lore.add(Text.empty());
         lore.add(line("Tanio zapełnia salę i mało zarabia,", Formatting.GRAY));
-        lore.add(line("a head. Dear is a quiet room at four", Formatting.GRAY));
+        lore.add(line("od głowy. Drogo to pusta sala za cztery", Formatting.GRAY));
         lore.add(line("razy więcej kasy. Co jest lepsze,", Formatting.GRAY));
         lore.add(line("zależy od wielkości miasta.", Formatting.GRAY));
         lore.add(Text.empty());
@@ -143,14 +143,14 @@ public class ClubScreenHandler extends ScreenHandler {
                         any ? Formatting.YELLOW : Formatting.DARK_GRAY),
                 Text.empty(),
                 line("Rozbicie budki wysypie kasę na", Formatting.DARK_GRAY),
-                line("floor rather than vanishing.", Formatting.DARK_GRAY))));
+                line("ziemię, zamiast przepaść.", Formatting.DARK_GRAY))));
         return tag;
     }
 
     private ItemStack about() {
         ItemStack tag = new ItemStack(Items.PAPER);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("The room is yours").formatted(Formatting.WHITE, Formatting.BOLD));
+                plain("Sala należy do ciebie").formatted(Formatting.WHITE, Formatting.BOLD));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Nic tu nie ocenia twojego budynku.", Formatting.GRAY),
                 line("Klub to jedyne miejsce, gdzie liczy", Formatting.GRAY),
@@ -177,12 +177,12 @@ public class ClubScreenHandler extends ScreenHandler {
         if (index == TILL_SLOT) {
             int lifted = TrapClubs.collect(who, club);
             if (lifted <= 0) {
-                who.sendMessage(plain("Nothing to lift.").formatted(Formatting.GRAY), true);
+                who.sendMessage(plain("Nie ma czego odbierać.").formatted(Formatting.GRAY), true);
                 click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
             } else {
                 who.sendMessage(plain("Lifted ").formatted(Formatting.GRAY)
                         .append(plain(lifted + "e").formatted(Formatting.GREEN))
-                        .append(plain(" out of " + club.name()).formatted(Formatting.GRAY)),
+                        .append(plain(" z " + club.name()).formatted(Formatting.GRAY)),
                         true);
                 click(SoundEvents.BLOCK_VAULT_INSERT_ITEM, 1.1F);
             }
@@ -193,12 +193,12 @@ public class ClubScreenHandler extends ScreenHandler {
             Text named = who.getMainHandStack().get(DataComponentTypes.CUSTOM_NAME);
             if (named == null || named.getString().isBlank()) {
                 who.sendMessage(plain("Weź przedmiot nazwany na kowadle i kliknij "
-                        + "the sign to name the club.").formatted(Formatting.GRAY), true);
+                        + "tabliczkę, żeby nazwać klub.").formatted(Formatting.GRAY), true);
                 return;
             }
             TrapClubs.rename(club, named.getString());
             click(SoundEvents.BLOCK_ANVIL_USE, 1.4F);
-            who.sendMessage(plain("Now trading as ").formatted(Formatting.GRAY)
+            who.sendMessage(plain("Nowa nazwa: ").formatted(Formatting.GRAY)
                     .append(plain(club.name()).formatted(Formatting.LIGHT_PURPLE)), true);
             paint();
         }

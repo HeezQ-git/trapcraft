@@ -75,7 +75,7 @@ public class LedgerItem extends Item implements PolymerItem {
 
         Scan scan = scan(server, player.getBlockPos());
         if (scan.rows().isEmpty()) {
-            player.sendMessage(Text.literal("Nothing stored nearby.")
+            player.sendMessage(Text.literal("W pobliżu nic nie jest przechowywane.")
                     .formatted(Formatting.GRAY), true);
             server.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundCategory.PLAYERS, 0.5F, 0.7F);
@@ -86,7 +86,7 @@ public class LedgerItem extends Item implements PolymerItem {
                 SoundEvents.ITEM_BOOK_PAGE_TURN, SoundCategory.PLAYERS, 0.9F, 1.0F);
         player.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new LedgerScreenHandler(syncId, inventory, scan),
-                Text.literal("The Ledger").formatted(Formatting.DARK_GRAY)));
+                Text.literal("Spis skrzyń").formatted(Formatting.DARK_GRAY)));
         return ActionResult.SUCCESS;
     }
 
@@ -192,7 +192,7 @@ public class LedgerItem extends Item implements PolymerItem {
                 // Chat, not the actionbar: a contract countdown may already be
                 // living there, and one would silently replace the other.
                 player.sendMessage(Text.literal("+" + (targets.size() - MAX_PINGS)
-                                + " more containers not traced")
+                                + " pojemników więcej, nie namierzono")
                         .formatted(Formatting.DARK_GRAY), false);
                 break;
             }

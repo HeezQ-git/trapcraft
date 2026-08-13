@@ -97,13 +97,13 @@ public class MarketStallBlock extends Block implements PolymerBlock, PolymerText
             }
             shopper.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                     (syncId, inventory, ignored) -> new ShopScreenHandler(syncId, inventory),
-                    Text.literal("The Market").formatted(Formatting.DARK_GREEN)));
+                    Text.literal("Rynek").formatted(Formatting.DARK_GREEN)));
             return ActionResult.SUCCESS;
         }
 
         shopper.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, inventory, ignored) -> new StallScreenHandler(syncId, inventory, stall),
-                Text.literal(stall.ownerName() + "'s Stall").formatted(Formatting.GOLD)));
+                Text.literal("Stragan: " + stall.ownerName()).formatted(Formatting.GOLD)));
         return ActionResult.SUCCESS;
     }
 

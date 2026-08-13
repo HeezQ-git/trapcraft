@@ -57,10 +57,10 @@ public final class TrapScrap {
         // quietly eat whatever is in it.
         var packed = stack.get(DataComponentTypes.CONTAINER);
         if (packed != null && packed.stream().findAny().isPresent()) {
-            return "empty it out first";
+            return "najpierw to opróżnij";
         }
         if (stack.isDamaged()) {
-            return "nobody wants it broken";
+            return "nikt tego nie chce zniszczonego";
         }
         return null;
     }

@@ -156,7 +156,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         display.setStack(BLACK_SLOT,
                 outsideTag("black", "BLACK", Items.BLACK_WOOL, Formatting.DARK_GRAY));
         display.setStack(ODD_SLOT, outsideTag("odd", "ODD", Items.BONE, Formatting.WHITE));
-        display.setStack(EVEN_SLOT, outsideTag("even", "EVEN", Items.BONE_MEAL, Formatting.WHITE));
+        display.setStack(EVEN_SLOT, outsideTag("even", "PARZYSTE", Items.BONE_MEAL, Formatting.WHITE));
         display.setStack(LOW_SLOT,
                 outsideTag("low", "1 - 18", Items.IRON_NUGGET, Formatting.AQUA));
         display.setStack(HIGH_SLOT,
@@ -194,7 +194,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             tag.set(DataComponentTypes.CUSTOM_NAME,
                     plain(String.valueOf(pocket)).formatted(colourOf(pocket)));
             tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                    line(i == shown - 1 ? "Last spin" : "Earlier", Formatting.DARK_GRAY))));
+                    line(i == shown - 1 ? "Ostatni spin" : "Wcześniej", Formatting.DARK_GRAY))));
             display.setStack(TRACK_FROM + i, tag);
         }
     }
@@ -222,22 +222,22 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         }
 
         List<Text> lore = new ArrayList<>();
-        lore.add(line(pocket == 0 ? "The house pocket" : "Straight up", Formatting.GRAY)
-                .append(plain("   pays " + (TrapMath.ROULETTE_STRAIGHT - 1) + " to 1")
+        lore.add(line(pocket == 0 ? "Pole kasyna" : "Pojedyncza liczba", Formatting.GRAY)
+                .append(plain("   płaci " + (TrapMath.ROULETTE_STRAIGHT - 1) + " to 1")
                         .formatted(Formatting.GOLD)));
         if (staked > 0) {
-            lore.add(line("Riding: ", Formatting.DARK_GRAY)
+            lore.add(line("Postawione: ", Formatting.DARK_GRAY)
                     .append(plain(staked + "e").formatted(Formatting.GREEN))
                     .append(plain("  ->  " + staked * TrapMath.ROULETTE_STRAIGHT + "e")
                             .formatted(Formatting.GOLD)));
         }
         lore.add(Text.empty());
         lore.add(line("LPM", Formatting.YELLOW)
-                .append(plain(" to put " + CHIPS[chipChoice] + "e on it")
+                .append(plain(" stawia tu " + CHIPS[chipChoice] + "e")
                         .formatted(Formatting.GRAY)));
         if (staked > 0) {
-            lore.add(line("Right-click", Formatting.YELLOW)
-                    .append(plain(" to take it back").formatted(Formatting.GRAY)));
+            lore.add(line("PPM", Formatting.YELLOW)
+                    .append(plain(" zabiera żeton").formatted(Formatting.GRAY)));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -255,20 +255,20 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
             tag.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
         }
         List<Text> lore = new ArrayList<>();
-        lore.add(line("Pays even money", Formatting.GOLD));
+        lore.add(line("Płaci 1 do 1", Formatting.GOLD));
         lore.add(line("Na zerze wszystko przepada. To przewaga kasyna.", Formatting.DARK_GRAY));
         if (staked > 0) {
-            lore.add(line("Riding: ", Formatting.DARK_GRAY)
+            lore.add(line("Postawione: ", Formatting.DARK_GRAY)
                     .append(plain(staked + "e").formatted(Formatting.GREEN))
                     .append(plain("  ->  " + staked * TrapMath.ROULETTE_EVEN_MONEY + "e")
                             .formatted(Formatting.GOLD)));
         }
         lore.add(Text.empty());
         lore.add(line("LPM", Formatting.YELLOW)
-                .append(plain(" to put " + CHIPS[chipChoice] + "e on it").formatted(Formatting.GRAY)));
+                .append(plain(" stawia tu " + CHIPS[chipChoice] + "e").formatted(Formatting.GRAY)));
         if (staked > 0) {
-            lore.add(line("Right-click", Formatting.YELLOW)
-                    .append(plain(" to take it back").formatted(Formatting.GRAY)));
+            lore.add(line("PPM", Formatting.YELLOW)
+                    .append(plain(" zabiera żeton").formatted(Formatting.GRAY)));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -281,7 +281,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                         .append(plain(CHIPS[chipChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("How much each click puts down.", Formatting.GRAY),
+                line("Ile stawia jedno kliknięcie.", Formatting.GRAY),
                 Text.empty(),
                 line("LPM", Formatting.YELLOW)
                         .append(plain(" zmienia wartość żetonu").formatted(Formatting.GRAY)))));
@@ -313,7 +313,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                 + Math.round(TrapMath.rouletteReturnToPlayer("red") * 100)
                 + "%.", Formatting.DARK_GRAY));
         lore.add(Text.empty());
-        lore.add(line("Right-click", Formatting.YELLOW)
+        lore.add(line("PPM", Formatting.YELLOW)
                 .append(plain(" czyści stół").formatted(Formatting.GRAY)));
         if (!lastBets.isEmpty() && total == 0) {
             lore.add(line("Shift+LPM", Formatting.YELLOW)
@@ -330,7 +330,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                         .append(plain(TrapMarket.wealthOf(player) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         List<Text> lore = new java.util.ArrayList<>(List.of(
-                line("Wallets count.", Formatting.DARK_GRAY)));
+                line("Portfel też się liczy.", Formatting.DARK_GRAY)));
         lore.addAll(TrapHouse.tableNote(house, TrapHouse.TOP_ROULETTE));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -490,7 +490,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         }
         if (TrapMarket.wealthOf(player) < owed) {
             deny();
-            player.sendMessage(plain("That bet was ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Ten zakład to ").formatted(Formatting.GRAY)
                     .append(plain(owed + "e").formatted(Formatting.RED))
                     .append(plain(". Brakuje ci kasy.").formatted(Formatting.GRAY)), false);
             return;
@@ -622,13 +622,13 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                 .formatted(colourOf(result), Formatting.BOLD);
 
         if (won <= 0) {
-            player.sendMessage(plain("The ball settles on ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Kulka zatrzymuje się na ").formatted(Formatting.GRAY)
                     .append(where)
                     .append(plain(".   ").formatted(Formatting.GRAY))
                     .append(plain("-" + total + "e").formatted(Formatting.RED)), false);
         } else {
             int net = won - total;
-            player.sendMessage(plain("The ball settles on ").formatted(Formatting.GRAY)
+            player.sendMessage(plain("Kulka zatrzymuje się na ").formatted(Formatting.GRAY)
                     .append(where)
                     .append(plain(".   ").formatted(Formatting.GRAY))
                     .append(plain("+" + won + "e").formatted(Formatting.GREEN, Formatting.BOLD))
