@@ -358,7 +358,7 @@ footer a:hover { text-decoration: underline; }
         <div><b>1077</b><span>priced lines</span></div>
         <div><b>6</b><span>strains</span></div>
         <div><b>203</b><span>blends</span></div>
-        <div><b>37</b><span>advancements</span></div>
+        <div><b>38</b><span>advancements</span></div>
       </div>
     </header>
 
@@ -729,11 +729,28 @@ footer a:hover { text-decoration: underline; }
     <p class="note"><strong>Nothing sold to customers or dealers is taxed at all.</strong>
     That is not an oversight either — the black market pays better per hour precisely because
     it pays nothing to anybody, and that is a problem worth having.</p>
+    <h3 class="sub">Putting money in</h3>
+    <p>The vault was a one-way tap for a long time: you could <em>take</em> the treasury out,
+    and the only things that ever put anything in were duties skimmed off transactions
+    somebody else made. So the public works sat behind a purse that filled at a few percent of
+    other people's paydays.</p>
+    <p><strong>Pay in</strong> sits next to the purse. A click puts in a slice, a right-click
+    puts in everything you are carrying. It is the shortest route between a chest full of
+    emeralds and a town that is worth living in.</p>
+    <h3 class="sub">Rates</h3>
+    <p>Owning things costs something every day, out of your own pocket and into the purse:
+    <strong>60e per shop</strong> and <strong>15e per grade</strong>
+    of every house you let. A shop and a let house used to be the only businesses in the game
+    with no outgoings at all — a casino pays upkeep and a crew wants wages, but a landlord
+    simply got richer every morning forever.</p>
+    <p class="note">Only while you are online, and only ever one day at a time. Being away for
+    a week owes a day, not a debt.</p>
     <h3 class="sub">What the purse buys</h3>
-    <p>A treasury with no sink is a scoreboard. Each of these is bought once, permanently, by
-    anybody, from the vault — and announced, the same rule as a withdrawal and for the same
-    reason.</p>
-    <div class="scroller"><table class=""><thead><tr><th>Public work</th><th>Does</th><th>Costs</th></tr></thead><tbody><tr><td>The Watch</td><td><span class="dim">Patrols come round half as often</span></td><td>4000e</td></tr><tr><td>Paved Roads</td><td><span class="dim">Houses near the vault grade one higher</span></td><td>6000e</td></tr><tr><td>Street Lamps</td><td><span class="dim">Townspeople go shopping far more</span></td><td>3000e</td></tr><tr><td>The Exchange</td><td><span class="dim">The counter pays better for everything</span></td><td>8000e</td></tr><tr><td>The Clinic</td><td><span class="dim">Tenants put up with more before they leave</span></td><td>5000e</td></tr><tr><td>The Tramway</td><td><span class="dim">More people out shopping at once</span></td><td>7000e</td></tr><tr><td>The School</td><td><span class="dim">Everybody in the city is paid better</span></td><td>12000e</td></tr></tbody></table></div>
+    <p>A treasury with no sink is a scoreboard. Each work goes up to
+    <strong>8 levels</strong>, each costing 2.5× the one before, and
+    a work keeps doing its job while you save for the next one. Anybody may buy one, from the
+    vault, and everybody is told — the same rule as a withdrawal and for the same reason.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Public work</th><th>Does</th><th>Costs</th></tr></thead><tbody><tr><td>The Watch</td><td><span class="dim">Patrols come round half as often</span></td><td>4000e, then ×2.5</td></tr><tr><td>Paved Roads</td><td><span class="dim">Houses near the vault grade one higher</span></td><td>6000e, then ×2.5</td></tr><tr><td>Street Lamps</td><td><span class="dim">Townspeople go shopping far more</span></td><td>3000e, then ×2.5</td></tr><tr><td>The Exchange</td><td><span class="dim">The counter pays better for everything</span></td><td>8000e, then ×2.5</td></tr><tr><td>The Clinic</td><td><span class="dim">Tenants put up with more before they leave</span></td><td>5000e, then ×2.5</td></tr><tr><td>The Tramway</td><td><span class="dim">More people out shopping at once</span></td><td>7000e, then ×2.5</td></tr><tr><td>The School</td><td><span class="dim">Everybody in the city is paid better</span></td><td>12000e, then ×2.5</td></tr></tbody></table></div>
     <p class="note">Every one of them only makes sense for a <em>city</em>. The roads are the
     one thing in the game that rewards building near each other; the watch is the city
     answering the thing that makes farms dangerous; the exchange pays everybody, including
@@ -950,6 +967,66 @@ footer a:hover { text-decoration: underline; }
     and the apartment block cannot be the same place</strong> — that tension is what the whole
     city design was built around, and it is the only thing in the mod that makes the two halves
     of it argue over the same ground.</p>
+
+    <h3 class="sub">When one of them gets bitten</h3>
+    <p>A zombie that gets through a window turns a resident. That person is then
+    <strong>ill</strong>: they earn nothing, they pay no rent, and they are not out buying
+    anything — the household is short one wage until they are well. Your mailbox says who and
+    for how long.</p>
+    <p>Craft a <strong>hospital</strong> and stand it inside a building, exactly the way you
+    stood a mailbox in a room. Click it and it walks the walls and grades the place. A ward
+    wants more than a house does:</p>
+    <p>2 beds · 24 squares of floor · sealed, with a door ·
+    <strong>no dark corners at all</strong> · 90% built rather
+    than dug · a cupboard for the supplies.</p>
+    <p><strong>Beds are the capacity.</strong> A three-bed ward treats three people at once;
+    a fourth waits, ill, until a bed frees up. Somebody bitten anywhere in the city goes to
+    the nearest open ward with a bed in it, and comes home 1 day later.</p>
+    <h3 class="sub">The city pays for it</h3>
+    <p>This is the first thing that takes money out of the vault <em>without anybody choosing
+    to spend it</em>. The doctors are paid <strong>450e a day per patient</strong>,
+    out of the city purse and into the town purse — so it comes back through your shop door.
+    <strong>The Clinic</strong> knocks 40% off every
+    bill.</p>
+    <p class="note">An empty purse means nobody is treated. They stay ill, the household keeps
+    earning nothing, and after 4 days of it they die — and if it was the tenant,
+    the tenancy dies with them. A city with no hospital at all is the same story with no bed to
+    wait in. That is the argument for keeping the vault funded, and it is the only one this mod
+    makes with a funeral.</p>
+</section>
+<section id="clubs" class="sec">
+  <div class="sec-mark">§08b</div>
+  <header class="sec-head">
+    <p class="kicker">one room, one decision</p>
+    <h2>Nightclubs</h2>
+  </header>
+  
+    <p class="lede">A <strong>nightclub booth</strong> put down in a room makes that room a
+    club. Nothing grades the building and nothing ever will — a club is the one place where
+    taste is the whole point, and a checklist telling you it needs two more lamps would be the
+    mod designing your club for you. Give them somewhere to stand and they find their own way
+    in.</p>
+    <h3 class="sub">The door</h3>
+    <p>The door charge is the only lever, and it is a real decision:
+    <strong>8e to 64e</strong>, four rungs. Cheap fills
+    the room and earns a pittance a head; dear is a quiet room at four times the money. Which
+    of those is right depends on how many people actually live here — and the town grows, so
+    the answer changes.</p>
+    <div class="scroller"><table class=""><thead><tr><th>Door</th><th>Costs</th><th>Draws</th></tr></thead><tbody><tr><td>Free-for-all</td><td>8e</td><td>everybody who is up</td></tr><tr><td>Cheap night</td><td>16e</td><td>most of them</td></tr><tr><td>Proper door</td><td>32e</td><td>the ones with money</td></tr><tr><td>Members only</td><td>64e</td><td>a few, paying well</td></tr></tbody></table></div>
+    <h3 class="sub">Who comes</h3>
+    <p>Your own residents, out of your own houses — the same people who pay your rent, drawn
+    from the same pool as casino punters and shoppers. <strong>A night at the club is a night
+    somebody is not at home</strong>, not at a slot machine and not at a till. One person is
+    in one place, always, and every venue in town competes for the same neighbours.</p>
+    <p>They come after dark only. They walk if they live near enough for a villager to plan
+    the route and turn up at the door if they do not, pay once on the way in, dance for a
+    while, then go home and stay in for a bit before they fancy another night.</p>
+    <p class="note"><strong>A full room stirs the street.</strong> Four or more inside and the
+    police start taking an interest — a club is the loudest thing you can own, and that is the
+    cost that is not measured in emeralds.</p>
+    <p>Takings sit in the till until you lift them. Break the booth and they spill on the
+    floor rather than vanishing.</p>
+    
 </section>
 <section id="crew" class="sec">
   <div class="sec-mark">§09</div>
@@ -981,7 +1058,7 @@ footer a:hover { text-decoration: underline; }
     <h3 class="sub">Pace</h3>
     <div class="scroller"><table class=""><thead><tr><th>Rung</th><th>A job every</th><th>Costs</th><th>Wage</th></tr></thead><tbody><tr><td>Plodding</td><td>12.5s</td><td>—</td><td>+0e</td></tr><tr><td>Steady</td><td>7.5s</td><td>200e</td><td>+10e</td></tr><tr><td>Brisk</td><td>5s</td><td>450e</td><td>+26e</td></tr><tr><td>Quick</td><td>3.1s</td><td>1000e</td><td>+52e</td></tr><tr><td>Flat out</td><td>1.9s</td><td>2200e</td><td>+96e</td></tr></tbody></table></div>
     <h3 class="sub">Jobs</h3>
-    <div class="scroller"><table class=""><thead><tr><th>Job</th><th>Costs</th><th>Wage</th><th>What they do</th></tr></thead><tbody><tr><td>Picking</td><td>free</td><td>+0e</td><td><span class="dim">Your mature plants, into the nearest chest. Wants a ripe plant in the patch.</span></td></tr><tr><td>Curing</td><td>480e</td><td>+8e</td><td><span class="dim">Loads the racks and pulls them at peak. Wants a rack, and fresh buds in the chest.</span></td></tr><tr><td>Refining</td><td>1400e</td><td>+20e</td><td><span class="dim">Runs the refiner and pulls it at PEAK. Wants a refiner, paste and blaze powder.</span></td></tr><tr><td>Pressing</td><td>750e</td><td>+12e</td><td><span class="dim">Leaves into paste, batch after batch. Wants a press and a batch of coca leaves.</span></td></tr><tr><td>Rolling</td><td>600e</td><td>+10e</td><td><span class="dim">Cured buds and paper into joints. Wants CURED buds AND paper in the chest.</span></td></tr><tr><td>Farmhand</td><td>260e</td><td>+5e</td><td><span class="dim">Wheat, carrots, anything else that ripens. Wants a ripe food crop in the patch.</span></td></tr><tr><td>Fertilising</td><td>400e</td><td>+6e</td><td><span class="dim">Bone meal on food crops. Never on yours. Wants bone meal in the chest.</span></td></tr><tr><td>Sowing</td><td>340e</td><td>+6e</td><td><span class="dim">Plants seeds out of the chest into empty rows. Wants seeds in the chest and empty farmland.</span></td></tr><tr><td>Tilling</td><td>220e</td><td>+4e</td><td><span class="dim">Turns bare ground near water into farmland. Wants bare ground near water.</span></td></tr></tbody></table></div>
+    <div class="scroller"><table class=""><thead><tr><th>Job</th><th>Costs</th><th>Wage</th><th>What they do</th></tr></thead><tbody><tr><td>Picking</td><td>free</td><td>+0e</td><td><span class="dim">Your mature plants, into the nearest chest. Wants a ripe plant in the patch.</span></td></tr><tr><td>Curing</td><td>480e</td><td>+8e</td><td><span class="dim">Loads the racks and pulls them at peak. Wants a rack, and fresh buds in the chest.</span></td></tr><tr><td>Refining</td><td>1400e</td><td>+20e</td><td><span class="dim">Runs the refiner and pulls it at PEAK. Wants a refiner, paste and blaze powder.</span></td></tr><tr><td>Pressing</td><td>750e</td><td>+12e</td><td><span class="dim">Leaves into paste, batch after batch. Wants a press and a batch of coca leaves.</span></td></tr><tr><td>Rolling</td><td>600e</td><td>+10e</td><td><span class="dim">Cured buds and paper into joints. Wants CURED buds AND paper in the chest.</span></td></tr><tr><td>Farmhand</td><td>260e</td><td>+5e</td><td><span class="dim">Wheat, carrots, anything else that ripens. Wants a ripe food crop in the patch.</span></td></tr><tr><td>Fertilising</td><td>400e</td><td>+6e</td><td><span class="dim">Bone meal on food crops. Never on yours. Wants bone meal in the chest.</span></td></tr><tr><td>Sowing</td><td>340e</td><td>+6e</td><td><span class="dim">Plants seeds out of the chest into empty rows. Wants seeds in the chest and empty farmland.</span></td></tr><tr><td>Tilling</td><td>220e</td><td>+4e</td><td><span class="dim">Turns bare ground near water into farmland. Wants bare ground near water.</span></td></tr><tr><td>Laundering</td><td>1200e</td><td>+18e</td><td><span class="dim">Fills the drum with dirty money and pulls it out clean. Wants a drum, and dirty money in the chest.</span></td></tr></tbody></table></div>
     <p>The times above are what you would measure with a stopwatch, breather included
     — not the raw pass rate.</p>
     <h3 class="sub">One chest</h3>
@@ -1085,6 +1162,15 @@ footer a:hover { text-decoration: underline; }
     sending punters back out of the door, so the hammer pays for itself in trade rather than
     in tidiness. The card shows the worst cabinet on the floor and you get told the moment one
     crosses the line.</p>
+    <h3 class="sub">The bar is the edge</h3>
+    <p>A cabinet's own plate leaves about three percent, and the cut, the parts and the
+    occasional card counter eat all of it — a floor running on the paytable alone earns
+    roughly nothing. What pays is <strong>what is behind the counter</strong>. Everybody
+    through the door is served out of your stash, and somebody four rounds into your own
+    product plays worse than they walked in playing:
+    <strong>4 points</strong> off what they win back,
+    against 1 for a punter served bread. A dry bar gets
+    you sober punters playing the plate, one go each, and a room that empties.</p>
     <p class="note">A floor is a business, not a tap. Punters have to be served from
     your own stash, a pit boss costs a flat wage against a proportional skim, and an
     unattended floor earns very close to nothing.</p>
@@ -1103,13 +1189,13 @@ footer a:hover { text-decoration: underline; }
 <section id="awards" class="sec">
   <div class="sec-mark">§14</div>
   <header class="sec-head">
-    <p class="kicker">37 of them</p>
+    <p class="kicker">38 of them</p>
     <h2>Advancements</h2>
   </header>
   
     <p class="lede">These are proper advancements — they turn up in your advancements screen like
     any others, with a toast when you earn one.</p>
-    <div class="scroller"><table class=""><thead><tr><th>Name</th><th>How</th><th>Kind</th></tr></thead><tbody><tr><td>An Address</td><td><span class="dim">Put a mailbox on a room somebody could live in.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Banked</td><td><span class="dim">Carry a wallet instead of twenty stacks.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Over A Fire</td><td><span class="dim">Cook opium down to base. The pot brings no fire of its own.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Blend</td><td><span class="dim">Put two strains through the mixing station.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Broke The Bank</td><td><span class="dim">Win more off one machine than its casino had in the vault.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Nothing To See</td><td><span class="dim">Sit through a raid without losing a gram.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Cold Turkey</td><td><span class="dim">Ride a full habit all the way back down to nothing.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Payroll</td><td><span class="dim">Take somebody on. Wages start immediately.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Patience</td><td><span class="dim">Dry a bud properly instead of smoking it wet.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Dirty Money</td><td><span class="dim">Take payment nobody can bank.</span></td><td><span class="frame task">task</span></td></tr><tr><td>The Long Line</td><td><span class="dim">Three machines, and it can still come to nothing.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Edge Case</td><td><span class="dim">Land the ball in an outside slot on The Drop.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Floor</td><td><span class="dim">Get a machine of your own on the floor.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Followed Home</td><td><span class="dim">Deal in person once too often and find out who was watching.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Foreman</td><td><span class="dim">Teach one hand everything there is to teach.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Founded</td><td><span class="dim">Put the city vault down and start taxing everybody.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Hooked</td><td><span class="dim">Let a meter get all the way to withdrawal.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Jackpot</td><td><span class="dim">Take ten times your stake off a machine.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Kingpin</td><td><span class="dim">Bring a dealer up to level five.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Licensed</td><td><span class="dim">Get your hands on a casino licence.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Liquidation</td><td><span class="dim">Clear 500 emeralds at the counter in one go.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Moved The Market</td><td><span class="dim">Push one item&#x27;s price by a fifth on your own.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>By Name</td><td><span class="dim">Make a blend somebody has already named.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Natural</td><td><span class="dim">Get dealt twenty-one on two cards.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Nerve</td><td><span class="dim">Walk away from the sixth rung of The Climb.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Network</td><td><span class="dim">Put somebody on the street selling for you.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Open For Business</td><td><span class="dim">Set up a market stall.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Weeping</td><td><span class="dim">Score a batch of pods and collect what runs out.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Full Daylight</td><td><span class="dim">Get hold of poppy seed. It won&#x27;t grow in a cellar.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Timed It</td><td><span class="dim">Pull the acetylator at peak for a Pure batch.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>They Found It</td><td><span class="dim">Have a raid walk out with your product.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Refined</td><td><span class="dim">Take the coca line all the way to powder.</span></td><td><span class="frame task">task</span></td></tr><tr><td>On The Rim</td><td><span class="dim">Call the edge on the coin toss and hit it.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Rolled</td><td><span class="dim">Turn a bud into something you can actually sell.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Everybody Eats</td><td><span class="dim">Get hold of some seeds and start something.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Shopkeeper</td><td><span class="dim">Open a shop the town can buy from.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Money</td><td><span class="dim">Win something on all four machines.</span></td><td><span class="frame challenge">challenge</span></td></tr></tbody></table></div>
+    <div class="scroller"><table class=""><thead><tr><th>Name</th><th>How</th><th>Kind</th></tr></thead><tbody><tr><td>An Address</td><td><span class="dim">Put a mailbox on a room somebody could live in.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Banked</td><td><span class="dim">Carry a wallet instead of twenty stacks.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Over A Fire</td><td><span class="dim">Cook opium down to base. The pot brings no fire of its own.</span></td><td><span class="frame task">task</span></td></tr><tr><td>House Blend</td><td><span class="dim">Put two strains through the mixing station.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Broke The Bank</td><td><span class="dim">Win more off one machine than its casino had in the vault.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Nothing To See</td><td><span class="dim">Sit through a raid without losing a gram.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Cold Turkey</td><td><span class="dim">Ride a full habit all the way back down to nothing.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Payroll</td><td><span class="dim">Take somebody on. Wages start immediately.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Patience</td><td><span class="dim">Dry a bud properly instead of smoking it wet.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Dirty Money</td><td><span class="dim">Take payment nobody can bank.</span></td><td><span class="frame task">task</span></td></tr><tr><td>The Long Line</td><td><span class="dim">Three machines, and it can still come to nothing.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Edge Case</td><td><span class="dim">Land the ball in an outside slot on The Drop.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Floor</td><td><span class="dim">Get a machine of your own on the floor.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Followed Home</td><td><span class="dim">Deal in person once too often and find out who was watching.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Foreman</td><td><span class="dim">Teach one hand everything there is to teach.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Founded</td><td><span class="dim">Put the city vault down and start taxing everybody.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Hooked</td><td><span class="dim">Let a meter get all the way to withdrawal.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Jackpot</td><td><span class="dim">Take ten times your stake off a machine.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Kingpin</td><td><span class="dim">Bring a dealer up to level five.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Licensed</td><td><span class="dim">Get your hands on a casino licence.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Liquidation</td><td><span class="dim">Clear 500 emeralds at the counter in one go.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Moved The Market</td><td><span class="dim">Push one item&#x27;s price by a fifth on your own.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>By Name</td><td><span class="dim">Make a blend somebody has already named.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Natural</td><td><span class="dim">Get dealt twenty-one on two cards.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Nerve</td><td><span class="dim">Walk away from the sixth rung of The Climb.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>The Network</td><td><span class="dim">Put somebody on the street selling for you.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Open For Business</td><td><span class="dim">Set up a market stall.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Weeping</td><td><span class="dim">Score a batch of pods and collect what runs out.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Full Daylight</td><td><span class="dim">Get hold of poppy seed. It won&#x27;t grow in a cellar.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Timed It</td><td><span class="dim">Pull the acetylator at peak for a Pure batch.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>They Found It</td><td><span class="dim">Have a raid walk out with your product.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>Refined</td><td><span class="dim">Take the coca line all the way to powder.</span></td><td><span class="frame task">task</span></td></tr><tr><td>On The Rim</td><td><span class="dim">Call the edge on the coin toss and hit it.</span></td><td><span class="frame challenge">challenge</span></td></tr><tr><td>Rolled</td><td><span class="dim">Turn a bud into something you can actually sell.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Everybody Eats</td><td><span class="dim">Get hold of some seeds and start something.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Shopkeeper</td><td><span class="dim">Open a shop the town can buy from.</span></td><td><span class="frame task">task</span></td></tr><tr><td>Somewhere To Get Better</td><td><span class="dim">Open a hospital, so a bite stops being the end of somebody.</span></td><td><span class="frame goal">goal</span></td></tr><tr><td>House Money</td><td><span class="dim">Win something on all four machines.</span></td><td><span class="frame challenge">challenge</span></td></tr></tbody></table></div>
 </section></main>
 
     <footer>

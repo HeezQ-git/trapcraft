@@ -8,6 +8,7 @@ import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -100,6 +101,17 @@ public final class TrapVisitors {
      * hospital has ever had, and a thin business to be in.
      */
     private static final float ILL_SHARE = 0.25f;
+    /**
+     * Ticks between tries at an errand, and how many before giving up on it.
+     *
+     * Two seconds apart, twenty times: somebody hangs around the best part of
+     * a minute waiting for a machine or a counter to come free before writing
+     * that errand off. A floor with every cabinet busy is what a floor worth
+     * visiting LOOKS like, so a visitor who cannot wait for one is a visitor
+     * who never plays.
+     */
+    private static final int START_RETRY = 40;
+    private static final int START_TRIES = 20;
     /** Near enough a ward door to be seen to. */
     private static final double AT_THE_DOOR = 3.0;
     /** Ticks between one shove along the way. See TrapFloor for why. */
@@ -137,6 +149,9 @@ public final class TrapVisitors {
         UUID wardId;
         long wardBy;
         int nudge;
+        /** Ticks before trying the next errand again, and how often we have. */
+        int cooldown;
+        int tries;
 
         Visit(UUID body, ArrayDeque<Errand> itinerary, int purse, boolean ill, long expires) {
             this.body = body;
@@ -338,7 +353,7 @@ public final class TrapVisitors {
             itinerary.add(random.nextBoolean() ? Errand.CASINO : Errand.SHOP);
         }
 
-        VillagerEntity body = spawn(world, at);
+        VillagerEntity body = make(world, at);
         if (body == null) {
             return;
         }
@@ -346,13 +361,26 @@ public final class TrapVisitors {
         // day out and a whale is worth noticing.
         int purse = PURSE_LOW + Math.min(random.nextInt(PURSE_HIGH - PURSE_LOW + 1),
                 random.nextInt(PURSE_HIGH - PURSE_LOW + 1));
+        // Registered BEFORE the body goes into the world, and the order is not
+        // cosmetic. spawnEntity fires ENTITY_LOAD synchronously, the handler
+        // below discards any tourist no live Visit knows about, and a body
+        // spawned first is therefore a body binned by its own author about a
+        // microsecond later. Caught live: every visitor logged an arrival and
+        // /visitors reported nobody in town, over and over.
         VISITS.add(new Visit(body.getUuid(), itinerary, purse, ill,
                 world.getTime() + TRIP_TICKS));
+        world.spawnEntity(body);
         TrapCraft.LOGGER.info("somebody's in town with {}e, here for {}", purse, itinerary);
     }
 
-    /** Conjure one, dressed as somebody from somewhere else. */
-    private static VillagerEntity spawn(ServerWorld world, BlockPos at) {
+    /**
+     * Make one, dressed as somebody from somewhere else.
+     *
+     * Deliberately does NOT put them in the world -- see the ordering note in
+     * the caller. The body exists and has its uuid the moment it is created,
+     * which is all the caller needs to register the visit first.
+     */
+    private static VillagerEntity make(ServerWorld world, BlockPos at) {
         VillagerEntity body = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
         if (body == null) {
             return null;
@@ -362,7 +390,6 @@ public final class TrapVisitors {
         body.setVillagerData(body.getVillagerData().withType(
                 types.getOrThrow(FROM_AWAY.get(world.getRandom().nextInt(FROM_AWAY.size())))));
         body.addCommandTag(TOURIST_TAG);
-        world.spawnEntity(body);
         return body;
     }
 
@@ -402,11 +429,27 @@ public final class TrapVisitors {
                 leave(world, body, visit);
                 continue;
             }
-            if (!start(server, world, body, visit, visit.itinerary.peek())) {
-                // Nowhere to do this one right now. Drop it and try whatever
-                // else they came for rather than standing in the road; a city
-                // with no free machine is not a reason to end somebody's day.
+            if (--visit.cooldown > 0) {
+                continue;
+            }
+            if (start(server, world, body, visit, visit.itinerary.peek())) {
+                visit.tries = 0;
+                continue;
+            }
+            // Nowhere to do this one right now. WAIT, and try again shortly.
+            //
+            // The first version dropped the errand on the spot, which meant a
+            // whole itinerary drained in three consecutive ticks and somebody
+            // who arrived while the floor happened to be full turned round and
+            // went home inside a fifth of a second. Caught live: a visitor
+            // arrived with 281e for a shop and two machines and was gone
+            // before the next log line. A busy floor is the NORMAL state of a
+            // floor worth visiting, so giving up instantly is giving up
+            // always.
+            visit.cooldown = START_RETRY;
+            if (++visit.tries >= START_TRIES) {
                 visit.itinerary.poll();
+                visit.tries = 0;
             }
         }
         VISITS.removeAll(leaving);
@@ -583,6 +626,23 @@ public final class TrapVisitors {
                         "\n  One turns up every " + ARRIVE_TICKS / 20 + "s while there's room."
                                 + " The works bring more: lamps, the tram, roads, the school.")
                 .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        // What all this custom is worth to somebody with a drum in the cellar.
+        //
+        // Not a second system: visitor money already lands in shop.turnover
+        // and house.handle, which is exactly what TrapLaw.washLimit reads. A
+        // room full of people from out of town IS the explanation -- that is
+        // what a front is, and it has been true since the first one of them
+        // put an emerald in a slot. It was simply invisible, and an
+        // explanation nobody can see is one nobody can spend.
+        ServerPlayerEntity asking = source.getPlayer();
+        if (asking != null) {
+            int headroom = TrapLaw.washLimit(asking);
+            out.append(net.minecraft.text.Text.literal("\n  " + Math.max(0, headroom)
+                            + "e of your takings would still explain themselves"
+                            + (headroom > 0 ? "." : " -- the drum is ahead of the till."))
+                    .formatted(headroom > 0 ? net.minecraft.util.Formatting.DARK_GRAY
+                            : net.minecraft.util.Formatting.RED));
+        }
         net.minecraft.text.Text shown = out;
         source.sendFeedback(() -> shown, false);
         return 1;
