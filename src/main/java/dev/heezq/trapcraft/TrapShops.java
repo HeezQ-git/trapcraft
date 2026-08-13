@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.entity.passive.WanderingTraderEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -79,6 +78,24 @@ public final class TrapShops {
     private static final int CHECK_INTERVAL = 20 * 20;
     private static final float PULL = 0.06f;
     private static final int MAX_SHOPPERS = 6;
+    /**
+     * How far a shop will call somebody in from.
+     *
+     * The same reach the casino uses. A town is not a street: houses go up
+     * where there is room and a shop goes up where its owner wanted it, and
+     * past this the question answers itself -- a villager in an unloaded chunk
+     * is not ticking and cannot be found by any search.
+     */
+    private static final int REACH_OUT = 512;
+    /**
+     * The longest trip worth asking a villager to walk.
+     *
+     * A pathfinder gives out somewhere past forty blocks and the Brain
+     * reclaims the walk target between plans, so anything further is a walk
+     * target that quietly does nothing while somebody stands in the road.
+     * Past it they are stood at the shop door and walk the last of it in.
+     */
+    private static final int WALKABLE = 40;
     private static final int PATIENCE = 20 * 20;
     private static final int COUNTER = 3;
     private static final int LEAVE_TICKS = 20 * 8;
@@ -103,6 +120,28 @@ public final class TrapShops {
          * down. The commas are the only place this format can grow.
          */
         boolean staffed;
+        /**
+         * Bitten, and not coming back until somebody cures them.
+         *
+         * Never written down. The zombie standing at the counter IS the
+         * record -- it is a persistent entity wearing the keeper's tag, so a
+         * restart rediscovers the situation in one entity lookup, and a flag
+         * on disk could only ever disagree with it.
+         */
+        transient boolean sick;
+        /**
+         * The day they are due back off sick, or -1.
+         *
+         * Written down, unlike {@link #sick}. Once a bitten keeper has been
+         * carried off to a ward there is nothing at the counter to look at any
+         * more -- the evidence walked away -- so the ONLY thing that knows
+         * they are still off is this number. A transient one would have every
+         * restart decide the shop was simply unstaffed and hire over the top
+         * of somebody who is lying in a hospital.
+         */
+        long backOn = -1;
+        /** Said so once. Not every ten seconds. */
+        transient boolean toldSick;
         /** The last in-game day the keeper was paid, so a restart can't double it. */
         long lastPaid = -1;
 
@@ -205,6 +244,29 @@ public final class TrapShops {
     public static void register() {
         ServerLifecycleEvents.SERVER_STARTED.register(TrapShops::load);
         registerCommand();
+        // Keepers standing at counters that are not there any more.
+        //
+        // The backstop for every shop that was closed before the register
+        // learnt to sweep by tag, and for anybody left behind by a till that
+        // was carried off. Guarded on the register being loaded at all: an
+        // empty SHOPS means the file has not been read yet, and sweeping then
+        // would bin every shopkeeper on the server.
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register(
+                (entity, world) -> {
+                    if (SHOPS.isEmpty()
+                            || !entity.getCommandTags().contains(KEEPER_TAG)
+                            || !(entity instanceof VillagerEntity
+                            || entity instanceof net.minecraft.entity.mob.ZombieVillagerEntity)) {
+                        return;
+                    }
+                    for (Shop shop : SHOPS) {
+                        if (shop.dimension.equals(world.getRegistryKey().getValue().toString())
+                                && entity.getBlockPos().isWithinDistance(shop.pos, SICK_REACH)) {
+                            return;   // somebody's, and still employed
+                        }
+                    }
+                    entity.discard();
+                });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             int now = server.getTicks();
             if (!SHOPPERS.isEmpty() || !LEAVING.isEmpty()) {
@@ -296,8 +358,8 @@ public final class TrapShops {
         save();
         owner.sendMessage(Text.literal("Shop open. ").formatted(Formatting.GREEN, Formatting.BOLD)
                 .append(Text.literal("Put market shelves within " + REACH + " blocks and "
-                        + "they join it. Stock goes in any chest under the till or under "
-                        + "a shelf.").formatted(Formatting.GRAY)), false);
+                        + "they join it. Open a shelf and fill it -- that's your stock.")
+                        .formatted(Formatting.GRAY)), false);
         if (!TrapCity.founded()) {
             owner.sendMessage(Text.literal("There's no city yet, so there's nobody to "
                     + "shop here.").formatted(Formatting.DARK_GRAY), false);
@@ -329,7 +391,7 @@ public final class TrapShops {
                                 + " blocks and it'll join.").formatted(Formatting.GRAY))
                 : Text.literal("Joined ").formatted(Formatting.GREEN)
                         .append(Text.literal(shop.name).formatted(Formatting.GOLD))
-                        .append(Text.literal(". Stock a chest under it, or under the till.")
+                        .append(Text.literal(". Right-click it to stock it.")
                                 .formatted(Formatting.GRAY)), false);
     }
 
@@ -409,9 +471,27 @@ public final class TrapShops {
             save();
             return "They've gone home. The counter is yours again.";
         }
+        // Their first day starts NOW. Without this line lastPaid is whatever it
+        // was -- the day they last walked out, or -1 -- so the wage round ten
+        // seconds later reads "a day is owed", takes 45e off a till that has
+        // not earned any yet, and walks them straight back out through the
+        // `continue` above stand(). Which meant that on a fresh shop, hiring
+        // somebody spawned nobody at all, ever: the only sign of it was two
+        // chat lines ten seconds apart.
+        shop.lastPaid = TrapMarket.today(owner.getServer());
+        // And they are stood up here rather than on the next wage round, so
+        // there is somebody behind the counter by the time the screen closes.
+        ServerWorld world = worldOf(owner.getServer(), shop.dimension);
+        if (world != null) {
+            stand(world, shop);
+        }
         save();
-        return "Hired. " + KEEPER_WAGE + "e a day out of the till, and the shop keeps "
-                + "trading while you're anywhere on the server.";
+        return "Hired. " + KEEPER_WAGE + "e a day out of your own pocket, and the shop "
+                + "keeps trading while you're anywhere on the server."
+                + (TrapMarket.wealthOf(owner) < KEEPER_WAGE
+                ? "  Today's free -- but you're carrying " + TrapMarket.wealthOf(owner)
+                + "e, and they walk out tomorrow unless you can make " + KEEPER_WAGE
+                + "e." : "");
     }
 
     /**
@@ -423,31 +503,17 @@ public final class TrapShops {
      * else's tick budget.
      */
     private static void keepers(MinecraftServer server) {
-        long day = server.getOverworld().getTimeOfDay() / 24000L;
+        long day = TrapMarket.today(server);
         for (Shop shop : new ArrayList<>(SHOPS)) {
             if (!shop.staffed) {
                 continue;
             }
-            if (shop.lastPaid != day) {
-                shop.lastPaid = day;
-                if (shop.till < KEEPER_WAGE) {
-                    shop.staffed = false;
-                    sendHome(server, shop);
-                    ServerPlayerEntity boss = server.getPlayerManager().getPlayer(shop.owner);
-                    if (boss != null) {
-                        boss.sendMessage(Text.literal("Your shopkeeper walked out of ")
-                                .formatted(Formatting.RED)
-                                .append(Text.literal(shop.name).formatted(Formatting.GOLD))
-                                .append(Text.literal(" -- the till couldn't make their "
-                                        + KEEPER_WAGE + "e.").formatted(Formatting.GRAY)), false);
-                    }
-                    save();
-                    continue;
-                }
-                shop.till -= KEEPER_WAGE;
-                save();
-            }
-            if (server.getPlayerManager().getPlayer(shop.owner) == null) {
+            ServerPlayerEntity boss = server.getPlayerManager().getPlayer(shop.owner);
+            if (boss == null) {
+                // Nobody minding it, nobody being paid. The shop only trades
+                // while its owner is on the server, so the day is not banked
+                // either -- charging for a shift that nobody worked would be
+                // the one thing worse than not charging at all.
                 sendHome(server, shop);
                 continue;
             }
@@ -455,23 +521,170 @@ public final class TrapShops {
             if (world == null) {
                 continue;
             }
+            // Nothing there any more.
+            //
+            // onStateReplaced closes a shop when a player breaks the till, and
+            // that is the only way it has ever been closed -- so a till taken
+            // by a piston (which is explicitly skipped as `moved`), an
+            // explosion, or any other mod left the register pointing at an
+            // address with no counter at it, quietly re-hiring a shopkeeper
+            // there every ten seconds forever. Asking the world what is
+            // actually at the spot costs one blockstate lookup a shop and
+            // cannot be got wrong the next time somebody invents a way to
+            // move a block. TrapFloor.beat learnt exactly this about wires.
+            if (loaded(world, shop.pos)
+                    && !(world.getBlockState(shop.pos).getBlock() instanceof ShopTillBlock)) {
+                closeShop(world, shop.pos);
+                continue;
+            }
             // Re-adding the same ticket pushes its expiry out rather than
             // stacking another, so this is a hash lookup a shop every ten
             // seconds.
             world.getChunkManager().addTicket(KEEPER_TICKET,
                     new net.minecraft.util.math.ChunkPos(shop.pos), 2);
+            // BEFORE the wage, because this is what decides whether there is
+            // anybody to pay. A keeper who was bitten last night is on the
+            // books and off the payroll until they are cured.
             stand(world, shop);
+            if (shop.sick) {
+                continue;
+            }
+            if (shop.lastPaid != day) {
+                shop.lastPaid = day;
+                // Out of the owner's own pocket, not the till.
+                //
+                // A wage off the till meant a shop had to be turning a profit
+                // before it could afford the person whose whole job is to make
+                // it turn one, so a new shop could never hire anybody: you
+                // empty the till the moment you open it, and the keeper walks
+                // out the same day. A wage is something the boss pays.
+                if (TrapMarket.wealthOf(boss) < KEEPER_WAGE) {
+                    shop.staffed = false;
+                    sendHome(server, shop);
+                    boss.sendMessage(Text.literal("Your shopkeeper walked out of ")
+                            .formatted(Formatting.RED)
+                            .append(Text.literal(shop.name).formatted(Formatting.GOLD))
+                            .append(Text.literal(" -- you couldn't make their "
+                                    + KEEPER_WAGE + "e.").formatted(Formatting.GRAY)), false);
+                    save();
+                    continue;
+                }
+                TrapMarket.take(boss, KEEPER_WAGE);
+                TrapLedger.record(boss, TrapLedger.Source.STALL, -KEEPER_WAGE);
+                boss.sendMessage(Text.literal("Shopkeeper's wage: ")
+                        .formatted(Formatting.DARK_GRAY)
+                        .append(Text.literal("-" + KEEPER_WAGE + "e")
+                                .formatted(Formatting.RED))
+                        .append(Text.literal("  " + shop.name)
+                                .formatted(Formatting.DARK_GRAY)), true);
+                save();
+            }
         }
     }
 
     /** Put the keeper back on their feet if they've wandered off or unloaded. */
     private static void stand(ServerWorld world, Shop shop) {
+        BlockPos till = shop.pos;
+        long day = TrapMarket.today(world.getServer());
+        // Off sick, on the books, and somewhere else entirely.
+        if (shop.backOn >= 0) {
+            if (day < shop.backOn) {
+                shop.sick = true;
+                return;
+            }
+            // Discharged. The body that went in is not the person who comes
+            // out -- a zombie cannot be un-bitten without a golden apple, and
+            // the whole point of this was that it should not need one -- so
+            // the one lying in the ward is cleared and the shop takes its own
+            // keeper back on below, under the name it always uses for that
+            // till. Same person, as far as anybody in the town can tell.
+            discharge(world, shop);
+            shop.backOn = -1;
+            shop.sick = false;
+            shop.toldSick = false;
+            save();
+        }
+        // Off sick before anything else.
+        //
+        // A villager that gets bitten stops being a VillagerEntity and becomes
+        // a ZombieVillagerEntity -- a NEW entity, with a new id, wearing the
+        // same name and every tag. So the id in KEEPERS goes stale, the lookup
+        // below finds nobody, and this method does the one thing it knows how
+        // to do: hire another one. Who has the same night ahead of them. That
+        // is how a counter grows a crowd of zombies, and TrapHomes learnt it
+        // the same way with ninety-eight of them round one village.
+        //
+        // They are not replaced and not binned. Somebody who has been bitten
+        // is somebody you can cure -- weakness and a golden apple -- and when
+        // they turn back they are a VillagerEntity wearing the keeper's tag
+        // again, which the adoption below picks straight back up. Their job is
+        // held open; they simply are not paid for the days they are a zombie.
+        for (var turned : world.getEntitiesByClass(
+                net.minecraft.entity.mob.ZombieVillagerEntity.class,
+                new net.minecraft.util.math.Box(till).expand(SICK_REACH),
+                found -> found.isAlive()
+                        && found.getCommandTags().contains(KEEPER_TAG))) {
+            shop.sick = true;
+            KEEPERS.remove(shop.pos);
+            // Off to a ward, under their own steam, because a shopkeeper who
+            // can only be saved by a player standing over them with a splash
+            // potion is a shopkeeper who stays a zombie. The city has a
+            // hospital for exactly this and it is somebody's job to run it.
+            TrapHospitals.Ward ward = TrapHospitals.takeIn(world, turned);
+            shop.backOn = ward == null ? -1 : day + TrapHospitals.STAY_DAYS;
+            ServerPlayerEntity boss = world.getServer()
+                    .getPlayerManager().getPlayer(shop.owner);
+            if (!shop.toldSick && boss != null) {
+                boss.sendMessage(Text.literal(turned.getCustomName() == null
+                                ? "Your shopkeeper" : turned.getCustomName().getString())
+                        .formatted(Formatting.GOLD)
+                        .append(ward == null
+                                ? Text.literal(" has been bitten, and there's no hospital "
+                                        + "in this city to take them to. No work and no "
+                                        + "wage until somebody cures them.")
+                                        .formatted(Formatting.RED)
+                                : Text.literal(" has been bitten. Taken to " + ward.name()
+                                        + " -- back behind the counter in "
+                                        + TrapHospitals.STAY_DAYS + " day, and earning "
+                                        + "you nothing until then.")
+                                        .formatted(Formatting.GRAY)), false);
+            }
+            shop.toldSick = true;
+            save();
+            return;
+        }
+        shop.sick = false;
+        shop.toldSick = false;
         UUID known = KEEPERS.get(shop.pos);
         if (known != null && world.getEntity(known) instanceof VillagerEntity alive
                 && alive.isAlive()) {
             return;
         }
-        BlockPos spot = TrapSpawn.near(world, shop.pos.up());
+        // Somebody is already stood here that this session has never heard of.
+        //
+        // KEEPERS is memory only and a keeper is persistent, so every restart
+        // of a staffed shop arrived with the old keeper still at the counter
+        // and an empty map saying there was nobody -- and this method's whole
+        // job is to fix "there is nobody" by spawning one. A shop left staffed
+        // would therefore grow a shopkeeper per restart, forever, which is the
+        // same crowd-of-phantoms the floor and the shelves have each had.
+        // Adopted rather than replaced, and any extras that already piled up
+        // are cleared on the way past.
+        VillagerEntity standing = null;
+        for (var found : world.getEntitiesByClass(VillagerEntity.class,
+                new net.minecraft.util.math.Box(till).expand(6),
+                other -> other.isAlive() && other.getCommandTags().contains(KEEPER_TAG))) {
+            if (standing == null) {
+                standing = found;
+            } else {
+                found.discard();
+            }
+        }
+        if (standing != null) {
+            KEEPERS.put(till.toImmutable(), standing.getUuid());
+            return;
+        }
+        BlockPos spot = counterSide(world, shop.pos);
         if (spot == null) {
             return;
         }
@@ -479,7 +692,11 @@ public final class TrapShops {
         if (keeper == null) {
             return;
         }
-        keeper.refreshPositionAndAngles(spot, world.getRandom().nextFloat() * 360f, 0f);
+        // Facing the counter they are stood at. Their AI is off so they will
+        // never turn on their own, and a shopkeeper pointed at a random
+        // compass direction reads as somebody who wandered in.
+        keeper.refreshPositionAndAngles(spot, (float) Math.toDegrees(Math.atan2(
+                till.getZ() - spot.getZ(), till.getX() - spot.getX())) - 90f, 0f);
         // Stable per till, so the person behind your counter is the same
         // person after every reload rather than a new hire every morning.
         keeper.setCustomName(Text.literal(TrapHomes.nameFor(shop.pos.hashCode())
@@ -492,21 +709,97 @@ public final class TrapShops {
         KEEPERS.put(shop.pos.toImmutable(), keeper.getUuid());
     }
 
-    /** Marks a shopkeeper, so nothing else mistakes one for a wandering local. */
-    public static final String KEEPER_TAG = "trapcraft_keeper";
-
-    private static void sendHome(MinecraftServer server, Shop shop) {
-        UUID id = KEEPERS.remove(shop.pos);
-        if (id == null || server == null) {
-            return;
-        }
-        for (ServerWorld world : server.getWorlds()) {
-            if (world.getEntity(id) instanceof VillagerEntity keeper) {
-                keeper.discard();
+    /**
+     * Clear the keeper who has been lying in a ward.
+     *
+     * ponytail: the nearest tagged zombie to any ward in this world, not
+     * "the one this shop sent". A shop has no id to stamp on them and two
+     * bitten shopkeepers are interchangeable anyway -- each till hires back
+     * under its own stable name, so nobody can tell which body was whose.
+     */
+    private static void discharge(ServerWorld world, Shop shop) {
+        for (BlockPos sign : TrapHospitals.wards(shop.dimension)) {
+            for (var lying : world.getEntitiesByClass(
+                    net.minecraft.entity.mob.ZombieVillagerEntity.class,
+                    new net.minecraft.util.math.Box(sign).expand(SICK_REACH),
+                    found -> found.getCommandTags().contains(KEEPER_TAG))) {
+                lying.discard();
                 return;
             }
         }
     }
+
+    /**
+     * Somewhere to stand at the counter, beside it rather than on it.
+     *
+     * The search used to start at {@code till.up()}, which is a perfectly good
+     * standing spot -- the till has a collision box, so its own lid counts as
+     * a floor. The result was a shopkeeper stood on top of the counter looking
+     * down at the customers. Beside it first, in a ring, and only if the whole
+     * ring is blocked does it fall back to anywhere at all: a keeper on the
+     * counter is silly, and a keeper who never appears because the shop is
+     * cramped is worse.
+     */
+    private static BlockPos counterSide(ServerWorld world, BlockPos till) {
+        int[][] ring = {
+                {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                {1, 1}, {1, -1}, {-1, 1}, {-1, -1},
+        };
+        for (int[] offset : ring) {
+            for (int drop = 0; drop <= 1; drop++) {
+                BlockPos spot = till.add(offset[0], -drop, offset[1]);
+                if (TrapSpawn.safe(world, spot)) {
+                    return spot;
+                }
+            }
+        }
+        return TrapSpawn.near(world, till.up());
+    }
+
+    /** Marks a shopkeeper, so nothing else mistakes one for a wandering local. */
+    public static final String KEEPER_TAG = "trapcraft_keeper";
+
+    private static void sendHome(MinecraftServer server, Shop shop) {
+        KEEPERS.remove(shop.pos);
+        shop.sick = false;
+        shop.toldSick = false;
+        if (server == null) {
+            return;
+        }
+        // By the TAG at the counter, not by the id we remembered.
+        //
+        // The remembered id is wrong in both the cases that matter. A keeper
+        // who was bitten is a different entity now, so the old id finds
+        // nothing and the zombie is left standing at a counter that no longer
+        // exists; and a till that was taken up and put down somewhere else
+        // leaves its old keeper behind with nothing that will ever look for
+        // them again. Either way the bodies pile up at addresses with no shop
+        // at them, which is what "they spawn all the time even though the till
+        // moved" actually is -- not new ones spawning, old ones never leaving.
+        ServerWorld world = worldOf(server, shop.dimension);
+        if (world == null) {
+            return;
+        }
+        var counter = new net.minecraft.util.math.Box(shop.pos).expand(SICK_REACH);
+        for (var keeper : world.getEntitiesByClass(VillagerEntity.class, counter,
+                found -> found.getCommandTags().contains(KEEPER_TAG))) {
+            keeper.discard();
+        }
+        for (var turned : world.getEntitiesByClass(
+                net.minecraft.entity.mob.ZombieVillagerEntity.class, counter,
+                found -> found.getCommandTags().contains(KEEPER_TAG))) {
+            turned.discard();
+        }
+    }
+
+    /**
+     * How far from the counter a keeper still counts as theirs.
+     *
+     * Wide, because a bitten one walks: the point is to find them at all, and
+     * finding somebody else's keeper is impossible -- two tills this close
+     * would be one shop.
+     */
+    private static final int SICK_REACH = 16;
 
     /** Cycle the price policy and write it down. */
     public static void repricePrices(Shop shop) {
@@ -532,10 +825,10 @@ public final class TrapShops {
     /**
      * Every container this shop can sell out of.
      *
-     * Under the till and under every shelf, because a supermarket keeps its
-     * stock in a back room and a market stall keeps it under the counter, and
-     * telling somebody which of those they are allowed to build would be the
-     * mod deciding what their shop looks like.
+     * The shelves themselves first -- a shelf holds its own stock, which is
+     * the whole point of a shelf. Then under the till and under every shelf,
+     * because a supermarket keeps a back room and telling somebody they may
+     * not have one would be the mod deciding what their shop looks like.
      */
     public static List<Inventory> stockOf(ServerWorld world, Shop shop) {
         List<Inventory> boxes = new ArrayList<>();
@@ -550,6 +843,12 @@ public final class TrapShops {
             boxes.add(under);
         }
         for (Shelf shelf : shelvesOf(shop)) {
+            // The shelf's own stock, straight off the block entity: it is
+            // never half of a double chest and never a minecart, so there is
+            // nothing for TrapBoxes to resolve and no entity lookup to pay for.
+            if (world.getBlockEntity(shelf.pos) instanceof MarketShelfBlockEntity onIt) {
+                boxes.add(onIt);
+            }
             Inventory box = TrapBoxes.at(world, shelf.pos.down());
             if (box != null) {
                 boxes.add(box);
@@ -773,8 +1072,27 @@ public final class TrapShops {
             return;
         }
 
-        // A cheap shop draws more custom than a dear one, which is the whole
-        // point of being allowed to set a price at all.
+        Shop shop = openShop(server, random);
+        if (shop == null) {
+            // Nothing to buy anywhere. They still have jobs.
+            commute(server, random);
+            return;
+        }
+        List<Shelf> counters = shelvesOf(shop);
+        arrive(server, shop.dimension, counters.get(random.nextInt(counters.size())).pos,
+                Trip.SHOP, random);
+    }
+
+    /**
+     * A shop that is loaded, stocked, and has something worth crossing for.
+     *
+     * A cheap shop draws more custom than a dear one, which is the whole point
+     * of being allowed to set a price at all. Pulled out of the trip so that
+     * somebody from out of town can be sent to the same counters on the same
+     * terms -- a visitor should be drawn by a well-run shop exactly as a
+     * neighbour is, or the markup only means anything to half the street.
+     */
+    private static Shop openShop(MinecraftServer server, Random random) {
         List<Shop> open = new ArrayList<>();
         for (Shop shop : SHOPS) {
             ServerWorld world = worldOf(server, shop.dimension);
@@ -787,20 +1105,35 @@ public final class TrapShops {
             // A staffed counter draws more custom than an empty one, which is
             // most of what you are paying the wage for.
             int weight = Math.round(Math.max(1, 200 - shop.markup())
-                    * (shop.staffed ? KEEPER_PULL : 1f));
+                    * (shop.staffed && !shop.sick ? KEEPER_PULL : 1f));
             for (int i = 0; i < weight; i += 20) {
                 open.add(shop);
             }
         }
-        if (open.isEmpty()) {
-            // Nothing to buy anywhere. They still have jobs.
-            commute(server, random);
-            return;
+        return open.isEmpty() ? null : open.get(random.nextInt(open.size()));
+    }
+
+    /**
+     * Send somebody who is already standing in the world to a counter.
+     *
+     * The visitor half of {@link #arrive}: the body is supplied rather than
+     * found, because whoever is passing through is not in the housing register
+     * and {@code freeResident} will never hand them over.
+     */
+    public static boolean sendVisitor(MinecraftServer server, VillagerEntity body) {
+        Random random = server.getOverworld().getRandom();
+        if (SHOPPERS.containsKey(body.getUuid())) {
+            return false;
         }
-        Shop shop = open.get(random.nextInt(open.size()));
+        Shop shop = openShop(server, random);
+        if (shop == null) {
+            return false;
+        }
         List<Shelf> counters = shelvesOf(shop);
-        arrive(server, shop.dimension, counters.get(random.nextInt(counters.size())).pos,
-                Trip.SHOP, random);
+        BlockPos target = counters.get(random.nextInt(counters.size())).pos;
+        ServerWorld world = worldOf(server, shop.dimension);
+        return world != null && send(server, world, shop.dimension, target,
+                Trip.SHOP, random, body);
     }
 
     /**
@@ -860,28 +1193,69 @@ public final class TrapShops {
         if (world == null) {
             return false;
         }
-        BlockPos door = doorstep(world, target, random);
-        if (door == null) {
-            return false;
-        }
-        WanderingTraderEntity shopper = EntityType.WANDERING_TRADER.create(world,
-                SpawnReason.EVENT);
+        // Somebody who lives here, and nobody else.
+        //
+        // The shoppers used to be wandering traders conjured on the doorstep
+        // wearing a name picked at random out of the housing register, which
+        // meant Lom could be buying bread at a till while the real Lom was sat
+        // at home -- the same phantom the casino floor ran on until the town
+        // was made to supply its own punters. A shop's customers are its
+        // neighbours; if none of them is free, nobody comes, and the stock
+        // stays on the shelf.
+        VillagerEntity shopper = TrapHomes.freeResident(world, target, REACH_OUT);
         if (shopper == null) {
             return false;
         }
-        shopper.refreshPositionAndAngles(door, random.nextFloat() * 360.0F, 0.0F);
-        // Somebody out of the housing register, not a label. What they spend
-        // gets added to the name when they actually spend it -- see buy().
-        String who = TrapHomes.someoneFromTown(random);
+        return send(server, world, dimension, target, kind, random, shopper);
+    }
+
+    /**
+     * Walk a body that has already been chosen to a counter.
+     *
+     * Split from {@link #arrive} so a visitor can be sent on exactly the same
+     * trip as a neighbour. Everything below this line is the same for both:
+     * the same tag, the same walk, the same patience, the same till. The only
+     * thing that turns on where somebody is from is whose money crosses the
+     * counter and where they go afterwards, and both are one branch each.
+     */
+    private static boolean send(MinecraftServer server, ServerWorld world, String dimension,
+                                BlockPos target, Trip kind, Random random,
+                                VillagerEntity shopper) {
+        String who = plainName(shopper);
+        shopper.addCommandTag(TAG);
         shopper.setCustomName(Text.literal(kind == Trip.WORK ? who + "  ·  on shift" : who)
                 .formatted(Formatting.AQUA));
         shopper.setCustomNameVisible(true);
-        shopper.addCommandTag(TAG);
-        shopper.setDespawnDelay(20 * 60 * 3);
-        world.spawnEntity(shopper);
+        // Up, if they were in bed. A shift starts at dawn and the schedule
+        // would otherwise have them asleep through it.
+        shopper.wakeUp();
+        // Walked if it is a walk a villager can plan, and stood at the door if
+        // it is not -- the same trade the casino makes, for the same reason:
+        // a pathfinder gives out somewhere past forty blocks, and nobody
+        // watches a neighbour cross town. What must never happen is a SECOND
+        // copy of somebody, and cannot: this is the one body the register
+        // knows about, moved.
+        if (!shopper.getBlockPos().isWithinDistance(target, WALKABLE)) {
+            BlockPos door = doorstep(world, target, random);
+            if (door == null) {
+                return false;
+            }
+            shopper.refreshPositionAndAngles(door, random.nextFloat() * 360.0F, 0.0F);
+        }
+        TrapHomes.walkTo(shopper, target);
         SHOPPERS.put(shopper.getUuid(),
                 new Shopper(target, dimension, server.getTicks(), kind));
         return true;
+    }
+
+    /** What they are called with any errand's total taken back off. */
+    private static String plainName(VillagerEntity body) {
+        if (body.getCustomName() == null) {
+            return "Somebody";
+        }
+        String shown = body.getCustomName().getString();
+        int cut = shown.indexOf("  ·  ");
+        return cut < 0 ? shown : shown.substring(0, cut);
     }
 
     private static BlockPos doorstep(ServerWorld world, BlockPos shelf, Random random) {
@@ -909,7 +1283,7 @@ public final class TrapShops {
     private static void shepherd(MinecraftServer server, int now) {
         List<UUID> done = new ArrayList<>();
         for (var row : SHOPPERS.entrySet()) {
-            WanderingTraderEntity shopper = find(server, row.getKey());
+            VillagerEntity shopper = find(server, row.getKey());
             if (shopper == null) {
                 done.add(row.getKey());
                 continue;
@@ -939,18 +1313,45 @@ public final class TrapShops {
                 continue;
             }
             if (now % 20 == 0) {
-                shopper.getNavigation().startMovingTo(counter.getX() + 0.5,
-                        counter.getY() + 1.0, counter.getZ() + 0.5, 0.55);
+                // A walk target, not a navigation call. A villager Brain
+                // re-picks its own destination whenever it has none and simply
+                // overwrites a path a tick later; given a target the stroll
+                // task stands down, that being the memory it waits on being
+                // empty. The old raw call was fine for a wandering trader and
+                // is not for a resident.
+                shopper.wakeUp();
+                TrapHomes.walkTo(shopper, counter);
             }
         }
         done.forEach(SHOPPERS::remove);
 
         List<UUID> gone = new ArrayList<>();
         for (var row : LEAVING.entrySet()) {
-            WanderingTraderEntity shopper = find(server, row.getKey());
+            VillagerEntity shopper = find(server, row.getKey());
             if (shopper == null || now - row.getValue() > LEAVE_TICKS) {
                 if (shopper != null) {
-                    shopper.discard();
+                    // Untagged, un-named and walked home, never discarded: a
+                    // shopper is somebody's tenant, and binning one here would
+                    // have the shops quietly eating the town that keeps them.
+                    shopper.removeCommandTag(TAG);
+                    if (TrapVisitors.isVisitor(shopper.getUuid())) {
+                        // ...unless they are not anybody's tenant. Somebody
+                        // passing through has no bed to be walked back to, and
+                        // sendHome on a body with no house is how a visitor
+                        // turns into furniture. Handed back to whoever brought
+                        // them instead; they may have another errand.
+                        shopper.setCustomName(null);
+                        shopper.setCustomNameVisible(false);
+                        TrapVisitors.errandDone(shopper.getUuid());
+                        gone.add(row.getKey());
+                        continue;
+                    }
+                    shopper.setCustomName(Text.literal(plainName(shopper))
+                            .formatted(Formatting.AQUA));
+                    TrapHomes.stayIn(shopper, shopper.getWorld().getTime()
+                            + TrapFloor.NIGHT_OFF
+                            + shopper.getWorld().getRandom().nextInt(TrapFloor.NIGHT_OFF));
+                    TrapHomes.sendHome((ServerWorld) shopper.getWorld(), shopper);
                 }
                 gone.add(row.getKey());
             }
@@ -965,7 +1366,7 @@ public final class TrapShops {
      * housing register, and paying again on arrival would mean a town that
      * earns more when somebody happens to be stood in the chunk watching.
      */
-    private static void clockOn(MinecraftServer server, WanderingTraderEntity shopper,
+    private static void clockOn(MinecraftServer server, VillagerEntity shopper,
                                 BlockPos site) {
         ServerWorld world = (ServerWorld) shopper.getWorld();
         world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, site.getX() + 0.5,
@@ -975,7 +1376,7 @@ public final class TrapShops {
         leave(server, shopper);
     }
 
-    private static void buy(MinecraftServer server, WanderingTraderEntity shopper,
+    private static void buy(MinecraftServer server, VillagerEntity shopper,
                             Shopper trip) {
         ServerWorld world = (ServerWorld) shopper.getWorld();
         Shelf shelf = at(world, trip.target());
@@ -991,15 +1392,27 @@ public final class TrapShops {
         }
         int duty = TrapCity.dutyOn(line.price(), line.duty());
         int total = line.price() + duty;
-        // Afford BEFORE take. take() empties the chest, so a town that turns
+        // Whose money this is. A neighbour shops out of the town's wage bill;
+        // somebody passing through brought their own, from outside it -- which
+        // is the entire reason visitors exist, because a shop whose only
+        // customers are its neighbours can only ever be as busy as the town is
+        // populous.
+        boolean visitor = TrapVisitors.isVisitor(shopper.getUuid());
+        // Afford BEFORE take. take() empties the chest, so a payer that turns
         // out to be broke one line later has walked off with the shopping --
         // and it would look like the stock was miscounted, not like the money
         // ran out.
-        if (!TrapPayroll.afford(total) || !take(world, shop, line)) {
+        boolean afford = visitor ? TrapVisitors.purseOf(shopper.getUuid()) >= total
+                : TrapPayroll.afford(total);
+        if (!afford || !take(world, shop, line)) {
             leave(server, shopper);
             return;
         }
-        TrapPayroll.spend(total);
+        if (visitor) {
+            TrapVisitors.spend(shopper.getUuid(), total);
+        } else {
+            TrapPayroll.spend(total);
+        }
         shop.till += line.price();
         shop.sold++;
         shop.turnover += line.price();
@@ -1008,8 +1421,7 @@ public final class TrapShops {
         // What they spent, over their head, for the eight seconds they hang
         // about before leaving. A shopper you watched walk in is worth more as
         // "Maud  ·  12e" than as one more anonymous villager at a shelf.
-        String named = shopper.getCustomName() == null ? "Somebody"
-                : shopper.getCustomName().getString();
+        String named = plainName(shopper);
         shopper.setCustomName(Text.literal(named + "  ·  " + (line.price() + duty) + "e")
                 .formatted(Formatting.GREEN));
 
@@ -1031,14 +1443,14 @@ public final class TrapShops {
         leave(server, shopper);
     }
 
-    private static void leave(MinecraftServer server, WanderingTraderEntity shopper) {
+    private static void leave(MinecraftServer server, VillagerEntity shopper) {
         LEAVING.put(shopper.getUuid(), server.getTicks());
         shopper.getNavigation().stop();
     }
 
-    private static WanderingTraderEntity find(MinecraftServer server, UUID id) {
+    private static VillagerEntity find(MinecraftServer server, UUID id) {
         for (ServerWorld world : server.getWorlds()) {
-            if (world.getEntity(id) instanceof WanderingTraderEntity found
+            if (world.getEntity(id) instanceof VillagerEntity found
                     && found.getCommandTags().contains(TAG)) {
                 return found;
             }
@@ -1131,6 +1543,9 @@ public final class TrapShops {
                     shop.turnover = money.length > 2 ? Integer.parseInt(money[2]) : 0;
                     shop.staffed = money.length > 3 && money[3].equals("1");
                     shop.lastPaid = money.length > 4 ? Long.parseLong(money[4]) : -1;
+                    // Appended, and length-guarded like everything before it,
+                    // so a register written by an older build still reads.
+                    shop.backOn = money.length > 5 ? Long.parseLong(money[5]) : -1;
                     SHOPS.add(shop);
                 }
             }
@@ -1154,7 +1569,8 @@ public final class TrapShops {
                         .append(shop.till).append(',').append(shop.sold).append(',')
                         .append(shop.turnover).append(',')
                         .append(shop.staffed ? 1 : 0).append(',')
-                        .append(shop.lastPaid).append(' ')
+                        .append(shop.lastPaid).append(',')
+                        .append(shop.backOn).append(' ')
                         .append(shop.name.replace('\n', ' ')).append('\n');
             }
             for (Shelf shelf : SHELVES) {

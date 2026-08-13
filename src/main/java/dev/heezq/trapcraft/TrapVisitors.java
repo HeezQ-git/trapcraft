@@ -130,12 +130,33 @@ public final class TrapVisitors {
 
     // --- who is in town -------------------------------------------------------
 
-    /** How many visitors the city can hold at once. */
+    /**
+     * How many visitors the city can hold at once.
+     *
+     * The baseline is deliberately non-zero: an unimproved city still gets
+     * visitors, because "not a rare event" was the requirement and gating the
+     * whole feature behind 28,000e of unbuilt works would have failed it.
+     *
+     * What the works buy is MORE of them, and that is the first return on the
+     * treasury a player can stand in the street and watch walk past. Every
+     * other effect a public work has is a number you need a spreadsheet to
+     * notice; this one is a crowd.
+     */
     public static int room() {
-        // Scaled by what the city has built for them in a later pass. The
-        // baseline is deliberately non-zero: an unimproved city still gets
-        // visitors, because "not a rare event" was the requirement.
-        return BASE_VISITORS;
+        int room = BASE_VISITORS;
+        if (TrapCity.built(TrapCity.Work.LAMPS)) {
+            room += 2;      // somewhere to shop, lit
+        }
+        if (TrapCity.built(TrapCity.Work.TRAM)) {
+            room += 3;      // the biggest single lift: it is how people arrive
+        }
+        if (TrapCity.built(TrapCity.Work.ROADS)) {
+            room += 1;
+        }
+        if (TrapCity.built(TrapCity.Work.SCHOOL)) {
+            room += 2;      // a city worth visiting rather than passing through
+        }
+        return room;
     }
 
     public static int inTown() {
@@ -278,14 +299,19 @@ public final class TrapVisitors {
         }
         var random = world.getRandom();
 
+        // What they came for. A mix, because somebody who only ever gambles is
+        // a punter with a suitcase -- the point of a visitor is that they use
+        // the CITY, and a floor, a counter and a ward are three different
+        // people's businesses.
+        //
+        // WARD is not enqueued yet: the walk-in flow is the one errand with no
+        // machinery behind it, and an errand that always declines is an errand
+        // that quietly shortens everybody's trip.
         ArrayDeque<Errand> itinerary = new ArrayDeque<>();
         int errands = MIN_ERRANDS + random.nextInt(MAX_ERRANDS - MIN_ERRANDS + 1);
         boolean ill = random.nextFloat() < 0.25f;
-        if (ill) {
-            itinerary.add(Errand.WARD);
-        }
         while (itinerary.size() < errands) {
-            itinerary.add(Errand.CASINO);
+            itinerary.add(random.nextBoolean() ? Errand.CASINO : Errand.SHOP);
         }
 
         VillagerEntity body = spawn(world, at);
@@ -365,9 +391,16 @@ public final class TrapVisitors {
             visit.busy = true;
             return true;
         }
-        // SHOP and WARD land in the next pass. Until then they are not errands
-        // anybody can be sent on, and saying so out loud beats a visitor
-        // standing in the square waiting for a shop that will never call back.
+        if (errand == Errand.SHOP) {
+            if (!TrapShops.sendVisitor(server, body)) {
+                return false;
+            }
+            visit.busy = true;
+            return true;
+        }
+        // WARD lands in the next pass. Until then it is not an errand anybody
+        // can be sent on, and saying so out loud beats a visitor standing in
+        // the square waiting for a ward that will never call back.
         return false;
     }
 
@@ -385,6 +418,74 @@ public final class TrapVisitors {
         }
         visit.itinerary.poll();
         visit.busy = false;
+    }
+
+    /**
+     * /visitors -- who is in town, and why nobody is.
+     *
+     * The same reason {@link TrapFloor#registerCommands} exists: a feature
+     * that is running perfectly and quietly declining every errand is, from
+     * inside the game, identical to a feature that was never written. Every
+     * test that can turn somebody away says so out loud here.
+     */
+    public static void registerCommands() {
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, access, env) -> dispatcher.register(
+                        net.minecraft.server.command.CommandManager.literal("visitors")
+                                .executes(context -> report(context.getSource()))));
+    }
+
+    private static int report(net.minecraft.server.command.ServerCommandSource source) {
+        MinecraftServer server = source.getServer();
+        net.minecraft.text.MutableText out = net.minecraft.text.Text.literal("Visitors  ")
+                .formatted(net.minecraft.util.Formatting.GOLD,
+                        net.minecraft.util.Formatting.BOLD)
+                .append(net.minecraft.text.Text.literal(VISITS.size() + " in town, room for "
+                                + room())
+                        .formatted(net.minecraft.util.Formatting.GRAY));
+        if (!TrapCity.founded()) {
+            out.append(net.minecraft.text.Text.literal(
+                            "\n  No city. Nobody visits a place with no vault in it.")
+                    .formatted(net.minecraft.util.Formatting.RED));
+        } else {
+            ServerWorld world = null;
+            for (ServerWorld candidate : server.getWorlds()) {
+                if (candidate.getRegistryKey().getValue().toString()
+                        .equals(TrapCity.vaultWorld())) {
+                    world = candidate;
+                    break;
+                }
+            }
+            BlockPos vault = TrapCity.vaultAt();
+            BlockPos step = world == null ? null : doorstep(world, vault);
+            out.append(net.minecraft.text.Text.literal("\n  They come in above the vault at "
+                            + vault.getX() + ", " + vault.getZ()
+                            + (step == null
+                            ? " -- but there is nowhere to stand up there right now"
+                            : ", at ground level y" + step.getY()))
+                    .formatted(step == null ? net.minecraft.util.Formatting.RED
+                            : net.minecraft.util.Formatting.DARK_GRAY));
+        }
+        int purse = 0;
+        for (Visit visit : VISITS) {
+            purse += visit.purse;
+        }
+        out.append(net.minecraft.text.Text.literal("\n  " + purse
+                        + "e of out-of-town money between them"
+                        + (VISITS.isEmpty() ? "" : ", here for:"))
+                .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        for (Visit visit : VISITS) {
+            out.append(net.minecraft.text.Text.literal("\n    " + visit.purse + "e  "
+                            + (visit.busy ? "busy" : "walking") + "  " + visit.itinerary)
+                    .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        }
+        out.append(net.minecraft.text.Text.literal(
+                        "\n  One turns up every " + ARRIVE_TICKS / 20 + "s while there's room."
+                                + " The works bring more: lamps, the tram, roads, the school.")
+                .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        net.minecraft.text.Text shown = out;
+        source.sendFeedback(() -> shown, false);
+        return 1;
     }
 
     /** Their day is over. They go, and their winnings go with them. */
