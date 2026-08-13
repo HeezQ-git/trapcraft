@@ -29,7 +29,9 @@ public class TrapCraft implements ModInitializer {
         TrapCity.register();
         TrapPayroll.register();
         TrapHomes.register();
+        TrapHospitals.register();
         TrapShops.register();
+        TrapClubs.register();
         TrapLaw.register();
         TrapTables.register();
         TrapRaid.register();
@@ -37,6 +39,7 @@ public class TrapCraft implements ModInitializer {
         TrapDealers.register();
         TrapHouse.register();
         TrapFloor.register();
+        TrapVisitors.register();
         TrapHeat.registerCommands();
         TrapStickup.registerCommands();
         TrapFloor.registerCommands();
@@ -44,6 +47,7 @@ public class TrapCraft implements ModInitializer {
         TrapCough.register();
         TrapAddiction.register();
         TrapContent.register();
+        TrapPolymer.logCarriers();
         TrapTrades.register();
         TrapDealing.register();
         TrapGuide.register();

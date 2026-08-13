@@ -229,6 +229,16 @@ public final class TrapFloor {
         final String name;
         /** An advantage player, if nobody was watching the door. */
         boolean cheat;
+        /**
+         * Somebody from out of town.
+         *
+         * Decides two things and nothing else: whose pocket the stake comes
+         * out of, and where they go when they have had enough. A visitor down
+         * the resident departure path is a statue at a cabinet.
+         */
+        boolean visitor;
+        /** What they were handed on the way in: 2 product, 1 food, 0 nothing. */
+        final int served;
         int roundsLeft;
         int wait;
         int won;
@@ -244,12 +254,13 @@ public final class TrapFloor {
         /** Already brought to the door once. Only ever happens the once. */
         boolean shownIn;
 
-        Punter(UUID id, String at, UUID house, int stake, int rounds, BlockPos stand,
-               String name, long deadline) {
+        Punter(UUID id, String at, UUID house, int stake, int rounds, int served,
+               BlockPos stand, String name, long deadline) {
             this.id = id;
             this.at = at;
             this.house = house;
             this.stake = stake;
+            this.served = served;
             this.roundsLeft = rounds;
             this.wait = ROUND_TICKS;
             this.stand = stand;
@@ -262,6 +273,42 @@ public final class TrapFloor {
     }
 
     private static final List<Punter> PUNTERS = new ArrayList<>();
+
+    /**
+     * Ticks in before somebody fancies another go, doubled at random.
+     *
+     * Six thousand is a quarter of a day, so a resident is out a few times a
+     * day at the outside and at home for the rest of it -- and because the
+     * hour decides when they set off, those goes land in the evening. The
+     * jitter is what stops the whole town leaving the house together.
+     */
+    public static final int NIGHT_OFF = 6000;
+    /**
+     * The share of the town that is out at the very peak of the night.
+     *
+     * The population is the hard ceiling -- twenty-four residents can never be
+     * twenty-five punters -- but the ceiling is not the number. A town where
+     * everybody is at a slot machine at all times has no more people in it
+     * than one where nobody is; the point of tying the two together was that
+     * the floor should fill and empty with the town's own evening.
+     *
+     * A half, not the quarter this shipped as. The quarter was sized against
+     * the shape of the evening and never against the bill at the end of it,
+     * and the two are the same knob: a floor's income is punters through the
+     * door and its cost is cabinets on the floor, so capping the first at a
+     * quarter of a town of twenty-eight put the ceiling UNDER the upkeep of
+     * anything bigger than about thirty machines. Measured on the live floor
+     * at fifty-one: a quarter bleeds ~1400e an hour and cannot break even at
+     * any hour of any day, because {@link TrapMath#punterStakeCeiling} shrinks
+     * the bets as the crowd grows, so the handle is near flat however many
+     * cabinets are standing there. A half clears it by about the same margin.
+     *
+     * Still a share and still multiplied by the hour, so the daytime floor is
+     * two people and a lot of empty stools and genuinely runs at a loss until
+     * the evening -- which is the thing this number is for. It is the peak
+     * that moved, not the shape.
+     */
+    private static final float NIGHT_SHARE = 0.5f;
 
     /**
      * One beat of every floor paying its bills and being judged on how it is
@@ -322,36 +369,43 @@ public final class TrapFloor {
     /**
      * Three beats behind on the cut, and somebody comes round for it.
      *
-     * Aimed at whoever is standing on the floor, because the floor is where
-     * the money is and because a debt nobody can be found for is not a
-     * problem. If the owner is somewhere else entirely, the tab simply keeps
-     * running -- and their machines stay dark, which is punishment enough
-     * until they come back.
+     * Aimed at whoever is CARRYING THE CARD, not at whoever happens to be
+     * standing on the floor. This used to pick the nearest body to a machine,
+     * which was fine while the person on their own floor was the person who
+     * owned it and wrong the moment a deed changed hands: a customer playing
+     * somebody else's slots got jumped for somebody else's tab, with the
+     * house's name in the message reading like an accusation.
+     *
+     * Anywhere in the world, because the card is the deed and a debt does not
+     * stop being yours when you leave the building. If the holder is offline
+     * the tab simply keeps running -- and their machines stay dark, which is
+     * punishment enough until they come back.
      */
     private static void collectors(MinecraftServer server, TrapHouse.House house) {
-        for (Map.Entry<String, UUID> wire : TrapHouse.wires().entrySet()) {
-            if (!wire.getValue().equals(house.id)) {
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            if (!holdsDeed(player, house)) {
                 continue;
             }
-            ServerWorld world = worldOf(server, wire.getKey());
-            BlockPos pos = TrapHouse.posOf(wire.getKey());
-            if (world == null || pos == null) {
-                continue;
-            }
-            for (ServerPlayerEntity player : world.getPlayers()) {
-                if (!player.getBlockPos().isWithinDistance(pos, 24)) {
-                    continue;
-                }
-                TrapHouse.settled(house);
-                player.sendMessage(Text.literal("Somebody's here about the money "
-                                + house.name + " owes.")
-                        .formatted(Formatting.RED, Formatting.BOLD), false);
-                TrapStickup.jump(player, TrapMath.stickupSquad(
-                        TrapContracts.repOf(TrapContracts.findPhone(player)),
-                        TrapHeat.carryingHeat(player), 3, 16));
-                return;
+            TrapHouse.settled(house);
+            player.sendMessage(Text.literal("Somebody's here about the money "
+                            + house.name + " owes.")
+                    .formatted(Formatting.RED, Formatting.BOLD), false);
+            TrapStickup.jump(player, TrapMath.stickupSquad(
+                    TrapContracts.repOf(TrapContracts.findPhone(player)),
+                    TrapHeat.carryingHeat(player), 3, 16));
+            return;
+        }
+    }
+
+    /** The card is the deed, so whoever is carrying it is who they want. */
+    private static boolean holdsDeed(ServerPlayerEntity player, TrapHouse.House house) {
+        var inventory = player.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            if (TrapHouse.of(inventory.getStack(slot)) == house) {
+                return true;
             }
         }
+        return false;
     }
 
     /**
@@ -570,14 +624,17 @@ public final class TrapFloor {
      * free, so a floor of four cabinets holds four however big the town gets,
      * which is still the legible answer to "how do I get busier".
      */
-    private static int room() {
-        return TrapHomes.population();
+    private static int room(MinecraftServer server) {
+        int town = TrapHomes.population();
+        float busy = TrapMath.casinoHourFactor(
+                server.getOverworld().getTimeOfDay() % 24000L);
+        return Math.min(town, Math.round(town * NIGHT_SHARE * busy));
     }
 
     private static void maybeArrive(MinecraftServer server, boolean forced) {
         float busy = TrapMath.casinoHourFactor(
                 server.getOverworld().getTimeOfDay() % 24000L);
-        if (PUNTERS.size() >= room()
+        if (PUNTERS.size() >= room(server)
                 || (!forced && server.getOverworld().getRandom().nextFloat()
                 > ARRIVAL_CHANCE * busy * bestPull())) {
             return;
@@ -635,32 +692,61 @@ public final class TrapFloor {
     private static void arrive(MinecraftServer server, String at) {
         ServerWorld world = worldOf(server, at);
         BlockPos pos = TrapHouse.posOf(at);
-        UUID houseId = TrapHouse.wires().get(at);
-        TrapHouse.House house = TrapHouse.byId(houseId);
-        if (world == null || pos == null || house == null) {
+        if (world == null || pos == null) {
             return;
         }
-        var random = world.getRandom();
-
         // Where they will end up standing, worked out BEFORE anybody is sent
         // for: a machine with nowhere to stand beside it gets no customers at
         // all, which is better than a customer standing on top of it like a
         // hat.
-        BlockPos stand = standAt(world, pos);
-        if (stand == null) {
+        if (standAt(world, pos) == null) {
             return;
         }
-
-        // Somebody who lives here. There is no other kind any more -- the
-        // strangers who appeared out of nowhere were always a stand-in for a
-        // town that did not exist yet, and a stand-in is exactly what makes
-        // the floor a lie: the room filled with people the register had never
-        // heard of while the tenants two streets away stayed in. A punter is
-        // now a resident who walked over, one body, in one place, and if
-        // nobody in the town is free then nobody comes tonight.
+        // Somebody who lives here. That is what an ARRIVAL is -- the strangers
+        // who appeared out of nowhere were always a stand-in for a town that
+        // did not exist yet, and a stand-in is exactly what makes the floor a
+        // lie: the room filled with people the register had never heard of
+        // while the tenants two streets away stayed in. A punter is a resident
+        // who walked over, one body, in one place, and if nobody in the town
+        // is free then nobody comes tonight.
+        //
+        // Somebody from out of town is a different question, asked by
+        // TrapVisitors, which walks its own body in here through seat(). It is
+        // the only other caller and it never claims its people live here.
         VillagerEntity punter = resident(world, pos);
         if (punter == null) {
             return;
+        }
+        seat(server, at, punter, false);
+    }
+
+    /**
+     * Put a body -- whoever's it is -- on a machine.
+     *
+     * Split out of {@link #arrive} so that a visitor can be seated on the same
+     * terms as a neighbour: the same stake sizing, the same jam at the door,
+     * the same drink, the same seat, the same walk. The ONLY thing that turns
+     * on where they are from is whose pocket the stake comes out of and where
+     * they go afterwards, and both of those are one branch each.
+     *
+     * @param visitor somebody passing through, whose money is from outside the
+     *                town's purse and who has no home to be sent back to
+     * @return whether they were actually seated
+     */
+    public static boolean seat(MinecraftServer server, String at,
+                               VillagerEntity punter, boolean visitor) {
+        ServerWorld world = worldOf(server, at);
+        BlockPos pos = TrapHouse.posOf(at);
+        UUID houseId = TrapHouse.wires().get(at);
+        TrapHouse.House house = TrapHouse.byId(houseId);
+        if (world == null || pos == null || house == null) {
+            return false;
+        }
+        var random = world.getRandom();
+
+        BlockPos stand = standAt(world, pos);
+        if (stand == null) {
+            return false;
         }
 
         // Capped by how full the room already is: a busy floor is a cheap
@@ -670,20 +756,22 @@ public final class TrapFloor {
         // Never a stake the vault could not settle: a punter who breaks the
         // bank is a punter who took the owner's money away while they were
         // stood somewhere else entirely.
-        // ...and never a stake the TOWN could not settle either. A punter is
-        // somebody who was paid on Friday, not a fountain with a felt top.
+        // ...and never a stake the payer could not settle either. A punter is
+        // somebody who was paid on Friday, not a fountain with a felt top --
+        // and a visitor is somebody with a holiday budget, which runs out the
+        // same way.
         while (stake > TrapMath.PUNTER_MIN_STAKE
                 && (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)
-                        || !TrapPayroll.afford(stake))) {
+                        || !affords(punter, visitor, stake))) {
             stake /= 2;
         }
         if (!TrapHouse.covers(house, stake, TrapHouse.TOP_SLOT)
-                || !TrapPayroll.afford(stake)) {
+                || !affords(punter, visitor, stake)) {
             // Turned away at the smallest bet there is, by the house or by
             // their own pocket. Word gets round either way -- and they stay
             // where they are, because they never left home for this.
             TrapHouse.turnedAway(house);
-            return;
+            return false;
         }
         // A shabby cabinet loses you the punter at the door. Wear used to cost
         // nothing but a rep point, which made the hammer a chore with no
@@ -695,7 +783,7 @@ public final class TrapFloor {
                     SoundCategory.BLOCKS, 0.5F, 0.5F);
             world.spawnParticles(ParticleTypes.SMOKE, pos.getX() + 0.5,
                     pos.getY() + 1.2, pos.getZ() + 0.5, 8, 0.3, 0.3, 0.3, 0.01);
-            return;
+            return false;
         }
         // Served at the door, out of your own stash. This is the whole
         // difference between a floor and a faucet: a dry bar means one go and
@@ -710,34 +798,28 @@ public final class TrapFloor {
         punter.setCustomName(named(who, stake, served == 2 ? Formatting.LIGHT_PURPLE
                 : served == 1 ? Formatting.WHITE : Formatting.DARK_GRAY));
         punter.setCustomNameVisible(true);
-        // Out of bed, and off the two hooks that would drag them back to it.
+        // Out of bed. The floor is busiest at midnight, which is precisely
+        // when a villager Brain would otherwise have them asleep.
         //
-        // This is the whole of why the walk did not work. A villager with a
-        // claimed bed runs a task every tick that walks it home, and after
-        // dusk that task is the entire point of its evening -- so a walk
-        // target pointed at a casino was being replaced within the second, and
-        // three trips in five ended in somebody giving up thirteen blocks from
-        // where they started. Worst at midnight, which is exactly when a
-        // casino is busiest. The daytime version of the same fight is the
-        // meeting bell.
-        //
-        // Forgotten rather than fought: they gave up their spot at the bell
-        // and their bed for the night because they went out, which is what
-        // going out is. Vanilla hands them another bed when they are home and
-        // idle again -- the same path a villager takes when somebody breaks
-        // the one they had.
+        // Their BED is deliberately left alone. It was taken off them for a
+        // release on the theory that the walk-home task was what kept punters
+        // from reaching a machine -- measured, and it made no difference to
+        // the arrival rate at all. What it did do was far worse: a resident
+        // with no bed and no meeting point has nothing to go back to, so once
+        // their evening ended they simply strolled around the casino they were
+        // standing in, forever, and the town read as a place where nobody goes
+        // home. A bed is the one thing that makes a villager keep a routine.
         punter.wakeUp();
-        punter.getBrain().forget(net.minecraft.entity.ai.brain.MemoryModuleType.HOME);
-        punter.getBrain().forget(net.minecraft.entity.ai.brain.MemoryModuleType.MEETING_POINT);
 
         // Patience for the walk, worked out from how far they actually live.
         int away = (int) Math.sqrt(punter.squaredDistanceTo(
                 stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5));
         Punter session = new Punter(punter.getUuid(), at, houseId, stake,
                 TrapMath.punterRoundsServed(house.addiction, served,
-                        new java.util.Random(random.nextLong())), stand, who,
+                        new java.util.Random(random.nextLong())), served, stand, who,
                 world.getTime() + WALK_GRACE + (long) away * TICKS_PER_BLOCK);
         session.walkingIn = true;
+        session.visitor = visitor;
         PUNTERS.add(session);
 
         // Somebody watching the floor spots them on the way in. Without one,
@@ -753,8 +835,82 @@ public final class TrapFloor {
         // outlast somebody's patience for getting there.
         step(punter, stand);
         claim(world, pos, punter.getUuid(), false);
-        TrapCraft.LOGGER.info("{} out to a machine at {} {} {}, {}e a go, {} blocks to walk",
-                who, pos.getX(), pos.getY(), pos.getZ(), stake, away);
+        TrapCraft.LOGGER.info("{} {} to a machine at {} {} {}, {}e a go, {} blocks to walk",
+                who, visitor ? "in off the road" : "out", pos.getX(), pos.getY(), pos.getZ(),
+                stake, away);
+        return true;
+    }
+
+    /**
+     * Can whoever is about to bet actually cover it?
+     *
+     * The town purse for a neighbour, their own holiday money for somebody
+     * passing through. Two pockets, because a visitor's emeralds never came
+     * out of the wage bill and putting them through {@link TrapPayroll} would
+     * have the town paying for other people's nights out.
+     */
+    private static boolean affords(VillagerEntity punter, boolean visitor, int stake) {
+        return visitor ? TrapVisitors.purseOf(punter.getUuid())
+                >= stake + TrapCity.dutyOn(stake, TrapCity.Duty.GAMING)
+                : TrapPayroll.afford(stake);
+    }
+
+    /**
+     * Lay one round's stake, out of whichever pocket this one belongs to.
+     *
+     * A neighbour's comes out of the town's wage bill and goes back into it
+     * when they win. A visitor's is money from outside the town entirely --
+     * which is the whole point of them, because a floor whose only customers
+     * are its own residents can only ever be as busy as the town is populous,
+     * and the upkeep on the cabinets does not care how populous that is.
+     *
+     * A visitor also pays GAMING duty on top, which a resident on a night out
+     * does not. That is the tourist tax and it is deliberate: outside money
+     * lifts the floor's ceiling, and the city's cut is the drain welded to
+     * that faucet. Without it this is just a tap with better manners.
+     */
+    private static boolean lay(Punter punter) {
+        if (!punter.visitor) {
+            return TrapPayroll.spend(punter.stake);
+        }
+        int duty = TrapCity.dutyOn(punter.stake, TrapCity.Duty.GAMING);
+        if (!TrapVisitors.spend(punter.id, punter.stake + duty)) {
+            return false;
+        }
+        TrapCity.receive(duty, TrapCity.Duty.GAMING);
+        return true;
+    }
+
+    /**
+     * A machine somebody from out of town could walk up to right now.
+     *
+     * The same tests the arrival roll makes -- wired, loaded, free, not
+     * broken, behind a vault that can pay -- asked on behalf of a caller who
+     * already has a body and only wants somewhere to put it.
+     */
+    public static String freeWire(MinecraftServer server, int purse) {
+        List<String> open = new ArrayList<>();
+        TrapHouse.wires().forEach((at, id) -> {
+            TrapHouse.House house = TrapHouse.byId(id);
+            if (house == null || house.balance <= 0) {
+                return;
+            }
+            ServerWorld world = worldOf(server, at);
+            BlockPos pos = TrapHouse.posOf(at);
+            if (world == null || pos == null
+                    || !world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)
+                    || !TrapHouse.isMachine(world.getBlockState(pos).getBlock())) {
+                return;
+            }
+            if (occupant(world, pos) == null && !TrapHouse.broken(world, pos)
+                    && standAt(world, pos) != null) {
+                open.add(at);
+            }
+        });
+        if (open.isEmpty() || purse < TrapMath.PUNTER_MIN_STAKE) {
+            return null;
+        }
+        return open.get(server.getOverworld().getRandom().nextInt(open.size()));
     }
 
     /** Their name, and what they are playing for. */
@@ -916,17 +1072,23 @@ public final class TrapFloor {
     /** One round, played against the machine they are standing at. */
     private static void play(ServerWorld world, BlockPos pos, Punter punter,
                              TrapHouse.House house) {
-        // The town went broke between arriving and playing. They stand there
+        // The payer went broke between arriving and playing. They stand there
         // and do nothing rather than play a round nobody paid for.
-        if (!TrapPayroll.spend(punter.stake)) {
+        if (!lay(punter)) {
             return;
         }
         TrapHouse.punterStaked(house, punter.stake);
         float rtp = returnOf(world.getBlockState(pos).getBlock());
         if (house.loose()) {
             rtp = TrapMath.LOOSE_RETURN;
-        } else if (punter.cheat) {
-            rtp = TrapMath.CHEAT_RETURN;
+        } else {
+            if (punter.cheat) {
+                rtp = TrapMath.CHEAT_RETURN;
+            }
+            // Whatever was handed to them at the door is still in them --
+            // including the one who came in counting. See TrapMath.servedEdge:
+            // this is the whole of what makes a stocked bar a business.
+            rtp -= TrapMath.servedEdge(punter.served);
         }
         int back = Math.round(punter.stake
                 * TrapMath.punterRound(rtp, new java.util.Random(world.getRandom().nextLong())));
@@ -934,8 +1096,13 @@ public final class TrapFloor {
         // Back to the purse it came out of. Without this the town leaks its
         // entire wage bill into casino balances and quietly stops shopping,
         // which presents as "the shops are broken" a long way from the floor
-        // that actually ate the money.
-        TrapPayroll.credit(paid);
+        // that actually ate the money. A visitor's winnings go back to the
+        // visitor, and out of the world with them when they go home.
+        if (punter.visitor) {
+            TrapVisitors.credit(punter.id, paid);
+        } else {
+            TrapPayroll.credit(paid);
+        }
 
         // Machines wear out. A busy floor throws up something to fix every ten
         // minutes or so, and a shabby one is worth less to its own name --
@@ -948,28 +1115,20 @@ public final class TrapFloor {
                 world.spawnParticles(ParticleTypes.LARGE_SMOKE,
                         pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
                         25, 0.35, 0.35, 0.35, 0.02);
-                for (ServerPlayerEntity nearby : world.getPlayers()) {
-                    if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
-                        nearby.sendMessage(Text.literal("A machine's gone down at "
-                                        + pos.getX() + ", " + pos.getZ()
-                                        + ". It wants a hammer.")
-                                .formatted(Formatting.RED), false);
-                    }
-                }
+                tellOwner(world, house, Text.literal("A machine's gone down at "
+                                + pos.getX() + ", " + pos.getZ()
+                                + ". It wants a hammer.")
+                        .formatted(Formatting.RED));
             } else if (TrapHouse.wearAt(world, pos) == TrapMath.JAM_FROM) {
                 // One word, once, at the exact point it starts costing money.
                 // Wear has been climbing on every cabinet since this mod
                 // shipped with nothing anywhere showing it, which is how a
                 // maintenance system stays invisible for months.
-                for (ServerPlayerEntity nearby : world.getPlayers()) {
-                    if (nearby.getBlockPos().isWithinDistance(pos, 48)) {
-                        nearby.sendMessage(Text.literal("A cabinet's getting shabby at "
-                                        + pos.getX() + ", " + pos.getZ() + ". ")
-                                .formatted(Formatting.YELLOW)
-                                .append(Text.literal("It's started turning punters away.")
-                                        .formatted(Formatting.GRAY)), false);
-                    }
-                }
+                tellOwner(world, house, Text.literal("A cabinet's getting shabby at "
+                                + pos.getX() + ", " + pos.getZ() + ". ")
+                        .formatted(Formatting.YELLOW)
+                        .append(Text.literal("It's started turning punters away.")
+                                .formatted(Formatting.GRAY)));
             }
         }
 
@@ -992,6 +1151,29 @@ public final class TrapFloor {
                     pos.getX() + 0.5, pos.getY() + 1.3, pos.getZ() + 0.5, 4, 0.3, 0.2, 0.3, 0.01);
             world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(),
                     SoundCategory.NEUTRAL, 0.4F, 0.9F);
+        }
+    }
+
+    /**
+     * A repair bill, read out to whoever is holding the card.
+     *
+     * The wear notices used to go to every player within 48 blocks, which is
+     * somebody else's maintenance read out to the neighbours: log in near a
+     * floor you have never set foot in and you are told its cabinets are
+     * getting shabby, at coordinates you have no reason to walk to. Ownership
+     * here is the card and nothing else -- see {@link TrapHouse#owns} -- so it
+     * is the card that gets told, wherever its holder happens to be standing.
+     * A machine that wants a hammer wants one whether the owner is on the
+     * floor or three thousand blocks away.
+     *
+     * An owner who is offline simply misses it. The wear is on the block and
+     * in the house screen either way, so nothing is lost but the nudge.
+     */
+    private static void tellOwner(ServerWorld world, TrapHouse.House house, Text line) {
+        for (ServerPlayerEntity player : world.getServer().getPlayerManager().getPlayerList()) {
+            if (TrapHouse.owns(player, house)) {
+                player.sendMessage(line, false);
+            }
         }
     }
 
@@ -1054,24 +1236,12 @@ public final class TrapFloor {
      * look at, once every three seconds.
      */
     private static VillagerEntity resident(ServerWorld world, BlockPos machine) {
-        VillagerEntity nearest = null;
-        double closest = (double) RESIDENT_RANGE * RESIDENT_RANGE;
-        for (VillagerEntity villager : world.getEntitiesByType(EntityType.VILLAGER,
-                found -> found.isAlive()
-                        && found.getCommandTags().contains(TrapHomes.TENANT_TAG)
-                        && !found.getCommandTags().contains(PUNTER_TAG))) {
-            double away = villager.squaredDistanceTo(
-                    machine.getX() + 0.5, machine.getY() + 0.5, machine.getZ() + 0.5);
-            if (away < closest) {
-                closest = away;
-                nearest = villager;
-            }
-        }
-        return nearest;
+        return TrapHomes.freeResident(world, machine, RESIDENT_RANGE);
     }
 
     /** Near enough the standing spot to be playing the machine at it. */
     private static final double ARRIVED = 1.75;
+
     private static void leave(ServerWorld world, VillagerEntity body, Punter punter) {
         int net = punter.won - punter.lost;
         world.spawnParticles(net >= 0 ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER,
@@ -1086,12 +1256,22 @@ public final class TrapFloor {
         // while their house decided they were missing and made another one.
         body.removeCommandTag(PUNTER_TAG);
         body.setAiDisabled(false);
-        body.setCustomName(Text.literal(punter.name).formatted(Formatting.AQUA));
-        // And they walk home, rather than standing in the doorway forever.
-        TrapHomes.Home home = TrapHomes.homeOf(body);
-        if (home != null) {
-            TrapHomes.walkTo(body, home.anchor());
+        if (punter.visitor) {
+            // Somebody passing through has no bed to be walked back to and no
+            // entry in the register to be given back. sendHome and stayIn are
+            // the two calls that turn a visitor into furniture -- the exact
+            // shape of the bug this method was written to fix, one door along.
+            // TrapVisitors owns whatever they do next.
+            body.setCustomName(null);
+            body.setCustomNameVisible(false);
+            TrapVisitors.errandDone(punter.id);
+            return;
         }
+        TrapHomes.stayIn(body, world.getTime() + NIGHT_OFF
+                + world.getRandom().nextInt(NIGHT_OFF));
+        body.setCustomName(Text.literal(punter.name).formatted(Formatting.AQUA));
+        // And they go home, rather than standing in the doorway forever.
+        TrapHomes.sendHome(world, body);
     }
 
     /**
@@ -1224,8 +1404,9 @@ public final class TrapFloor {
         net.minecraft.text.MutableText out = Text.literal("Floor  ").formatted(Formatting.GOLD, Formatting.BOLD)
                 .append(Text.literal(wired + " machines wired, " + loaded
                         + " loaded, " + free + " free").formatted(Formatting.GRAY))
-                .append(Text.literal("\n  " + PUNTERS.size() + " of " + room()
-                                + " residents out" + (walking > 0
+                .append(Text.literal("\n  " + PUNTERS.size() + " out of a town of "
+                                + TrapHomes.population() + ", room for "
+                                + room(server) + " at this hour" + (walking > 0
                                 ? ", " + walking + " still walking over" : "")
                                 + ", " + SEATS.size() + " seats taken")
                         .formatted(Formatting.DARK_GRAY))
