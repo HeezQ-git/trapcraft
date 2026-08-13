@@ -10,6 +10,7 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.village.VillagerType;
 import net.minecraft.world.Heightmap;
 
@@ -92,6 +93,21 @@ public final class TrapVisitors {
     private static final int MIN_ERRANDS = 1;
     private static final int MAX_ERRANDS = 3;
     /**
+     * How many turn up already unwell.
+     *
+     * A quarter, so a ward with beds free has a steady trade that is not
+     * somebody's neighbour being bitten -- which is the only patient a
+     * hospital has ever had, and a thin business to be in.
+     */
+    private static final float ILL_SHARE = 0.25f;
+    /** Near enough a ward door to be seen to. */
+    private static final double AT_THE_DOOR = 3.0;
+    /** Ticks between one shove along the way. See TrapFloor for why. */
+    private static final int NUDGE_TICKS = 20;
+    /** Patience for a walk, flat and per block, as the floor sizes it. */
+    private static final int WALK_GRACE = 200;
+    private static final int TICKS_PER_BLOCK = 20;
+    /**
      * Ticks a visitor is given to finish the whole trip.
      *
      * A backstop, not a schedule. Every errand has its own patience inside the
@@ -116,6 +132,11 @@ public final class TrapVisitors {
         final long expires;
         /** Somebody a venue is currently running. Left alone until it says so. */
         boolean busy;
+        /** Where they are headed under their own steam. Only the ward. */
+        BlockPos ward;
+        UUID wardId;
+        long wardBy;
+        int nudge;
 
         Visit(UUID body, ArrayDeque<Errand> itinerary, int purse, boolean ill, long expires) {
             this.body = body;
@@ -304,12 +325,15 @@ public final class TrapVisitors {
         // the CITY, and a floor, a counter and a ward are three different
         // people's businesses.
         //
-        // WARD is not enqueued yet: the walk-in flow is the one errand with no
-        // machinery behind it, and an errand that always declines is an errand
-        // that quietly shortens everybody's trip.
+        // Somebody who turns up unwell sees a doctor FIRST, which is both what
+        // a person would do and what keeps the ward from being the errand
+        // everybody runs out of money before reaching.
         ArrayDeque<Errand> itinerary = new ArrayDeque<>();
         int errands = MIN_ERRANDS + random.nextInt(MAX_ERRANDS - MIN_ERRANDS + 1);
-        boolean ill = random.nextFloat() < 0.25f;
+        boolean ill = random.nextFloat() < ILL_SHARE;
+        if (ill) {
+            itinerary.add(Errand.WARD);
+        }
         while (itinerary.size() < errands) {
             itinerary.add(random.nextBoolean() ? Errand.CASINO : Errand.SHOP);
         }
@@ -360,6 +384,16 @@ public final class TrapVisitors {
                 leaving.add(visit);
                 continue;
             }
+            if (visit.ward != null) {
+                // The one errand they walk themselves. Nobody else is going to
+                // call errandDone for a ward, so this does it.
+                if (!toWard(server, world, body, visit)) {
+                    visit.ward = null;
+                    visit.wardId = null;
+                    errandDone(visit.body);
+                }
+                continue;
+            }
             if (visit.busy) {
                 continue;
             }
@@ -398,9 +432,75 @@ public final class TrapVisitors {
             visit.busy = true;
             return true;
         }
-        // WARD lands in the next pass. Until then it is not an errand anybody
-        // can be sent on, and saying so out loud beats a visitor standing in
-        // the square waiting for a ward that will never call back.
+        if (errand == Errand.WARD) {
+            TrapHospitals.Ward ward = TrapHospitals.walkIn(server);
+            if (ward == null || visit.purse < TrapHospitals.bill()) {
+                return false;
+            }
+            // The one errand nobody else walks them to. A machine and a till
+            // both had a customer-fetching seam already; a ward has never had
+            // a walk-in before, so the legwork is here -- and kept to the same
+            // shape the others use, a re-asserted walk target and a deadline
+            // after which they are simply put at the door.
+            visit.ward = ward.sign();
+            visit.wardId = ward.id();
+            visit.wardBy = world.getTime() + WALK_GRACE
+                    + (long) Math.sqrt(body.squaredDistanceTo(
+                            Vec3d.ofCenter(ward.sign()))) * TICKS_PER_BLOCK;
+            visit.busy = true;
+            body.wakeUp();
+            TrapHomes.walkTo(body, ward.sign());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * One step of somebody making their own way to a ward.
+     *
+     * @return true when they are still on their way
+     */
+    private static boolean toWard(MinecraftServer server, ServerWorld world,
+                                  VillagerEntity body, Visit visit) {
+        double left = body.squaredDistanceTo(Vec3d.ofCenter(visit.ward));
+        if (left > AT_THE_DOOR * AT_THE_DOOR) {
+            if (world.getTime() < visit.wardBy) {
+                // Re-asserted rather than set once: a villager Brain replaces
+                // a walk target with its own the moment it has none, so a
+                // target set at the door of the trip is gone within seconds.
+                if (++visit.nudge % NUDGE_TICKS == 0) {
+                    body.wakeUp();
+                    TrapHomes.walkTo(body, visit.ward);
+                }
+                return true;
+            }
+            // Out of patience. Put at the door rather than left in the road --
+            // the same trade the floor and the shops both make, because a
+            // town-length walk is not a thing the engine will do.
+            BlockPos door = TrapSpawn.near(world, visit.ward.up());
+            if (door == null) {
+                return false;
+            }
+            body.refreshPositionAndAngles(door, world.getRandom().nextFloat() * 360.0F, 0.0F);
+        }
+        TrapHospitals.Ward ward = TrapHospitals.byId(visit.wardId);
+        if (ward == null) {
+            return false;
+        }
+        // Seen to, and paid for out of their own pocket. A resident's bill is
+        // met by the city -- that is what the health service IS -- and
+        // somebody here for the weekend is not on it. The doctors are paid the
+        // same either way, and the city takes its cut of the visit.
+        int fee = TrapHospitals.bill();
+        int duty = TrapCity.dutyOn(fee, TrapCity.Duty.INCOME);
+        if (!spend(visit.body, fee + duty)) {
+            return false;
+        }
+        TrapPayroll.credit(fee);
+        TrapCity.receive(duty, TrapCity.Duty.INCOME);
+        TrapHospitals.seen(world, ward);
+        TrapCraft.LOGGER.info("somebody from out of town paid {}e at {}", fee + duty,
+                ward.name() == null ? "a ward" : ward.name());
         return false;
     }
 

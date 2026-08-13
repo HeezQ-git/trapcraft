@@ -102,6 +102,29 @@ class TouristTest {
     }
 
     @Test
+    void aWalkInIsNotAPatient() throws Exception {
+        String visitors = source("TrapVisitors.java");
+        assertFalse(visitors.contains("TrapHospitals.Patient")
+                        || visitors.contains("PATIENTS"),
+                "the patient list is keyed off a Home because a patient is a tenant "
+                        + "who got bitten -- the mood, the letters, the tenancy that "
+                        + "ends if they die. Somebody in town for the day has no "
+                        + "household for any of that to happen to");
+    }
+
+    @Test
+    void aVisitorPaysTheirOwnDoctor() throws Exception {
+        String visitors = source("TrapVisitors.java");
+        assertFalse(visitors.contains("TrapCity.spend"),
+                "the city meets a RESIDENT's bill -- that is what the health "
+                        + "service is. Somebody here for the weekend is not on it, "
+                        + "and billing the treasury for them would have the town "
+                        + "paying for other people's holidays");
+        assertTrue(visitors.contains("TrapPayroll.credit(fee)"),
+                "the doctors are paid the same either way; only the payer changes");
+    }
+
+    @Test
     void theCityTakesItsCutOfSomebodyPassingThrough() throws Exception {
         String floor = source("TrapFloor.java");
         assertTrue(floor.contains("TrapCity.receive(duty, TrapCity.Duty.GAMING)"),
