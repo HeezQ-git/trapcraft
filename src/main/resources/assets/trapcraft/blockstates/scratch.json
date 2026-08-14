@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "trapcraft:block/scratch"
+    },
+    "facing=east": {
+      "model": "trapcraft:block/scratch",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "trapcraft:block/scratch",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "trapcraft:block/scratch",
+      "y": 270
     }
   }
 }

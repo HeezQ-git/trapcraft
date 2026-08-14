@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "trapcraft:block/toss"
+    },
+    "facing=east": {
+      "model": "trapcraft:block/toss",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "trapcraft:block/toss",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "trapcraft:block/toss",
+      "y": 270
     }
   }
 }

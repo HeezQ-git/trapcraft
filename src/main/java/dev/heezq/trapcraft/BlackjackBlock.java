@@ -24,10 +24,9 @@ import java.util.Map;
 /**
  * The furniture for {@link BlackjackScreenHandler}.
  *
- * A table on four legs, which costs from the thin see-through pool and
- * has to: a legged model on a solid carrier makes the client cull whatever is
- * under and beside it. check_models.py measures the coverage and fails the
- * deploy rather than trusting this comment.
+ * A skirted casino table: felt in a brass rim over a panelled plinth, the way
+ * a real pit table hides its drop box. Closed shell, solid carrier -- the
+ * see-through leaf pool is what shader packs wave as foliage.
  *
  * Four states rather than one, because a dealer's side is only a dealer's
  * side if you can point it at the dealer.
@@ -37,12 +36,13 @@ public class BlackjackBlock extends TurnableBlock implements PolymerBlock, Polym
 
     public BlackjackBlock(Settings settings) {
         super(settings);
-        // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. It is a table on four legs, and a
-        // carrier that claims to be a solid cube makes the client cull the
-        // faces of whatever is under and beside it -- so a table on a floor
-        // above a cave shows you the cave. check_models.py measures the
-        // coverage and fails the deploy rather than trusting this comment.
-        this.carriers = carriers(TrapPolymer.NON_SOLID, "blackjack",
+        // FULL_BLOCK (note block states), not the leaf pool: shader packs
+        // wave every leaf state as foliage, and a card table swaying mid-hand
+        // is a plant. The table traded its four legs for a skirted plinth so
+        // the shell is closed and the solid carrier is honest;
+        // check_models.py measures the coverage and fails the deploy rather
+        // than trusting this comment.
+        this.carriers = carriers(BlockModelType.FULL_BLOCK, "blackjack",
                 () -> Blocks.GREEN_TERRACOTTA.getDefaultState());
     }
 

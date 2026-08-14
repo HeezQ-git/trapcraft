@@ -942,47 +942,124 @@ SLOT_PAL = {
     "b": "#1b2a3a",   # screen glass
     "B": "#2f4a63",   # glass, lit
     "w": "#e8e4d8",   # marquee lamp
+    "L": "#fff8d8",   # marquee lamp, hot
     "g": "#54d37a",   # win lamp
     "e": "#c8ccd8",   # chrome
+    # The reels behind the glass.
+    "f": "#efe8d4",   # reel paper
+    "F": "#cfc4a4",   # reel paper, shaded / separator
+    "c": "#c22730",   # cherry
+    "s": "#3f8a2f",   # cherry stem
+    "z": "#2b56c4",   # lucky seven
 }
 
+# A fielded lacquer panel, not red noise: border, gold pinstripe corners,
+# sheen high on the panel and shadow low, the way sprayed lacquer actually
+# catches a room's light.
 SLOT_BODY = """
 dRRRRRRRRRRRRRRd
 RrrrrrrrrrrrrrrR
-RrrdrrrrrrrdrrrR
+Rrddddddddddddrd
+Rrdyrrrrrrrrydrd
+RrdrRRrrrrRrrdrd
+RrdrRrrrrrrrrdrd
+Rrdrrrrrrrrrrdrd
+Rrdrrrrrrrrrrdrd
+Rrdrrrrrrrrrrdrd
+Rrdrrdrrrrrrrdrd
+Rrdrrrrrrrdrrdrd
+Rrdyrrrrrrrrydrd
+Rrddddddddddddrd
 RrrrrrrrrrrrrrrR
-RrrrrrrrrrrrrrrR
-RrdrrrrrrrrrrdrR
-RrrrrrrrrrrrrrrR
-RrrrrrrrrrrrrrrR
-RrrrrdrrrrrrrrrR
-RrrrrrrrrrrrrrrR
-RrdrrrrrrrrdrrrR
-RrrrrrrrrrrrrrrR
-RrrrrrrrrrrrrrrR
-RrrrdrrrrrrrrrrR
-RrrrrrrrrrrrrrrR
-dRRRRRRRRRRRRRRd
+drrdrrrrrrrrdrrd
+dddddddddddddddd
 """
 
-SLOT_SCREEN = """
-kkkkkkkkkkkkkkkk
-kbbbbbbbbbbbbbbk
-kbBBbbBBbbBBbbbk
-kbBbbbBbbbBbbbbk
-kbBBbbBBbbBBbbbk
-kbbbbbbbbbbbbbbk
-kbBBbbBBbbBBbbbk
-kbBbbbBbbbBbbbbk
-kbBBbbBBbbBBbbbk
-kbbbbbbbbbbbbbbk
-kbBBbbBBbbBBbbbk
-kbBbbbBbbbBbbbbk
-kbBBbbBBbbBBbbbk
-kbbbbbbbbbbbbbbk
-kbbbbbbbbbbbbbbk
-kkkkkkkkkkkkkkkk
+# The reel: one 16-row strip, four symbols with a shaded gap row between.
+# All three reels are this strip started at a different row, which is why
+# they never look synchronised -- see slot_screen_frames().
+SLOT_REEL = """
+ffsf
+fccf
+fccf
+FFFF
+fYyf
+yYyy
+fyyf
+FFFF
+zzzf
+ffzf
+fzff
+FFFF
+kkkk
+kffk
+kkkk
+FFFF
 """
+
+
+def slot_screen_frames() -> list[str]:
+    """The reel window: three reels spinning behind glass.
+
+    Four frames, each reel rolled four rows further on -- a quarter of the
+    strip per frame, so the loop closes exactly. The phases (0, 5, 10) keep
+    the reels out of step, which is what makes three copies of one strip
+    read as three independent reels. The glass itself stays still: chrome
+    payline ticks and a translucent glare that never moves, painted over
+    whatever the reels are doing.
+    """
+    strip = SLOT_REEL.strip("\n").split("\n")
+    frames = []
+    for f in range(4):
+        rows = ["k" * 16]
+        for y in range(14):
+            cells = []
+            for phase in (0, 5, 10):
+                cells.append(strip[(y + 4 * f + phase) % 16])
+            rows.append("k" + "k".join(cells) + "k")
+        rows.append("k" * 16)
+        # The still glass: chrome payline ticks either side of mid-height.
+        # No translucent glare -- the carrier renders on the solid layer,
+        # where partial alpha comes out as a solid white smear.
+        for tick_row in (7, 8):
+            rows[tick_row] = "e" + rows[tick_row][1:15] + "e"
+        frames.append("\n".join(rows))
+    return frames
+
+
+# The marquee: brass rails round a lamp chase over a lacquer field. Only the
+# lamp row moves; everything else is the same map in every frame.
+SLOT_MARQUEE_BASE = """
+oyyyyyyyyyyyyyyo
+LwwwLwwwLwwwLwww
+drrrrrrrrrrrrrrd
+oyyyyyyyyyyyyyyo
+rrrrrrrrrrrrrrrr
+rrrrrrYYrrrrrrrr
+rrrrrYYYYrrrrrrr
+rrrryYYYYyrrrrrr
+rrrrrYYYYrrrrrrr
+rrrrrrYYrrrrrrrr
+rrrrrrrrrrrrrrrr
+drrrrrrrrrrrrrrd
+oyyyyyyyyyyyyyyo
+LwwwLwwwLwwwLwww
+drrrrrrrrrrrrrrd
+oooooooooooooooo
+"""
+
+
+def slot_marquee_frames() -> list[str]:
+    """Chase the marquee lamps: the lit bulb walks one step per frame."""
+    frames = []
+    rows = SLOT_MARQUEE_BASE.strip("\n").split("\n")
+    for f in range(4):
+        chased = list(rows)
+        for lamp_row in (1, 13):
+            lamps = rows[lamp_row]
+            chased[lamp_row] = lamps[-f:] + lamps[:-f] if f else lamps
+        frames.append("\n".join(chased))
+    return frames
 
 SLOT_TRIM = """
 oyyyyyyyyyyyyyyo
@@ -1264,6 +1341,29 @@ xxxxxxxxxxxxxxxx
 ................
 ................
 ................
+"""
+
+# The skirt the tables wear now that they are closed to the carpet: two
+# fielded mahogany panels under a brass pin line. The model's skirt band
+# shows rows 2-14 of this, so the panels live there and the top rows are
+# rail for anything else that slices it.
+TABLE_SKIRT = """
+mMMMMMMMMMMMMMMm
+wwwwwwwwwwwwwwww
+wdddddddwddddddw
+wdWWWWWdwdWWWWWd
+wdWwwwWdwdWwwwWd
+wdWwwwWdwdWwwwWd
+wdWwWwWdwdWwWwWd
+wdWwwwWdwdWwwwWd
+wdWwwwWdwdWwwwWd
+wdWwwwWdwdWwwwWd
+wdWwWwWdwdWwWwWd
+wdWwwwWdwdWwwwWd
+wdWWWWWdwdWWWWWd
+wdddddddwddddddw
+wwwwwwwwwwwwwwww
+dddddddddddddddd
 """
 
 # The coin standing on its rim in the middle of the toss table.
@@ -1638,48 +1738,55 @@ PLINKO_PAL = {
     "p": "#cfd6e0",     # peg
     "P": "#ffffff",     # peg, lit
     "g": "#2fbf6b",     # winning slot
+    "G": "#5ee394",     # winning slot, lit
     "r": "#c03a3a",     # losing slot
+    "R": "#e05a5a",     # losing slot, lit
     "y": "#e8c33a",     # edge slot
+    "k": "#07090f",     # the void behind the tray
 }
 
-# The peg field: a dark board with a lattice of bright pegs.
+# The backboard behind the 3D pegs: midnight blue with faint fall-trails
+# under the peg columns, and one silver ball caught mid-drop. The pegs
+# themselves are geometry now (see plinko_model), so the board stopped
+# painting them -- a printed peg behind a real one reads as a double.
 PLINKO_BOARD = """
+dbbbbbbbbbbbbbbd
+bbbbBbbbbbbbBbbb
+bbBbbbbbBbbbbbbb
+bbbbBbbbbbbbBbbb
+bbBbbbbbBbbbbbbb
+bbbbbbbbbbbbBbbb
+bbBbbbbpPbbbbbbb
+bbbbBbbpPbbbBbbb
+bbBbbbbbbbbbbbbb
+bbbbBbbbBbbbBbbb
+bbBbbbbbbbbbbbbb
+bbbbBbbbBbbbBbbb
+bbBbbbbbbbbbbbbb
+bbbbBbbbBbbbBbbb
 bbbbbbbbbbbbbbbb
-bBbpbbbpbbbpbbBb
-bbbbbbbbbbbbbbbb
-bpbbbpbbbpbbbpbb
-bbbbbbbbbbbbbbbb
-bBbpbbbpbbbpbbBb
-bbbbbbbbbbbbbbbb
-bpbbbpbbbpbbbpbb
-bbbbbbbbbbbbbbbb
-bBbpbbbpbbbpbbBb
-bbbbbbbbbbbbbbbb
-bpbbbpbbbpbbbpbb
-bbbbbbbbbbbbbbbb
-bBbpbbbpbbbpbbBb
-bbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb
+dbbbbbbbbbbbbbbd
 """
 
-# The bottom half: the same field, then the payout slots in a row.
+# The lower face: trails continue, then the painted slot backs the fins
+# divide -- green pays, red does not -- and the dark void behind the tray.
 PLINKO_SLOTS = """
-bbbbbbbbbbbbbbbb
-bpbbbpbbbpbbbpbb
-bbbbbbbbbbbbbbbb
-bBbpbbbpbbbpbbBb
-bbbbbbbbbbbbbbbb
-bpbbbpbbbpbbbpbb
-bbbbbbbbbbbbbbbb
+dbbbbbbbbbbbbbbd
+bbbbBbbbbbbbBbbb
+bbBbbbbbBbbbbbbb
+bbbbBbbbbbbbBbbb
+bbBbbbbbBbbbbbbb
+bbbbBbbbbbbbBbbb
+bbBbbbbbBbbbbbbb
 wwwwwwwwwwwwwwww
-yyggrrrrrrrrggyy
-yyggrrrrrrrrggyy
+wwGGGwRRwwRRwGGw
+wwgggwrrwwrrwggw
+wwgggwrrwwrrwggw
+wwgggwrrwwrrwggw
 wwwwwwwwwwwwwwww
-bbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb
+kkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkk
 """
 
 # The frame around the board, with brass corners.
@@ -1702,6 +1809,68 @@ MWWWWWWWWWWWWWWM
 mMwwwwwwwwwwwwMm
 """
 
+# The cabinet flanks: a fielded violet panel in a lit frame, so a row of
+# cabinets reads as furniture from the side rather than as a purple wall.
+PLINKO_SIDE = """
+mMwwwwwwwwwwwwMm
+MWWWWWWWWWWWWWWM
+wWddddddddddddWw
+wWdwwwwwwwwwwdWw
+wWdwWwwwwwwWwdWw
+wWdwwwwwdwwwwdWw
+wWdwwWwwwwwwwdWw
+wWdwwwwwwwWwwdWw
+wWdwWwwdwwwwwdWw
+wWdwwwwwwwwWwdWw
+wWdwwWwwwwwwwdWw
+wWdwwwwwWwwwwdWw
+wWdwwwwwwwwwwdWw
+wWddddddddddddWw
+MWWWWWWWWWWWWWWM
+mMwwwwwwwwwwwwMm
+"""
+
+# One peg, drawn as a full tile: the model samples the centre window
+# (uv 6..10), so the middle four pixels are the peg's polished face and the
+# rest is the shadowed steel it would read as if anything else sliced it.
+PLINKO_PEG = """
+bbbbbbbbbbbbbbbb
+bbbbbppppppbbbbb
+bbbppppppppppbbb
+bbpppPPPPpppppbb
+bbppPPPPPPppppbb
+bpppPPPPPPpppppb
+bppPPPPPPPPppppb
+bppPPPPPPPPppppb
+bpppPPPPPPpppppb
+bbppppPPppppppbb
+bbpppppppppppbbb
+bbbppppppppppbbb
+bbbbbppppppbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+"""
+
+
+def plinko_marquee_frames() -> list[str]:
+    """The marquee stripe: a gold barber chase sliding across the crown.
+
+    The crown face samples row 0 of this, so the animation only has to be
+    honest along one row -- the rest of the map is the same diagonal drawn
+    down the sheet for anything else that slices it. Four frames, period
+    four, so the loop closes.
+    """
+    base = "MmwwMmwwMmwwMmww"
+    frames = []
+    for f in range(4):
+        rows = []
+        for y in range(16):
+            shift = (y + f) % 4
+            rows.append(base[-shift:] + base[:-shift] if shift else base)
+        frames.append("\n".join(rows))
+    return frames
+
 # --- the roulette table ---------------------------------------------------
 
 ROULETTE_PAL = {
@@ -1719,23 +1888,25 @@ ROULETTE_PAL = {
     "S": "#f2f5f7",     # silver, lit
 }
 
-# The felt: green baize with a lighter worn patch where the chips go.
+# The felt: green baize with the LAYOUT painted on it -- a white border
+# line running under the wheel, and the red/black betting cells along the
+# player's edge. A roulette top without the print is a rug.
 ROULETTE_FELT = """
 kkkkkkkkkkkkkkkk
 kggggggggggggggk
-kgGGgggggggGGggk
-kggggggggggggggk
-kgggGGgggggggggk
-kggggggggggGggGk
-kgGggggggggggggk
-kgggggggGGggggGk
-kGggggggggggggGk
-kggggGggggggGggk
-kgggggggggggkggk
-kGgggggkgggggggk
-kggGgggggggggGgk
-kgggggggggggkggk
-kggggggggggggggk
+kgSSSSSSSSSSSSgk
+kgSggggggggggSgk
+kgSggGggggggkSgk
+kgSggggggkgggSgk
+kgSgGggggggggSgk
+kgSgggggggGggSgk
+kgSggkgggggggSgk
+kgSggggGgggggSgk
+kgSgggggggkggSgk
+kgSgGggggggggSgk
+kgSSSSSSSSSSSSgk
+kgrrbbrrbbrrbbgk
+kgrrbbrrbbrrbbgk
 kkkkkkkkkkkkkkkk
 """
 
@@ -1759,26 +1930,52 @@ MWWWWWWWWWWWWWWM
 mMwwwwwwwwwwwwMm
 """
 
-# The wheel head: alternating red and black wedges around a silver hub, with
-# the ball resting in one pocket.
-ROULETTE_WHEEL = """
-....wwwwwwww....
-..wwrrbbrrbbww..
-.wwrrbbrrbbrrww.
-wwrrbbrrbbrrbbww
-wrrbbss....ssbbw
-wrbbsSSSSSSSSsbw
-wbbsSSssssssSSsw
-wbsSSssSSSSssSSw
-wbsSSssSSSSssSSw
-wbbsSSssssssSSsw
-wrbbsSSSSSSSSsbw
-wrrbbss....ssbbw
-wwrrbbrrbbrrbbww
-.wwrrbbrrbbrrww.
-..wwrrbbrrbbww..
-....wwwwwwww....
-"""
+
+def roulette_wheel_map() -> str:
+    """The wheel head, drawn by radius so the rings come out true.
+
+    Wood square, gold rim, sixteen alternating pockets, silver bowl, gold
+    hub -- and the ball sitting in one pocket. Drawn as geometry rather than
+    typed, because concentric circles at 16px are exactly the thing fingers
+    get wrong and arithmetic gets right. The corners are PAINTED wood, not
+    transparent: the carrier renders on the solid layer now, where an alpha
+    hole comes out as a black pixel, not a hole.
+
+    The spin is four frames of this image rotated 90 degrees at a time --
+    see the write in main(). Rotation is why the map must read correctly
+    at every quarter turn: rings are rotation-proof by construction, and
+    the ball orbits, which is the whole point.
+    """
+    import math
+    rows = []
+    for y in range(16):
+        row = ""
+        for x in range(16):
+            dx, dy = x - 7.5, y - 7.5
+            distance = math.hypot(dx, dy)
+            if distance > 7.9:
+                row += "w"                      # wood corners of the head
+            elif distance > 6.7:
+                row += "m"                      # gold rim
+            elif distance > 4.4:
+                # Sixteen pockets, alternating. atan2 sweeps -pi..pi, so
+                # scale to sixteenths and let parity paint the wedge.
+                sector = int((math.atan2(dy, dx) + math.pi) / (2 * math.pi) * 16)
+                row += "r" if sector % 2 == 0 else "b"
+            elif distance > 1.8:
+                # The bowl: brushed silver, lit toward the top-left the way
+                # every other sprite in the mod carries its light.
+                row += "S" if (dx + dy) < -2.5 else "s"
+            else:
+                row += "M"                      # gold hub
+        rows.append(row)
+    # The ball, resting in a pocket at the wheel's north-east. NOT at the
+    # rim: the model's disc face crops this texture to 3.5..12.5, so a ball
+    # any further out exists only on the side slices where nobody can name
+    # it. Two pixels, bright over shadow, inside the crop.
+    rows[4] = rows[4][:11] + "Ss" + rows[4][13:]
+    rows[5] = rows[5][:11] + "s" + rows[5][12:]
+    return "\n".join(rows)
 
 # --- the wallet -----------------------------------------------------------
 
@@ -3380,6 +3577,17 @@ WITHDRAWAL_ICON = """
 """
 
 
+def filled(ascii_map: str, background: str) -> str:
+    """Replace transparent padding with a painted background character.
+
+    For textures that ended up on solid-layer carriers: the solid layer
+    ignores alpha, so a transparent pixel renders as black. Props drawn with
+    '.' padding for the old cutout carriers get their padding painted the
+    colour of whatever they stand against instead.
+    """
+    return ascii_map.replace(".", background)
+
+
 def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
     rows = [r for r in ascii_map.strip("\n").split("\n")]
     assert len(rows) == 16, f"expected 16 rows, got {len(rows)}"
@@ -3513,21 +3721,27 @@ def main() -> None:
     write(render(TOSS_TOP, TABLE_PAL), "block", "toss_top.png")
     write(render(CARD_TOP, TABLE_PAL), "block", "blackjack_top.png")
     write(render(TABLE_SIDE, TABLE_PAL), "block", "table_side.png")
+    write(render(TABLE_SKIRT, TABLE_PAL), "block", "table_skirt.png")
     write(render(TABLE_LEG, TABLE_PAL), "block", "table_leg.png")
-    write(render(TABLE_RIM, TABLE_PAL), "block", "table_rim.png")
+    # Solid-carrier blocks slice this anywhere -- the old transparent rows
+    # would render black, so they are painted outline-dark instead.
+    write(render(filled(TABLE_RIM, "x"), TABLE_PAL), "block", "table_rim.png")
 
     write(render(BAR_TOP, BAR_PAL), "block", "bar_top.png")
     write(render(BAR_FRONT, BAR_PAL), "block", "bar_front.png")
     write(render(BAR_SHELF, BAR_PAL), "block", "bar_shelf.png")
     write(render(BAR_BRASS, BAR_PAL), "block", "bar_brass.png")
-    write(render(BAR_GLASS, BAR_PAL), "block", "bar_glass.png")
+    # The whole casino sits on solid-layer carriers now, so every prop that
+    # was drawn on '.' for the old cutout carriers gets its padding painted:
+    # wood behind the glassware, outline-dark behind the table furniture.
+    write(render(filled(BAR_GLASS, "w"), BAR_PAL), "block", "bar_glass.png")
     for colour, (dark, lit) in BAR_GLASSWARE.items():
-        write(render(BAR_BOTTLE, {**BAR_PAL, "1": dark, "2": lit}),
+        write(render(filled(BAR_BOTTLE, "w"), {**BAR_PAL, "1": dark, "2": lit}),
               "block", f"bar_bottle_{colour}.png")
-    write(render(TOSS_COIN, TABLE_PAL), "block", "toss_coin.png")
-    write(render(CARD_SHOE, TABLE_PAL), "block", "card_shoe.png")
-    write(render(CHIP_STACK, TABLE_PAL), "block", "chip_stack.png")
-    write(render(CARD_RACK, TABLE_PAL), "block", "card_rack.png")
+    write(render(filled(TOSS_COIN, "g"), TABLE_PAL), "block", "toss_coin.png")
+    write(render(filled(CARD_SHOE, "x"), TABLE_PAL), "block", "card_shoe.png")
+    write(render(filled(CHIP_STACK, "x"), TABLE_PAL), "block", "chip_stack.png")
+    write(render(filled(CARD_RACK, "x"), TABLE_PAL), "block", "card_rack.png")
     write(render(CLIMB_FACE, CLIMB_PAL), "block", "climb_face.png")
     write(render(CLIMB_STEP, CLIMB_PAL), "block", "climb_step.png")
     write(render(CLIMB_LAMP, CLIMB_PAL), "block", "climb_lamp.png")
@@ -3536,9 +3750,23 @@ def main() -> None:
     write(render(PLINKO_BOARD, PLINKO_PAL), "block", "plinko_board.png")
     write(render(PLINKO_SLOTS, PLINKO_PAL), "block", "plinko_slots.png")
     write(render(PLINKO_FRAME, PLINKO_PAL), "block", "plinko_frame.png")
+    write(render(PLINKO_SIDE, PLINKO_PAL), "block", "plinko_side.png")
+    write(render(PLINKO_PEG, PLINKO_PAL), "block", "plinko_peg.png")
+    # The crown chase: gold sliding along the marquee, four frames, closed
+    # loop. The one moving part a cabinet earns while nobody is playing it.
+    write_animated([render(frame, PLINKO_PAL) for frame in plinko_marquee_frames()],
+                   3, "block", "plinko_marquee.png")
     write(render(ROULETTE_FELT, ROULETTE_PAL), "block", "roulette_felt.png")
     write(render(ROULETTE_RIM, ROULETTE_PAL), "block", "roulette_rim.png")
-    write(render(ROULETTE_WHEEL, ROULETTE_PAL), "block", "roulette_wheel.png")
+    # The wheel spins: the same head rotated a quarter turn per frame, so
+    # the pockets sweep and the ball orbits. Slow on purpose -- a wheel at
+    # strobe speed reads as a broken texture, not a game.
+    wheel = render(roulette_wheel_map(), ROULETTE_PAL)
+    write_animated([wheel,
+                    wheel.transpose(Image.Transpose.ROTATE_270),
+                    wheel.transpose(Image.Transpose.ROTATE_180),
+                    wheel.transpose(Image.Transpose.ROTATE_90)],
+                   8, "block", "roulette_wheel.png")
     write(render(WALLET_BODY, WALLET_PAL), "item", "wallet_body.png")
     write(render(WALLET_FLAP, WALLET_PAL), "item", "wallet_flap.png")
     write(render(WALLET_COIN, WALLET_PAL), "item", "wallet_coin.png")
@@ -3557,7 +3785,13 @@ def main() -> None:
     write(render(STALL_AWNING, STALL_PAL), "block", "stall_awning.png")
     write(render(STALL_GOODS, STALL_PAL), "block", "stall_goods.png")
     write(render(SLOT_BODY, SLOT_PAL), "block", "slot_body.png")
-    write(render(SLOT_SCREEN, SLOT_PAL), "block", "slot_screen.png")
+    # The reels spin and the marquee lamps chase. Interpolation smears the
+    # four-row reel steps into something like motion blur, which is the
+    # closest a 16px texture gets to a spinning reel.
+    write_animated([render(frame, SLOT_PAL) for frame in slot_screen_frames()],
+                   3, "block", "slot_screen.png")
+    write_animated([render(frame, SLOT_PAL) for frame in slot_marquee_frames()],
+                   3, "block", "slot_marquee.png")
     write(render(SLOT_TRIM, SLOT_PAL), "block", "slot_trim.png")
     write(render(SLOT_DECK, SLOT_PAL), "block", "slot_deck.png")
     for wand, (lit, body, core) in WAND_GEMS.items():

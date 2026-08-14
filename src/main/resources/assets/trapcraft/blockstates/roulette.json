@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "trapcraft:block/roulette"
+    },
+    "facing=east": {
+      "model": "trapcraft:block/roulette",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "trapcraft:block/roulette",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "trapcraft:block/roulette",
+      "y": 270
     }
   }
 }

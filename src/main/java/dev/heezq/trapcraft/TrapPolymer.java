@@ -42,9 +42,17 @@ public final class TrapPolymer {
      *       177 generated models has.
      * </ul>
      *
-     * So: 61 carriers out of one 78-state pool, and the 37-state pool left
-     * alone entirely. Anything that needs a see-through carrier uses this
-     * constant rather than naming a pool of its own.
+     * One more property of leaves, learned the hard way: shader packs wave
+     * them. Every leaf state is foliage to a shader, so anything carried here
+     * sways in the wind -- fine for a bong, absurd for a slot machine. The
+     * whole casino floor therefore closed its shells and moved to FULL_BLOCK
+     * (note block states, which nothing waves); this pool is only for models
+     * that genuinely cannot seal the cube.
+     *
+     * So: 25 carriers (bong, gravity bong, mailbox, mixer) out of one
+     * 78-state pool, and the 37-state pool left alone entirely. Anything that
+     * needs a see-through carrier uses this constant rather than naming a
+     * pool of its own.
      */
     public static final BlockModelType NON_SOLID = BlockModelType.BIOME_TRANSPARENT_BLOCK;
 

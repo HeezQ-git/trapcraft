@@ -47,16 +47,18 @@ public class PlinkoBlock extends TurnableBlock implements PolymerBlock, PolymerT
 
     public PlinkoBlock(Settings settings) {
         super(settings);
-        // A see-through carrier: the board is a frame with gaps in it, and a
-        // carrier that claims to be a solid cube makes the client cull the
-        // faces of whatever is behind and below -- the roulette table shipped
-        // exactly that bug and showed the caves under the floor.
+        // FULL_BLOCK (note block states), not the leaf pool: shader packs
+        // wave every leaf state as foliage, and a board you watch a ball fall
+        // down cannot also be swaying. The shallow wall-board became a
+        // full-depth cabinet so the shell is closed and the solid carrier is
+        // honest; check_models.py measures the coverage and fails the deploy
+        // rather than trusting this comment.
         //
-        // Eight states, four per half. A board is all face: point it at the
-        // wall and the whole block is a plank.
-        this.lowerCarriers = carriers(TrapPolymer.NON_SOLID, "plinko_lower",
+        // Eight states, four per half. The cabinet is all face: the pegs and
+        // the tray hang off the front, so it has to point at the room.
+        this.lowerCarriers = carriers(BlockModelType.FULL_BLOCK, "plinko_lower",
                 () -> Blocks.BLUE_TERRACOTTA.getDefaultState());
-        this.upperCarriers = carriers(TrapPolymer.NON_SOLID, "plinko_upper",
+        this.upperCarriers = carriers(BlockModelType.FULL_BLOCK, "plinko_upper",
                 () -> Blocks.BLUE_TERRACOTTA.getDefaultState());
         setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }

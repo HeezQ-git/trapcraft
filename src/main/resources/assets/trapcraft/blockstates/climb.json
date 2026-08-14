@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "trapcraft:block/climb"
+    },
+    "facing=east": {
+      "model": "trapcraft:block/climb",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "trapcraft:block/climb",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "trapcraft:block/climb",
+      "y": 270
     }
   }
 }

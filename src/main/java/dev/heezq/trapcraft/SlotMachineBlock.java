@@ -48,17 +48,19 @@ public class SlotMachineBlock extends TurnableBlock implements PolymerBlock, Pol
 
     public SlotMachineBlock(Settings settings) {
         super(settings);
-        // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the client
-        // believes about this block, and believing a cabinet on a plinth is a
-        // solid cube makes it cull the faces of whatever is underneath -- so
-        // you stand on a floor above a cave and see straight through into it.
-        // Any model that doesn't fill the cube has to say so.
+        // FULL_BLOCK (note block states), not the leaf pool. Every leaf state
+        // is foliage to a shader pack, and foliage WAVES -- a cabinet that
+        // sways in the breeze is a plant, whatever the texture says. The
+        // model earns the solid carrier by keeping a closed shell, so the
+        // culled faces of the floor and walls are never visible;
+        // check_models.py measures that and fails the deploy rather than
+        // trusting this comment.
         //
         // Eight states, four per half: a machine with a screen on the front is
         // only worth having if the front can face the room.
-        this.lowerCarriers = carriers(TrapPolymer.NON_SOLID, "slot_machine_lower",
+        this.lowerCarriers = carriers(BlockModelType.FULL_BLOCK, "slot_machine_lower",
                 () -> Blocks.RED_TERRACOTTA.getDefaultState());
-        this.upperCarriers = carriers(TrapPolymer.NON_SOLID, "slot_machine_upper",
+        this.upperCarriers = carriers(BlockModelType.FULL_BLOCK, "slot_machine_upper",
                 () -> Blocks.RED_TERRACOTTA.getDefaultState());
         setDefaultState(getDefaultState().with(HALF, DoubleBlockHalf.LOWER));
     }

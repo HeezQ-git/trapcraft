@@ -1,0 +1,19 @@
+{
+  "values": [
+    "trapcraft:toss",
+    "trapcraft:blackjack",
+    "trapcraft:scratch",
+    "trapcraft:roulette",
+    "trapcraft:plinko",
+    "trapcraft:casino_bar",
+    "trapcraft:market_stall",
+    "trapcraft:market_shelf",
+    "trapcraft:shop_till",
+    "trapcraft:nightclub",
+    "trapcraft:mailbox",
+    "trapcraft:mixing_station",
+    "trapcraft:drying_rack",
+    "trapcraft:scoring_table",
+    "trapcraft:leaf_press"
+  ]
+}

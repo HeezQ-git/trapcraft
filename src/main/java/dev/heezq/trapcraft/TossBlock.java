@@ -24,10 +24,9 @@ import java.util.Map;
 /**
  * The furniture for {@link TossScreenHandler}.
  *
- * A table on four legs, which costs one state from the thin
- * see-through pool and has to: a legged model on a solid carrier makes
- * the client cull whatever is under and beside it. check_models.py measures
- * the coverage and fails the deploy rather than trusting this comment.
+ * A skirted casino table: felt in a brass rim over a panelled plinth. Closed
+ * shell, solid carrier -- the see-through leaf pool is what shader packs wave
+ * as foliage, and the coin should be the only thing moving on this table.
  */
 public class TossBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
     private final Map<Direction, BlockState> carriers;
@@ -35,13 +34,13 @@ public class TossBlock extends TurnableBlock implements PolymerBlock, PolymerTex
     public TossBlock(Settings settings) {
         super(settings);
         this.carriers = carriers(
-                // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. It is a table on four
-                // legs now, and a carrier that claims to be a solid cube makes
-                // the client cull the faces of whatever is under and beside
-                // it -- so a table on a floor above a cave shows you the cave.
-                // check_models.py measures the coverage and fails the deploy
-                // rather than trusting this comment.
-                TrapPolymer.NON_SOLID, "toss",
+                // FULL_BLOCK (note block states), not the leaf pool: shader
+                // packs wave every leaf state as foliage, and a coin-toss
+                // table should not billow. The table traded its legs for a
+                // skirted plinth so the shell is closed and the solid carrier
+                // is honest; check_models.py measures the coverage and fails
+                // the deploy rather than trusting this comment.
+                BlockModelType.FULL_BLOCK, "toss",
                 () -> Blocks.GREEN_TERRACOTTA.getDefaultState());
     }
 

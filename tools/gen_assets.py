@@ -1448,28 +1448,36 @@ def nerve_tonic_assets() -> None:
 
 
 def table_model(top: str, furniture=None) -> dict:
-    """A gaming table: four legs, an apron, a felt top in a brass rim, and
-    whatever that particular game keeps standing on it.
+    """A pit table: felt in a brass rim over a panelled skirt to the carpet.
 
-    It used to be a single textured cube -- a solid block of wood from the
-    floor to the felt, which is not a table, it is a crate somebody drew a
-    card game on. Legs cost a state from the thin TRANSPARENT_BLOCK pool
-    apiece, and three states is what four sides of daylight under a table is
-    worth.
+    It had four legs once, and the legs are what kept the whole casino on
+    leaf carriers -- an open cube needs a see-through carrier, and every
+    see-through carrier Polymer owns is a leaf state that shader packs wave
+    as foliage. A real casino table is skirted to the floor anyway (that is
+    where the drop box lives), so the closed shell is more honest, not less:
+    kick plinth, panelled skirt, corner posts proud of it, and the playing
+    surface overhanging the lot. check_models.py verifies the shell stays
+    closed now that the carrier claims to be solid.
 
     `furniture` is a list of extra elements, so the coin, the card shoe and
     the scratchcard rack are the thing you tell the three games apart by from
     across the room rather than a texture you have to walk up to and read.
     """
     elements = [
-        # Four legs, inset from the corners so there is daylight between them.
-        box([1.5, 0, 1.5], [4, 11, 4], "leg"),
-        box([12, 0, 1.5], [14.5, 11, 4], "leg"),
-        box([1.5, 0, 12], [4, 11, 14.5], "leg"),
-        box([12, 0, 12], [14.5, 11, 14.5], "leg"),
-        # The apron the top sits on, tying the legs together.
-        box([1, 11, 1], [15, 13.5, 15], "side", up="side", down="side"),
-        # The playing surface, proud of the apron, with the felt on the lid.
+        # Kick plinth, full footprint: the floor's culled top face must
+        # never be visible, and this is the element that guarantees it.
+        box([0, 0, 0], [16, 1.5, 16], "leg", up="leg", down="leg"),
+        # The skirt: fielded panels to the carpet. Recessed a shade so the
+        # kick and the top both read as separate mouldings.
+        box([0.25, 1.5, 0.25], [15.75, 13.5, 15.75], "skirt",
+            up="skirt", down="skirt"),
+        # Corner posts, proud of the skirt: the silhouette the legs used to
+        # give it, without the daylight that cost a leaf state.
+        box([-0.5, 0, -0.5], [1.5, 14.3, 1.5], "leg"),
+        box([14.5, 0, -0.5], [16.5, 14.3, 1.5], "leg"),
+        box([-0.5, 0, 14.5], [1.5, 14.3, 16.5], "leg"),
+        box([14.5, 0, 14.5], [16.5, 14.3, 16.5], "leg"),
+        # The playing surface, proud of the skirt, with the felt on the lid.
         box([0, 13.5, 0], [16, 15.5, 16], "rim", up="top", down="side"),
     ]
     elements.extend(furniture or [])
@@ -1479,13 +1487,14 @@ def table_model(top: str, furniture=None) -> dict:
         "textures": {
             "top": f"{NS}:block/{top}",
             "side": f"{NS}:block/table_side",
+            "skirt": f"{NS}:block/table_skirt",
             "leg": f"{NS}:block/table_leg",
             "rim": f"{NS}:block/table_rim",
             "coin": f"{NS}:block/toss_coin",
             "shoe": f"{NS}:block/card_shoe",
             "chips": f"{NS}:block/chip_stack",
             "rack": f"{NS}:block/card_rack",
-            "particle": f"{NS}:block/table_side",
+            "particle": f"{NS}:block/table_skirt",
         },
         "elements": elements,
     }
@@ -1513,29 +1522,35 @@ def bar_model() -> dict:
     whole = [0, 0, 16, 16]
     elements = [
         # --- the counter you stand at ------------------------------------
-        box([1, 0, 2], [15, 1.5, 11], "wood"),                    # kick board
-        box([0.5, 1.5, 2.5], [15.5, 13, 11], "front",             # the carcass
+        # Full-footprint kick and a front flush with the block edge: the
+        # carrier is a solid cube now (leaf carriers wave under shaders), so
+        # the shell has to close -- the panelling and the foot rail stand
+        # PROUD of the front instead of the front being recessed behind them.
+        box([0, 0, 0], [16, 1.5, 16], "wood", up="wood", down="wood"),  # kick
+        box([0, 1.5, 0], [16, 13, 11], "front",                   # the carcass
             up="wood", down="wood"),
-        box([0.3, 1.5, 2.2], [15.7, 2.3, 2.7], "brass"),          # beading, low
-        box([0.3, 12.2, 2.2], [15.7, 13, 2.7], "brass"),          # beading, high
-        box([3.4, 2.3, 2.2], [4.4, 12.2, 2.7], "brass"),          # stiles
-        box([11.6, 2.3, 2.2], [12.6, 12.2, 2.7], "brass"),
-        box([2.5, 1.4, -1.2], [3.5, 3.2, 0.4], "brass"),          # rail brackets
-        box([12.5, 1.4, -1.2], [13.5, 3.2, 0.4], "brass"),
-        box([0, 3.2, -1.4], [16, 4.4, -0.2], "brass"),            # the foot rail
-        # The top overhangs the front by a block-and-a-half's worth of nothing,
-        # which is the bit you lean on. table_side's brass band lands on the
-        # front edge of it, so the lip is brass without another element.
+        box([0.3, 1.5, -0.5], [15.7, 2.3, 0], "brass"),           # beading, low
+        box([0.3, 12.2, -0.5], [15.7, 13, 0], "brass"),           # beading, high
+        box([3.4, 2.3, -0.5], [4.4, 12.2, 0], "brass"),           # stiles
+        box([11.6, 2.3, -0.5], [12.6, 12.2, 0], "brass"),
+        box([2.5, 1.4, -1.6], [3.5, 3.2, 0], "brass"),            # rail brackets
+        box([12.5, 1.4, -1.6], [13.5, 3.2, 0], "brass"),
+        box([0, 3.2, -1.8], [16, 4.4, -0.6], "brass"),            # the foot rail
+        # The top overhangs the front, which is the bit you lean on.
+        # table_side's brass band lands on the front edge of it, so the lip
+        # is brass without another element.
         box([0, 13, -1.5], [16, 15.5, 11.5], "wood", up="top", uv=whole),
 
         # --- the back bar ------------------------------------------------
         # It stands on the floor rather than starting at counter height: a
         # shelf of bottles hanging in the air over the keeper's head is what
-        # the old one did, and it looked like it.
-        box([0.5, 0, 12.5], [2.2, 25, 15.5], "wood"),             # uprights
-        box([13.8, 0, 12.5], [15.5, 25, 15.5], "wood"),
-        box([2.2, 0, 14.2], [13.8, 24.5, 15.5], "shelf"),         # boards behind
-        box([0.5, 15.5, 12], [15.5, 16.3, 15.6], "wood"),         # bottom shelf
+        # the old one did, and it looked like it. Uprights and boards run to
+        # the seams so the closed shell holds behind the counter too.
+        box([0.5, 0, 11], [2.2, 25, 16], "wood"),                 # uprights
+        box([13.8, 0, 11], [15.5, 25, 16], "wood"),
+        box([2.2, 0, 14.2], [13.8, 24.5, 16], "shelf"),           # boards behind
+        # The service shelf bridges counter and back bar at working height.
+        box([0.5, 15.5, 11], [15.5, 16.3, 15.6], "wood"),         # bottom shelf
         box([0.5, 20.3, 12], [15.5, 21.1, 15.6], "wood"),         # upper shelf
         box([0.2, 25, 12.2], [15.8, 26, 15.8], "brass"),          # cornice
     ]
@@ -1668,6 +1683,24 @@ def scratch_furniture() -> list:
     ]
 
 
+def facing_variants(model: str, half: str | None = None) -> dict:
+    """Blockstate variants for a TurnableBlock, spun like a furnace.
+
+    Vanilla clients never read these -- Polymer bakes the spin into each
+    carrier's model mapping -- but a client running the mod (the dev loop,
+    and anyone who installs the jar) resolves the real blockstate here, and
+    with a bare "" variant every table on the server faces north.
+    """
+    out = {}
+    for facing, angle in (("north", 0), ("east", 90), ("south", 180), ("west", 270)):
+        key = f"facing={facing}" + (f",half={half}" if half else "")
+        variant = {"model": model}
+        if angle:
+            variant["y"] = angle
+        out[key] = variant
+    return out
+
+
 def table_assets(name: str, top: str, pattern, key, furniture=None) -> None:
     put(f"assets/{NS}/models/block/{name}.json", table_model(top, furniture))
     put(f"assets/{NS}/models/item/{name}.json", {"parent": f"{NS}:block/{name}"})
@@ -1675,7 +1708,7 @@ def table_assets(name: str, top: str, pattern, key, furniture=None) -> None:
         "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
     })
     put(f"assets/{NS}/blockstates/{name}.json", {
-        "variants": {"": {"model": f"{NS}:block/{name}"}},
+        "variants": facing_variants(f"{NS}:block/{name}"),
     })
     put(f"data/{NS}/recipe/{name}.json", {
         "type": "minecraft:crafting_shaped",
@@ -1905,7 +1938,7 @@ def climb_assets() -> None:
         "model": {"type": "minecraft:model", "model": f"{NS}:item/climb"},
     })
     put(f"assets/{NS}/blockstates/climb.json", {
-        "variants": {"": {"model": f"{NS}:block/climb"}},
+        "variants": facing_variants(f"{NS}:block/climb"),
     })
 
     # Iron for the box, gold for the locks, and a tripwire hook because the
@@ -1933,14 +1966,68 @@ def climb_assets() -> None:
 
 
 def plinko_model(upper: bool) -> dict:
-    """A tall peg board in a frame, standing against the wall.
+    """An arcade cabinet with the drop running down the front of it.
 
-    Deliberately shallow front to back -- it is a board, not a cabinet, and
-    the ball falls down the FACE of it. Made of a back panel, a raised frame
-    around the edge, and side rails, so the pegs sit in a recess you can see
-    into rather than being painted on a slab.
+    It used to be a shallow board floating in the back half of the cube,
+    which needed a see-through carrier -- and every see-through carrier is a
+    leaf state that shader packs wave. Same cure as the climb: the body
+    fills the cube exactly, and everything that makes it a game -- the pegs,
+    the slot fins, the catch tray, the marquee -- is bolted to the OUTSIDE
+    of the front face. Proud geometry is free; hollow geometry costs a
+    blockstate and a wave.
+
+    The pegs are real boxes, staggered 3-4-3-4 the way a plinko field is,
+    so the ball's path is something you could point at rather than a print.
     """
-    face = "board" if upper else "slots"
+    pegs = []
+    # Upper half: four rows of pegs. Lower: two rows, then the slot fins
+    # and the tray take over. Rows stagger, and every peg stands proud.
+    rows = ((2.5, (4, 8, 12)), (5.5, (2.6, 6, 10, 13.4)),
+            (8.5, (4, 8, 12)), (11.5, (2.6, 6, 10, 13.4))) if upper else \
+           ((10.5, (2.6, 6, 10, 13.4)), (13.5, (4, 8, 12)))
+    for low, centres in rows:
+        for centre in centres:
+            pegs.append(box([centre - 0.6, low, -0.8], [centre + 0.6, low + 1.2, 0.2],
+                            "peg", uv=[6, 6, 10, 10]))
+
+    elements = [
+        # The body fills the cube: game face on the front, panelled sides.
+        {
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"texture": "#board" if upper else "#slots",
+                          "uv": [0, 0, 16, 16]},
+                "south": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "east": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "west": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "up": {"texture": "#frame", "uv": [0, 0, 16, 16]},
+                "down": {"texture": "#frame", "uv": [0, 0, 16, 16]},
+            },
+        },
+        # Corner rails up the front edges, continuous across both halves.
+        box([-0.4, 0, -0.6], [1.2, 16, 0.8], "frame"),
+        box([14.8, 0, -0.6], [16.4, 16, 0.8], "frame"),
+    ] + pegs
+
+    if upper:
+        # The marquee crown: the lit sign that says a game lives here. Its
+        # face carries the chasing-arrow animation.
+        elements.append(box([-0.6, 15.2, -1.2], [16.6, 17.0, 1.6], "marquee",
+                            up="frame", down="frame"))
+    else:
+        # The catch tray, and the fins that divide the payout slots. The
+        # slot colours are painted on the face between the fins.
+        elements += [
+            box([0.6, 1.2, -2.4], [15.4, 2.4, 0.6], "frame", up="frame"),
+            box([0.6, 2.4, -2.4], [15.4, 3.6, -1.6], "frame", up="frame"),
+            box([1.4, 3.2, -0.7], [2.0, 8.5, 0.3], "frame"),
+            box([4.6, 3.2, -0.7], [5.2, 8.5, 0.3], "frame"),
+            box([7.8, 3.2, -0.7], [8.4, 8.5, 0.3], "frame"),
+            box([11.0, 3.2, -0.7], [11.6, 8.5, 0.3], "frame"),
+            box([14.2, 3.2, -0.7], [14.8, 8.5, 0.3], "frame"),
+        ]
+
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
@@ -1948,18 +2035,12 @@ def plinko_model(upper: bool) -> dict:
             "board": f"{NS}:block/plinko_board",
             "slots": f"{NS}:block/plinko_slots",
             "frame": f"{NS}:block/plinko_frame",
+            "side": f"{NS}:block/plinko_side",
+            "marquee": f"{NS}:block/plinko_marquee",
+            "peg": f"{NS}:block/plinko_peg",
             "particle": f"{NS}:block/plinko_frame",
         },
-        "elements": [
-            box([1, 0, 10], [15, 16, 12], face, up="frame", down="frame"),   # the field
-            box([0, 0, 9], [1, 16, 13], "frame", up="frame", down="frame"),  # left rail
-            box([15, 0, 9], [16, 16, 13], "frame", up="frame", down="frame"),  # right rail
-            box([1, 15, 9], [15, 16, 13], "frame", up="frame")               # head rail
-            if upper else
-            box([1, 0, 9], [15, 1, 13], "frame", down="frame"),              # tray at the foot
-            box([0.5, 0, 7.4], [15.5, 3, 9], "frame", up="frame", down="frame"),  # catch lip
-            box([0.5, 3, 7.4], [15.5, 3.6, 8.2], "frame", up="frame"),       # lip edge
-        ],
+        "elements": elements,
     }
 
 
@@ -1972,8 +2053,8 @@ def plinko_assets() -> None:
     })
     put(f"assets/{NS}/blockstates/plinko.json", {
         "variants": {
-            "half=lower": {"model": f"{NS}:block/plinko_lower"},
-            "half=upper": {"model": f"{NS}:block/plinko_upper"},
+            **facing_variants(f"{NS}:block/plinko_lower", half="lower"),
+            **facing_variants(f"{NS}:block/plinko_upper", half="upper"),
         },
     })
 
@@ -2008,13 +2089,18 @@ def plinko_assets() -> None:
 
 
 def roulette_model() -> dict:
-    """A waist-high table: legs, a felt top, a mahogany rim, and the wheel.
+    """A waist-high table: skirted base, a laid-out felt, and the wheel.
 
     Built low and wide on purpose. The slot machine next to it is two blocks
     tall, so a table you look DOWN at is what makes a room of both read as a
     casino floor rather than a row of cabinets. The wheel head sits proud of
     the felt with a brass hub, because a flat green square with a picture of a
     wheel on it is a rug.
+
+    Same closed shell as table_model and for the same reason: the legs it
+    used to stand on are what kept it on a leaf carrier, and leaf carriers
+    wave under shader packs. The skirt goes to the carpet, the way a real
+    wheel table hides its cash drawer.
     """
     return {
         "parent": "minecraft:block/block",
@@ -2023,27 +2109,35 @@ def roulette_model() -> dict:
             "felt": f"{NS}:block/roulette_felt",
             "rim": f"{NS}:block/roulette_rim",
             "wheel": f"{NS}:block/roulette_wheel",
+            "skirt": f"{NS}:block/table_skirt",
+            "leg": f"{NS}:block/table_leg",
+            "chips": f"{NS}:block/chip_stack",
             "particle": f"{NS}:block/roulette_rim",
         },
         "elements": [
-            # Four legs, inset so the table reads as standing rather than as a
-            # solid cube painted to look like one.
-            box([2, 0, 2], [4, 9, 4], "rim"),
-            box([12, 0, 2], [14, 9, 4], "rim"),
-            box([2, 0, 12], [4, 9, 14], "rim"),
-            box([12, 0, 12], [14, 9, 14], "rim"),
-            # The top: felt inside a raised rim.
-            box([1, 9, 1], [15, 11, 15], "rim", up="rim", down="rim"),
-            box([2, 11, 2], [14, 11.5, 14], "felt", up="felt"),
-            # The wheel head, sunk into the felt and standing proud of it.
-            box([4, 11.5, 4], [12, 13, 12], "wheel", up="wheel", down="wheel"),
-            box([6.5, 13, 6.5], [9.5, 13.8, 9.5], "rim", up="rim"),
-            # The dealer's chip rack along one edge -- the detail that says
-            # somebody works this table rather than it being scenery.
-            box([2.5, 11.5, 1.6], [13.5, 13.2, 3.2], "rim", up="rim", down="rim"),
-            box([3.5, 13.2, 1.9], [5.5, 14.2, 2.9], "wheel", up="wheel"),
-            box([7, 13.2, 1.9], [9, 14.2, 2.9], "wheel", up="wheel"),
-            box([10.5, 13.2, 1.9], [12.5, 14.2, 2.9], "wheel", up="wheel"),
+            # The same skirted base as the card tables, so the pit reads as
+            # one suite of furniture: kick, panelled skirt, corner posts.
+            box([0, 0, 0], [16, 1.5, 16], "leg", up="leg", down="leg"),
+            box([0.25, 1.5, 0.25], [15.75, 13.5, 15.75], "skirt",
+                up="skirt", down="skirt"),
+            box([-0.5, 0, -0.5], [1.5, 14.3, 1.5], "leg"),
+            box([14.5, 0, -0.5], [16.5, 14.3, 1.5], "leg"),
+            box([-0.5, 0, 14.5], [1.5, 14.3, 16.5], "leg"),
+            box([14.5, 0, 14.5], [16.5, 14.3, 16.5], "leg"),
+            # The top: the betting layout under a mahogany rim.
+            box([0, 13.5, 0], [16, 15.5, 16], "rim", up="felt", down="skirt"),
+            # The wheel head, standing proud of the felt: a spinning disc
+            # with a brass hub. The disc face is animated -- the one part of
+            # the table that should move is the wheel.
+            box([3.5, 15.5, 3.5], [12.5, 16.7, 12.5], "wheel",
+                up="wheel", down="rim"),
+            box([6.5, 16.7, 6.5], [9.5, 17.4, 9.5], "rim", up="rim"),
+            # The dealer's chip rack along the front edge -- the detail that
+            # says somebody works this table rather than it being scenery.
+            box([2.5, 15.5, 0.9], [13.5, 16.5, 2.7], "rim", up="rim", down="rim"),
+            box([3.3, 16.5, 1.2], [5.3, 17.3, 2.4], "chips", up="chips", uv=[0, 0, 16, 16]),
+            box([7, 16.5, 1.2], [9, 17.3, 2.4], "chips", up="chips", uv=[0, 0, 16, 16]),
+            box([10.7, 16.5, 1.2], [12.7, 17.3, 2.4], "chips", up="chips", uv=[0, 0, 16, 16]),
         ],
     }
 
@@ -2055,7 +2149,7 @@ def roulette_assets() -> None:
         "model": {"type": "minecraft:model", "model": f"{NS}:item/roulette"},
     })
     put(f"assets/{NS}/blockstates/roulette.json", {
-        "variants": {"": {"model": f"{NS}:block/roulette"}},
+        "variants": facing_variants(f"{NS}:block/roulette"),
     })
 
     # Wool for the felt, planks for the table, iron for the wheel bearing and
@@ -2390,24 +2484,29 @@ def slot_model(upper: bool) -> dict:
                 "glass": f"{NS}:block/slot_screen",
                 "body": f"{NS}:block/slot_body",
                 "trim": f"{NS}:block/slot_trim",
+                "marquee": f"{NS}:block/slot_marquee",
                 "particle": f"{NS}:block/slot_body",
             },
             "elements": [
-                box([1, 0, 1], [15, 13, 15], "body"),                 # cabinet head
-                box([0.8, 1.5, 0.6], [15.2, 11.5, 1.1], "glass"),     # front glass
-                box([0.8, 1.5, 14.9], [15.2, 11.5, 15.4], "glass"),   # back glass
-                box([0, 13, 0], [16, 16, 16], "trim", up="trim"),     # marquee
-                box([0.6, 0.8, 0.4], [15.4, 1.6, 15.6], "trim"),      # lower brass lip
+                # The head fills the cube to half a pixel: the carrier says
+                # solid, so the shell may not leave a sightline through.
+                box([0.5, 0, 0.5], [15.5, 13, 15.5], "body"),         # cabinet head
+                box([0.3, 1.5, 0.1], [15.7, 11.5, 0.6], "glass"),     # front glass
+                box([0.3, 1.5, 15.4], [15.7, 11.5, 15.9], "glass"),   # back glass
+                # The marquee band wears the chasing lamps; its lid stays
+                # brass so the machine reads metal from above.
+                box([0, 13, 0], [16, 16, 16], "marquee", up="trim"),  # marquee
+                box([0.4, 0.8, -0.1], [15.6, 1.6, 16.1], "trim"),     # lower brass lip
                 # A bezel round the glass, so the reels sit in a window
                 # instead of being painted on the front of a box.
-                box([0.4, 11.3, -0.3], [15.6, 12.6, 0.9], "trim", up="trim"),
-                box([0.4, 0.6, -0.3], [15.6, 1.9, 0.9], "trim", down="trim"),
-                box([0.2, 0.6, -0.3], [1.8, 12.6, 0.9], "trim"),
-                box([14.2, 0.6, -0.3], [15.8, 12.6, 0.9], "trim"),
+                box([0.2, 11.3, -0.6], [15.8, 12.6, 0.7], "trim", up="trim"),
+                box([0.2, 0.6, -0.6], [15.8, 1.9, 0.7], "trim", down="trim"),
+                box([0, 0.6, -0.6], [1.6, 12.6, 0.7], "trim"),
+                box([14.4, 0.6, -0.6], [16, 12.6, 0.7], "trim"),
                 # Lamp columns up the corners and a lit sign on the marquee.
-                box([-0.5, 1.2, -0.5], [0.9, 12.4, 0.9], "glass"),
-                box([15.1, 1.2, -0.5], [16.5, 12.4, 0.9], "glass"),
-                box([2.5, 13.4, -0.9], [13.5, 15.6, 0.4], "glass",
+                box([-0.7, 1.2, -0.7], [0.7, 12.4, 0.7], "glass"),
+                box([15.3, 1.2, -0.7], [16.7, 12.4, 0.7], "glass"),
+                box([2.5, 13.4, -0.9], [13.5, 15.6, 0.4], "marquee",
                     up="trim", down="trim"),
                 box([-0.6, 15.6, -1.1], [16.6, 16.8, 16.6], "trim", up="trim"),
             ],
@@ -2422,9 +2521,16 @@ def slot_model(upper: bool) -> dict:
             "particle": f"{NS}:block/slot_body",
         },
         "elements": [
-            box([1, 0, 1], [15, 12, 15], "body"),                 # cabinet
-            box([0.5, 12, 0.5], [15.5, 14, 15.5], "deck", up="deck"),   # sloped deck
+            # Half-pixel insets, not whole ones: the shell has to read as a
+            # cabinet with mouldings, but the carrier says solid cube, so
+            # every sightline through the block must die on geometry.
+            box([0.5, 0, 0.5], [15.5, 12, 15.5], "body"),         # cabinet
+            box([0.3, 12, 0.3], [15.7, 14, 15.7], "deck", up="deck"),   # sloped deck
             box([0, 14, 2], [16, 16, 14], "trim", up="trim"),     # console lip
+            # Brass edge bands seal the top corners the lip leaves open,
+            # front and back -- the coin-drop rail on a real console.
+            box([0, 14, 0.2], [16, 16, 1.2], "trim", up="trim"),
+            box([0, 14, 14.8], [16, 16, 15.8], "trim", up="trim"),
             box([15.4, 6, 6.5], [17, 11, 9.5], "trim"),           # lever arm
             box([15.6, 10.5, 6], [17.6, 12.5, 10], "deck"),       # lever knob
             box([0, 0, 0], [16, 1.2, 16], "trim", down="trim"),   # plinth
@@ -2450,6 +2556,12 @@ def slot_model(upper: bool) -> dict:
 def slot_assets() -> None:
     put(f"assets/{NS}/models/block/slot_machine_lower.json", slot_model(False))
     put(f"assets/{NS}/models/block/slot_machine_upper.json", slot_model(True))
+    put(f"assets/{NS}/blockstates/slot_machine.json", {
+        "variants": {
+            **facing_variants(f"{NS}:block/slot_machine_lower", half="lower"),
+            **facing_variants(f"{NS}:block/slot_machine_upper", half="upper"),
+        },
+    })
     # The item shows the console half -- the recognisable end with the lever.
     put(f"assets/{NS}/models/item/slot_machine.json",
         {"parent": f"{NS}:block/slot_machine_lower"})
@@ -2882,17 +2994,52 @@ def mailbox_assets() -> None:
 
 
 def tags() -> None:
-    """Make the hammer enchantable.
+    """Make the hammer enchantable, and the tool-required blocks minable.
 
     Enchanting eligibility in 1.21 is tag-driven: Item.Settings.enchantable()
     sets how GOOD the enchants are, but the table only offers them if the item
     is in these tags. Setting one without the other silently does nothing.
     Tags merge across mods, so adding to minecraft: namespace is correct here.
+
+    requiresTool() is the same shape of trap: it says "a correct tool drops
+    this", and correctness is decided by the pickaxe's tool component, which
+    only matches blocks in mineable/pickaxe. A block that requires a tool and
+    is in no mineable tag has no correct tool in the game -- it mines at bare
+    hand speed and drops NOTHING, whatever you hit it with.
     """
     for tag in ("mining", "mining_loot", "durability", "vanishing"):
         put(f"data/minecraft/tags/item/enchantable/{tag}.json", {
             "values": [f"{NS}:miners_hammer"],
         })
+
+    # Every block registered with requiresTool(). Any pickaxe drops them --
+    # no needs_iron_tool, these are shop fittings you should be able to move.
+    #
+    # The rest of these lists are SPEED, not drops: a block in no mineable tag
+    # ignores every tool and breaks at bare-hand pace however sharp your axe
+    # is. Polymer already mines these server-side against the real block, so
+    # the tag is the whole difference between "pickaxe works on the metal
+    # machine" and "nothing works on anything".
+    put("data/minecraft/tags/block/mineable/pickaxe.json", {
+        "values": [f"{NS}:{b}" for b in (
+            "wash_pot", "acetylator", "city_vault", "police",
+            "dirty_emerald_block", "laundry",
+            # Metal machines without requiresTool: any hand drops them, a
+            # pickaxe just stops pretending it's no better than a fist.
+            "slot_machine", "climb", "refiner",
+        )],
+    })
+
+    # The wooden furniture: tables, counters, cabinets, racks. An axe takes
+    # them down at axe speed, exactly like a crafting table.
+    put("data/minecraft/tags/block/mineable/axe.json", {
+        "values": [f"{NS}:{b}" for b in (
+            "toss", "blackjack", "scratch", "roulette", "plinko", "casino_bar",
+            "market_stall", "market_shelf", "shop_till", "nightclub",
+            "mailbox", "mixing_station", "drying_rack", "scoring_table",
+            "leaf_press",
+        )],
+    })
 
 
 def recipes() -> None:

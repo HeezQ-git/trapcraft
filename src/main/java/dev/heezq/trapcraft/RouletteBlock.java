@@ -36,13 +36,14 @@ public class RouletteBlock extends TurnableBlock implements PolymerBlock, Polyme
     public RouletteBlock(Settings settings) {
         super(settings);
         this.carriers = carriers(
-                // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the
-                // client believes about this block, and believing a table with
-                // legs is a solid cube makes it cull the faces of whatever is
-                // underneath -- so you stand on a floor above a cave and see
-                // straight through into it. Any model that doesn't fill the
-                // cube has to say so.
-                TrapPolymer.NON_SOLID, "roulette",
+                // FULL_BLOCK (note block states), not the leaf pool: shader
+                // packs wave every leaf state as foliage, and a roulette
+                // table rippling like a hedge is not furniture. The table
+                // traded its four legs for a skirted plinth so the shell is
+                // closed and the solid carrier is honest; check_models.py
+                // measures the coverage and fails the deploy rather than
+                // trusting this comment.
+                BlockModelType.FULL_BLOCK, "roulette",
                 () -> Blocks.GREEN_TERRACOTTA.getDefaultState());
     }
 

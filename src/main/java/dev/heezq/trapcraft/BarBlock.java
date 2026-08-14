@@ -44,7 +44,13 @@ public class BarBlock extends TurnableBlock implements PolymerBlock, PolymerText
 
     public BarBlock(Settings settings) {
         super(settings);
-        this.carriers = carriers(TrapPolymer.NON_SOLID, "casino_bar",
+        // FULL_BLOCK (note block states), not the leaf pool: shader packs
+        // wave every leaf state as foliage, and the one block the owner works
+        // at should not ripple while they do. The counter runs wall to wall
+        // and the back bar boards reach the seams, so the shell is closed and
+        // the solid carrier is honest; check_models.py measures the coverage
+        // and fails the deploy rather than trusting this comment.
+        this.carriers = carriers(BlockModelType.FULL_BLOCK, "casino_bar",
                 () -> Blocks.DARK_OAK_PLANKS.getDefaultState());
     }
 

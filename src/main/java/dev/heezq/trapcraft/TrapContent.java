@@ -566,19 +566,23 @@ public final class TrapContent {
         laundryItem = registerItem("laundry",
                 (settings, model) -> new RackItem(laundry, settings, model));
 
+        // The casino machines are opaque on purpose: their carriers are note
+        // block states (see the shader note in TrapPolymer), so the client
+        // lights them as solid cubes -- the server agreeing keeps mob
+        // spawning and crop growth honest around a casino floor.
         slotMachine = registerBlock("slot_machine", SlotMachineBlock::new,
-                AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL).nonOpaque());
+                AbstractBlock.Settings.create().strength(3.0F).sounds(BlockSoundGroup.METAL));
         slotMachineItem = registerItem("slot_machine",
                 (settings, model) -> new RackItem(slotMachine, settings, model));
 
         roulette = registerBlock("roulette", RouletteBlock::new,
-                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD).nonOpaque());
+                AbstractBlock.Settings.create().strength(2.5F).sounds(BlockSoundGroup.WOOD));
         rouletteItem = registerItem("roulette",
                 (settings, model) -> new RackItem(roulette, settings, model));
 
         plinko = registerBlock("plinko", PlinkoBlock::new,
                 AbstractBlock.Settings.create().strength(2.5F)
-                        .sounds(BlockSoundGroup.WOOD).nonOpaque());
+                        .sounds(BlockSoundGroup.WOOD));
         plinkoItem = registerItem("plinko",
                 (settings, model) -> new RackItem(plinko, settings, model));
 
@@ -604,7 +608,7 @@ public final class TrapContent {
 
         casinoBar = registerBlock("casino_bar", BarBlock::new,
                 AbstractBlock.Settings.create().strength(2.5F)
-                        .sounds(BlockSoundGroup.WOOD).nonOpaque());
+                        .sounds(BlockSoundGroup.WOOD));
         casinoBarItem = registerItem("casino_bar",
                 (settings, model) -> new RackItem(casinoBar, settings, model));
 

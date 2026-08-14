@@ -1,33 +1,33 @@
 {
   "variants": {
     "facing=north,half=lower": {
-      "model": "trapcraft:block/plinko_lower"
+      "model": "trapcraft:block/slot_machine_lower"
     },
     "facing=east,half=lower": {
-      "model": "trapcraft:block/plinko_lower",
+      "model": "trapcraft:block/slot_machine_lower",
       "y": 90
     },
     "facing=south,half=lower": {
-      "model": "trapcraft:block/plinko_lower",
+      "model": "trapcraft:block/slot_machine_lower",
       "y": 180
     },
     "facing=west,half=lower": {
-      "model": "trapcraft:block/plinko_lower",
+      "model": "trapcraft:block/slot_machine_lower",
       "y": 270
     },
     "facing=north,half=upper": {
-      "model": "trapcraft:block/plinko_upper"
+      "model": "trapcraft:block/slot_machine_upper"
     },
     "facing=east,half=upper": {
-      "model": "trapcraft:block/plinko_upper",
+      "model": "trapcraft:block/slot_machine_upper",
       "y": 90
     },
     "facing=south,half=upper": {
-      "model": "trapcraft:block/plinko_upper",
+      "model": "trapcraft:block/slot_machine_upper",
       "y": 180
     },
     "facing=west,half=upper": {
-      "model": "trapcraft:block/plinko_upper",
+      "model": "trapcraft:block/slot_machine_upper",
       "y": 270
     }
   }
