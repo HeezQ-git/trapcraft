@@ -41,13 +41,12 @@ public class MixerBlock extends TurnableBlock implements PolymerTexturedBlock {
     public MixerBlock(Settings settings) {
         super(settings);
         this.carriers = carriers(
-                // A see-through carrier (TrapPolymer.NON_SOLID), not FULL_BLOCK. The carrier is what the
-                // client believes about this block, and believing a table with
-                // legs is a solid cube makes it cull the faces of whatever is
-                // underneath -- so you stand on a floor above a cave and see
-                // straight through into it. Any model that doesn't fill the
-                // cube has to say so.
-                TrapPolymer.NON_SOLID, "mixing_station",
+                // FULL_BLOCK (note block states), not the leaf pool. The old
+                // comment here talked about a table with legs; the model has
+                // been a plain full cube the whole time, so the see-through
+                // carrier bought nothing except a shader pack waving the
+                // station like a shrub. Solid cube model, solid carrier.
+                BlockModelType.FULL_BLOCK, "mixing_station",
                 () -> Blocks.CRAFTING_TABLE.getDefaultState());
     }
 

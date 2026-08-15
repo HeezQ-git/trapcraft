@@ -49,7 +49,7 @@ public final class TrapPolymer {
      * (note block states, which nothing waves); this pool is only for models
      * that genuinely cannot seal the cube.
      *
-     * So: 25 carriers (bong, gravity bong, mailbox, mixer) out of one
+     * So: 21 carriers (bong 12, gravity bong 5, mailbox 4) out of one
      * 78-state pool, and the 37-state pool left alone entirely. Anything that
      * needs a see-through carrier uses this constant rather than naming a
      * pool of its own.

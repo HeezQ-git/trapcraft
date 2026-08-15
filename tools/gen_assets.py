@@ -1092,15 +1092,33 @@ def poppy_assets() -> None:
 
 
 def mixing_station_assets() -> None:
-    """The station block plus the two blend items it feeds."""
+    """The station block plus the two blend items it feeds.
+
+    Explicit geometry rather than parenting to cube_bottom_top, for the same
+    reason the club does it: a vanilla parent carries no elements of its own,
+    so check_models reads the shell as empty and cannot verify that a
+    FULL_BLOCK carrier's model actually fills the cube.
+    """
     put(f"assets/{NS}/models/block/mixing_station.json", {
-        "parent": "minecraft:block/cube_bottom_top",
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
         "textures": {
             "top": f"{NS}:block/mixing_station_top",
-            "bottom": f"{NS}:block/mixing_station_side",
             "side": f"{NS}:block/mixing_station_side",
             "particle": f"{NS}:block/mixing_station_side",
         },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "south": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "east": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "west": {"texture": "#side", "uv": [0, 0, 16, 16]},
+                "up": {"texture": "#top", "uv": [0, 0, 16, 16]},
+                "down": {"texture": "#side", "uv": [0, 0, 16, 16]},
+            },
+        }],
     })
     put(f"assets/{NS}/models/item/mixing_station.json", {
         "parent": f"{NS}:block/mixing_station",
