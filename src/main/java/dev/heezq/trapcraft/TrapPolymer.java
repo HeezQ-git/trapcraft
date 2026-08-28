@@ -57,6 +57,28 @@ public final class TrapPolymer {
     public static final BlockModelType NON_SOLID = BlockModelType.BIOME_TRANSPARENT_BLOCK;
 
     /**
+     * The pool for small props that must hold still.
+     *
+     * Every carrier in BOTH transparent pools is a leaf -- TRANSPARENT_BLOCK is
+     * azalea, flowering azalea, birch and spruce; BIOME_TRANSPARENT_BLOCK is
+     * oak, spruce, jungle, acacia, dark oak and mangrove. There is no
+     * see-through pool that is not foliage, so "use the other transparent
+     * pool" is not an escape from the swaying: it is the same problem with a
+     * different tree. A bong swaying reads as the room breathing; a row of
+     * medicine bottles swaying on a shelf reads as broken.
+     *
+     * Trapdoors are the way out. Bottom-half trapdoor states are non-opaque so
+     * they cull nothing, they render on cutout exactly like leaves do -- which
+     * is what the glassware models are built for -- and no shader pack waves
+     * or lights a trapdoor, because a trapdoor is neither a plant nor a lamp.
+     * The cost is a small pool: 13 states, against 78 for the leaves. Spend it
+     * on things that are visibly wrong when they move, and leave the rest of
+     * the trapdoor family (four sides and a top half, 13-16 apiece) for the
+     * next one.
+     */
+    public static final BlockModelType INERT = BlockModelType.BOTTOM_TRAPDOOR;
+
+    /**
      * Every carrier handed out, so the overlap above cannot come back silently.
      * A shared state is invisible from the server side -- both blocks work
      * perfectly and one of them just draws as the other.

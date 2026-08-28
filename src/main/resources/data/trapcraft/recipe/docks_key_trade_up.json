@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "KK",
+    "KK"
+  ],
+  "key": {
+    "K": "trapcraft:street_key"
+  },
+  "result": {
+    "id": "trapcraft:docks_key",
+    "count": 1
+  }
+}

@@ -129,9 +129,39 @@ public final class TrapVisitors {
      */
     private static final int TRIP_TICKS = 20 * 60 * 8;
 
-    /** What somebody came to town to do. */
+    /**
+     * What somebody came to town to do.
+     *
+     * The display names are here rather than at the one call site because
+     * /visitors used to print the deque straight -- {@code [CASINO, SHOP]} --
+     * which is the only English left in a readout a player reads, and adding
+     * two more constants would have doubled it.
+     */
     public enum Errand {
-        CASINO, SHOP, WARD
+        CASINO("kasyno"),
+        SHOP("sklep"),
+        WARD("lekarz"),
+        CLUB("klub"),
+        STALL("stragan");
+
+        private final String display;
+
+        Errand(String display) {
+            this.display = display;
+        }
+
+        public String display() {
+            return display;
+        }
+    }
+
+    /** An itinerary as somebody would say it out loud. */
+    private static String said(ArrayDeque<Errand> itinerary) {
+        StringBuilder out = new StringBuilder();
+        for (Errand errand : itinerary) {
+            out.append(out.isEmpty() ? "" : ", ").append(errand.display());
+        }
+        return out.toString();
     }
 
     /** One visitor, mid-trip. */
@@ -296,6 +326,10 @@ public final class TrapVisitors {
      * MOTION_BLOCKING_NO_LEAVES so a treetop is not a pavement, and only ever
      * in a loaded chunk: {@code getTopY} on an unloaded one is the mistake
      * {@link TrapHeat} already carries a comment about.
+     *
+     * Shared with the treasury shift in {@link TrapShops}, which had the same
+     * hole to fall down and fell down it: a clerk sent to the vault's own
+     * block is a resident put underground and left there.
      */
     public static BlockPos doorstep(ServerWorld world, BlockPos vault) {
         var random = world.getRandom();
@@ -349,8 +383,21 @@ public final class TrapVisitors {
         if (ill) {
             itinerary.add(Errand.WARD);
         }
+        // The four a visitor can turn up for, and the clock decides whether
+        // the fourth is on the list at all.
+        //
+        // A club is shut in daylight -- see TrapClubs.hour -- and an errand
+        // that cannot succeed still costs its owner the full START_TRIES
+        // before it is written off, which is the better part of a minute of
+        // somebody standing in the square doing nothing. The retry loop exists
+        // for a floor that happens to be full, not for a venue that is shut
+        // for the next ten minutes, so a daytime arrival is simply never sold
+        // a night out.
+        Errand[] open = world.getTimeOfDay() % 24000L >= 12000L
+                ? new Errand[] {Errand.CASINO, Errand.SHOP, Errand.STALL, Errand.CLUB}
+                : new Errand[] {Errand.CASINO, Errand.SHOP, Errand.STALL};
         while (itinerary.size() < errands) {
-            itinerary.add(random.nextBoolean() ? Errand.CASINO : Errand.SHOP);
+            itinerary.add(open[random.nextInt(open.length)]);
         }
 
         VillagerEntity body = make(world, at);
@@ -370,7 +417,7 @@ public final class TrapVisitors {
         VISITS.add(new Visit(body.getUuid(), itinerary, purse, ill,
                 world.getTime() + TRIP_TICKS));
         world.spawnEntity(body);
-        TrapCraft.LOGGER.info("somebody's in town with {}e, here for {}", purse, itinerary);
+        TrapCraft.LOGGER.info("somebody's in town with {}e, here for {}", purse, said(itinerary));
     }
 
     /**
@@ -470,6 +517,23 @@ public final class TrapVisitors {
         }
         if (errand == Errand.SHOP) {
             if (!TrapShops.sendVisitor(server, body)) {
+                return false;
+            }
+            visit.busy = true;
+            return true;
+        }
+        if (errand == Errand.STALL) {
+            // Walked by the shops, paid at the stall. TrapShops owns every
+            // lesson about crossing a town and TrapStalls owns the till; the
+            // seam is deliberate and documented at both ends.
+            if (!TrapShops.sendVisitorToStall(server, body)) {
+                return false;
+            }
+            visit.busy = true;
+            return true;
+        }
+        if (errand == Errand.CLUB) {
+            if (!TrapClubs.sendVisitor(server, body)) {
                 return false;
             }
             visit.busy = true;
@@ -619,7 +683,7 @@ public final class TrapVisitors {
                 .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         for (Visit visit : VISITS) {
             out.append(net.minecraft.text.Text.literal("\n    " + visit.purse + "e  "
-                            + (visit.busy ? "zajęty" : "idzie") + "  " + visit.itinerary)
+                            + (visit.busy ? "zajęty" : "idzie") + "  " + said(visit.itinerary))
                     .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         }
         out.append(net.minecraft.text.Text.literal(

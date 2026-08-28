@@ -43,10 +43,23 @@ public class CityScreenHandler extends ScreenHandler {
     private static final int PAY_SLOT = 1;
     private static final int RATES_FROM = 2;
     private static final int LEDGER_SLOT = 8;
+    private static final int POLICE_SLOT = 9;
     private static final int TAKE_FROM = 11;
     private static final int GIVE_SLOT = 16;
+    /**
+     * The council's standing order.
+     *
+     * Slot 17 because it is the one square on the top two rows nothing else
+     * wanted, and it sits at the end of the row above the public works -- which
+     * is the right place for it, since the order only exists BECAUSE of them.
+     */
+    private static final int ORDER_SLOT = 17;
     private static final int ABOUT_SLOT = 26;
     private static final int WORKS_FROM = 18;
+
+    /** What one click of the police dial is worth, and what a shift-click is. */
+    private static final int BEAT_STEP = TrapPolice.BUDGET_STEP;
+    private static final int BEAT_LEAP = TrapPolice.BUDGET_STEP * 4;
 
     /** What each withdraw button is worth. Null means everything. */
     private static final Integer[] TAKES = {64, 256, 1024, null};
@@ -57,7 +70,7 @@ public class CityScreenHandler extends ScreenHandler {
     /** One per public work, in declaration order. */
     private static final Item[] WORK_ICONS = {
             Items.CROSSBOW, Items.STONE_BRICKS, Items.LANTERN, Items.GOLD_INGOT,
-            Items.GLISTERING_MELON_SLICE, Items.MINECART, Items.BOOK};
+            Items.GLISTERING_MELON_SLICE, Items.MINECART, Items.BOOK, Items.IRON_BLOCK};
 
     private static final Item[] ICONS = {
             Items.BREAD, Items.BRICKS, Items.AMETHYST_SHARD, Items.PAPER,
@@ -76,6 +89,13 @@ public class CityScreenHandler extends ScreenHandler {
         // symptom would be "Take 4096e opened a different screen".
         if (GIVE_SLOT >= TAKE_FROM && GIVE_SLOT < TAKE_FROM + TAKES.length) {
             throw new IllegalStateException("city board: the take row reaches the donations door");
+        }
+        // The police dial is a click that SPENDS every day from then on, and
+        // it sits one slot off the withdraw row. A fifth take button would
+        // land on it and the symptom would be "Take 4096e hired four coppers".
+        if (POLICE_SLOT >= TAKE_FROM || POLICE_SLOT == GIVE_SLOT
+                || POLICE_SLOT == LEDGER_SLOT) {
+            throw new IllegalStateException("city board: the police dial is under something");
         }
         if (WORK_ICONS.length != TrapCity.Work.values().length
                 || WORKS_FROM + WORK_ICONS.length > SIZE
@@ -123,10 +143,12 @@ public class CityScreenHandler extends ScreenHandler {
             display.setStack(RATES_FROM + i, rate(duties[i], ICONS[i]));
         }
         display.setStack(LEDGER_SLOT, raised());
+        display.setStack(POLICE_SLOT, beat());
         for (int i = 0; i < TAKES.length; i++) {
             display.setStack(TAKE_FROM + i, take(TAKES[i]));
         }
         display.setStack(GIVE_SLOT, donations());
+        display.setStack(ORDER_SLOT, order());
         TrapCity.Work[] works = TrapCity.Work.values();
         for (int i = 0; i < works.length; i++) {
             display.setStack(WORKS_FROM + i, work(works[i], WORK_ICONS[i]));
@@ -218,6 +240,67 @@ public class CityScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /**
+     * The one standing cost the council actually chooses.
+     *
+     * Everything else at this counter is a purchase you make once. This is a
+     * subscription, and it is the only dial in the mod that a player can set
+     * to a number the treasury cannot sustain -- deliberately, because the
+     * interesting decision is exactly "can we afford this many coppers", and
+     * a dial that refused to move past what today's purse covers would answer
+     * the question for you.
+     *
+     * At the vault rather than at the station because a budget is the
+     * council's, not the duty sergeant's. See the note on PoliceScreenHandler.
+     */
+    private ItemStack beat() {
+        int budget = TrapPolice.budget();
+        int stations = TrapPolice.all().size();
+        ItemStack tag = new ItemStack(stations == 0 ? Items.GRAY_DYE
+                : budget > 0 ? Items.SHIELD : Items.BARRIER);
+        tag.set(DataComponentTypes.CUSTOM_NAME, plain("Policja")
+                .formatted(stations == 0 ? Formatting.DARK_GRAY : Formatting.AQUA,
+                        Formatting.BOLD)
+                .append(plain("   " + budget + "e dziennie")
+                        .formatted(budget > 0 ? Formatting.GOLD : Formatting.RED)));
+        List<Text> lore = new ArrayList<>();
+        if (stations == 0) {
+            lore.add(line("Nie ma komisariatu. Postaw blok", Formatting.RED));
+            lore.add(line("komisariatu w gotowym budynku z celami.", Formatting.RED));
+            lore.add(Text.empty());
+            lore.add(line("Bez niego te pieniądze nie mają dokąd pójść.",
+                    Formatting.DARK_GRAY));
+        } else {
+            lore.add(line("Na etacie " + TrapPolice.force() + " z "
+                            + budget / TrapPolice.WAGE + " opłaconych   (cel: "
+                            + TrapPolice.cells() + ")",
+                    TrapPolice.force() < budget / TrapPolice.WAGE
+                            ? Formatting.YELLOW : Formatting.WHITE));
+            lore.add(line("Wyposażenie " + TrapPolice.gear() + " z " + TrapPolice.TOP_GEAR
+                    + "  --  szybsi i dalej widzą.", Formatting.WHITE));
+            lore.add(line("Zbija przestępczość o "
+                            + Math.round(TrapPolice.deterrence() * 100) + "%.",
+                    TrapPolice.deterrence() > 0 ? Formatting.GREEN : Formatting.RED));
+            lore.add(Text.empty());
+            lore.add(line("LPM  +" + BEAT_STEP + "e     PPM  -" + BEAT_STEP + "e",
+                    Formatting.YELLOW));
+            lore.add(line("Shift  o " + BEAT_LEAP + "e naraz. Do " + TrapPolice.MAX_BUDGET
+                    + "e.", Formatting.YELLOW));
+            lore.add(Text.empty());
+            lore.add(line("Jeden funkcjonariusz: " + TrapPolice.WAGE + "e dziennie,",
+                    Formatting.DARK_GRAY));
+            lore.add(line("każde " + TrapPolice.GEAR_AT + "e to stopień wyposażenia.",
+                    Formatting.DARK_GRAY));
+            if (TrapPolice.funded() < budget) {
+                lore.add(Text.empty());
+                lore.add(line("Dziś kasa dała tylko " + TrapPolice.funded() + "e.",
+                        Formatting.RED));
+            }
+        }
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack take(Integer amount) {
         long purse = TrapCity.treasury();
         long wanted = amount == null ? purse : Math.min(amount, purse);
@@ -292,6 +375,61 @@ public class CityScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    /**
+     * What the council wants delivered, and whether you are carrying it.
+     *
+     * The icon is the goods themselves, which is the only sensible choice: a
+     * player should be able to read the order off the shape of the item
+     * without opening the tooltip, exactly as they read a shop shelf.
+     *
+     * Every state this can be in says which one it is out loud, because the
+     * three ways to see nothing here -- everything built, purse too thin,
+     * already filled today -- are indistinguishable from a broken feature
+     * otherwise. Same rule {@code /visitors} is written to.
+     */
+    private ItemStack order() {
+        TrapCity.Order order = TrapCity.order(who.getServer());
+        if (order == null) {
+            ItemStack tag = new ItemStack(Items.PAPER);
+            tag.set(DataComponentTypes.CUSTOM_NAME,
+                    plain("Zlecenia miejskie").formatted(Formatting.GRAY, Formatting.BOLD));
+            List<Text> lore = new ArrayList<>();
+            lore.add(line(!TrapCity.founded() ? "Nie ma miasta."
+                            : TrapCity.filledToday(who.getServer())
+                            ? "Dzisiejsze zlecenie już wykonane. Wróć jutro."
+                            : "Kasa miasta nie ma na to zapasu.",
+                    Formatting.GRAY));
+            lore.add(line("Rada kupuje materiały, dopóki ma co budować.",
+                    Formatting.DARK_GRAY));
+            tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+            return tag;
+        }
+        int wanted = order.lots() * order.entry().count();
+        int have = 0;
+        for (int slot = 0; slot < who.getInventory().size(); slot++) {
+            if (order.entry().matches(who.getInventory().getStack(slot))) {
+                have += who.getInventory().getStack(slot).getCount();
+            }
+        }
+        ItemStack tag = order.entry().stack();
+        tag.setCount(1);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Zlecenie: " + order.entry().label())
+                        .formatted(Formatting.AQUA, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line(wanted + " sztuk za " + order.paid() + "e",
+                Formatting.GOLD, Formatting.BOLD));
+        lore.add(line(have >= wanted ? "Masz wszystko. Kliknij, żeby oddać."
+                        : "Masz " + have + " z " + wanted + ".",
+                have >= wanted ? Formatting.GREEN : Formatting.RED));
+        lore.add(line("Rada płaci lepiej niż lada i gorzej, niż lada bierze.",
+                Formatting.DARK_GRAY));
+        lore.add(line("Jedno zlecenie dziennie, dopóki jest co budować.",
+                Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack about() {
         ItemStack tag = new ItemStack(Items.BELL);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -326,6 +464,47 @@ public class CityScreenHandler extends ScreenHandler {
                 click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
             } else {
                 click(SoundEvents.BLOCK_VAULT_INSERT_ITEM, 1.2F);
+            }
+            paint();
+            return;
+        }
+        if (index == POLICE_SLOT) {
+            if (TrapPolice.all().isEmpty()) {
+                who.sendMessage(Text.literal("Nie ma komisariatu, któremu można płacić.")
+                        .formatted(Formatting.GRAY), true);
+                click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
+                return;
+            }
+            int step = type == SlotActionType.QUICK_MOVE ? BEAT_LEAP : BEAT_STEP;
+            int was = TrapPolice.budget();
+            TrapPolice.setBudget(was + (button == 1 ? -step : step));
+            int now = TrapPolice.budget();
+            click(now == was ? SoundEvents.BLOCK_NOTE_BLOCK_BASS.value()
+                            : SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
+                    now > was ? 1.4F : 0.8F);
+            who.sendMessage(Text.empty()
+                    .append(TrapNotes.say("Budżet policji  ", Formatting.GRAY))
+                    .append(TrapNotes.say(now + "e/dzień", Formatting.GOLD, Formatting.BOLD))
+                    .append(TrapNotes.say("   " + TrapPolice.force() + " na etacie   "
+                                    + "wyposażenie " + TrapPolice.gear(),
+                            Formatting.DARK_GRAY)), true);
+            paint();
+            return;
+        }
+        if (index == ORDER_SLOT) {
+            TrapCity.Order order = TrapCity.order(who.getServer());
+            int paid = order == null ? 0 : TrapCity.fill(who, order);
+            if (paid <= 0) {
+                who.sendMessage(Text.literal(order == null
+                                ? "Rada nic dziś nie kupuje."
+                                : "Nie masz przy sobie całego zamówienia.")
+                        .formatted(Formatting.GRAY), true);
+                click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
+            } else {
+                click(SoundEvents.BLOCK_VAULT_INSERT_ITEM, 1.2F);
+                who.sendMessage(TrapNotes.headline("Dostarczone  ", Formatting.GREEN)
+                        .append(TrapNotes.say("rada zapłaciła " + paid + "e.",
+                                Formatting.GRAY)), false);
             }
             paint();
             return;
@@ -380,8 +559,17 @@ public class CityScreenHandler extends ScreenHandler {
         return player == who;
     }
 
+    /**
+     * A span that inherits nothing it did not ask for.
+     *
+     * Bold as well as italic, because every slot on this board is built as
+     * {@code plain(label).formatted(BOLD).append(plain(value))} and the value
+     * was quietly inheriting the label's weight -- so the whole board read as
+     * one bold block with no hierarchy in it. See {@link TrapNotes}.
+     */
     private static MutableText plain(String text) {
-        return Text.literal(text).styled(style -> style.withItalic(false));
+        return Text.literal(text)
+                .styled(style -> style.withItalic(false).withBold(false));
     }
 
     private static MutableText line(String text, Formatting... colours) {

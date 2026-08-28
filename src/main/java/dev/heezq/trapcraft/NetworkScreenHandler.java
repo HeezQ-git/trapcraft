@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -37,6 +38,14 @@ public class NetworkScreenHandler extends ScreenHandler {
     private static final int HELP_SLOT = 13;
     private static final int REROLL_SLOT = 17;
     private static final int OFFER_ROW = 2;
+    /**
+     * The market, from wherever you are standing.
+     *
+     * On this page and not behind its own gesture because the phone only has
+     * two -- click and sneak-click -- and both were spoken for. The far end of
+     * the middle row, mirroring the reroll button.
+     */
+    private static final int MARKET_SLOT = 9;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity boss;
@@ -81,7 +90,22 @@ public class NetworkScreenHandler extends ScreenHandler {
         }
         display.setStack(HELP_SLOT, help());
         display.setStack(REROLL_SLOT, rerollTag());
+        display.setStack(MARKET_SLOT, marketTag());
         sendContentUpdates();
+    }
+
+    private ItemStack marketTag() {
+        ItemStack tag = new ItemStack(Items.EMERALD);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Rynek").formatted(Formatting.GREEN, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Ten sam stragan, tylko przez telefon.", Formatting.GRAY),
+                Text.empty(),
+                line("W kieszeni: ", Formatting.DARK_GRAY)
+                        .append(plain(TrapMarket.wealthOf(boss) + "e").formatted(Formatting.GREEN)),
+                Text.empty(),
+                line("Kliknij, żeby otworzyć.", Formatting.YELLOW))));
+        return tag;
     }
 
     private ItemStack help() {
@@ -91,6 +115,7 @@ public class NetworkScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line("Górny rząd: twoi. Kliknij, żeby wezwać.", Formatting.GRAY),
                 line("Dolny rząd: chętni do pracy.", Formatting.GRAY),
+                line("Po lewej: rynek, bez chodzenia na stragan.", Formatting.GRAY),
                 Text.empty(),
                 line("Sprzedają, kiedy cię nie ma. Najlepiej w", Formatting.WHITE),
                 line("nocy, najgorzej koło południa.", Formatting.WHITE),
@@ -212,6 +237,14 @@ public class NetworkScreenHandler extends ScreenHandler {
             } else {
                 boss.closeHandledScreen();
             }
+            return;
+        }
+        if (index == MARKET_SLOT) {
+            boss.getWorld().playSound(null, boss.getBlockPos(),
+                    SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundCategory.PLAYERS, 0.5F, 1.6F);
+            boss.openHandledScreen(new SimpleNamedScreenHandlerFactory(
+                    (id, inventory, ignored) -> new ShopScreenHandler(id, inventory),
+                    plain("Rynek").formatted(Formatting.DARK_GREEN)));
             return;
         }
         if (index == REROLL_SLOT) {

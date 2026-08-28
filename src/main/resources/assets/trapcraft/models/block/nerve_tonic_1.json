@@ -1,0 +1,176 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "glass": "trapcraft:item/tonic_glass",
+    "liquid": "trapcraft:item/tonic_liquid",
+    "cork": "trapcraft:item/tonic_cork",
+    "particle": "trapcraft:item/tonic_liquid"
+  },
+  "elements": [
+    {
+      "from": [
+        5.8,
+        0.0,
+        5.8
+      ],
+      "to": [
+        10.2,
+        3.85,
+        10.2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#liquid",
+          "uv": [
+            5.8,
+            12.15,
+            10.2,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#liquid"
+        },
+        "east": {
+          "texture": "#liquid",
+          "uv": [
+            5.8,
+            12.15,
+            10.2,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#liquid"
+        },
+        "up": {
+          "texture": "#liquid"
+        },
+        "down": {
+          "texture": "#liquid",
+          "uv": [
+            5.8,
+            5.8,
+            10.2,
+            10.2
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        5.8,
+        3.85,
+        5.8
+      ],
+      "to": [
+        10.2,
+        5.225,
+        10.2
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass",
+          "uv": [
+            5.8,
+            10.775,
+            10.2,
+            12.15
+          ]
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass",
+          "uv": [
+            5.8,
+            10.775,
+            10.2,
+            12.15
+          ]
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass",
+          "uv": [
+            5.8,
+            5.8,
+            10.2,
+            10.2
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        6.9,
+        5.225,
+        6.9
+      ],
+      "to": [
+        9.1,
+        7.15,
+        9.1
+      ],
+      "faces": {
+        "north": {
+          "texture": "#glass"
+        },
+        "south": {
+          "texture": "#glass"
+        },
+        "east": {
+          "texture": "#glass"
+        },
+        "west": {
+          "texture": "#glass"
+        },
+        "up": {
+          "texture": "#glass"
+        },
+        "down": {
+          "texture": "#glass"
+        }
+      }
+    },
+    {
+      "from": [
+        6.625,
+        7.15,
+        6.625
+      ],
+      "to": [
+        9.375,
+        8.25,
+        9.375
+      ],
+      "faces": {
+        "north": {
+          "texture": "#cork"
+        },
+        "south": {
+          "texture": "#cork"
+        },
+        "east": {
+          "texture": "#cork"
+        },
+        "west": {
+          "texture": "#cork"
+        },
+        "up": {
+          "texture": "#cork"
+        },
+        "down": {
+          "texture": "#cork"
+        }
+      }
+    }
+  ]
+}

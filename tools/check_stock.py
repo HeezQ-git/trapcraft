@@ -563,6 +563,43 @@ def half_a_chest() -> list[str]:
     return problems
 
 
+def key_prices() -> list[str]:
+    """The key shelf has to quote what CaseOdds charges.
+
+    CaseOdds.java is the economy: CaseOddsTest proves that no case can be
+    resold for more than its key cost, and it proves it against the price in
+    THAT file. ShopStock writes the same four numbers out as literals so the
+    rest of this script -- and the wiki price table -- can see them at all,
+    which leaves exactly one way for the feature to break silently: somebody
+    edits the shelf and not the odds, and the shop starts selling a 6,000e key
+    for 600e with a test still cheerfully proving the 6,000e case is safe.
+    """
+    problems = []
+    odds = (ROOT / "src/main/java/dev/heezq/trapcraft/CaseOdds.java").read_text()
+    # Scoped to the Tier enum's own constants -- everything up to the first
+    # semicolon. Matching STREET("street", 450) across the whole file also
+    # matches the Grade constants, which are the ODDS, and comparing a shelf
+    # price against 1598 is a check that reports nonsense with total confidence.
+    block = re.search(r"enum Tier \{(.*?);", odds, re.S)
+    if block is None:
+        return ["can't find the Tier enum in CaseOdds.java"]
+    wanted = {tier: int(price.replace("_", "")) for tier, price
+              in re.findall(r'\w+\("(\w+)", ([\d_]+)\)', block.group(1))}
+    listed = {tier: int(price) for tier, price
+              in re.findall(r'add\(c, "trapcraft:(\w+)_key", 1, (\d+)\);',
+                            STOCK.read_text())}
+    if not wanted or not listed:
+        return ["can't read the key prices out of CaseOdds.java or ShopStock.java"]
+    for tier, price in listed.items():
+        if wanted.get(tier) != price:
+            problems.append(f"{tier} key is {price}e on the shelf but "
+                            f"{wanted.get(tier)}e in CaseOdds")
+    for tier in wanted:
+        if tier not in listed:
+            problems.append(f"{tier} key has no shelf line -- it can't be bought")
+    return problems
+
+
 def main() -> int:
     source = STOCK.read_text()
     spells = vanilla_enchantments()
@@ -591,6 +628,7 @@ def main() -> int:
     problems.extend(craft_loops(goods))
     problems.extend(half_a_chest())
     problems.extend(city_board())
+    problems.extend(key_prices())
 
     for ident, _, base in goods:
         if round(base * WORST_INDEX) < SELL_FLOOR:

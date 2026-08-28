@@ -30,6 +30,15 @@ import java.util.List;
  * underground is worth doing. Splitting it across two buildings is worth
  * doing. So is standing between them and the chest, because a dead raider
  * searches nothing.
+ *
+ * <h2>And now somebody rings the police</h2>
+ *
+ * See {@link #reported}. A raid used to be the one pressure a funded city
+ * could do nothing about, which made a farm inside a beat worth no more than
+ * a farm in the woods -- and given heat is halved underground, strictly worth
+ * less. The call is the other side of that trade, and it is a trade rather
+ * than a gift: the officers who come do not stop being officers when they
+ * arrive.
  */
 public final class TrapRaid {
     /** How far from the raid site a container can be and still get turned over. */
@@ -82,6 +91,46 @@ public final class TrapRaid {
         }
         RUNNING.add(new Search(world, site, raiders, new int[]{SEARCH_TICKS},
                 new int[]{1}, new int[]{0}));
+        reported(world, site);
+    }
+
+    /**
+     * Somebody rings it in.
+     *
+     * The gap this closes: a raid was the only pressure in the mod that the
+     * city could not answer. The town has a police force with a budget dial on
+     * it, and that force spent its shift walking past houses while four armed
+     * men emptied a chest two hundred blocks away, because nothing ever told
+     * it. A council could fund the force to the ceiling and it changed nothing
+     * about the thing players actually lose sleep over.
+     *
+     * Which quietly settles an argument the mod has never had a good answer
+     * to. Hiding a grow far from everybody was strictly correct -- heat is
+     * halved underground and no neighbour ever sees you -- so the city was
+     * somewhere you sold, never somewhere you worked. A farm inside a beat now
+     * buys something a bunker cannot: people who turn up.
+     *
+     * It is a call, not a guarantee. {@link TrapPolice#callOut} answers false
+     * when there is no station in range, none open, or none funded well enough
+     * to have anybody standing up in it -- and the message says which kind of
+     * nothing happened, because a force that was never going to come and a
+     * force that is on its way look identical from inside a burning shed.
+     */
+    private static void reported(ServerWorld world, BlockPos site) {
+        boolean answered = TrapPolice.callOut(world, site);
+        for (ServerPlayerEntity player : world.getPlayers()) {
+            if (!player.getBlockPos().isWithinDistance(site, 96)) {
+                continue;
+            }
+            player.sendMessage(answered
+                    ? Text.literal("Ktoś zadzwonił. ").formatted(Formatting.AQUA, Formatting.BOLD)
+                    .append(Text.literal("Patrol jest w drodze -- i nie pyta, czyj to towar.")
+                            .formatted(Formatting.GRAY))
+                    : Text.literal("Nikt nie przyjedzie. ")
+                    .formatted(Formatting.RED, Formatting.BOLD)
+                    .append(Text.literal("Żadna komenda nie ma tu patrolu w zasięgu.")
+                            .formatted(Formatting.GRAY)), false);
+        }
     }
 
     /**

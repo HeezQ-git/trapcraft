@@ -52,6 +52,15 @@ public final class TrapScrap {
         if (stack.getItem() instanceof WandItem) {
             return "różdżki nie wracają na półkę";
         }
+        // Cases and keys, both halves. The key because the shelf sells it and
+        // chests give it away, so a counter that took it would pay for
+        // exploring in emeralds instead of in cases. The case because it is
+        // never sold at all -- there is no shelf price to work back from, and
+        // a scrap value invented for it would be the only number in the
+        // feature nobody had to justify.
+        if (stack.getItem() instanceof CaseItem) {
+            return "skrzynki i klucze się nie skupuje";
+        }
         // A shulker box or bundle with something inside would sell its contents
         // invisibly at the price of the empty container. Refuse rather than
         // quietly eat whatever is in it.

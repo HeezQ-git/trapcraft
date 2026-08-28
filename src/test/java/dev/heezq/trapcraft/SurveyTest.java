@@ -74,6 +74,12 @@ class SurveyTest {
             return at(x, y, z) == 'X';
         }
 
+        /** 'Z' is wall the survey made up, because nobody had the chunk. */
+        @Override
+        public boolean asleep(int x, int y, int z) {
+            return at(x, y, z) == 'Z';
+        }
+
         HomeSurvey.Rooms survey() {
             return surveyFrom('@');
         }
@@ -200,6 +206,27 @@ class SurveyTest {
         assertTrue(found.clash());
     }
 
+    /**
+     * The block of flats: your own walls, your front door onto ground that is
+     * somebody else's -- a stairwell, a street, the flat below.
+     *
+     * The claim is a BOX, so this is not a rare shape. Any house tall enough
+     * reaches over the road, and every front door within a few blocks of one
+     * used to condemn the building it belonged to and report it as "not a
+     * room".
+     */
+    @Test
+    void aFrontDoorOntoSomebodyElsesGroundIsStillAFrontDoor() {
+        HomeSurvey.Rooms found = new Plan(
+                "#####X",
+                "#.@.DX",
+                "#####X").survey();
+        assertTrue(found.sealed(), "the room is sealed; their ground is outside it");
+        assertFalse(found.clash());
+        assertEquals(1, found.exits().size(), "the door onto their ground is the way out");
+        assertEquals(3, found.inside().size(), "and none of their ground comes with it");
+    }
+
     @Test
     void bricksOverTheAnchorReadAsCollapsed() {
         HomeSurvey.Rooms found = HomeSurvey.survey(new Plan(
@@ -296,6 +323,47 @@ class SurveyTest {
         assertTrue(found.sealed());
         assertEquals(0, found.exits().size(), "no way out at all, so no front door");
         assertTrue(found.floor() > 140, "the big room merged, got " + found.floor());
+    }
+
+    // --- half the building asleep ---------------------------------------------
+
+    /**
+     * The bug that made HeezQ's station open and shut all day.
+     *
+     * A building is bigger than a chunk and a chunk is loaded on its own. When
+     * one of them is not about, every square in it answers WALL -- so the fill
+     * stops at the chunk line and comes back with a room that is sealed,
+     * smaller, and perfectly plausible. No hole, no complaint, just four fewer
+     * cells than the place has. Graded, that closes the station; twelve seconds
+     * later the chunk is back and it opens again.
+     *
+     * The lie is unavoidable -- the survey cannot see what is not loaded -- so
+     * the fix is that it OWNS UP to it, and here is the assertion that says so.
+     */
+    @Test
+    void aSleepingChunkIsAWallTheSurveyMadeUp() {
+        HomeSurvey.Rooms found = new Plan(
+                "###########",
+                "#..@.#Z#..#",
+                "#....DZD..#",
+                "###########").survey();
+
+        assertTrue(found.sealed(), "a sleeping chunk seals the room rather than holing it");
+        assertTrue(found.floor() < 12, "only the near half was measured, got " + found.floor());
+        assertTrue(found.asleep(), "and the reading has to say so");
+    }
+
+    @Test
+    void anAwakeBuildingIsNotFlagged() {
+        HomeSurvey.Rooms found = new Plan(
+                "###########",
+                "#..@.#.#..#",
+                "#....D.D..#",
+                "###########").survey();
+
+        assertTrue(found.sealed());
+        assertTrue(found.floor() > 12, "the far half joined, got " + found.floor());
+        assertFalse(found.asleep(), "nothing was asleep, so nothing to own up to");
     }
 
     // --- furniture is floor ---------------------------------------------------
@@ -403,7 +471,7 @@ class SurveyTest {
             terrace.add(HomeSurvey.cell(x, 1, 5));
         }
         HomeSurvey.Rooms found = new HomeSurvey.Rooms(inside, Set.of(), terrace,
-                List.of(), true, false, 0L, false);
+                List.of(), true, false, 0L, false, false);
 
         assertEquals(8, found.indoors());
         assertEquals(8 / HomeSurvey.TERRACE_SHARE, found.decking(),

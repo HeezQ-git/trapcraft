@@ -925,8 +925,16 @@ class FormulaTest {
         }
         assertEquals(TrapMath.PUNTER_MAX_STAKE,
                 TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(0));
-        assertEquals(16, TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(7),
-                "seven in the room should cap at 16e, as advertised");
+        // A packed room is still the cheap room -- but "packed" has to mean
+        // packed for the town this game grew into. The bands used to run out
+        // at seven, so every punter on a forty-person floor was pinned to the
+        // bottom one and the ceiling had stopped being a ceiling.
+        assertEquals(16, TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(19),
+                "a genuinely packed room should cap at 16e, as advertised");
+        assertEquals(32, TrapMath.PUNTER_MIN_STAKE << TrapMath.punterStakeCeiling(18),
+                "and a busy-but-not-heaving one at 32e");
+        assertTrue(TrapMath.punterStakeCeiling(7) > TrapMath.punterStakeCeiling(19),
+                "seven in the room is not the same as twenty");
     }
 
     @Test
@@ -1005,12 +1013,21 @@ class FormulaTest {
         assertTrue(gross > 0, "the villagers must lose in the long run: " + gross);
 
         long cut = TrapMath.protectionOn(handle / cycles);
-        long lean = gross - cut - 10L * TrapMath.MACHINE_UPKEEP * 2 * 20;
-        long bloated = gross - cut - 20L * TrapMath.MACHINE_UPKEEP * 2 * 20;
+        // Four punters' worth of trade, so ten machines run six dark and
+        // twenty run sixteen. That is the whole question here: over-building
+        // has to COST, and it must not be fatal. It used to be fatal --
+        // upkeep was flat per cabinet, so past some machine count no floor
+        // broke even at any hour and the only advice was "own fewer".
+        long lean = gross - cut - TrapMath.upkeepOn(10, 6) * 2L * 20;
+        long bloated = gross - cut - TrapMath.upkeepOn(20, 16) * 2L * 20;
         assertTrue(lean > 150 && lean < 1200,
                 "a day cycle should be worth a few hundred, not thousands: " + lean);
-        assertTrue(bloated < lean / 3,
-                "twice the machines on the same trade should eat the profit: " + bloated);
+        assertTrue(bloated < lean,
+                "twice the machines on the same trade must still cost something: "
+                        + bloated + " against " + lean);
+        assertTrue(bloated > lean / 2,
+                "twice the machines must not eat the floor: " + bloated
+                        + " against " + lean);
     }
 
     @Test
@@ -1042,7 +1059,7 @@ class FormulaTest {
             List<Float> rtps = new java.util.ArrayList<>();
             for (int tick = 0; tick < 24_000; tick += 10) {
                 if (tick % 600 == 0) {
-                    vault -= machines * TrapMath.MACHINE_UPKEEP
+                    vault -= TrapMath.upkeepOn(machines, machines - inside.size())
                             + TrapMath.protectionOn(handleThisBeat);
                     handleThisBeat = 0;
                 }
@@ -1661,11 +1678,29 @@ class FormulaTest {
 
     @Test
     void everyCallOnTheCoinIsPricedTheSame() {
+        float worst = 1.0f;
+        float best = 0.0f;
         for (int called = 0; called < 3; called++) {
             float rtp = TrapMath.tossReturnToPlayer(called);
             assertTrue(rtp < 1.0f, "call " + called + " returns " + rtp + " -- the house loses");
             assertTrue(rtp > 0.93f, "call " + called + " returns " + rtp + " -- too mean");
+            worst = Math.min(worst, rtp);
+            best = Math.max(best, rtp);
         }
+        // The band above is wide enough to let the rim drift a long way from
+        // the sides, and the whole point of the game is that it does not: the
+        // class note promises the same edge whichever way you call it. Halving
+        // TOSS_EDGE_PAY without doubling TOSS_EDGE_CHANCE prices the rim at
+        // 0.48 and still leaves heads and tails at 0.96, so it is the SPREAD
+        // that catches it, not either number on its own.
+        //
+        // A point rather than the half the class note claims, because the real
+        // spread is 0.0052 and always has been -- 0.96 against 0.965 -- so a
+        // literal 0.005 here is red on numbers nobody has touched. The gap
+        // being guarded against is ninety times this.
+        assertTrue(best - worst < 0.01f,
+                "calls run from " + worst + " to " + best + " -- the rim and the"
+                        + " sides must carry the same edge to within a point");
     }
 
     @Test

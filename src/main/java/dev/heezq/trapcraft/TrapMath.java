@@ -424,6 +424,28 @@ public final class TrapMath {
         return new int[]{lots, Math.min(Math.max(loose, 0), room - lots * 9)};
     }
 
+    // --- the casino floor -----------------------------------------------------
+
+    /**
+     * What every machine on the floor will take, and what roulette stacks.
+     *
+     * One ladder, in one place, because seven cabinets disagreeing about what a
+     * bet is would be seven bugs waiting. The top of it is deliberately out of
+     * reach of most houses: {@link #houseCovers} refuses a stake the float
+     * cannot pay out, so a 4096e button on a small casino is a button that says
+     * no. That is the table limit doing its job, not a broken option.
+     *
+     * Roulette gets its own, one notch finer and one notch lower, because a
+     * chip there is laid per field and a board carries many of them.
+     */
+    public static final int[] STAKES = {8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+    public static final int[] CHIPS = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+
+    /** Step the stake button: forward on a left click, back on a right one. */
+    public static int cycle(int choice, int length, boolean back) {
+        return (choice + (back ? length - 1 : 1)) % length;
+    }
+
     // --- the slot machine -----------------------------------------------------
 
     /**
@@ -1507,7 +1529,12 @@ public final class TrapMath {
         float swing = -(float) Math.sin(phase);
         // Floored rather than allowed to reach zero: a casino that is provably
         // shut for eight minutes every day is a casino people stop checking.
-        return Math.max(0.12f, 1.0f + 0.95f * swing);
+        //
+        // The floor is 0.35 and was 0.12, which was shut in all but name --
+        // measured across a live day the noon hours ran 568e of trade a beat
+        // against 52e of bill, the worst stretch of the cycle by a distance.
+        // A quiet afternoon is the shape that was wanted; an empty one is not.
+        return Math.max(0.35f, 1.0f + 0.95f * swing);
     }
 
     /** Least and most a punter will put on one round. */
@@ -1520,25 +1547,35 @@ public final class TrapMath {
      *
      * A quiet floor is where the money is: two people in, and one of them may
      * be putting 256e on a spin. A packed floor is a packed floor because it
-     * is cheap -- seven in and nobody is playing above sixteen. Which is both
-     * true of real rooms and the thing that keeps a busy night from being
-     * simply a bigger night: you trade the size of the bets for the number of
-     * them.
+     * is cheap. Which is both true of real rooms and the thing that keeps a
+     * busy night from being simply a bigger night: you trade the size of the
+     * bets for the number of them.
+     *
+     * Rescaled 2026-08-13 for the room this game actually has. The old bands
+     * ran out at SEVEN -- they were written when a floor held a handful and
+     * the town was a dozen -- and by the time the town reached forty every
+     * punter on every night was pinned to the bottom band. Measured across two
+     * full days either side of the arrivals fix: the crowd doubled, the takings
+     * did not, and the average stake moved 14.3e to 14.4e. A ceiling that is
+     * always in force is not a ceiling, it is a price.
+     *
+     * Same shape, spread over the range that now happens. Twenty in the room
+     * is still the cheap floor it is supposed to be.
      */
     public static int punterStakeCeiling(int crowd) {
-        if (crowd <= 1) {
-            return 5;   // up to 256e
-        }
-        if (crowd <= 3) {
-            return 4;   // up to 128e
+        if (crowd <= 2) {
+            return 5;   // up to 256e, average 39e
         }
         if (crowd <= 5) {
-            return 3;   // up to 64e
+            return 4;   // up to 128e, average 36e
         }
-        if (crowd <= 6) {
-            return 2;   // up to 32e
+        if (crowd <= 10) {
+            return 3;   // up to 64e,  average 29e
         }
-        return 1;       // up to 16e
+        if (crowd <= 18) {
+            return 2;   // up to 32e,  average 21e
+        }
+        return 1;       // up to 16e,  average 14e
     }
 
     /**
@@ -1646,8 +1683,37 @@ public final class TrapMath {
         return 0.45f * (wear - JAM_FROM) / (float) (WEAR_BROKEN - JAM_FROM);
     }
 
-    /** What one wired machine costs to keep lit, per beat. */
+    /** What one wired machine costs to keep lit, per beat, with somebody on it. */
     public static final int MACHINE_UPKEEP = 1;
+
+    /**
+     * ...and what one nobody is sitting at costs instead.
+     *
+     * A flat emerald a cabinet made the machine count a CEILING rather than a
+     * decision: the bill is linear in machines and the trade is not, so past
+     * some number no floor breaks even at any hour, and the only advice
+     * anybody could give an owner was "own fewer machines". Measured on the
+     * live floor 2026-08-13: 47 cabinets, 28 ever occupied at the dusk peak,
+     * 19 of them never touched across a whole day at an emerald a beat each.
+     *
+     * A dark cabinet is a dark cabinet. It costs a quarter, so an over-built
+     * floor is carrying dead weight rather than bleeding to death, and the
+     * answer to "should I build another one" stops being no.
+     *
+     * A BROKEN one still costs full price -- it is not free, it is out of
+     * order, and the hammer is cheap. That is deliberate.
+     */
+    public static final float IDLE_UPKEEP = 0.25f;
+
+    /**
+     * The lights bill for a floor of this many, this many of them standing
+     * empty. One place, so the vault screen and the beat cannot disagree.
+     */
+    public static int upkeepOn(int machines, int free) {
+        int dark = Math.max(0, Math.min(machines, free));
+        return Math.round(Math.max(0, machines - dark) * MACHINE_UPKEEP
+                + dark * IDLE_UPKEEP);
+    }
     /**
      * The cut somebody takes of everything played on your floor.
      *
@@ -1672,8 +1738,14 @@ public final class TrapMath {
      * Sized so a busy ten-machine floor throws up something to fix every ten
      * minutes or so: often enough to be a job, rare enough not to be the only
      * job.
+     *
+     * Was 15, which was sized against a floor turning over sixty rounds a
+     * beat. At the seventy-five the live floor now runs, parts were the single
+     * biggest line on the bill -- 15e a beat against 27e of lights and wages
+     * -- and the repair notices arrived faster than anybody could walk the
+     * room. Twenty-five keeps the hammer a job and takes parts down to 9e.
      */
-    public static final int WEAR_PER_ROUNDS = 15;
+    public static final int WEAR_PER_ROUNDS = 25;
     /** Past this a machine is out of order and takes no bets. */
     public static final int WEAR_BROKEN = 100;
     /** What putting one right takes out of the vault, per point of wear. */
@@ -2412,17 +2484,26 @@ public final class TrapMath {
      * Heads, tails, and the third thing.
      *
      * A coin toss is the most boring bet there is, which is exactly why this
-     * one has an edge: about three tosses in two hundred the coin comes down
-     * on its rim, and anybody who called it takes sixty-four times their
-     * stake. Nobody wins it. Everybody tries it once.
+     * one has an edge: about three tosses in a hundred the coin comes down on
+     * its rim, and anybody who called it takes thirty-two times their stake.
+     * Nobody wins it. Everybody tries it once.
      *
      * The two sensible bets and the silly one carry the same house edge to
      * within half a percent, so calling the edge is a genuine choice about
-     * variance rather than a trap.
+     * variance rather than a trap. Which is why the pay and the chance move
+     * TOGETHER: halving the payout to 32x on its own would price the rim at
+     * 48% and turn the one bet on the floor that is supposed to be a choice
+     * into the trap the paragraph above says it is not. Rim return is
+     * CHANCE * PAY and it stays at 0.96.
+     *
+     * The side pay is 1.99 rather than 1.96 for the same reason from the
+     * other end: a rim that comes up twice as often takes three quarters of a
+     * percent out of the space heads and tails share, and without the bump
+     * the ordinary bet quietly drops from 0.965 to 0.951.
      */
-    public static final float TOSS_EDGE_CHANCE = 0.015f;
-    public static final float TOSS_SIDE_PAY = 1.96f;
-    public static final float TOSS_EDGE_PAY = 64.0f;
+    public static final float TOSS_EDGE_CHANCE = 0.03f;
+    public static final float TOSS_SIDE_PAY = 1.99f;
+    public static final float TOSS_EDGE_PAY = 32.0f;
 
     /** 0 heads, 1 tails, 2 on its edge. */
     public static int tossResult(float roll) {
@@ -2708,5 +2789,350 @@ public final class TrapMath {
     public static int stepped(int amount, int step, long cap) {
         long ceiling = Math.max(0L, Math.min(cap, Integer.MAX_VALUE));
         return (int) Math.max(0L, Math.min((long) amount + step, ceiling));
+    }
+
+    // --- law and disorder -------------------------------------------------------
+
+    /**
+     * Rolls {@link TrapCrime} takes at the town in one in-game day.
+     *
+     * 24000 ticks over a 240-tick round. Written down rather than inlined
+     * because it is the conversion between "crimes a day", which is the only
+     * number anybody can reason about, and "odds per round", which is the only
+     * one the tick loop can use -- and getting it wrong by a factor of a
+     * hundred is a town that either never has a burglary or has nothing else.
+     */
+    public static final float CRIME_ROUNDS_PER_DAY = 100f;
+
+    /**
+     * Offences a day per hundred residents, before anything modifies it.
+     *
+     * Was 9, and 9 was measured wrong. The arithmetic said 1.8 a day in a town
+     * of twenty, which sounded fine -- but the modifiers were MULTIPLICATIVE,
+     * so a poor town at night with a farm running hot got 1.8 x 2 x 1.7 x 2 =
+     * TWELVE, and an in-game day is twenty real minutes. Live result: a
+     * murder and two burglaries inside seven minutes, which is not a city with
+     * a crime problem, it is a city being demolished.
+     *
+     * Three and a half is 0.7 a day in that same town of twenty -- one thing
+     * happens roughly every half hour of play, and the modifiers below can no
+     * longer stack past {@link #CRIME_CEILING}.
+     */
+    public static final float CRIME_BASE = 3.5f;
+
+    /**
+     * The most offences a day a town can produce, however bad it gets.
+     *
+     * Not a tuning knob -- a backstop. Population is unbounded and the
+     * modifiers are not, so without this a big unhappy city walks itself into
+     * a rate nothing could police and nobody could enjoy. A town that hits
+     * this is already telling its owner something is wrong; it does not also
+     * need to be unplayable.
+     */
+    public static final float CRIME_CEILING = 2.0f;
+
+    /** What the dark does to all of it. */
+    public static final float NIGHT_CRIME = 1.5f;
+
+    /**
+     * The most poverty and a hot drug trade can add BETWEEN them.
+     *
+     * Added, not multiplied, and that is the whole of the fix. Two 2x
+     * multipliers on top of a night 1.7x is a 6.8x swing, which is not a
+     * simulation, it is a dice tower -- and a player cannot reason about a
+     * number that moves by seven times for reasons three systems apart.
+     */
+    public static final float CRIME_HARDSHIP_LIFT = 0.6f;
+    public static final float CRIME_HEAT_LIFT = 0.5f;
+
+    /** Server heat at which the drug trade contributes all it is going to. */
+    public static final int CRIME_HEAT_FULL = 400;
+
+    /** Share of muggings that put somebody in a hospital bed. */
+    public static final float HOSPITALISED = 0.35f;
+
+    /**
+     * Share of killings that are killings.
+     *
+     * The rest are found in time and go to a ward, which is where the two
+     * offices meet: a city with a hospital loses fewer people to the same
+     * number of stabbings. Under a half on purpose -- if every one of these
+     * were fatal the ward would be irrelevant to crime, and if none were then
+     * "murder" would be a word for an expensive hospital visit.
+     */
+    public static final float MURDER_FATAL = 0.45f;
+
+    /** The most of a town's crime a police force can ever hold down. */
+    public static final float TOP_DETERRENCE = 0.75f;
+
+    /** A copper's pace, and a runner's, so the chase can be reasoned about. */
+    public static final double OFFICER_PACE = 0.5;
+    public static final double OFFICER_PACE_PER_GEAR = 0.055;
+    /**
+     * How fast somebody runs from a crime scene.
+     *
+     * Deliberately between an unequipped officer (0.50) and a fully kitted one
+     * (0.665): a force with no budget can watch a suspect walk away and never
+     * close, and one the city pays for runs them down. That gap IS the
+     * feature -- it is what "and faster" on the dial buys, in the only place
+     * where a player can watch it happen.
+     */
+    public static final double SUSPECT_PACE = 0.575;
+
+    /**
+     * Odds of an offence in one round, from everything that drives it.
+     *
+     * Every term is something a player can move: build better houses and
+     * hardship falls, fund the force and deterrence rises, keep the farms cool
+     * and the town stops attracting people who work at night.
+     *
+     * Poverty and heat ADD into one lift rather than each multiplying the
+     * whole thing -- see {@link #CRIME_HARDSHIP_LIFT}. Night is still a
+     * multiplier because the dark genuinely is a different world, and
+     * deterrence is still a multiplier because it is a share of what would
+     * otherwise have happened. Then the whole thing meets
+     * {@link #CRIME_CEILING} before it becomes odds, because a rate nothing
+     * could police is not a difficulty setting.
+     */
+    public static float crimeOdds(int population, float hardship, float deterrence,
+                                  boolean night, int heat) {
+        if (population <= 0) {
+            return 0f;
+        }
+        float perDay = CRIME_BASE * population / 100f;
+        perDay *= 1f
+                + CRIME_HARDSHIP_LIFT * Math.max(0f, Math.min(1f, hardship))
+                + CRIME_HEAT_LIFT * Math.min(1f, Math.max(0, heat) / (float) CRIME_HEAT_FULL);
+        perDay *= night ? NIGHT_CRIME : 1f;
+        perDay = Math.min(CRIME_CEILING, perDay);
+        perDay *= 1f - Math.max(0f, Math.min(TOP_DETERRENCE, deterrence));
+        return Math.max(0f, Math.min(1f, perDay / CRIME_ROUNDS_PER_DAY));
+    }
+
+    /**
+     * How many turn up off the road.
+     *
+     * Off the town's own size, because a band that would flatten a hamlet is a
+     * nuisance to a city and one number cannot be both. Heat adds to it: a
+     * place known for its trade attracts the sort of people who have heard of
+     * it. Capped, because the answer to "what if the town is enormous" is not
+     * "an unkillable wall of crossbows".
+     */
+    public static int banditBand(int population, int heat) {
+        int band = 2 + population / 10 + Math.min(3, Math.max(0, heat) / 200);
+        return Math.max(2, Math.min(8, band));
+    }
+
+    /** One copper per this many residents is a full complement. */
+    public static final int BEAT_PER_OFFICER = 8;
+
+    /**
+     * How much crime a force holds down, 0 to {@link #TOP_DETERRENCE}.
+     *
+     * Per head of population rather than outright, because policing a village
+     * with four and policing a city with four are not the same job -- a town
+     * that grows without funding its force should feel exactly that.
+     */
+    public static float deterrence(int officers, int population, int gear) {
+        if (officers <= 0) {
+            return 0f;
+        }
+        float perHead = officers
+                / (float) Math.max(BEAT_PER_OFFICER, population);
+        return Math.min(TOP_DETERRENCE,
+                perHead * (1f + 0.12f * Math.max(0, gear)) * BEAT_PER_OFFICER * 0.3f);
+    }
+
+    /**
+     * What a truncheon does, per grade of kit.
+     *
+     * Was 4 + 2/grade, and that was measured against the wrong clock. An
+     * officer swings once per decision pass -- every thirty ticks -- so ten
+     * damage at full kit is ten damage every second and a half, against a
+     * zombie that hits back about once a second. Three seconds to kill one
+     * zombie is three seconds of taking hits, and the shift was being ground
+     * down: measured live at 25, 38, 7, 21, 21 and 38 out of 38.
+     *
+     * One swing is a second and a half of struggle, so it is allowed to be
+     * worth a second and a half. At full kit that is one zombie per swing,
+     * which is what a city paying 2100e a day should be buying.
+     */
+    public static float truncheonHit(int gear) {
+        return 6f + 5f * Math.max(0, gear);
+    }
+
+    /**
+     * What a bolt does, per grade of kit.
+     *
+     * Under a truncheon on purpose: range is the advantage, and a crossbow
+     * that also hit harder would make closing the distance a mistake. This is
+     * the answer to a pillager standing eight blocks back, not a better way of
+     * killing a zombie.
+     */
+    public static double boltHit(int gear) {
+        return 3.0 + 1.5 * Math.max(0, gear);
+    }
+
+    public static double officerPace(int gear) {
+        return OFFICER_PACE + OFFICER_PACE_PER_GEAR * Math.max(0, gear);
+    }
+
+    /** A copper the town paid for is a copper who survives a zombie. */
+    public static double officerHealth(int gear) {
+        return 24.0 + 10.0 * Math.max(0, gear);
+    }
+
+    /**
+     * The vest, which they had none of at all.
+     *
+     * Armour is the single biggest survivability lever in the game and an
+     * officer was wearing exactly as much of it as a farmer. Eleven points at
+     * full kit is a little under half of incoming damage -- riot gear, not
+     * plate, so an unfunded force is still fodder and a funded one still
+     * loses to a horde.
+     */
+    public static double officerArmour(int gear) {
+        return 2.0 + 3.0 * Math.max(0, gear);
+    }
+
+    /**
+     * How fast they walk it off, per pass, when nobody is swinging at them.
+     *
+     * The actual cause of the attrition. A villager only regenerates from
+     * food and these carry none, so every wound was permanent and death was
+     * just a matter of enough nights. Full recovery in a couple of minutes of
+     * quiet, which is a shift change without needing to model one.
+     */
+    public static float officerMend(int gear) {
+        return 0.5f + 0.25f * Math.max(0, gear);
+    }
+
+    /**
+     * Share of health below which an officer breaks off and goes home.
+     *
+     * The other half of not dying, and the half that reads as a person: the
+     * one measured at 7 out of 38 was still walking at zombies because
+     * nothing told it not to.
+     */
+    public static final float OFFICER_RETREAT = 0.35f;
+
+    /** Golems one level of the works puts on the street. */
+    public static final int GOLEMS_PER_LEVEL = 3;
+
+    /**
+     * How many golems are actually standing, from what the city BOUGHT and
+     * from who it is PAYING.
+     *
+     * The two halves of policing meet here and nowhere else. A public work is
+     * capital -- paid once, owned forever -- and the wage dial is the running
+     * cost, and a golem is police property rather than a monument, so it walks
+     * out with a copper or it does not walk out at all.
+     *
+     * Without that floor the feature eats itself: buy the works once, cut the
+     * budget to nothing the next morning, and the town keeps a permanent free
+     * army that never needs another emerald. Every other part of this file is
+     * written against a dial the player has to keep feeding, and one purchase
+     * that opts out of it would make the rest decoration.
+     */
+    public static int golemGuard(int worksLevel, int officers) {
+        return Math.min(Math.max(0, worksLevel) * GOLEMS_PER_LEVEL, Math.max(0, officers));
+    }
+
+    /**
+     * What a stop-and-search costs, or 0 for "walk on".
+     *
+     * The threshold is the whole of the fairness: a joint in a pocket is not
+     * a thing anybody gets fined for, and neither is a clean player standing
+     * near a station. It takes a POCKETFUL, or heat, or an outstanding
+     * assessment -- all three of which are the player having chosen something.
+     */
+    public static int ticket(int contraband, int heatTiers, int owed, int looksAway) {
+        boolean carrying = contraband >= looksAway;
+        if (!carrying && heatTiers <= 0 && owed <= 0) {
+            return 0;
+        }
+        int fine = 40;
+        if (carrying) {
+            fine += Math.min(320, (contraband - looksAway + 1) * 6);
+        }
+        fine += 90 * Math.max(0, heatTiers);
+        fine += owed > 0 ? 60 : 0;
+        return Math.min(600, fine);
+    }
+
+    /**
+     * What somebody walks off with, as a share of what was lying there.
+     *
+     * A share rather than a flat number, so a burglary hurts a landlord with
+     * nine houses of uncollected rent more than one who empties their box
+     * every morning -- which makes emptying it the counterplay, and gives
+     * {@code /home} something to be for.
+     */
+    public static int haul(int held, float low, float high, float roll) {
+        if (held <= 0 || high <= 0) {
+            return 0;
+        }
+        float share = low + (high - low) * Math.max(0f, Math.min(1f, roll));
+        return Math.max(1, Math.min(held, Math.round(held * share)));
+    }
+
+    // --- wand tiers -----------------------------------------------------------
+
+    /** What you buy, and the two you can earn on top of it. */
+    public static final int WAND_TIERS = 3;
+    /** A fifth off the cooldown per tier. */
+    private static final float[] WAND_SPEED = {1.00f, 0.80f, 0.60f};
+    /** A quarter on to the reach, the radius or the damage per tier. */
+    private static final float[] WAND_POWER = {1.00f, 1.25f, 1.50f};
+
+    /**
+     * Two multipliers for all five wands, rather than a table per wand.
+     *
+     * Each of them is a different verb -- one throws you, one reaps a field,
+     * one lights up ore -- and a hand-tuned ladder for each would be five sets
+     * of numbers to keep honest against five tooltips and a guide book. One
+     * promise instead ("a fifth faster, a quarter further, twice over"), which
+     * is also the only version of this a player can hold in their head while
+     * deciding whether the cores are worth spending.
+     *
+     * The tier is clamped rather than trusted: it arrives off an itemstack,
+     * and a component is whatever the last person to hold a command block
+     * wrote into it.
+     */
+    public static int wandTier(int tier) {
+        return Math.max(0, Math.min(WAND_TIERS - 1, tier));
+    }
+
+    /** A cooldown at this tier, never under a tick. */
+    public static int wandCooldown(int ticks, int tier) {
+        return Math.max(1, Math.round(ticks * WAND_SPEED[wandTier(tier)]));
+    }
+
+    /** A range, a radius or a block count at this tier. */
+    public static int wandReach(int blocks, int tier) {
+        return Math.round(blocks * WAND_POWER[wandTier(tier)]);
+    }
+
+    /** Damage at this tier, kept as a float because half hearts are a thing. */
+    public static float wandDamage(float damage, int tier) {
+        return damage * WAND_POWER[wandTier(tier)];
+    }
+
+    /**
+     * What the next tier costs in emeralds: half the shelf, then all of it.
+     *
+     * Priced off the wand's own catalogue price rather than in materials. The
+     * first version charged cores -- more of the breeze rods and nether stars
+     * the wand is crafted from -- which reads well and prices nothing: those
+     * are lines on the market like everything else, and a shelf that sells a
+     * sniffer egg for pocket change turns "two more eggs" into an upgrade you
+     * can buy with an afternoon's rent. Emeralds are the only unit in this mod
+     * that the market cannot undercut, because they ARE the market.
+     *
+     * A full ladder therefore costs half again what the wand did, which keeps
+     * the rack the thing you save for after you have already saved for it.
+     */
+    public static int wandPrice(int shelf, int tier) {
+        return Math.max(1, shelf * (wandTier(tier) + 1) / 2);
     }
 }

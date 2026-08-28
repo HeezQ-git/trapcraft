@@ -277,12 +277,18 @@ public final class TrapFloor {
     /**
      * Ticks in before somebody fancies another go, doubled at random.
      *
-     * Six thousand is a quarter of a day, so a resident is out a few times a
-     * day at the outside and at home for the rest of it -- and because the
-     * hour decides when they set off, those goes land in the evening. The
-     * jitter is what stops the whole town leaving the house together.
+     * Three thousand is an eighth of a day, so a resident is out several
+     * times a day -- and because the hour decides when they set off, those
+     * goes still land in the evening. The jitter is what stops the whole town
+     * leaving the house together.
+     *
+     * Was six thousand, and THIS was the real cap on how busy a floor ever
+     * got: measured across a live day, the midnight allowance was 43 people
+     * and the room held ten, because everybody who came at dusk was home
+     * sleeping it off for the rest of the night. The town was never the
+     * bottleneck the arithmetic in room() says it is -- this was.
      */
-    public static final int NIGHT_OFF = 6000;
+    public static final int NIGHT_OFF = 3000;
     /**
      * The share of the town that is out at the very peak of the night.
      *
@@ -765,8 +771,15 @@ public final class TrapFloor {
 
         // Capped by how full the room already is: a busy floor is a cheap
         // floor. See TrapMath.punterStakeCeiling.
+        //
+        // How full is measured in people AT A MACHINE, not people on the
+        // books. This was PUNTERS.size(), which counts everybody who has been
+        // sent for -- and on the live floor that was 39 with 21 of them still
+        // walking, so the room was priced as heaving while eighteen people
+        // played. A punter who has not reached a cabinet has not made the room
+        // busy; they have made it crowded on paper.
         int stake = TrapMath.punterStake(new java.util.Random(random.nextLong()),
-                PUNTERS.size());
+                seated());
         // Never a stake the vault could not settle: a punter who breaks the
         // bank is a punter who took the owner's money away while they were
         // stood somewhere else entirely.
@@ -1255,6 +1268,25 @@ public final class TrapFloor {
 
     /** Near enough the standing spot to be playing the machine at it. */
     private static final double ARRIVED = 1.75;
+
+    /**
+     * Punters actually at a machine, which is not everybody on the floor.
+     *
+     * The walk is thirty to forty seconds and about two in five of the room is
+     * doing it at any moment, so "how busy is it" has two honest answers and
+     * this is the one that prices a bet. The OTHER one -- everybody on the
+     * books -- is still what {@link #room} is checked against, because a
+     * walker does hold a seat and there is nowhere to put a second body on it.
+     */
+    private static int seated() {
+        int at = 0;
+        for (Punter punter : PUNTERS) {
+            if (!punter.walkingIn) {
+                at++;
+            }
+        }
+        return at;
+    }
 
     private static void leave(ServerWorld world, VillagerEntity body, Punter punter) {
         int net = punter.won - punter.lost;

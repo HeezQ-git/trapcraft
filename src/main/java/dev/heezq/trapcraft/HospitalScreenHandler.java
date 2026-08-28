@@ -116,12 +116,17 @@ public class HospitalScreenHandler extends ScreenHandler {
                         : "Za ciasno, żeby pracować.",
                 reading.floor() >= TrapHospitals.MIN_FLOOR));
         display.setStack(SEALED_SLOT, count(Items.BRICKS, "Szczelność",
-                reading.sealed() ? "Szczelny" : reading.clash() ? "Czyjś dom" : "Dziurawy",
+                reading.sealed() ? "Szczelny" : reading.clash() ? "Czyjś dom"
+                        : reading.buried() ? "Zamurowany" : "Dziurawy",
                 reading.sealed() ? "Ściany, podłoga, dach i drzwi."
                         : reading.clash()
                         ? "Nachodzi na zarejestrowany dom. Szpital potrzebuje "
                         + "własnego budynku."
-                        : "Jest dziura. Potrzebne ściany, podłoga, sufit i drzwi.",
+                        : reading.buried()
+                        ? "Blok stoi w litej ścianie. Postaw go w powietrzu "
+                        + "wewnątrz pomieszczenia."
+                        : "Jest dziura. Pomiar od " + TrapPolice.where(reading.measuredFrom())
+                        + ", ucieka na " + TrapPolice.where(reading.leak()) + ".",
                 reading.sealed()));
         display.setStack(LIGHT_SLOT, count(Items.LANTERN, "Światło",
                 reading.dark() == 0 ? "Wszędzie" : "ciemnych: " + reading.dark(),

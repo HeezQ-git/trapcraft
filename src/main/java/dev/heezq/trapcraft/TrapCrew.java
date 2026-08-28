@@ -53,6 +53,20 @@ import java.util.UUID;
  * own that can lose you money by existing, which is what makes deciding to
  * hire one an actual decision.
  *
+ * <h2>And they come from somewhere</h2>
+ *
+ * A hand is one of the town's own residents, drawn through
+ * {@link TrapHomes#freeResident} exactly as a shopper, a punter and a clubber
+ * are -- see {@link #put} for what that changed and why it was the last
+ * phantom in the mod. Two consequences worth knowing before you build a farm:
+ * a patch out of reach of anybody's house employs nobody, and every hand you
+ * take on is somebody who is now not shopping at anyone's counter.
+ *
+ * Their wages go the same way, into {@link TrapPayroll} rather than out of the
+ * world -- see {@link #payTheTown}. The town supplies the labour and the town
+ * gets the wage bill back; those are the two halves of the same sentence and
+ * they used to be neither.
+ *
  * <h2>What was wrong with the first one</h2>
  *
  * It picked about one plant every two minutes, which is not a worker, it is an
@@ -175,6 +189,28 @@ public final class TrapCrew {
 
     /** Small enough that the game never counts them heavy enough to trample. */
     private static final double HAND_SCALE = 0.85;
+
+    /**
+     * Marks somebody working a patch.
+     *
+     * Read by {@link TrapHomes#out}, which is the whole point of it: a hand is
+     * a resident with a job, and the register has to leave them where they are
+     * rather than walk them home at dusk or hand them to a shop that wants a
+     * customer. One person, one place.
+     */
+    public static final String HAND_TAG = "trapcraft_hand";
+
+    /**
+     * How far a hand will come from.
+     *
+     * The same 512 a club calls across and a casino draws a punter over, so
+     * "in town" means one thing to every employer in the mod rather than three
+     * slightly different things depending on who is asking.
+     */
+    private static final int HIRE_REACH = 512;
+
+    /** A villager's own walking speed, handed back when somebody is let go. */
+    private static final double RESIDENT_PACE = 0.5;
 
     /**
      * The ticket that keeps a patch awake, and how often it gets re-stamped.
@@ -723,10 +759,8 @@ public final class TrapCrew {
         if (TrapMarket.wealthOf(boss) < cost) {
             return "To kosztuje " + cost + "e, a tyle nie masz.";
         }
-        // Through the market, like every other emerald this mod moves. A wage
-        // that skipped circulate() would be a hole in the money supply the
-        // index could never see.
-        TrapMarket.take(boss, cost);
+        // Tuition, and somebody is being paid it. See payTheTown.
+        payTheTown(boss, cost);
         TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
         if (job != null) {
             hand.teach(job);
@@ -800,30 +834,99 @@ public final class TrapCrew {
      *         a better outcome than a hand suffocating in the wall the boss
      *         set their patch against.
      */
+    /**
+     * Somebody who already lives here, taken on at this patch.
+     *
+     * <h2>Where hands used to come from</h2>
+     *
+     * Nowhere. This method created a villager out of nothing, which made a
+     * crew the last phantom left in the mod. The shoppers were conjured
+     * traders once and the punters were strangers who appeared at the door;
+     * both were replaced by the town supplying its own, and both times that is
+     * what made the town real. A farm employing six people who were not from
+     * anywhere was the same fiction, and a bigger one -- a crew is the largest
+     * standing workforce a player ever has.
+     *
+     * <h2>What that buys</h2>
+     *
+     * A labour market, which is what "build houses" has been missing an answer
+     * to. Housing paid rent and moved a number in {@code /city}; it never once
+     * decided whether you could DO anything. Now the town's population is the
+     * supply of hands, one person can only be in one place -- see
+     * {@link TrapHomes#out} -- and a farm out of reach of anybody's house is a
+     * farm you work yourself.
+     *
+     * Reach is {@link #HIRE_REACH}, the same 512 a club and a casino call
+     * across, so "who is in town" means the same thing to every employer.
+     *
+     * <h2>Not spawned, not repainted</h2>
+     *
+     * They are already in the world and already a NITWIT -- {@link TrapHomes}
+     * makes them one for exactly the reason this method used to, so a villager
+     * with a workstation nearby never starts trading. Nothing here creates a
+     * body; it moves one and puts a name on it. The name is theirs with the
+     * job appended, in the {@code  ·  } shape the shops and the clubs use, so
+     * {@link #release} can hand it back when they are let go.
+     */
     private static VillagerEntity put(ServerWorld world, BlockPos patch, float yaw) {
         BlockPos stand = TrapSpawn.near(world, patch.up());
         if (stand == null) {
             return null;
         }
-        VillagerEntity mob = EntityType.VILLAGER.create(world, SpawnReason.EVENT);
+        VillagerEntity mob = TrapHomes.freeResident(world, patch, HIRE_REACH);
         if (mob == null) {
             return null;
         }
+        mob.addCommandTag(HAND_TAG);
         mob.refreshPositionAndAngles(stand, yaw, 0.0F);
         mob.setPersistent();
         mob.setAiDisabled(false);
-        mob.setCustomName(Text.literal("Robotnik").formatted(Formatting.YELLOW));
+        mob.wakeUp();
+        mob.setCustomName(Text.literal(plainName(mob) + "  ·  robotnik")
+                .formatted(Formatting.YELLOW));
         mob.setCustomNameVisible(true);
-        // NITWIT, and not merely "no profession". A professionless villager
-        // takes a job from any workstation it wanders past and becomes a
-        // trader -- which would undercut the market stall by accident, exactly
-        // what this was supposed to avoid. A nitwit never takes one.
-        mob.setVillagerData(mob.getVillagerData().withProfession(
-                world.getRegistryManager()
-                        .getOrThrow(net.minecraft.registry.RegistryKeys.VILLAGER_PROFESSION)
-                        .getOrThrow(net.minecraft.village.VillagerProfession.NITWIT)));
-        world.spawnEntity(mob);
         return mob;
+    }
+
+    /** What somebody is called with any job title taken back off. */
+    private static String plainName(VillagerEntity body) {
+        if (body.getCustomName() == null) {
+            return "Ktoś";
+        }
+        String shown = body.getCustomName().getString();
+        int cut = shown.indexOf("  ·  ");
+        return cut < 0 ? shown : shown.substring(0, cut);
+    }
+
+    /**
+     * Let somebody go, and give them back everything the job did to them.
+     *
+     * All four of these matter and the first three are invisible until they
+     * are wrong. A hand keeps {@link #HAND_TAG}, so a released one that kept
+     * it would be a person no shop, casino or club could ever call on again --
+     * a townsperson permanently deleted from the labour force by having once
+     * had a job. The SCALE is {@link #HAND_SCALE}, so a town that hires and
+     * fires would slowly fill with small people. The speed is whatever their
+     * pace was bought up to, so the neighbours would end up sprinting. And the
+     * name still says robotnik.
+     *
+     * Put home rather than left standing in the field, for {@link TrapHomes}'
+     * reason: the walk back from a farm is one a villager will not finish.
+     */
+    private static void release(VillagerEntity mob) {
+        mob.removeCommandTag(HAND_TAG);
+        var scale = mob.getAttributeInstance(EntityAttributes.SCALE);
+        if (scale != null) {
+            scale.setBaseValue(1.0);
+        }
+        var speed = mob.getAttributeInstance(EntityAttributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            speed.setBaseValue(RESIDENT_PACE);
+        }
+        mob.setCustomName(Text.literal(plainName(mob)).formatted(Formatting.AQUA));
+        if (mob.getWorld() instanceof ServerWorld world) {
+            TrapHomes.putHome(world, mob);
+        }
     }
 
     /**
@@ -1005,7 +1108,7 @@ public final class TrapCrew {
                 spot.getY() + 1.2, spot.getZ() + 0.5, 16, 0.4, 0.4, 0.4, 0.02);
         boss.sendMessage(Text.literal("Od teraz pracuje tutaj. ").formatted(Formatting.GREEN)
                 .append(Text.literal(spot.getX() + " " + spot.getY() + " " + spot.getZ()
-                        + (moved ? "" : ", stoi tam nowa osoba."))
+                        + (moved ? "" : ", przyszedł ktoś z miasta."))
                         .formatted(Formatting.GRAY)), false);
         return null;
     }
@@ -1025,9 +1128,19 @@ public final class TrapCrew {
         ServerWorld world = boss.getWorld();
         VillagerEntity mob = put(world, patch, boss.getYaw());
         if (mob == null) {
-            return "Nie ma tu nikogo chętnego.";
+            // Two different nothings, and telling them apart is the difference
+            // between a player who builds a house and a player who files a bug
+            // report. Nobody free is a labour market doing its job; nowhere to
+            // stand is a patch against a wall.
+            return TrapSpawn.near(world, patch.up()) == null
+                    ? "Nie ma tu gdzie stanąć. Odsuń się od ściany."
+                    : TrapHomes.population() <= 0
+                    ? "Nie ma tu nikogo do wynajęcia. Ludzie mieszkają w domach -- "
+                            + "postaw skrzynkę pocztową i wynajmij komuś."
+                    : "Wszyscy w okolicy są zajęci albo mieszkają za daleko. "
+                            + "Robotnik przyjdzie z " + HIRE_REACH + " bloków, nie dalej.";
         }
-        TrapMarket.take(boss, HIRE_COST);
+        payTheTown(boss, HIRE_COST);
         // Capital, not wages, but the same line: the ledger's job is to answer
         // "what has this crew cost me", and a hire fee missing from it made
         // that question unanswerable from the one file built to answer it.
@@ -1210,7 +1323,7 @@ public final class TrapCrew {
             }
         }
 
-        TrapMarket.take(boss, cost);
+        payTheTown(boss, cost);
         TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
         int put = 0;
         for (PlanHand wanted : plan.hands()) {
@@ -1330,11 +1443,17 @@ public final class TrapCrew {
             if (mob != null) {
                 mob.getWorld().playSound(null, mob.getBlockPos(), SoundEvents.ENTITY_VILLAGER_NO,
                         SoundCategory.NEUTRAL, 0.9F, 0.8F);
-                mob.discard();
+                // Sent home, not discarded. A hand is somebody's tenant now,
+                // and binning one is binning a townsperson -- the register
+                // would stand a replacement up on their doorstep a few seconds
+                // later, which is the same person arriving twice.
+                release(mob);
             }
             CREW.remove(i);
             save();
-            boss.sendMessage(Text.literal("Zwolniono ekipę.").formatted(Formatting.GRAY), false);
+            boss.sendMessage(Text.literal("Zwolniono ekipę. ").formatted(Formatting.GRAY)
+                    .append(Text.literal("Wracają do domów i znów są do wzięcia.")
+                            .formatted(Formatting.DARK_GRAY)), false);
             return null;
         }
         return "Nie masz nikogo zatrudnionego.";
@@ -2350,6 +2469,40 @@ public final class TrapCrew {
     }
 
     /**
+     * Money that goes to a person rather than out of the world.
+     *
+     * A hand is a townsperson, and {@link TrapHospitals} already settled what
+     * that means: a doctor's fee lands in {@link TrapPayroll} because a wage
+     * should come back through a shop door. There is nothing about a farmhand
+     * that makes them a different kind of person, but for six versions every
+     * emerald a crew was paid went through {@code TrapMarket.take} -- the call
+     * for money LEAVING the world -- which made this the one employer in the
+     * mod whose staff were paid into a hole.
+     *
+     * It is not a rounding argument. A crew is the largest recurring outgoing
+     * a player has, so a town with three farms on it was quietly having the
+     * biggest wage bill in the city deleted rather than spent, and the shops
+     * were poorer for exactly the work that should have made them busy. Now
+     * the loop closes: you pay somebody, they shop, and the counter they shop
+     * at may well be yours.
+     *
+     * {@code collect} rather than {@code take} for {@link TrapCity#charge}'s
+     * reason -- the money is moving, not evaporating, and reporting it
+     * destroyed and re-minted would have the index feel two shocks where
+     * nothing happened at all.
+     *
+     * Callers MUST have checked {@link TrapMarket#wealthOf} first, exactly as
+     * before; this moves money it assumes is there.
+     */
+    private static void payTheTown(ServerPlayerEntity boss, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        TrapMarket.collect(boss, amount);
+        TrapPayroll.credit(amount);
+    }
+
+    /**
      * One packet. False means they have run out of patience.
      *
      * Nothing is owed retroactively when the arrears clear, and that is a
@@ -2360,7 +2513,7 @@ public final class TrapCrew {
     private static boolean pay(ServerPlayerEntity boss, Hand hand) {
         int wage = hand.wage();
         if (TrapMarket.wealthOf(boss) >= wage) {
-            TrapMarket.take(boss, wage);
+            payTheTown(boss, wage);
             TrapLedger.record(boss, TrapLedger.Source.CREW, -wage);
             hand.paid += wage;
             if (hand.missed > 0) {
@@ -2405,7 +2558,10 @@ public final class TrapCrew {
         if (mob != null) {
             mob.getWorld().playSound(null, mob.getBlockPos(), SoundEvents.ENTITY_VILLAGER_NO,
                     SoundCategory.NEUTRAL, 1.0F, 0.7F);
-            mob.discard();
+            // Home, not deleted. Somebody who walked out over unpaid wages is
+            // still somebody who lives here -- and is available to be hired
+            // again tomorrow, by you or by the neighbour who does pay.
+            release(mob);
         }
         CREW.remove(hand);
         if (boss != null) {

@@ -53,7 +53,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
     private static final int CASH_SLOT = 26;
     private static final int INFO_SLOT = 0;
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity player;
@@ -218,7 +218,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(climbing ? "Zablokowane do końca gry." : "Kliknij, żeby zmienić.",
+                line(climbing ? "Zablokowane do końca gry." : "Klik: wyżej, prawy klik: niżej.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -279,7 +279,7 @@ public class ClimbScreenHandler extends ScreenHandler implements TrapTables.Play
             return;
         }
         if (index == STAKE_SLOT && !climbing) {
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             click(1.4F);
             repaint();
             return;

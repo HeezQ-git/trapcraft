@@ -33,11 +33,28 @@ public final class TrapTrades {
                 result, maxUses, xp, 0.05F);
     }
 
+    /**
+     * A payout, in blocks once it stops fitting in a stack.
+     *
+     * A trade's price is a single ItemStack, and the inventory clamps one to 64
+     * on the way in -- so a 198-emerald bag of Pure dope quietly paid 64 and
+     * burnt the rest. Capping the price instead would have been the same bug
+     * wearing a design justification. Emerald blocks are money here too, by
+     * {@link TrapMarket#valueOf}, so the denomination changes and the worth
+     * does not.
+     */
+    private static ItemStack pay(int emeralds) {
+        ItemStack loose = new ItemStack(Items.EMERALD, emeralds);
+        return emeralds <= loose.getMaxCount()
+                ? loose
+                : new ItemStack(Items.EMERALD_BLOCK, Math.round(emeralds / 9.0F));
+    }
+
     private static TradeOffers.Factory buy(net.minecraft.item.Item wanted, int count, int emeralds,
                                            int maxUses, int xp) {
         return (entity, random) -> new TradeOffer(
                 new TradedItem(wanted, count), Optional.empty(),
-                new ItemStack(Items.EMERALD, emeralds), maxUses, xp, 0.05F);
+                pay(emeralds), maxUses, xp, 0.05F);
     }
 
     /** Buys only stacks carrying exactly this grade, and pays accordingly. */
@@ -48,7 +65,7 @@ public final class TrapTrades {
         return (entity, random) -> new TradeOffer(
                 new TradedItem(net.minecraft.registry.Registries.ITEM.getEntry(wanted), count, predicate),
                 Optional.empty(),
-                new ItemStack(Items.EMERALD, emeralds), 6, 2, 0.05F);
+                pay(emeralds), 6, 2, 0.05F);
     }
 
     /** Same idea as buyGraded, but keyed on the purity component. */
@@ -59,7 +76,7 @@ public final class TrapTrades {
         return (entity, random) -> new TradeOffer(
                 new TradedItem(net.minecraft.registry.Registries.ITEM.getEntry(wanted), count, predicate),
                 Optional.empty(),
-                new ItemStack(Items.EMERALD, emeralds), 4, 3, 0.05F);
+                pay(emeralds), 4, 3, 0.05F);
     }
 
     public static void register() {

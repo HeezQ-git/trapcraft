@@ -40,7 +40,8 @@ import java.util.Map;
  * stands next to it, and patients are put in beds around it. There is nothing
  * for it to point at, so there is nothing to move.
  */
-public class HospitalBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
+public class HospitalBlock extends TurnableBlock
+        implements PolymerBlock, PolymerTexturedBlock, SurveyAnchor {
     private final Map<Direction, BlockState> carriers;
 
     public HospitalBlock(Settings settings) {

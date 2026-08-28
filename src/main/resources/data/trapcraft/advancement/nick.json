@@ -1,0 +1,33 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:police"
+    },
+    "title": "Kto\u015b tego pilnuje",
+    "description": "Otw\u00f3rz komisariat, \u017ceby miasto mia\u0142o kogo wys\u0142a\u0107.",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:police"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:founded"
+}

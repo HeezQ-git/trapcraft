@@ -85,7 +85,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             "Gold", "Ender Pearl", "Diamond", "Star",
     };
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
 
     /** Ticks each reel spins before it locks, first to last. */
     private static final int[] STOPS = {24, 32, 40, 48, 58};
@@ -296,13 +296,13 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
     }
 
     private ItemStack stakeTag() {
-        ItemStack tag = new ItemStack(Items.EMERALD, Math.max(1, STAKES[stakeChoice] / 8));
+        ItemStack tag = new ItemStack(Items.EMERALD, Math.max(1, Math.min(64, STAKES[stakeChoice] / 8)));
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain("Stawka ").formatted(Formatting.GRAY)
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Kliknij, żeby zmienić.", Formatting.YELLOW))));
+                line("Klik: wyżej, prawy klik: niżej.", Formatting.YELLOW))));
         return tag;
     }
 
@@ -450,7 +450,7 @@ public class SlotScreenHandler extends ScreenHandler implements TrapTables.Playi
             return;
         }
         if (slotIndex == STAKE_SLOT) {
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             beep(1.4F);
             repaint();
             return;

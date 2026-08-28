@@ -15,11 +15,13 @@ import net.minecraft.block.Blocks;
 import net.minecraft.component.type.ConsumableComponents;
 import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsageContext;
 import net.minecraft.item.Items;
 import net.minecraft.item.consume.UseAction;
 import net.minecraft.particle.ParticleTypes;
@@ -62,6 +64,9 @@ public final class TrapContent {
     public static Item hammer;
     /** The wand rack, in the order the shop shelves them. */
     public static final Map<WandItem.Kind, Item> WANDS = new EnumMap<>(WandItem.Kind.class);
+    /** The four cases, and the four keys that open them. See {@link TrapCases}. */
+    public static final Map<CaseOdds.Tier, Item> CASES = new EnumMap<>(CaseOdds.Tier.class);
+    public static final Map<CaseOdds.Tier, Item> KEYS = new EnumMap<>(CaseOdds.Tier.class);
     public static Block cocaCrop;
     public static Item cocaSeeds;
     public static Item cocaLeaves;
@@ -72,6 +77,8 @@ public final class TrapContent {
     public static Block refiner;
     public static Item refinerItem;
     public static Item nerveTonic;
+    /** The same bottle, stood on a shelf. Placed by the item above. */
+    public static Block nerveTonicBlock;
     public static Item ledger;
     public static Item wallet;
     public static Item casinoCard;
@@ -86,6 +93,10 @@ public final class TrapContent {
     public static Item cityVaultItem;
     public static Block hospital;
     public static Item hospitalItem;
+    public static Block police;
+    public static Item policeItem;
+    public static Block fireHouse;
+    public static Item fireHouseItem;
     public static Block marketShelf;
     public static Item marketShelfItem;
     public static net.minecraft.block.entity.BlockEntityType<MarketShelfBlockEntity>
@@ -370,8 +381,33 @@ public final class TrapContent {
         registerPoppy();
         registerDevices();
         registerWands();
+        registerCases();
         registerItemGroup();
         registerWorldgen();
+    }
+
+    /**
+     * Four cases and four keys.
+     *
+     * Stackable, unlike the wands: these arrive in ones and twos off mobs and
+     * out of chests and a player is meant to sit on a pile of them waiting for
+     * the key. Rarity rises with the tier so a phantom case reads as one from
+     * across a chest -- the name is the only thing separating the four, and at
+     * item-frame size the colour of the text is doing most of that work.
+     */
+    private static void registerCases() {
+        for (CaseOdds.Tier tier : CaseOdds.Tier.values()) {
+            net.minecraft.util.Rarity rarity = switch (tier) {
+                case STREET -> net.minecraft.util.Rarity.COMMON;
+                case DOCKS -> net.minecraft.util.Rarity.UNCOMMON;
+                case CARTEL -> net.minecraft.util.Rarity.RARE;
+                case PHANTOM -> net.minecraft.util.Rarity.EPIC;
+            };
+            CASES.put(tier, registerItem(tier.caseId(), (settings, model) ->
+                    new CaseItem(tier, settings.rarity(rarity), model)));
+            KEYS.put(tier, registerItem(tier.keyId(), (settings, model) ->
+                    new CaseItem.Key(tier, settings.rarity(rarity), model)));
+        }
     }
 
     /**
@@ -394,7 +430,7 @@ public final class TrapContent {
                             // on at purchase: one minted by /give or taken from
                             // the creative tab describes itself too.
                             .component(net.minecraft.component.DataComponentTypes.LORE,
-                                    new net.minecraft.component.type.LoreComponent(kind.blurb())),
+                                    new net.minecraft.component.type.LoreComponent(kind.blurb(0))),
                     model)));
         }
     }
@@ -474,6 +510,15 @@ public final class TrapContent {
                         .noCollision().ticksRandomly().breakInstantly()
                         .sounds(BlockSoundGroup.CROP)
                         .pistonBehavior(net.minecraft.block.piston.PistonBehavior.DESTROY));
+        // Registered BEFORE the item: NerveTonicItem is a BlockItem and reads
+        // this field in its constructor.
+        // Candle settings with glass sounds: breaks on a touch, and a piston
+        // shoving it pops the bottles out rather than dragging a Polymer block
+        // somewhere its carrier does not follow.
+        nerveTonicBlock = registerBlock("nerve_tonic", NerveTonicBlock::new,
+                AbstractBlock.Settings.create().strength(0.1F).nonOpaque()
+                        .sounds(BlockSoundGroup.GLASS)
+                        .pistonBehavior(net.minecraft.block.piston.PistonBehavior.DESTROY));
         nerveTonic = registerItem("nerve_tonic", NerveTonicItem::new);
         ledger = registerItem("ledger", (settings, model) ->
                 new LedgerItem(settings.maxCount(1), model));
@@ -526,6 +571,22 @@ public final class TrapContent {
                         .sounds(BlockSoundGroup.GLASS).luminance(state -> 10));
         hospitalItem = registerItem("hospital",
                 (settings, model) -> new RackItem(hospital, settings, model));
+
+        // Stone sounds and a lamp of its own, for the ward's reason turned
+        // round: a station has to be lit to pass its own inspection, so the
+        // block that registers one may as well carry a light. Tougher than a
+        // hospital because it is a nick.
+        police = registerBlock("police", PoliceBlock::new,
+                AbstractBlock.Settings.create().strength(3.5F).requiresTool()
+                        .sounds(BlockSoundGroup.STONE).luminance(state -> 10));
+        policeItem = registerItem("police",
+                (settings, model) -> new RackItem(police, settings, model));
+
+        fireHouse = registerBlock("fire_house", FireHouseBlock::new,
+                AbstractBlock.Settings.create().strength(3.5F).requiresTool()
+                        .sounds(BlockSoundGroup.STONE).luminance(state -> 8));
+        fireHouseItem = registerItem("fire_house",
+                (settings, model) -> new RackItem(fireHouse, settings, model));
 
         marketShelf = registerBlock("market_shelf", MarketShelfBlock::new,
                 AbstractBlock.Settings.create().strength(2.0F).sounds(BlockSoundGroup.WOOD));
@@ -714,6 +775,8 @@ public final class TrapContent {
                     entries.add(mailboxItem);
                     entries.add(cityVaultItem);
                     entries.add(hospitalItem);
+                    entries.add(policeItem);
+                    entries.add(fireHouseItem);
                     entries.add(shopTillItem);
                     entries.add(marketShelfItem);
                     entries.add(laundryItem);
@@ -731,6 +794,12 @@ public final class TrapContent {
                     entries.add(hammer);
                     for (Item wand : WANDS.values()) {
                         entries.add(wand);
+                    }
+                    // Case then its key, four times, rather than all the
+                    // cases and then all the keys: the pair is the unit.
+                    for (CaseOdds.Tier tier : CaseOdds.Tier.values()) {
+                        entries.add(CASES.get(tier));
+                        entries.add(KEYS.get(tier));
                     }
                 })
                 .build();
@@ -878,12 +947,17 @@ public final class TrapContent {
      * first-day materials on purpose: the answer to being terrified must never
      * be gated behind the operation that terrifies you.
      */
-    static class NerveTonicItem extends TrapItem {
+    static class NerveTonicItem extends RackItem {
         /** How long it holds the meter down after you drink it. */
         public static final int CALM_TICKS = 90 * 20;
 
         NerveTonicItem(Settings settings, Identifier model) {
-            super(settings.food(
+            // A null block here is not an error until somebody right-clicks
+            // with it, which is a crash report from the live server rather
+            // than a failure to boot. Fail where the ordering is wrong.
+            super(java.util.Objects.requireNonNull(nerveTonicBlock,
+                            "register the nerve_tonic BLOCK before the item"),
+                    settings.food(
                             new FoodComponent.Builder().nutrition(1).saturationModifier(0.2F)
                                     .alwaysEdible().build(),
                             ConsumableComponents.food()
@@ -898,6 +972,32 @@ public final class TrapContent {
                                     .build())
                             .maxCount(8),
                     model);
+        }
+
+        /**
+         * Sneak to stand one down, click a cluster to add to it, else drink.
+         *
+         * A consumable BlockItem places on every right-click aimed at a block
+         * and only drinks when the placement fails -- which indoors, where the
+         * whole paranoia mechanic happens, means aiming at the sky to take
+         * your medicine. So placing is the sneak, as it is for everything else
+         * you put down carefully.
+         *
+         * The one exception is a bottle already standing there: adding to a
+         * cluster has to be the plain click, because that is the gesture
+         * candles taught everybody, and nobody is trying to drink a bottle
+         * while pointing at four others.
+         */
+        @Override
+        public ActionResult useOnBlock(ItemUsageContext context) {
+            PlayerEntity player = context.getPlayer();
+            boolean onACluster = context.getWorld()
+                    .getBlockState(context.getBlockPos()).isOf(nerveTonicBlock);
+            if (player != null && !player.isSneaking() && !onACluster) {
+                return use(context.getWorld(), player, context.getHand());
+            }
+            // Vanilla's own fallback: if there is nowhere to put it, drink it.
+            return super.useOnBlock(context);
         }
 
         @Override

@@ -138,7 +138,7 @@ public class CrewScreenHandler extends ScreenHandler {
             for (int i = 0; i < TEACHABLE.size(); i++) {
                 display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(i)));
             }
-            display.setStack(WHIP_SLOT, whipTag(card));
+            display.setStack(WHIP_SLOT, whipTag(card, selected));
             display.setStack(MOVE_SLOT, moveTag(card));
             display.setStack(NIGHTS_SLOT, nightsTag(card));
             display.setStack(PLANS_SLOT, plansTag());
@@ -215,10 +215,15 @@ public class CrewScreenHandler extends ScreenHandler {
         // indistinguishable from one that is simply being lazy. It used to
         // also mean "you are stood too far away", which it no longer can --
         // the patch holds itself open now, so this is a zombie or nothing.
+        // "Use the whip" was half an instruction. The whip acts on whoever is
+        // SELECTED, and a player who reads this line is by definition looking
+        // at a head they have not clicked -- so the obvious next move whipped
+        // hand one, which was alive, walked back to its patch, and said so in
+        // green while the dead one stayed dead.
         lore.add(card.present()
                 ? line("Jest na działce.", Formatting.GREEN)
-                : line("Zginął. Użyj bata, żeby postawić nowego.",
-                Formatting.RED));
+                : line(chosen ? "Zginął. Użyj bata, żeby postawić nowego."
+                : "Zginął. Kliknij go, potem bat.", Formatting.RED));
         lore.add(line(chosen ? "Wybrany." : "Kliknij, żeby wybrać.",
                 chosen ? Formatting.DARK_GRAY : Formatting.YELLOW));
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -364,13 +369,19 @@ public class CrewScreenHandler extends ScreenHandler {
      *
      * A lead is the closest thing the game has to a picture of a whip, and it
      * reads at a glance in a row that is otherwise crops and tools.
+     *
+     * It says WHICH one, like the fire button always has. "Zagoń go" -- whip
+     * HIM -- was a pronoun with five possible referents on a board where four
+     * of them are alive and one is a corpse, and the whole point of clicking
+     * it is usually the corpse.
      */
-    private ItemStack whipTag(TrapCrew.Card card) {
+    private ItemStack whipTag(TrapCrew.Card card, int nth) {
         boolean gone = !card.present();
         ItemStack tag = new ItemStack(Items.LEAD);
         tag.set(DataComponentTypes.CUSTOM_NAME,
-                plain("Zagoń go z powrotem").formatted(gone ? Formatting.RED : Formatting.YELLOW,
-                        Formatting.BOLD));
+                plain((gone ? "Postaw nowego robotnika " : "Zagoń robotnika ") + (nth + 1))
+                        .formatted(gone ? Formatting.RED : Formatting.YELLOW,
+                                Formatting.BOLD));
         List<Text> lore = new ArrayList<>();
         lore.add(line("Wraca na swoje miejsce i kończy", Formatting.GRAY));
         lore.add(line("przerwę, na której akurat był.", Formatting.GRAY));
@@ -538,7 +549,13 @@ public class CrewScreenHandler extends ScreenHandler {
             return;
         }
         if (index == WHIP_SLOT) {
-            answer(TrapCrew.whip(boss, card.index()));
+            // In chat, unlike every other refusal here. The rest of the board
+            // greys out what will not work, so "nothing happened" is already
+            // explained by the item you clicked. The whip is never greyed out
+            // -- it is free -- so its no is the only one on this screen a
+            // player has to actually READ, and the action bar is a grey line
+            // under a chest window nobody is looking at the bottom of.
+            answer(TrapCrew.whip(boss, card.index()), false);
             return;
         }
         if (index == MOVE_SLOT) {
@@ -571,10 +588,15 @@ public class CrewScreenHandler extends ScreenHandler {
     }
 
     private void answer(String no) {
+        answer(no, true);
+    }
+
+    /** @param overlay action bar, or false for chat when the reason must be read. */
+    private void answer(String no, boolean overlay) {
         if (no == null) {
             click(SoundEvents.ENTITY_VILLAGER_WORK_FARMER, 1.0F);
         } else {
-            boss.sendMessage(Text.literal(no).formatted(Formatting.GRAY), true);
+            boss.sendMessage(Text.literal(no).formatted(Formatting.GRAY), overlay);
             click(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.7F);
         }
         paint();

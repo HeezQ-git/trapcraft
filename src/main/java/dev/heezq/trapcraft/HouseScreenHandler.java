@@ -199,24 +199,31 @@ public class HouseScreenHandler extends ScreenHandler {
                                 .formatted(house.balance > 0 ? Formatting.GREEN : Formatting.RED,
                                         Formatting.BOLD)));
         int machines = TrapHouse.machineCount(house);
-        int upkeep = machines * TrapMath.MACHINE_UPKEEP;
+        // Both ends of the bill: what a full floor costs and what an empty one
+        // does. The screen has no cheap way to ask how many are occupied right
+        // now -- that needs the world -- and the two numbers are the decision
+        // anyway. See TrapMath.upkeepOn.
+        int upkeep = TrapMath.upkeepOn(machines, 0);
+        int idle = TrapMath.upkeepOn(machines, machines);
         List<Text> lore = new ArrayList<>();
         lore.add(line("Każdy przegrany zakład wpada tutaj.", Formatting.GRAY));
         lore.add(line("Każda wygrana jest z tego wypłacana.", Formatting.GRAY));
         lore.add(Text.empty());
         lore.add(plain("Utrzymanie  ").formatted(Formatting.GRAY)
-                .append(plain(upkeep + "e").formatted(Formatting.RED, Formatting.BOLD))
+                .append(plain("do " + upkeep + "e").formatted(Formatting.RED, Formatting.BOLD))
                 .append(plain(" co 30s").formatted(Formatting.DARK_GRAY)));
-        lore.add(line("  automatów: " + machines + ", świecą się", Formatting.DARK_GRAY));
-        lore.add(line("  niezależnie od tego, czy ktoś gra.", Formatting.DARK_GRAY));
+        lore.add(line("  automatów: " + machines + ". Przy komplecie graczy.",
+                Formatting.DARK_GRAY));
+        lore.add(line("  Ciemna szafka to ćwierć stawki, więc", Formatting.DARK_GRAY));
+        lore.add(line("  pusta sala kosztuje " + idle + "e.", Formatting.DARK_GRAY));
         lore.add(plain("Haracz  ").formatted(Formatting.GRAY)
                 .append(plain(Math.round(TrapMath.PROTECTION_RATE * 100) + "%")
                         .formatted(Formatting.RED, Formatting.BOLD))
                 .append(plain(" wszystkiego, co obstawiono").formatted(Formatting.DARK_GRAY)));
         lore.add(line("  Ze skarbca, niezależnie od wyniku.", Formatting.DARK_GRAY));
         lore.add(line("  Trzy niezapłacone raty i przyjdą.", Formatting.RED));
-        lore.add(line("  Skarbiec wystarczy na " + (upkeep <= 0 ? "zawsze"
-                        : (house.balance / upkeep / 2) + " min") + " pustki.",
+        lore.add(line("  Skarbiec wystarczy na " + (idle <= 0 ? "zawsze"
+                        : (house.balance / idle / 2) + " min") + " pustki.",
                 Formatting.DARK_GRAY));
         lore.add(Text.empty());
         lore.add(line("Pełny skarbiec to też twoja reputacja:", Formatting.WHITE));

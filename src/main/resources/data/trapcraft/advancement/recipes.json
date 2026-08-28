@@ -1,0 +1,66 @@
+{
+  "criteria": {
+    "joined": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "requirements": [
+    [
+      "joined"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "trapcraft:acetylator",
+      "trapcraft:blackjack",
+      "trapcraft:blend_joint",
+      "trapcraft:bong",
+      "trapcraft:boost_wand",
+      "trapcraft:builder_wand",
+      "trapcraft:burner_phone",
+      "trapcraft:cartel_key_trade_up",
+      "trapcraft:casino_bar",
+      "trapcraft:casino_card",
+      "trapcraft:city_vault",
+      "trapcraft:climb",
+      "trapcraft:dirty_emerald_block",
+      "trapcraft:dirty_emerald_from_block",
+      "trapcraft:docks_key_trade_up",
+      "trapcraft:drying_rack",
+      "trapcraft:fire_house",
+      "trapcraft:gravity_bong",
+      "trapcraft:harvest_wand",
+      "trapcraft:hospital",
+      "trapcraft:joint_diesel",
+      "trapcraft:joint_haze",
+      "trapcraft:joint_kush",
+      "trapcraft:joint_midnight",
+      "trapcraft:joint_purp",
+      "trapcraft:joint_sunset",
+      "trapcraft:laundry",
+      "trapcraft:leaf_press",
+      "trapcraft:ledger",
+      "trapcraft:mailbox",
+      "trapcraft:market_shelf",
+      "trapcraft:market_stall",
+      "trapcraft:miners_hammer",
+      "trapcraft:mixing_station",
+      "trapcraft:nerve_tonic",
+      "trapcraft:nightclub",
+      "trapcraft:phantom_key_trade_up",
+      "trapcraft:plinko",
+      "trapcraft:police",
+      "trapcraft:prospect_wand",
+      "trapcraft:refiner",
+      "trapcraft:roulette",
+      "trapcraft:scoring_table",
+      "trapcraft:scratch",
+      "trapcraft:shop_till",
+      "trapcraft:slot_machine",
+      "trapcraft:storm_wand",
+      "trapcraft:toss",
+      "trapcraft:wallet",
+      "trapcraft:wash_pot"
+    ]
+  }
+}

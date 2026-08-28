@@ -35,6 +35,8 @@ public final class TrapComponents {
     public static ComponentType<String> casino;
     /** Which house a mailbox is the post for, as a UUID string. */
     public static ComponentType<String> home;
+    /** How far up a wand has been taken, 0 for one straight off the shelf. */
+    public static ComponentType<Integer> wandTier;
 
     public static Blend getBlend(ItemStack stack) {
         return stack.get(blend);
@@ -86,6 +88,11 @@ public final class TrapComponents {
                         .codec(Codec.STRING)
                         .packetCodec(PacketCodecs.STRING)
                         .build());
+        wandTier = Registry.register(Registries.DATA_COMPONENT_TYPE, TrapCraft.id("wand_tier"),
+                ComponentType.<Integer>builder()
+                        .codec(Codec.INT)
+                        .packetCodec(PacketCodecs.VAR_INT)
+                        .build());
 
         // DATA_COMPONENT_TYPE is a SYNCED registry: every entry registered here
         // is sent to the client during login, and a client that doesn't know
@@ -100,7 +107,7 @@ public final class TrapComponents {
         // working because the packwiz pack happened to ship the same jar to
         // everyone, which is luck rather than design.
         PolymerComponent.registerDataComponent(blend, contract, rep, quality, purity, balance,
-                casino, home);
+                casino, home, wandTier);
     }
 
     public static Purity getPurity(ItemStack stack) {

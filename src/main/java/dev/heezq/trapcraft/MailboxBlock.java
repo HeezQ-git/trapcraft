@@ -47,7 +47,8 @@ import java.util.List;
  * shorter and wrong in three places: a creative break would drop one, an
  * explosion would drop one, and silk touch would mean nothing.
  */
-public class MailboxBlock extends TurnableBlock implements PolymerBlock, PolymerTexturedBlock {
+public class MailboxBlock extends TurnableBlock
+        implements PolymerBlock, PolymerTexturedBlock, SurveyAnchor {
     private final Map<Direction, BlockState> carriers;
 
     public MailboxBlock(Settings settings) {
@@ -227,18 +228,26 @@ public class MailboxBlock extends TurnableBlock implements PolymerBlock, Polymer
             return spare;
         }
 
-        // Outdoors, and every house of yours round here already has its post.
-        // Two different intentions land here -- moving that house's box, or
-        // registering a new house from a spot that is not a room -- and
-        // guessing between them is what turned a village into one address.
+        // Every house of yours round here already has its post. Two different
+        // intentions land here -- moving that house's box, or registering a new
+        // house from a spot the survey refused -- and guessing between them is
+        // what turned a village into one address.
+        //
+        // The survey's OWN reason leads, and the neighbour is a footnote. It
+        // used to be the other way round: "this is not a room" was printed over
+        // whatever the survey actually said, so a sealed flat that failed for a
+        // reason with a fix -- a hole at a named position, a clash with a named
+        // house -- was told it was not a room, which is both untrue and
+        // unactionable. In a block of flats every new room is within
+        // LOOKS_FOR of an older one's box, so that message was the only one
+        // anybody building upwards could ever get.
         TrapHomes.Home posted = TrapHomes.postedNear(who, ground, pos, LOOKS_FOR);
         if (posted != null) {
             BlockPos box = posted.mailbox();
-            refuse(who, ground, pos, "To nie jest pokój, a " + posted.name()
-                    + " ma już skrzynkę na " + box.getX() + " " + box.getY() + " "
-                    + box.getZ() + ". Żeby ją PRZENIEŚĆ, kucnij i kliknij ją pustą ręką, "
-                    + "a potem postaw tutaj. Żeby zarejestrować kolejny dom, stań w jego "
-                    + "i kliknij tam skrzynką.");
+            refuse(who, ground, pos, no + "\n  (" + posted.name() + " ma już skrzynkę na "
+                    + box.getX() + " " + box.getY() + " " + box.getZ()
+                    + ". Żeby ją PRZENIEŚĆ, kucnij i kliknij ją pustą ręką, a potem "
+                    + "postaw tutaj.)");
             return null;
         }
 

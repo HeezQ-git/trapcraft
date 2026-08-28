@@ -10,10 +10,10 @@ import net.minecraft.util.Formatting;
  * should feel like different skills rather than one mechanic reskinned.
  */
 public enum Purity {
-    CUT("Cięte", Formatting.DARK_GRAY, 0.55F, 3),
-    STREET("Uliczne", Formatting.WHITE, 1.00F, 7),
-    CLEAN("Dobre", Formatting.AQUA, 1.50F, 13),
-    PURE("Idealne", Formatting.LIGHT_PURPLE, 2.10F, 22);
+    CUT("Cięte", Formatting.DARK_GRAY, 0.55F, 9),
+    STREET("Uliczne", Formatting.WHITE, 1.00F, 21),
+    CLEAN("Dobre", Formatting.AQUA, 1.50F, 39),
+    PURE("Idealne", Formatting.LIGHT_PURPLE, 2.10F, 66);
 
     private final String display;
     private final Formatting colour;
@@ -55,7 +55,18 @@ public enum Purity {
         return potency;
     }
 
-    /** Well above weed: Pure is 22 emeralds against Fire weed's 7. */
+    /**
+     * Well above weed: Pure is 66 emeralds against Fire weed's 21.
+     *
+     * Scaled 3x on 2026-08-15, together with {@link Quality#emeralds()}, so the
+     * whole ratio table between the two lines is untouched -- what moved is
+     * where both sit against {@link ShopStock}. A Cut line used to fetch 6e on
+     * the street and a loaf of bread costs 6e, which said a refined drug is
+     * worth dinner. Pure now goes for 125e against a 42e diamond, and the long
+     * dope chain behind it for 376e, which is what the machines and the risk
+     * are actually worth. The market catalogue is the anchor: retune against
+     * bread, diamond and netherite there, not against this table's own past.
+     */
     public int emeralds() {
         return emeralds;
     }

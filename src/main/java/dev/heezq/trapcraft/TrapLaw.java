@@ -413,6 +413,38 @@ public final class TrapLaw {
                         + "nalicza ci podatek.\n\n"))
                 .append(warn("Zaległość = policja ma cię na oku, aż zapłacisz."))));
 
+        // The one office whose budget is a live number rather than a rate, so
+        // the constitution has to print what the council actually voted --
+        // "there is a police force" is not a law, "we pay them 900e a day and
+        // today we managed 600" is.
+        pages.add(page(title("POLICJA\n\n")
+                .append(body(TrapPolice.all().isEmpty()
+                        ? "Miasto nie ma komisariatu.\n\n"
+                        : "Komisariatów: " + TrapPolice.all().size() + ", cel: "
+                        + TrapPolice.cells() + ".\n\n"))
+                .append(body("Budżet " + TrapPolice.budget() + "e dziennie.\n"))
+                .append(body("Na etacie " + TrapPolice.force()
+                        + ", wyposażenie " + TrapPolice.gear() + "/"
+                        + TrapPolice.TOP_GEAR + ".\n\n"))
+                .append(TrapPolice.funded() < TrapPolice.budget()
+                        ? warn("Wypłacono tylko " + TrapPolice.funded() + "e.")
+                        : hint("Suwak jest przy skarbcu miasta."))));
+
+        pages.add(page(title("PRZESTĘPSTWA\n\n")
+                .append(body("Spraw od początku: " + TrapCrime.total() + "\n"))
+                .append(body("Wykrytych: " + TrapCrime.solved() + "\n"))
+                .append(body("Umorzonych: " + TrapCrime.wentCold() + "\n\n"))
+                .append(body("Skradziono " + TrapCrime.stolen() + "e, odzyskano "
+                        + TrapCrime.recovered() + "e.\n\n"))
+                .append(hint("/crime mówi, co je napędza."))));
+
+        pages.add(page(title("KONTROLA OSOBISTA\n\n")
+                .append(body("Patrol zatrzymuje gracza, który ma przy sobie "
+                        + "ponad " + TrapPolice.LOOKS_AWAY + " sztuk towaru, "
+                        + "świeży heat albo dług w urzędzie.\n\n"))
+                .append(body("Mandat idzie do kasy miasta.\n\n"))
+                .append(hint("Nic ci nie zabiorą i nikt cię nie zamknie."))));
+
         pages.add(page(title("BRUDNE PIENIĄDZE\n\n")
                 .append(body("Ulica płaci brudnymi szmaragdami.\n\n"))
                 .append(body("Żaden sklep ich nie weźmie i nie zapłacisz "

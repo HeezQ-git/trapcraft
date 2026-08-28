@@ -158,17 +158,21 @@ public final class TrapClubs {
         final UUID club;
         final String name;
         final BlockPos floor;
+        /** Somebody from out of town: their own money, and no bed to go to. */
+        final boolean visitor;
         int beatsLeft = NIGHT_BEATS;
         int wait = BEAT_TICKS;
         boolean walkingIn = true;
         final long deadline;
 
-        Guest(UUID id, UUID club, String name, BlockPos floor, long deadline) {
+        Guest(UUID id, UUID club, String name, BlockPos floor, long deadline,
+              boolean visitor) {
             this.id = id;
             this.club = club;
             this.name = name;
             this.floor = floor;
             this.deadline = deadline;
+            this.visitor = visitor;
         }
     }
 
@@ -253,6 +257,12 @@ public final class TrapClubs {
         spill(world, pos, (int) Math.min(club.till, Integer.MAX_VALUE));
         for (var guest : new ArrayList<>(GUESTS.values())) {
             if (guest.club.equals(club.id)) {
+                // Off the books BEFORE the night is ended, or dance() finds
+                // them a tick later with no club to belong to and ends it a
+                // second time. Harmless while every guest was a resident --
+                // putHome twice is putHome -- and not harmless now: the second
+                // errandDone polls an errand the visitor never ran.
+                GUESTS.remove(guest.id);
                 leave(world.getServer(), guest);
             }
         }
@@ -346,19 +356,54 @@ public final class TrapClubs {
         return Math.max(1, Math.round(TrapHomes.population() * 0.3f));
     }
 
+    /**
+     * Guests who live here, which is the only kind the cap is about.
+     *
+     * {@link #room} says how much of the TOWN can be in one room at once, and
+     * somebody from away is not part of the town -- they are capacity on top
+     * of it, which is the entire economic point of {@link TrapVisitors}.
+     * Counting them against the cap would mean a busy club turning away the
+     * neighbours it was built for in order to hold onto tourists, and the
+     * bigger a draw the club became the fewer locals could get in.
+     */
+    private static int locals() {
+        int here = 0;
+        for (Guest guest : GUESTS.values()) {
+            if (!guest.visitor) {
+                here++;
+            }
+        }
+        return here;
+    }
+
+    /**
+     * Is anybody dancing at this hour?
+     *
+     * Daylight is not a club. The hour factor floors at 0.35 so a casino is
+     * never shut; a dance floor at noon is just a lit room. The gate is on 1.0
+     * rather than on the floor, so raising that floor for the casino's sake
+     * leaves this alone -- which is why it is written as a number and not as
+     * "above the floor".
+     *
+     * Pulled out of {@link #doors} so a visitor is turned away by exactly the
+     * same clock the residents are. A tourist let into a club at noon would be
+     * the one person in town who can do a thing nobody else can.
+     */
+    private static float hour(MinecraftServer server) {
+        float busy = TrapMath.casinoHourFactor(
+                server.getOverworld().getTimeOfDay() % 24000L);
+        return busy < 1.0f ? 0f : busy;
+    }
+
     private static void doors(MinecraftServer server) {
         if (CLUBS.isEmpty() || TrapHomes.population() <= 0) {
             return;
         }
-        float busy = TrapMath.casinoHourFactor(
-                server.getOverworld().getTimeOfDay() % 24000L);
-        // Daylight is not a club. The hour factor floors at 0.12 so a casino
-        // is never shut; a dance floor at noon is just a lit room.
-        if (busy < 1.0f) {
+        float busy = hour(server);
+        if (busy <= 0f) {
             return;
         }
-        int here = GUESTS.size();
-        if (here >= room(server)) {
+        if (locals() >= room(server)) {
             return;
         }
         for (Club club : CLUBS) {
@@ -388,7 +433,63 @@ public final class TrapClubs {
         if (guest == null) {
             return;
         }
-        String who = plainName(guest);
+        admit(world, club, guest, floor, plainName(guest), false);
+    }
+
+    /**
+     * Somebody passing through comes in.
+     *
+     * The ceiling this fixes is written down in {@link TrapVisitors}: a club's
+     * crowd is drawn through {@code freeResident}, so a room that holds thirty
+     * people in a town of twenty holds twenty, and the door charge -- the only
+     * lever the whole block has -- stops meaning anything the moment the town
+     * is the binding constraint rather than the price. A club was the loudest
+     * example of the exact problem tourists were invented to solve and the one
+     * venue they could not reach.
+     *
+     * It is also the errand that makes an evening in this city read as one
+     * evening. A visitor already gambled, shopped and saw a doctor; the room
+     * everybody in town is in at once was the conspicuous gap.
+     *
+     * Their own money, out of their own purse, exactly as at a till or a
+     * cabinet -- {@link TrapPayroll} is the TOWN's wage bill and a tourist was
+     * never paid out of it.
+     *
+     * @return true if they got in and the venue now owns them
+     */
+    public static boolean sendVisitor(MinecraftServer server, VillagerEntity body) {
+        if (CLUBS.isEmpty() || GUESTS.containsKey(body.getUuid()) || hour(server) <= 0f) {
+            return false;
+        }
+        for (Club club : CLUBS) {
+            ServerWorld world = worldOf(server, club.dimension);
+            if (world == null
+                    || !world.isChunkLoaded(club.pos.getX() >> 4, club.pos.getZ() >> 4)) {
+                continue;
+            }
+            // Checked here rather than at the door: somebody turned away for
+            // being short after a cross-town walk has spent their evening
+            // getting nowhere, and the errand machinery would call that a
+            // success and move on.
+            if (TrapVisitors.purseOf(body.getUuid()) < club.door()) {
+                continue;
+            }
+            BlockPos floor = TrapSpawn.near(world, club.pos.up());
+            if (floor == null) {
+                continue;
+            }
+            return admit(world, club, body, floor, "Ktoś z daleka", true);
+        }
+        return false;
+    }
+
+    /**
+     * A body, a club, and a place to stand: the half both doors share.
+     *
+     * @return true if they are on their way in
+     */
+    private static boolean admit(ServerWorld world, Club club, VillagerEntity guest,
+                                 BlockPos floor, String who, boolean visitor) {
         guest.addCommandTag(TAG);
         guest.setCustomName(Text.literal(who).formatted(Formatting.LIGHT_PURPLE));
         guest.setCustomNameVisible(true);
@@ -400,13 +501,15 @@ public final class TrapClubs {
         if (!guest.getBlockPos().isWithinDistance(club.pos, WALKABLE)) {
             BlockPos door = TrapSpawn.near(world, club.pos.up(), 6);
             if (door == null) {
-                return;
+                guest.removeCommandTag(TAG);
+                return false;
             }
             guest.refreshPositionAndAngles(door, world.getRandom().nextFloat() * 360f, 0f);
         }
         TrapHomes.walkTo(guest, floor);
         GUESTS.put(guest.getUuid(), new Guest(guest.getUuid(), club.id, who, floor,
-                world.getTime() + 200 + 20L * WALKABLE));
+                world.getTime() + 200 + 20L * WALKABLE, visitor));
+        return true;
     }
 
     private static String plainName(VillagerEntity body) {
@@ -468,7 +571,15 @@ public final class TrapClubs {
     /** The door charge, once, on the way in. */
     private static void pay(ServerWorld world, Club club, Guest guest, VillagerEntity body) {
         int charge = club.door();
-        if (!TrapPayroll.spend(charge)) {
+        // Whose money this is. A neighbour's night out comes off the town's
+        // wage bill; somebody passing through brought their own from outside
+        // it, which is the whole reason a club can be busier than the town is
+        // populous. Both fail CLOSED for TrapPayroll.spend's reason -- a
+        // half-paid door charge is a duplication bug wearing a hat.
+        boolean paid = guest.visitor
+                ? TrapVisitors.spend(guest.id, charge)
+                : TrapPayroll.spend(charge);
+        if (!paid) {
             return;   // the town went broke between the street and the door
         }
         TrapCity.Duty duty = TrapCity.Duty.LUXURY;
@@ -518,6 +629,18 @@ public final class TrapClubs {
             return;
         }
         body.removeCommandTag(TAG);
+        if (guest.visitor) {
+            // Not stayIn and not putHome. Those two calls are what turn a
+            // visitor into furniture -- the failure written down in
+            // TrapFloor.leave and again in TrapShops -- because somebody
+            // passing through has no bed to be walked back to and no entry in
+            // the register to be given back. Handed to whoever brought them;
+            // they may have another errand in town.
+            body.setCustomName(null);
+            body.setCustomNameVisible(false);
+            TrapVisitors.errandDone(guest.id);
+            return;
+        }
         body.setCustomName(Text.literal(guest.name).formatted(Formatting.AQUA));
         // A night out, then a night in. The same cooldown the casino uses, so
         // one town's worth of people is shared between every venue in it.

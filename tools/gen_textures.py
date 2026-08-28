@@ -2302,6 +2302,69 @@ WAND_GEMS = {
 }
 
 
+# --- cases and keys ---------------------------------------------------------
+#
+# Same trick as the wands above: two sprites, recoloured four ways each. A tier
+# is a colour and nothing else, which is the right call for a family somebody
+# will have all four of in one chest -- a redraw per tier would make them four
+# unrelated items instead of one ladder.
+#
+# The pairing is the other half of it. A case and its key share a palette
+# exactly, so "which key opens this" is answerable across a hotbar without
+# reading a tooltip.
+
+CASE_KEY_TIERS = {
+    # frame, lit face, body -- darkest to lightest, per tier.
+    "street": ("#2b2b2f", "#9aa0a8", "#6e747c", "#4a4f56"),    # tin and grease
+    "docks": ("#12333a", "#5fd3d8", "#2e8f97", "#1d5f66"),     # wet steel
+    "cartel": ("#3a2a06", "#ffd75e", "#d9a41f", "#9a7212"),    # money
+    "phantom": ("#17111f", "#c08bff", "#6c3fa8", "#3a2159"),   # the black one
+}
+
+# A crate: lid, seam, latch, body. The latch sits across the seam so the thing
+# reads as SHUT, which is the entire point of a case you haven't got a key for.
+CASE = """
+................
+................
+.dddddddddddddd.
+.dHHHHHHHHHHHHd.
+.dLLLLLLLLLLLLd.
+.dLLLLLmmLLLLLd.
+.ddddddmmdddddd.
+.dBBBBBmmBBBBBd.
+.dBBBBBMMBBBBBd.
+.dBBBBBBBBBBBBd.
+.dBBBBBBBBBBBBd.
+.dBBBBBBBBBBBBd.
+.dddddddddddddd.
+................
+................
+................
+"""
+
+# Bow at the top, two teeth at the bottom right. Upright rather than on the
+# stick diagonal the wands use: a key lying diagonally in a hotbar reads as
+# another wand, and these two families must not be confusable.
+KEY = """
+................
+.....ooooo......
+....oHHHHHo.....
+...oHOo.oOHo....
+...oHo...oOo....
+...oOOo.oOOo....
+....oOOOOOo.....
+.....oSSSo......
+......sSs.......
+......sSs.......
+......sSsO......
+......sSs.......
+......sSsOO.....
+......sSs.......
+.......s........
+................
+"""
+
+
 # --- burner phone ---------------------------------------------------------
 
 PHONE_PAL = {
@@ -2812,6 +2875,176 @@ xgwwwwwwgwwwwwgx
 xgwwwwwwgwwwwwgx
 xgwwwwwwgwwwwwgx
 xWWWWWWWWWWWWWWx
+xxxxxxxxxxxxxxxx
+"""
+
+
+# --- the fire station -------------------------------------------------------
+#
+# Red brick, a wide pale garage door across the face, and a bell over it. The
+# door is the load-bearing half for the same reason the police chequer is: a
+# fire station is the one civic building whose shape is recognisable before any
+# marking on it, because the whole front of it is a hole big enough to drive
+# through. Everything else on this face exists to say that opening is a door
+# and not a window -- the sill under it, the lintel over it, and the bell.
+#
+# Warmer and lighter than the nick on purpose. The two buildings will stand on
+# the same street, both are red-and-something, and the pair has to be tellable
+# apart at a glance in the dark: navy-on-grey against red-on-cream.
+
+FIRE_PAL = {
+    "b": "#9c3a2c",     # brick
+    "B": "#b04a38",     # brick, lit
+    "d": "#6f2820",     # brick, shadow
+    "m": "#7d3229",     # mortar course
+    "w": "#e6ddcc",     # cream door
+    "W": "#f2ebdd",     # cream door, lit
+    "g": "#c3b8a4",     # door groove
+    "s": "#4a4a4f",     # slate sill
+    "y": "#d8b23c",     # brass bell
+    "Y": "#efd06a",     # brass, lit
+    "x": "#2a1712",     # outline
+}
+
+FIRE_FACE = """
+xxxxxxxxxxxxxxxx
+xBBBBBBBBBBBBBBx
+xbbbbbyYYybbbbbx
+xbbbbyYyyYybbbbx
+xbbbbyyyyyybbbbx
+xbbbbbsssssbbbbx
+xssssssssssssssx
+xswWWWWWWWWWWwsx
+xswWgWWggWWgWwsx
+xswWgWWggWWgWwsx
+xswWgWWggWWgWwsx
+xswWgWWggWWgWwsx
+xswwwwwwwwwwwwsx
+xssssssssssssssx
+xBBBBBBBBBBBBBBx
+xxxxxxxxxxxxxxxx
+"""
+
+FIRE_SIDE = """
+xxxxxxxxxxxxxxxx
+xBBBBBBBBBBBBBBx
+xbbbbmbbbbbbbbbx
+xbbbbmbbbbbbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbbbbbbmbbbbx
+xbbbbbbbbbmbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbmbbbbbbbbbx
+xbbbbmbbbbbbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbbbbbbmbbbbx
+xbbbbbbbbbmbbbbx
+xddddddddddddddx
+xBBBBBBBBBBBBBBx
+xxxxxxxxxxxxxxxx
+"""
+
+FIRE_TOP = """
+xxxxxxxxxxxxxxxx
+xBBBBBBBBBBBBBBx
+xbbbbbbmbbbbbbbx
+xbbbbbbmbbbbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbbbmbbbbbbbx
+xbbbbbbmbbbbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbbbmbbbbbbbx
+xbbbbbbmbbbbbbbx
+xmmmmmmmmmmmmmmx
+xbbbbbbmbbbbbbbx
+xbbbbbbmbbbbbbbx
+xbbbbbbmbbbbbbbx
+xBBBBBBBBBBBBBBx
+xxxxxxxxxxxxxxxx
+"""
+
+
+# --- the police station -----------------------------------------------------
+#
+# Grey civic concrete, a blue-and-white chequer band across the top, and a
+# silver shield under it. The chequer is the load-bearing half: it is the one
+# marking that says "police" in every country that has any, it survives being
+# sixteen pixels wide because it is nothing but alternating squares, and it
+# reads at a glance from across a street at night -- which is the same test the
+# hospital's red cross was built to pass.
+#
+# Deliberately NOT navy overall. A solid dark block on a dark street is a hole;
+# the concrete is the same value as vanilla stone brick so the building reads
+# as municipal, and only the band and the badge carry the colour.
+
+POLICE_PAL = {
+    "c": "#6a6f78",     # concrete
+    "C": "#7d838d",     # concrete, lit
+    "g": "#565a62",     # course line
+    "d": "#3f4349",     # shadow
+    "n": "#23386b",     # navy
+    "N": "#33528f",     # navy, lit
+    "w": "#dfe4ec",     # white
+    "s": "#aab2be",     # silver
+    "S": "#848c99",     # silver, shaded
+    "y": "#c9a227",     # brass
+    "x": "#262a2f",     # outline
+}
+
+POLICE_FACE = """
+xxxxxxxxxxxxxxxx
+xCCCCCCCCCCCCCCx
+xcNwNwNwNwNwNwcx
+xcwNwNwNwNwNwNcx
+xcggggggggggggcx
+xcccsssssssscccx
+xcccsNNyyNNscccx
+xcccsyyyyyyscccx
+xcccsNyyyyNscccx
+xcccsNyNNyNscccx
+xcccSsNNNNsScccx
+xccccSsNNsSccccx
+xcccccSssScccccx
+xcddddddddddddcx
+xCCCCCCCCCCCCCCx
+xxxxxxxxxxxxxxxx
+"""
+
+POLICE_SIDE = """
+xxxxxxxxxxxxxxxx
+xCCCCCCCCCCCCCCx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xggggggggggggggx
+xcccgccccccccccx
+xcccgccccccccccx
+xcccgccccccccccx
+xggggggggggggggx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xcddddddddddddcx
+xCCCCCCCCCCCCCCx
+xxxxxxxxxxxxxxxx
+"""
+
+POLICE_TOP = """
+xxxxxxxxxxxxxxxx
+xCCCCCCCCCCCCCCx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xggggggggggggggx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xccccccgcccccccx
+xCCCCCCCCCCCCCCx
 xxxxxxxxxxxxxxxx
 """
 
@@ -3715,6 +3948,12 @@ def main() -> None:
     write(render(HOSPITAL_FACE, HOSPITAL_PAL), "block", "hospital_face.png")
     write(render(HOSPITAL_SIDE, HOSPITAL_PAL), "block", "hospital_side.png")
     write(render(HOSPITAL_TOP, HOSPITAL_PAL), "block", "hospital_top.png")
+    write(render(FIRE_FACE, FIRE_PAL), "block", "fire_house_face.png")
+    write(render(FIRE_SIDE, FIRE_PAL), "block", "fire_house_side.png")
+    write(render(FIRE_TOP, FIRE_PAL), "block", "fire_house_top.png")
+    write(render(POLICE_FACE, POLICE_PAL), "block", "police_face.png")
+    write(render(POLICE_SIDE, POLICE_PAL), "block", "police_side.png")
+    write(render(POLICE_TOP, POLICE_PAL), "block", "police_top.png")
     write(render(MAILBOX_BOX, MAILBOX_PAL), "block", "mailbox_box.png")
     write(render(MAILBOX_POST, MAILBOX_PAL), "block", "mailbox_post.png")
     write(render(MAILBOX_FLAG, MAILBOX_PAL), "block", "mailbox_flag.png")
@@ -3797,6 +4036,16 @@ def main() -> None:
     for wand, (lit, body, core) in WAND_GEMS.items():
         write(render(WAND, dict(WAND_PAL, G=lit, B=body, d=core)),
               "item", f"{wand}_wand.png")
+
+    print("cases and keys:")
+    for tier, (frame, lit, body, dark) in CASE_KEY_TIERS.items():
+        write(render(CASE, {"d": frame, "H": lit, "L": body, "B": dark,
+                            # The latch is metal on every tier -- it is the
+                            # part that is the same lock four times over.
+                            "m": "#c9ccd1", "M": "#7c8189"}),
+              "item", f"{tier}_case.png")
+        write(render(KEY, {"o": frame, "H": lit, "O": body, "S": body, "s": dark}),
+              "item", f"{tier}_key.png")
 
     print("smoking gear:")
     gear = palette_for("kush")

@@ -269,11 +269,18 @@ public final class TrapHomes {
      * places that can change one is two places that can put a house in a
      * condition the survey never produced.
      */
+    /**
+     * @param asleep part of what was measured is in a chunk that is not about,
+     *               so the numbers are a SMALLER building than the one that is
+     *               there -- see {@link #consider}. Nothing may be graded on a
+     *               reading with this set; the reading is not wrong about the
+     *               world, it is wrong about how much of the world it saw.
+     */
     public record Readout(String name, int tier, int floor, boolean sealed, boolean clash,
                           int exits, int beds, boolean crafting, boolean storage,
                           boolean cooking, boolean stall, boolean window, int lights,
                           int kinds, int dark, float finished, String roughest, boolean registered,
-                          BlockPos measuredFrom, BlockPos leak, boolean buried) {
+                          BlockPos measuredFrom, BlockPos leak, boolean buried, boolean asleep) {
         /** One bed is the hard requirement; the rest decide the household. */
         public boolean bed() {
             return beds > 0;
@@ -323,6 +330,16 @@ public final class TrapHomes {
 
     /** Odds a tenant fancies something on any given day. */
     private static final float CRAVING_ODDS = 0.55f;
+
+    /**
+     * Odds a tenant of a fully-hooked street overdoses on any given day.
+     *
+     * The worst case, scaled DOWN by the square of the meter -- see
+     * {@link #overdosed}. One house in forty is a bed filled every other day
+     * in a town of twenty, which is the top of a dial nobody reaches by
+     * accident.
+     */
+    private static final float OVERDOSE_ODDS = 0.025f;
 
     private static final List<Home> HOMES = new ArrayList<>();
     private static Path saveFile;
@@ -467,12 +484,17 @@ public final class TrapHomes {
     private static Readout grade(ServerWorld world, Home self, HomeSurvey.Rooms rooms) {
         String name = self == null ? null : self.name;
         if (!rooms.sealed()) {
+            // asleep=false, and deliberately: an unloaded chunk answers "wall",
+            // and a wall cannot open a hole in a room or bury an anchor. A
+            // failed survey is a failed BUILDING, and calling it unreadable
+            // instead would mean a place that really has had its roof taken off
+            // could never be closed.
             return new Readout(name, 0, 0, false, rooms.clash(), 0, 0, false, false,
                     false, false, false, 0, 0, 0, 0f, "", self != null,
                     self == null ? null : self.anchor,
                     new BlockPos(HomeSurvey.cellX(rooms.escape()),
                             HomeSurvey.cellY(rooms.escape()),
-                            HomeSurvey.cellZ(rooms.escape())), rooms.buried());
+                            HomeSurvey.cellZ(rooms.escape())), rooms.buried(), false);
         }
         int floor = rooms.floor();
         Fittings kit = fittings(world, rooms.inside());
@@ -487,7 +509,7 @@ public final class TrapHomes {
         return new Readout(name, tier, floor, true, false, rooms.exits().size(), kit.beds,
                 kit.crafting, kit.storage, kit.cooking, kit.stall, kit.window,
                 kit.lights, kit.kinds, kit.dark, kit.finished(), kit.roughest(), self != null,
-                self == null ? null : self.anchor, null, false);
+                self == null ? null : self.anchor, null, false, rooms.asleep());
     }
 
     /**
@@ -608,6 +630,14 @@ public final class TrapHomes {
             }
         }
         Readout now = grade(world, home, rooms);
+        if (now.asleep()) {
+            // loaded() checks the CORNERS of the box and the anchor, which is
+            // four chunks of however many a house covers -- so a hall three
+            // chunks wide can have its middle asleep and pass. Grading on that
+            // reading drops the tier, which moves a tenant out over a chunk
+            // boundary.
+            return now;
+        }
         int was = home.tier;
         home.tier = now.tier();
         home.floor = now.floor();
@@ -795,7 +825,67 @@ public final class TrapHomes {
                                 .formatted(Formatting.RED)), true);
             }
         }
+        // And once in a while it goes wrong, on the same meter that decides
+        // what they ask for.
+        //
+        // Last in the pass on purpose: today's wage and today's rent have both
+        // been settled, so somebody who collapses tonight still worked today,
+        // which is exactly how a bite behaves. Tomorrow's pass finds them in a
+        // bed, counts them off `working`, and stops paying them then.
+        overdosed(world, home);
         save();
+    }
+
+    /**
+     * A tenant takes too much, and the city gets the bill.
+     *
+     * <h2>The hole this fills</h2>
+     *
+     * The black market pays no duty. That is the deliberate shape of the whole
+     * mod -- see {@link TrapCity} -- and for eight versions the ONLY answer to
+     * it was heat: sell enough and men with axes turn up at your farm. Which
+     * makes dealing a risk you take with your own property and nothing else.
+     * It never cost the town a thing.
+     *
+     * Now it does, and it costs the town in the most specific way available:
+     * through {@link TrapHospitals}, which bills {@link TrapCity}'s purse per
+     * patient per day, out of a treasury the untaxed half of the economy has
+     * never once paid into. Hook the street hard enough and the council starts
+     * finding beds full of people your customers turned into. A city with no
+     * ward loses them after {@link TrapHospitals#LOST_DAYS} days.
+     *
+     * <h2>Why it reads the landlord's meter</h2>
+     *
+     * Because {@link #roll} already does, and one meter for the town's habit
+     * beats two that can disagree about it. It is the same client list that
+     * decides a tenant asks for bags instead of joints; this is what happens
+     * at the end of that sentence. Supplying somebody else's tenants does
+     * nothing here, and that is a real gap rather than a hidden one -- the mod
+     * has never modelled which specific villager bought which specific bag,
+     * and inventing that to make this fairer would be a per-tenant meter, a
+     * per-tenant save file, and a lot of machinery for one roll a day.
+     *
+     * <h2>Rare, and never at the bottom of the meter</h2>
+     *
+     * Squared, so it is not a tax on selling anything at all. A street a
+     * quarter hooked is a one-in-six-hundred day and will effectively never
+     * happen; a street at the ceiling is one house in forty, per day, which in
+     * a town of twenty is a bed filled every other day. That is the difference
+     * between "somebody had a bad night once" and "there is an epidemic and
+     * you caused it", and the meter between them is one you chose to push.
+     */
+    private static void overdosed(ServerWorld world, Home home) {
+        if (home.tenant == null || TrapHospitals.tenantAway(home)) {
+            return;
+        }
+        float hooked = TrapAddiction.street(home.owner) / Drug.MAX;
+        if (hooked <= 0f) {
+            return;
+        }
+        if (world.getRandom().nextFloat() >= OVERDOSE_ODDS * hooked * hooked) {
+            return;
+        }
+        TrapHospitals.hurt(world, home, home.tenant, "przedawkował");
     }
 
     /**
@@ -1235,7 +1325,17 @@ public final class TrapHomes {
      */
     public static boolean out(net.minecraft.entity.Entity body) {
         return body.getCommandTags().contains(TrapFloor.PUNTER_TAG)
-                || body.getCommandTags().contains(TrapShops.TAG);
+                || body.getCommandTags().contains(TrapShops.TAG)
+                // A guest on a dance floor. This one was simply missed when
+                // the clubs shipped, and the symptom was subtle enough to
+                // survive: a shop could call a dancer away mid-night and the
+                // house sweep walked them home from the middle of a room they
+                // had paid to get into, which read as "the club empties for no
+                // reason" three files from the cause.
+                || body.getCommandTags().contains(TrapClubs.TAG)
+                // And somebody working a patch, who is out for as long as they
+                // are employed rather than for an evening. See TrapCrew#put.
+                || body.getCommandTags().contains(TrapCrew.HAND_TAG);
     }
 
     /**
@@ -1778,11 +1878,16 @@ public final class TrapHomes {
             if (state == null) {
                 return false;
             }
-            // The mailbox and the hospital sign are the two blocks a survey is
-            // taken FROM, so both have to read as air: a fill that starts
-            // inside a solid block never leaves it.
-            if (state.isAir() || state.isOf(TrapContent.mailbox)
-                    || state.isOf(TrapContent.hospital)) {
+            // A block a survey is taken FROM has to read as air: a fill that
+            // starts inside a solid block never leaves it, and the room comes
+            // back "buried" -- which every checklist prints as "not sealed",
+            // so a perfectly good building is told it has a hole in it.
+            //
+            // Asked of the BLOCK rather than listed by name here. The list
+            // version was air/mailbox/hospital, the police station was added a
+            // version later, and the first one anybody built reported a hole
+            // in a sealed room. See SurveyAnchor.
+            if (state.isAir() || state.getBlock() instanceof SurveyAnchor) {
                 return true;
             }
             // Water is walkable to a flood fill and would run a house into the
@@ -1820,6 +1925,17 @@ public final class TrapHomes {
             return state != null && (state.getBlock() instanceof DoorBlock
                     || state.getBlock() instanceof FenceGateBlock
                     || state.getBlock() instanceof TrapdoorBlock);
+        }
+
+        /**
+         * The chunk case only. A square off the top or the bottom of the world
+         * is a wall the survey can trust; one in a chunk nobody has loaded is
+         * a wall it made up.
+         */
+        @Override
+        public boolean asleep(int x, int y, int z) {
+            return y >= world.getBottomY() && y <= world.getTopYInclusive()
+                    && !world.getChunkManager().isChunkLoaded(x >> 4, z >> 4);
         }
 
         @Override
@@ -2014,6 +2130,22 @@ public final class TrapHomes {
      */
     static void sicken(Home home, int cost) {
         home.mood = Math.max(0, home.mood - cost);
+        save();
+    }
+
+    /**
+     * Somebody went through the mailbox.
+     *
+     * A NEGATIVE amount puts it back, which is what restitution is -- one
+     * method rather than two because the clamp is the whole of the logic and
+     * having it in one place is what stops a returned burglary paying a
+     * landlord twice. Clamped at empty: a till cannot go below nothing, and a
+     * burglar cannot walk off with more than was sitting there.
+     *
+     * @see TrapCrime for the other end of it
+     */
+    static void robbed(Home home, int amount) {
+        home.till = Math.max(0, home.till - amount);
         save();
     }
 

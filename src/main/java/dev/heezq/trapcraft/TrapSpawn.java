@@ -74,7 +74,18 @@ public final class TrapSpawn {
      * not. Callers that really must produce a body handle the null themselves.
      */
     public static BlockPos near(World world, BlockPos pos, int radius) {
-        return BlockPos.findClosest(pos, radius, radius, spot -> safe(world, spot))
+        return near(world, pos, radius, 2);
+    }
+
+    /**
+     * The same, for something that does not fit in a villager's doorway.
+     *
+     * A golem is two and three quarter blocks tall. Stand one in a slot with
+     * two blocks of headroom and its EYES are inside the ceiling, which is
+     * suffocation damage every tick from a spot the search called safe.
+     */
+    public static BlockPos near(World world, BlockPos pos, int radius, int height) {
+        return BlockPos.findClosest(pos, radius, radius, spot -> safe(world, spot, height))
                 .map(BlockPos::toImmutable)
                 .orElse(null);
     }

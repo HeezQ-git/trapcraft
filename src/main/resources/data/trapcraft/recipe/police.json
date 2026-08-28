@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SLS",
+    "BHB",
+    "SSS"
+  ],
+  "key": {
+    "S": "minecraft:stone_bricks",
+    "L": "minecraft:lantern",
+    "B": "minecraft:iron_bars",
+    "H": "minecraft:shield"
+  },
+  "result": {
+    "id": "trapcraft:police",
+    "count": 1
+  }
+}

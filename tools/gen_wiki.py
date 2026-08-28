@@ -28,6 +28,7 @@ import sys
 from PIL import Image
 
 import check_stock
+import gen_assets
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src/main/java/dev/heezq/trapcraft"
@@ -246,6 +247,21 @@ def named_blends() -> list[dict]:
     return out
 
 
+def crime_kinds() -> list[dict]:
+    """The offence table, off the enum.
+
+    Typed out in prose once and it went stale the first time a weight moved,
+    which on this page is worse than useless: the whole point of printing the
+    weights is that a council can see what it is buying protection FROM.
+    """
+    text = java("TrapCrime")
+    found = re.findall(r'^\s{8}(\w+)\("([^"]+)", (\d+), (\d+), (\d+),', text, re.M)
+    if not found:
+        sys.exit("gen_wiki: couldn't read the crime kinds -- the enum moved")
+    return [{"name": n, "display": d, "weight": int(w), "fine": int(f), "days": int(days)}
+            for n, d, w, f, days in found]
+
+
 def recipes() -> dict[str, dict]:
     """Shaped recipes as a grid the page can draw, keyed by result path."""
     out = {}
@@ -417,6 +433,34 @@ def gather() -> None:
     DATA["ward_stay"] = int(need(r"STAY_DAYS = (\d+)", wards, "STAY_DAYS"))
     DATA["ward_lost"] = int(need(r"LOST_DAYS = (\d+)", wards, "LOST_DAYS"))
     DATA["comfortable"] = int(need(r"COMFORTABLE = (\d+)", math, "COMFORTABLE"))
+
+    # The second office. Read, never retyped -- the budget page quotes numbers
+    # a council is expected to plan around, and a stale one costs somebody a
+    # night's worth of burglaries they thought they had paid to prevent.
+    police = java("TrapPolice")
+    DATA["nick_cells"] = int(need(r"MIN_CELLS = (\d+)", police, "police MIN_CELLS"))
+    DATA["nick_floor"] = int(need(r"MIN_FLOOR = (\d+)", police, "police MIN_FLOOR"))
+    DATA["cop_wage"] = int(need(r"int WAGE = (\d+)", police, "police WAGE"))
+    DATA["beat_step"] = int(need(r"BUDGET_STEP = (\d+)", police, "BUDGET_STEP"))
+    DATA["beat_max"] = int(need(r"MAX_BUDGET = (\d+)", police, "MAX_BUDGET"))
+    DATA["gear_at"] = int(need(r"GEAR_AT = (\d+)", police, "GEAR_AT"))
+    DATA["top_gear"] = int(need(r"TOP_GEAR = (\d+)", police, "TOP_GEAR"))
+    DATA["pocketful"] = int(need(r"LOOKS_AWAY = (\d+)", police, "police LOOKS_AWAY"))
+    DATA["crime_base"] = float(need(r"CRIME_BASE = ([\d.]+)f", math, "CRIME_BASE"))
+    DATA["crime_ceiling"] = float(need(r"CRIME_CEILING = ([\d.]+)f", math, "CRIME_CEILING"))
+    DATA["crime_hardship_lift"] = float(need(
+        r"CRIME_HARDSHIP_LIFT = ([\d.]+)f", math, "CRIME_HARDSHIP_LIFT"))
+    DATA["crime_heat_lift"] = float(need(
+        r"CRIME_HEAT_LIFT = ([\d.]+)f", math, "CRIME_HEAT_LIFT"))
+    DATA["night_crime"] = float(need(r"NIGHT_CRIME = ([\d.]+)f", math, "NIGHT_CRIME"))
+    DATA["top_deterrence"] = float(need(r"TOP_DETERRENCE = ([\d.]+)f", math, "TOP_DETERRENCE"))
+    DATA["murder_fatal"] = float(need(r"MURDER_FATAL = ([\d.]+)f", math, "MURDER_FATAL"))
+    DATA["hospitalised"] = float(need(r"HOSPITALISED = ([\d.]+)f", math, "HOSPITALISED"))
+    DATA["suspect_pace"] = float(need(r"SUSPECT_PACE = ([\d.]+)", math, "SUSPECT_PACE"))
+    DATA["officer_pace"] = float(need(r"OFFICER_PACE = ([\d.]+)", math, "OFFICER_PACE"))
+    DATA["officer_gear_pace"] = float(need(
+        r"OFFICER_PACE_PER_GEAR = ([\d.]+)", math, "OFFICER_PACE_PER_GEAR"))
+    DATA["crimes"] = crime_kinds()
     DATA["income_rate"] = int(need(
         # Matched on the enum constant, not its display name: the display name
         # is player-facing prose and gets translated, and pinning the scrape to
@@ -492,11 +536,29 @@ def gather() -> None:
     # The wand shelf, read off the catalogue rather than typed: it is the one
     # shelf whose PRICE is the feature, so a page quoting a stale one is worse
     # than a page that never mentioned it.
-    wands = [int(p) for p in re.findall(r'add\(c, "trapcraft:\w+_wand", 1, (\d+)\)', stock)]
+    rack = re.findall(r'add\(c, "trapcraft:(\w+_wand)", 1, (\d+)\)', stock)
+    wands = [int(p) for _, p in rack]
     # Grouped with a space, not a comma: these are the only five-figure prices
     # on the page and 120,000 reads as a decimal to a Polish eye.
     DATA["wand_low"] = f"{min(wands):,}".replace(",", " ")
     DATA["wand_high"] = f"{max(wands):,}".replace(",", " ")
+
+    # The ladder on top of that shelf. Both multipliers and the tier count come
+    # out of TrapMath and the two upgrade prices are worked out here the same
+    # way WandItem works them out -- half the shelf, then all of it -- so the
+    # page cannot quote a ladder the wands do not have. Names come from
+    # gen_assets, which is where the items are named in the first place.
+    speed = floats("WAND_SPEED", math)
+    power = floats("WAND_POWER", math)
+    DATA["wand_tiers"] = int(need(r"WAND_TIERS = (\d+)", math, "WAND_TIERS"))
+    DATA["wand_faster"] = round((1 - speed[1]) * 100)
+    DATA["wand_stronger"] = round((power[1] - 1) * 100)
+    DATA["wand_faster_top"] = round((1 - speed[-1]) * 100)
+    DATA["wand_stronger_top"] = round((power[-1] - 1) * 100)
+    DATA["wand_rack"] = [
+        (gen_assets.WANDS[name][0], int(price), int(price) // 2, int(price))
+        for name, price in rack
+    ]
 
 
 def band_top(tier: int) -> int:
@@ -708,8 +770,12 @@ def build() -> str:
         ("06", "market", "Rynek"),
         ("07", "stalls", "Stragany"), ("08", "city", "Miasto"),
         ("08b", "homes", "Mieszkania"),
+        ("08c", "police", "Policja"),
         ("09", "crew", "Ekipa"),
-        ("10", "heat", "Policja i naloty"), ("11", "street", "Ulica"),
+        # "Naloty", not "Policja i naloty". That section is the pillager squad
+        # that comes for a farm; §08c is the office the city pays. Two things
+        # called police on one page is a page that answers neither question.
+        ("10", "heat", "Naloty"), ("11", "street", "Ulica"),
         ("12", "casino", "Kasyno"), ("13", "commands", "Komendy"),
         ("14", "awards", "Osiągnięcia"),
     ]
@@ -960,7 +1026,25 @@ def build() -> str:
     podświetlone rudy, dokładanie bloków i piorun na zawołanie. Wszystko inne na rynku
     da się zdobyć samemu; to jest ta półka, na którą się zbiera.</p>
     <p class="note">Różdżek lada nie odkupuje za żadne pieniądze. Da się je też
-    wykuć — z jednej do trzech rzeczy, po które trzeba się bić.</p>"""))
+    wykuć — z jednej do trzech rzeczy, po które trzeba się bić.</p>
+    <h3>Poziomy różdżek</h3>
+    <p>Ta z półki to dopiero pierwszy z <strong>{d['wand_tiers']}</strong> poziomów.
+    Kucnij i kliknij prawym w <strong>stół zaklęć</strong> trzymając różdżkę, a podniesie
+    się o jeden — za emki, prosto z kieszeni albo z portfela. Każdy poziom to
+    <strong>−{d['wand_faster']}%</strong> czasu odnowienia i <strong>+{d['wand_stronger']}%</strong>
+    zasięgu, promienia albo obrażeń, więc III odnawia się o {d['wand_faster_top']}% szybciej
+    i sięga o {d['wand_stronger_top']}% dalej niż ta ze sklepu.</p>
+    {table(["Różdżka", "Półka", "II", "III"],
+           [[esc(name), f"{shelf:,}e".replace(",", " "),
+             f'<span class="acc">{two:,}e</span>'.replace(",", " "),
+             f'<span class="acc">{three:,}e</span>'.replace(",", " ")]
+            for name, shelf, two, three in d["wand_rack"]])}
+    <p class="note">Pełna drabinka kosztuje półtora raza tyle, co sama różdżka — i to
+    jedyne miejsce na rynku, gdzie takie pieniądze naprawdę znikają z obiegu.
+    Różdżka Burz jako jedyna nie zyskuje zasięgu, tylko siłę: piorun z czterdziestu
+    bloków przez ścianę i tak jest na granicy.</p>
+    <p class="note">Ulepszenie nie zadziała, dopóki różdżka stygnie po użyciu — gra nie
+    pyta wtedy przedmiotu o nic. Kliknij ponownie, gdy zegar zejdzie.</p>"""))
 
     sections.append(section("07", "stalls", "Stragany", "powód, żeby przejść przez miasto", f"""
     <p class="lede">Stragan, który postawisz, należy do ciebie. Postaw pod nim skrzynię,
@@ -1325,6 +1409,82 @@ def build() -> str:
     zamiast go skasować.</p>
     """))
 
+    sections.append(section("08c", "police", "Policja i przestępczość",
+                            "urząd z pokrętłem", f"""
+    <p class="lede">Miasto okrada samo siebie. Nie przychodzi to z zewnątrz jak nalot i nie
+    jest karą za nic — <strong>im więcej ludzi mieszka w mieście, tym więcej się w nim
+    dzieje</strong>, a jedyne, co można z tym zrobić, to zbudować komisariat i zapłacić
+    komuś, żeby chodził po ulicach.</p>
+    <h3 class="sub">Komisariat</h3>
+    <p>Blok komisariatu postawiony w gotowym budynku ocenia go tak samo jak skrzynka
+    pocztowa i szpital: {d['nick_cells']} łóżka (to są cele) · {d['nick_floor']} kratek
+    podłogi · szczelny, z drzwiami · ani jednego ciemnego kąta ·
+    {round(d['shell_steps'][1] * 100)}% zbudowane, a nie wykopane · skrzynia na zbrojownię.</p>
+    <p><strong>Każda cela to jeden etat.</strong> Nie chodzi tylko o to, gdzie trzymać
+    zatrzymanych — miasto nie obsadzi więcej funkcjonariuszy, niż ma cel, więc pieniądze bez
+    budynku nie kupują nikogo. To jedyna rzecz, która trzyma blok w feature'rze, którego
+    pokrętło stoi gdzie indziej.</p>
+    <h3 class="sub">Pokrętło jest przy skarbcu</h3>
+    <p>Budżet komendy ustawia się w kasie miasta, nie na komisariacie — bo to rada uchwala
+    budżet, a nie dyżurny. Krok {d['beat_step']}e, do {d['beat_max']}e dziennie. Z tej jednej
+    liczby wynika wszystko:</p>
+    <p><strong>{d['cop_wage']}e dziennie</strong> to jeden funkcjonariusz. Każde
+    <strong>{d['gear_at']}e</strong> budżetu to jeden stopień wyposażenia, do
+    {d['top_gear']} — a wyposażenie to tempo, zasięg wzroku, siła ciosu i zdrowie.
+    <strong>Straż miejska</strong> z inwestycji miejskich daje jeden stopień gratis.</p>
+    <p class="note">Pusta kasa nie wyłącza policji, tylko ją przerzedza: miasto płaci tyle,
+    ile ma, w krokach po {d['beat_step']}e, i ogłasza, ilu zostało. Nieopłacona komenda to
+    jutrzejsze włamania — i to jest cały mechanizm.</p>
+    <h3 class="sub">Co robią</h3>
+    <p>Chodzą. Od domu do sklepu, od sklepu do skarbca, wokół własnego komisariatu —
+    i <strong>nie kładą się spać</strong>, bo w nocy dzieje się {d['night_crime']}x więcej.
+    Co zobaczą wrogiego w zasięgu, to biją pałką. Zombie potrafi ich zabić i wtedy komenda
+    wystawia kogoś na jego miejsce.</p>
+    <h3 class="sub">Co się dzieje w mieście</h3>
+    {table(["Przestępstwo", "Udział", "Grzywna", "Cela"],
+           [[c["display"], f"{c['weight']}%", f"{c['fine']}e", f"{c['days']} dni"]
+            for c in d["crimes"]])}
+    <p>Bazowo <strong>{d['crime_base']} przestępstwa dziennie na stu mieszkańców</strong> — czyli
+    w mieście dwudziestu osób coś dzieje się mniej więcej <strong>raz na pół godziny gry</strong>.
+    Bieda w domach dokłada do tego {round(d['crime_hardship_lift'] * 100)}%, rozgrzany handel
+    kolejne {round(d['crime_heat_lift'] * 100)}%, a noc mnoży całość przez
+    {d['night_crime']}. Te dwa pierwsze się <em>dodają</em>, nie mnożą — inaczej pechowe
+    miasto potrafiłoby biec siedem razy szybciej od swojej własnej stawki.</p>
+    <p class="note">Nad tym wszystkim jest twardy sufit: <strong>{d['crime_ceiling']}
+    przestępstwa dziennie</strong>, cokolwiek by się działo. Najgorsze możliwe miasto to jedno
+    zdarzenie na dziesięć minut gry, a nie oblężenie — a policja zbija nawet to o
+    <strong>do {round(d['top_deterrence'] * 100)}%</strong>. <code>/crime</code> pokazuje
+    dokładnie te liczby, więc nic tu nie jest pogodą.</p>
+    <p><strong>Kradzież i włamanie zabierają prawdziwe pieniądze</strong> — ze skrzynki
+    pocztowej i z kasy sklepu, jako udział tego, co tam leży. Pełna skrzynka to cel, więc
+    zbieranie czynszu jest samo w sobie obroną. Pieniądze nie znikają: idą do portfela
+    mieszkańców, bo złodziej też tu mieszka i wyda je u kogoś w sklepie.</p>
+    <p><strong>Rozbój</strong> wysyła lokatora do szpitala — tym samym wejściem co ugryzienie,
+    z tym samym rachunkiem i tym samym pogrzebem, jeśli miasto nie ma oddziału.
+    <strong>Zabójstwa</strong> to {[c for c in d["crimes"] if c["name"] == "MURDER"][0]["weight"]}%
+    spraw i zdarzają się <strong>wyłącznie po zmroku</strong> — za dnia ta sama sprawa wychodzi
+    jako rozbój. {round(d['murder_fatal'] * 100)}% z nich kończy się od razu śmiercią lokatora,
+    reszta trafia na oddział, więc miasto ze szpitalem grzebie mniej ludzi przy tej samej
+    liczbie noży.</p>
+    <h3 class="sub">Pościg</h3>
+    <p>Sprawca zostaje na miejscu z czerwoną nazwą i ucieka. Biegnie tempem
+    {d['suspect_pace']} — <strong>szybciej niż funkcjonariusz bez wyposażenia
+    ({d['officer_pace']}) i wolniej niż w pełni wyposażony
+    ({round(d['officer_pace'] + d['officer_gear_pace'] * d['top_gear'], 3)})</strong>.
+    To jest jedyne miejsce, gdzie widać, za co się płaci, i jedyna rzecz w tym module,
+    którą rozstrzyga fizyka, a nie tabela.</p>
+    <p>Złapany oddaje, co zabrał, grzywna idzie do kasy miasta, a on sam do celi na kilka dni.
+    Cele pełne — wychodzi za kaucją, grzywna zostaje. Nikt go nie dopadnie w kilka minut —
+    sprawa umorzona i pieniądze przepadają.</p>
+    <h3 class="sub">Kontrola osobista</h3>
+    <p>Patrol podchodzi też do <em>ciebie</em>. Zatrzymuje, jeśli masz przy sobie ponad
+    <strong>{d['pocketful']} sztuk towaru</strong>, świeży heat albo zaległość w urzędzie —
+    i wtedy wypisuje mandat do kasy miasta. Skręt w kieszeni nikogo nie obchodzi.</p>
+    <p class="note">Nie zabierają towaru i nikogo nie aresztują. Jeden mandat na kilka minut,
+    najwyżej, i nigdy taki, którego nie masz z czego zapłacić — wtedy zamiast pieniędzy
+    dostajesz uwagę.</p>
+    """))
+
     sections.append(section("09", "crew", "Ekipa", "ktoś, kto zbierze za ciebie", f"""
     <p class="lede">{d['hire']}e za zatrudnienie, potem {d['wage']}e za każde pięć minut,
     <strong>kiedy pracują</strong>, niezależnie od tego, czy coś zebrali. {d['max_hands']}
@@ -1371,7 +1531,7 @@ def build() -> str:
     {d['grace']} wypłat na zero, czyli około dwóch dni, a zapłacenie jednej umarza całe
     zaległości.</p>"""))
 
-    sections.append(section("10", "heat", "Policja i naloty", "bycie widzianym kosztuje", f"""
+    sections.append(section("10", "heat", "Naloty", "bycie widzianym kosztuje", f"""
     <p class="lede">Uprawa na widoku zostaje zauważona. Uwaga policji liczona jest w promieniu
     {d['heat_radius']} bloków: dojrzałe rośliny liczą się po 3, ukryte po 2, rosnące po 1,
     zajęte suszarki po 1, prasy i rafinerie po 2.</p>

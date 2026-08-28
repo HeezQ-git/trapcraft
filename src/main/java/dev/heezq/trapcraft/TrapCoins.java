@@ -198,6 +198,21 @@ public final class TrapCoins {
         save();
         if (paid > 0) {
             TrapMarket.pay(player, paid);
+            // The city takes its cut, exactly as it does at the window next
+            // door (TrapInvest.collect). Without this, speculating was the one
+            // legal way to earn in the whole mod that paid nothing to anybody
+            // -- which is the property the black market is supposed to have
+            // alone, and the entire reason the revenue office exists.
+            //
+            // On the GAIN, not on the gross, and that is where this parts
+            // company with the term deposits. A position there is locked for a
+            // day at minimum, so duty on the whole payout is a charge you took
+            // knowingly; a coin can be flipped a minute after it was bought,
+            // and duty on the gross would mean a trade that closed exactly
+            // where it opened lost you a tenth of your money. That is not a
+            // tax, it is a reason never to touch the feature.
+            TrapCity.charge(player, Math.max(0, paid - holding.spent()),
+                    TrapCity.Duty.INCOME);
             TrapLedger.record(player, TrapLedger.Source.INVEST, paid);
         }
         return paid;

@@ -233,6 +233,23 @@ public final class TrapMarket {
         if (entry.item() instanceof WandItem) {
             return 0;
         }
+        // Keys, for a different reason: they are also FOUND. A counter paying
+        // half of 22,000e for one out of an end city chest would turn
+        // exploring into an emerald faucet and the case would never be opened.
+        if (entry.item() instanceof CaseItem) {
+            return 0;
+        }
+        // A one-emerald line is never bought back, on any day.
+        //
+        // sellPrice() already refuses under 2e, but it is handed TODAY'S price
+        // -- so a penny line drifts over the floor on a hot market and the shop
+        // starts buying at 1e what it sold at 2e. That is fine for a line worth
+        // an emerald and a printer for the furniture, which is priced by the
+        // piece at the floor precisely BECAUSE it is never bought back. Judged
+        // on the flat price instead, so the answer doesn't move with the index.
+        if (entry.base() < 2) {
+            return 0;
+        }
         int paid = TrapMath.sellPrice(buyPrice(server, entry));
         // The Exchange. A market town gets a better counter, which is the one
         // public work that pays everybody including whoever never leaves their

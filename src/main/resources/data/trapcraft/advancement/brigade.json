@@ -1,0 +1,33 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:fire_house"
+    },
+    "title": "W\u00f3z wyje\u017cd\u017ca",
+    "description": "Otw\u00f3rz remiz\u0119, \u017ceby po\u017car nie by\u0142 tylko twoim problemem.",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:fire_house"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:founded"
+}

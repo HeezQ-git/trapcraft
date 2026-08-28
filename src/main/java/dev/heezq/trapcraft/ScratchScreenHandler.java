@@ -46,13 +46,14 @@ public class ScratchScreenHandler extends ScreenHandler {
     private static final int[] PANELS = {3, 4, 5, 12, 13, 14, 21, 22, 23};
 
     private static final int INFO_SLOT = 0;
+    private static final int THEME_SLOT = 1;
     private static final int PRIZES_SLOT = 9;
     private static final int STAKE_SLOT = 18;
     private static final int PURSE_SLOT = 8;
     private static final int ALL_SLOT = 17;
     private static final int BUY_SLOT = 26;
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
     private final ServerPlayerEntity player;
@@ -60,6 +61,7 @@ public class ScratchScreenHandler extends ScreenHandler {
     private final TrapHouse.House house;
 
     private int stakeChoice = 0;
+    private int themeChoice;
     /** The card, or null when there isn't one on the counter. */
     private int[] card;
     private final boolean[] shown = new boolean[TrapMath.SCRATCH_PANELS];
@@ -71,6 +73,7 @@ public class ScratchScreenHandler extends ScreenHandler {
         super(ScreenHandlerType.GENERIC_9X3, syncId);
         this.player = (ServerPlayerEntity) playerInventory.player;
         this.house = house;
+        this.themeChoice = CHOSEN.getOrDefault(this.player.getUuid(), 0) % THEMES.length;
 
         for (int index = 0; index < SIZE; index++) {
             this.addSlot(new ReadOnlySlot(display, index,
@@ -90,26 +93,70 @@ public class ScratchScreenHandler extends ScreenHandler {
 
     // --- the faces ------------------------------------------------------------
 
-    private static Item faceItem(int face) {
-        return switch (face) {
-            case 1 -> Items.GOLD_NUGGET;
-            case 2 -> Items.EMERALD;
-            case 3 -> Items.BELL;
-            case 4 -> Items.DIAMOND;
-            case 5 -> Items.NETHER_STAR;
-            default -> Items.COAL;
-        };
+    /**
+     * What the card is wearing.
+     *
+     * Six ranks, six items, six words, and nothing else. A motyw cannot touch
+     * what a face is WORTH -- that lives in TrapMath and is the same on every
+     * card -- which is also why the colours are not in here: colour is rank,
+     * and it has to mean the same thing on the payout table whichever skin is
+     * on the counter. Being unable to change the odds is what makes it safe to
+     * let somebody switch mid-card.
+     */
+    private record Theme(String name, Item foil, Item[] faces, String[] names) {
     }
 
-    private static String faceName(int face) {
-        return switch (face) {
-            case 1 -> "Nugget";
-            case 2 -> "Emerald";
-            case 3 -> "Bell";
-            case 4 -> "Diamond";
-            case 5 -> "Star";
-            default -> "Dud";
-        };
+    private static final Theme[] THEMES = {
+            new Theme("Klasyk", Items.LIGHT_GRAY_STAINED_GLASS_PANE,
+                    new Item[]{Items.COAL, Items.GOLD_NUGGET, Items.EMERALD,
+                            Items.BELL, Items.DIAMOND, Items.NETHER_STAR},
+                    new String[]{"Pusto", "Samorodek", "Szmaragd",
+                            "Dzwonek", "Diament", "Gwiazda"}),
+            new Theme("Kopalnia", Items.GRAY_STAINED_GLASS_PANE,
+                    new Item[]{Items.COBBLESTONE, Items.RAW_COPPER, Items.RAW_IRON,
+                            Items.RAW_GOLD, Items.DIAMOND, Items.ANCIENT_DEBRIS},
+                    new String[]{"Skała", "Miedź", "Żelazo",
+                            "Złoto", "Diament", "Debris"}),
+            new Theme("Morski", Items.LIGHT_BLUE_STAINED_GLASS_PANE,
+                    new Item[]{Items.KELP, Items.COD, Items.PRISMARINE_SHARD,
+                            Items.NAUTILUS_SHELL, Items.HEART_OF_THE_SEA, Items.TRIDENT},
+                    new String[]{"Wodorost", "Dorsz", "Pryzmaryn",
+                            "Muszla", "Serce morza", "Trójząb"}),
+            new Theme("Netherowy", Items.RED_STAINED_GLASS_PANE,
+                    new Item[]{Items.NETHERRACK, Items.QUARTZ, Items.BLAZE_ROD,
+                            Items.GHAST_TEAR, Items.NETHERITE_SCRAP, Items.NETHERITE_INGOT},
+                    new String[]{"Netherrack", "Kwarc", "Płonący pręt",
+                            "Łza ghasta", "Złom", "Netheryt"}),
+            new Theme("Ogród", Items.LIME_STAINED_GLASS_PANE,
+                    new Item[]{Items.STICK, Items.WHEAT, Items.APPLE,
+                            Items.HONEYCOMB, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE},
+                    new String[]{"Patyk", "Pszenica", "Jabłko",
+                            "Plaster miodu", "Złote jabłko", "Enchant"}),
+            new Theme("Zaświaty", Items.PURPLE_STAINED_GLASS_PANE,
+                    new Item[]{Items.ROTTEN_FLESH, Items.BONE, Items.ENDER_PEARL,
+                            Items.PHANTOM_MEMBRANE, Items.ENDER_EYE, Items.DRAGON_BREATH},
+                    new String[]{"Zgnilizna", "Kość", "Perła",
+                            "Błona", "Oko Endera", "Oddech smoka"}),
+    };
+
+    /**
+     * Which skin each player last picked. In memory, like TrapCasino's set:
+     * the worst a restart can do is put somebody back on the Klasyk, and it is
+     * one int per player who has ever opened a card.
+     */
+    private static final java.util.Map<java.util.UUID, Integer> CHOSEN =
+            new java.util.HashMap<>();
+
+    private Theme theme() {
+        return THEMES[themeChoice];
+    }
+
+    private Item faceItem(int face) {
+        return theme().faces()[face];
+    }
+
+    private String faceName(int face) {
+        return theme().names()[face];
     }
 
     private static Formatting faceColour(int face) {
@@ -136,6 +183,7 @@ public class ScratchScreenHandler extends ScreenHandler {
             display.setStack(PANELS[panel], panelTag(panel));
         }
         display.setStack(INFO_SLOT, infoTag());
+        display.setStack(THEME_SLOT, themeTag());
         display.setStack(PRIZES_SLOT, prizeTag());
         display.setStack(STAKE_SLOT, stakeTag());
         display.setStack(PURSE_SLOT, purseTag());
@@ -152,7 +200,7 @@ public class ScratchScreenHandler extends ScreenHandler {
             return blank;
         }
         if (!shown[panel]) {
-            ItemStack foil = new ItemStack(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
+            ItemStack foil = new ItemStack(theme().foil());
             foil.set(DataComponentTypes.CUSTOM_NAME,
                     plain("? ? ?").formatted(Formatting.WHITE, Formatting.BOLD));
             foil.set(DataComponentTypes.LORE, new LoreComponent(List.of(
@@ -192,6 +240,26 @@ public class ScratchScreenHandler extends ScreenHandler {
         return tag;
     }
 
+    private ItemStack themeTag() {
+        ItemStack tag = new ItemStack(faceItem(TrapMath.SCRATCH_FACES - 1));
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Motyw: ").formatted(Formatting.GRAY)
+                        .append(plain(theme().name())
+                                .formatted(Formatting.AQUA, Formatting.BOLD)));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line("Klik: następny, prawy klik: poprzedni.", Formatting.YELLOW));
+        lore.add(Text.empty());
+        for (int index = 0; index < THEMES.length; index++) {
+            lore.add(line((index == themeChoice ? " > " : "   ") + THEMES[index].name(),
+                    index == themeChoice ? Formatting.WHITE : Formatting.DARK_GRAY));
+        }
+        lore.add(Text.empty());
+        lore.add(line("Sam wygląd. Szanse i wypłaty", Formatting.DARK_GRAY));
+        lore.add(line("są takie same na każdej karcie.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack prizeTag() {
         ItemStack tag = new ItemStack(Items.PAINTING);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -223,7 +291,7 @@ public class ScratchScreenHandler extends ScreenHandler {
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(card != null ? "Najpierw dokończ tę kartę."
-                        : "Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
+                        : "Klik: wyżej, prawy klik: niżej.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -286,8 +354,17 @@ public class ScratchScreenHandler extends ScreenHandler {
                 deny();
                 return;
             }
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             click(1.4F);
+            paint();
+            return;
+        }
+        // Allowed mid-card on purpose: a costume cannot reach the numbers, so
+        // there is nothing to protect the card from here.
+        if (index == THEME_SLOT) {
+            themeChoice = TrapMath.cycle(themeChoice, THEMES.length, button == 1);
+            CHOSEN.put(player.getUuid(), themeChoice);
+            click(1.1F);
             paint();
             return;
         }

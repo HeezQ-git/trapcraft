@@ -274,4 +274,28 @@ class ResidentTest {
                         + "resident who ever had a night out stands frozen at that cabinet "
                         + "for good while their house makes another one of them");
     }
+
+    @Test
+    void nobodyClocksOnAtTheBottomOfTheTreasury() throws Exception {
+        String shops = source("TrapShops.java");
+        int commute = shops.indexOf("private static boolean commute(");
+        assertTrue(commute >= 0, "commute() has gone");
+        String body = shops.substring(commute, shops.indexOf("\n    }", commute));
+        assertTrue(body.contains("TrapVisitors.doorstep(hall, TrapCity.vaultAt())"),
+                "the treasury shift has to be sited on the GROUND above the vault. "
+                        + "A vault is usually buried, the site is where the commuter is "
+                        + "put down, and a resident dropped in the cellar cannot path to "
+                        + "a counter under six metres of rock");
+        assertFalse(body.contains("new Shopper(TrapCity.vaultAt()"),
+                "the vault's own block as the work site is the bug: that is the town "
+                        + "teleporting its own people underground once every commute");
+
+        int shepherd = shops.indexOf("private static void shepherd(");
+        String walk = shops.substring(shepherd, shops.indexOf("\n    }", shepherd));
+        assertTrue(walk.contains("if (stand == null) {") && walk.contains("leave(server, shopper)"),
+                "and a trip whose counter has nowhere to stand beside it must END. "
+                        + "Retrying the same impossible walk every second is how one "
+                        + "stuck resident stays stuck, and stays off the register's "
+                        + "books, for the rest of the world");
+    }
 }

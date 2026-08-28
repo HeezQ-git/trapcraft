@@ -13,6 +13,7 @@ import net.minecraft.block.MushroomPlantBlock;
 import net.minecraft.block.SaplingBlock;
 import net.minecraft.block.TallPlantBlock;
 import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -127,10 +128,19 @@ public final class ShopStock {
      */
     public static final Category MAGIC = new Category("magic", "Różdżki",
             "trapcraft:storm_wand", Formatting.LIGHT_PURPLE, "Drogo. Bardzo drogo");
+    /**
+     * Keys, and only keys.
+     *
+     * The cases themselves are deliberately absent and must stay absent: a
+     * case you can buy is a shop with extra steps, and the whole mechanic is
+     * that the box is free and the key is not. See {@link TrapCases}.
+     */
+    public static final Category KEYS = new Category("keys", "Klucze",
+            "trapcraft:cartel_key", Formatting.YELLOW, "Do skrzynek. Bez zwrotów");
 
     public static final List<Category> CATEGORIES =
             List.of(BUILDING, FITTINGS, WOOD, DECOR, FURNITURE, GARDEN, FARMING, FOOD,
-                    MATERIALS, NETHER, UTILITY, ENCHANTS, RARE, MAGIC);
+                    MATERIALS, NETHER, UTILITY, ENCHANTS, RARE, KEYS, MAGIC);
 
     /**
      * Items the market must never trade, at any price.
@@ -249,7 +259,8 @@ public final class ShopStock {
         int listed = STOCK.size();
         stockTheKitchen();
         stockTheGarden();
-        // Last, so it can see everything the other two claimed and not list a
+        stockTheTimberYard();
+        // Last, so it can see everything the others claimed and not list a
         // modded flower twice at two different prices.
         stockTheMods();
         TrapCraft.LOGGER.info(
@@ -343,17 +354,46 @@ public final class ShopStock {
      * pay 20% a craft. Panes are priced as the third of a block they are.
      */
     private static final Map<String, Sweep> SWEEPS = Map.ofEntries(
-            // Furniture. Cheapest Macaw's piece is 0.33e of wood.
-            Map.entry("mcwfurnitures", new Sweep(FURNITURE, 8, 4)),
-            Map.entry("storagedelight", new Sweep(FURNITURE, 4, 4)),
+            // Furniture, one piece at a time. Nobody wants eight of the same
+            // chair, and a bundle is the only granularity this shop has -- so
+            // the bundle is one. At 1e a piece that puts every one of these
+            // lines under the counter's two-emerald floor, which is the whole
+            // reason the price is allowed to double: the shop sells you a
+            // chair and never buys it back, so no craft can be sold into it.
+            // Cheapest Macaw's piece is 0.33e of wood and 0.45 x 1e clears it,
+            // which would be a printer if any of this were bought back.
+            Map.entry("mcwfurnitures", new Sweep(FURNITURE, 1, 1)),
+            Map.entry("storagedelight", new Sweep(FURNITURE, 1, 1)),
             Map.entry("cratedelight", new Sweep(FURNITURE, 1, 13)),
-            Map.entry("comforts", new Sweep(FURNITURE, 2, 4)),
+            Map.entry("comforts", new Sweep(FURNITURE, 1, 2)),
             // Fittings. Built out of stairs and slabs, and priced like them.
             Map.entry("mcwroofs", new Sweep(FITTINGS, 32, 4)),
             Map.entry("mcwwindows", new Sweep(FITTINGS, 64, 4)),
             Map.entry("mcwfences", new Sweep(FITTINGS, 64, 6)),
             Map.entry("mcwstairs", new Sweep(FITTINGS, 64, 3)),
             Map.entry("mcwbridges", new Sweep(FITTINGS, 32, 4)),
+            // Doors and trapdoors are joinery too, and they carry the vanilla
+            // wood tags -- so they have to be swept by name here, or the
+            // timber yard below would price five hundred Macaw's doors as
+            // plain oak ones.
+            Map.entry("mcwdoors", new Sweep(FITTINGS, 8, 2)),
+            Map.entry("mcwtrpdoors", new Sweep(FITTINGS, 8, 2)),
+            // Paving, on the building shelf and under the stone it is cut
+            // from -- the stonecutter turns one andesite into FOUR paving
+            // slabs, so the price comes off that four rather than off what a
+            // path feels like it ought to cost. Swept, so it lands after the
+            // hand-written stone and the shelf still opens on cobble.
+            Map.entry("mcwpaths", new Sweep(BUILDING, 64, 2)),
+            // Lanterns and lamps.
+            Map.entry("mcwlights", new Sweep(DECOR, 16, 2)),
+            // Sold, never bought back, and that is the only price that works:
+            // fifty-five of this mod's recipes hand back more items than they
+            // eat -- nine garlands from three, sixty-four snow from nine -- and
+            // no flat price survives a recipe that triples the count. Whatever
+            // the number is, nine of it at 45% beats three of it at full. Under
+            // the counter's two-emerald floor there is nothing to sell into, so
+            // all fifty-five close at once instead of one suffix at a time.
+            Map.entry("mcwholidays", new Sweep(DECOR, 16, 1)),
             // Trim, and the blocks that are nine of something in a coat.
             Map.entry("beautify", new Sweep(DECOR, 16, 3)),
             Map.entry("stackedblocks", new Sweep(MATERIALS, 1, 8)));
@@ -361,15 +401,92 @@ public final class ShopStock {
     /** Panes, wherever they come from. Three to the block they are cut from. */
     private static final Sweep PANES = new Sweep(FITTINGS, 64, 3);
 
-    private static void stockTheMods() {
-        // Everything already on a shelf, however it got there: these mods add
-        // flowers and food too, and the garden and kitchen sweeps have run by
-        // now. Listing a thing twice is not an error the game reports -- it is
-        // two prices for one item and a shelf that disagrees with itself.
+    /**
+     * Every id on a shelf already, however it got there.
+     *
+     * The later sweeps need this because the earlier ones stock off the
+     * registry rather than out of DECLARED: these mods add flowers and food
+     * too. Listing a thing twice is not an error the game reports -- it is two
+     * prices for one item and a shelf that disagrees with itself.
+     */
+    private static java.util.Set<String> stocked() {
         java.util.Set<String> already = new java.util.HashSet<>();
         for (Entry entry : STOCK) {
             already.add(entry.id());
         }
+        return already;
+    }
+
+    /**
+     * Every wood in the pack, at the prices vanilla wood already sells for.
+     *
+     * A hundred and thirty-six mods, and between them about two dozen more
+     * trees: Oh The Biomes We've Gone alone adds twenty-five. The shelf
+     * carried nine. Somebody building in aspen bought oak here and went back to
+     * chopping, which is the same complaint the timber loop above was written
+     * to answer -- one tree short of the pack rather than one plank short of a
+     * roof.
+     *
+     * Asked of the vanilla tags rather than by name, because a wood mod has to
+     * join #minecraft:planks for a crafting table to accept its planks at all.
+     * The tags are load-bearing for the mod, so they are honest about what is a
+     * plank in a way a list of ids I typed out never would be.
+     *
+     * Prices are the vanilla ones exactly, shape for shape. That is what makes
+     * this safe without measuring anything: check_stock.py has already proved
+     * the vanilla numbers can't be crafted into money, and a mod's oak-shaped
+     * recipes are vanilla's recipes with a different log in them.
+     */
+    private static final Map<TagKey<Item>, int[]> TIMBER = new LinkedHashMap<>();
+
+    static {
+        TIMBER.put(ItemTags.LOGS, new int[]{32, 8});
+        TIMBER.put(ItemTags.PLANKS, new int[]{64, 5});
+        TIMBER.put(ItemTags.WOODEN_STAIRS, new int[]{64, 5});
+        TIMBER.put(ItemTags.WOODEN_SLABS, new int[]{64, 5});
+        TIMBER.put(ItemTags.WOODEN_FENCES, new int[]{32, 4});
+        TIMBER.put(ItemTags.FENCE_GATES, new int[]{8, 3});
+        TIMBER.put(ItemTags.WOODEN_DOORS, new int[]{16, 4});
+        TIMBER.put(ItemTags.WOODEN_TRAPDOORS, new int[]{16, 4});
+        TIMBER.put(ItemTags.WOODEN_BUTTONS, new int[]{32, 3});
+        TIMBER.put(ItemTags.WOODEN_PRESSURE_PLATES, new int[]{16, 3});
+        // Before SIGNS: a hanging sign is in both tags and is the dearer of
+        // the two, and first match wins below.
+        TIMBER.put(ItemTags.HANGING_SIGNS, new int[]{8, 4});
+        TIMBER.put(ItemTags.SIGNS, new int[]{8, 3});
+    }
+
+    private static void stockTheTimberYard() {
+        java.util.Set<String> already = stocked();
+        Map<String, Integer> perMod = new LinkedHashMap<>();
+        for (Item item : Registries.ITEM) {
+            String id = Registries.ITEM.getId(item).toString();
+            String mod = id.substring(0, id.indexOf(':'));
+            // A mod with its own shelf keeps it. Macaw's doors and trapdoors
+            // are five hundred lines of wooden door by the tags, and they are
+            // joinery, not timber.
+            if (SWEEPS.containsKey(mod) || already.contains(id) || DECLARED.containsKey(id)
+                    || NEVER_STOCK.contains(id) || CURRENCY.contains(id)) {
+                continue;
+            }
+            ItemStack stack = item.getDefaultStack();
+            for (var shape : TIMBER.entrySet()) {
+                if (!stack.isIn(shape.getKey())) {
+                    continue;
+                }
+                int count = shape.getValue()[0];
+                STOCK.add(new Entry(WOOD, item, id, count, shape.getValue()[1],
+                        new ItemStack(item, count), item.getName().getString()));
+                perMod.merge(mod, 1, Integer::sum);
+                break;
+            }
+        }
+        TrapCraft.LOGGER.info("market: swept {} timber lines {}",
+                perMod.values().stream().mapToInt(Integer::intValue).sum(), perMod);
+    }
+
+    private static void stockTheMods() {
+        java.util.Set<String> already = stocked();
 
         Map<String, Integer> perMod = new LinkedHashMap<>();
         for (Item item : Registries.ITEM) {
@@ -533,6 +650,31 @@ public final class ShopStock {
         enchantments();
         theGoodStuff();
         wands();
+        keys();
+    }
+
+    /**
+     * The key shelf.
+     *
+     * Written as four literals and not as a loop over {@code CaseOdds.Tier},
+     * which was the first version and was wrong: every tool in tools/ reads
+     * this catalogue by pattern-matching {@code add(...)} lines, so a loop is
+     * four lines that no check sees and that the wiki price list silently
+     * omits. The prices genuinely live in {@link CaseOdds} -- CaseOddsTest
+     * asserts the whole economy against them -- and check_stock.py compares
+     * these four numbers against that file, so the copy cannot drift.
+     *
+     * The shop will not buy them back at any price -- see TrapScrap.refusal.
+     * Keys turn up free in chests, and a counter that paid half of 22,000e for
+     * one found in an end city would make exploring an emerald faucet rather
+     * than a route into the cases.
+     */
+    private static void keys() {
+        Category c = KEYS;
+        add(c, "trapcraft:street_key", 1, 450);
+        add(c, "trapcraft:docks_key", 1, 1600);
+        add(c, "trapcraft:cartel_key", 1, 6000);
+        add(c, "trapcraft:phantom_key", 1, 22000);
     }
 
     /**

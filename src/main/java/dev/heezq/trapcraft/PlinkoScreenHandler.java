@@ -53,7 +53,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
     private static final int DROP_SLOT = FOOTER + 4;
     private static final int PURSE_SLOT = FOOTER + 6;
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
     /** Ticks between bounces. Slow enough to follow, fast enough to want another. */
     private static final int BOUNCE_TICKS = 5;
 
@@ -202,7 +202,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
+                line("Klik: wyżej, prawy klik: niżej.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -257,7 +257,7 @@ public class PlinkoScreenHandler extends ScreenHandler implements TrapTables.Pla
             return;
         }
         if (index == STAKE_SLOT) {
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             click(1.4F);
             repaint();
             return;

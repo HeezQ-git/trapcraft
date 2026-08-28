@@ -66,6 +66,12 @@ import java.util.UUID;
  * holds the symptoms off without touching the meter, which makes it a way to
  * get a day's work done rather than a way to get clean.
  *
+ * Or money. A bed in a registered ward is triple decay with the symptoms held
+ * off, billed by the day out of your own pocket -- see {@link #inTreatment}.
+ * It buys the same cure faster and without the week of being useless, which is
+ * the only thing in this file the city has anything to do with, and it was a
+ * strange thing for the city to have nothing to do with.
+ *
  * Nothing here decays while you are logged out. Same rule as the coke crash:
  * a comedown you can dodge by quitting to the menu is not a comedown.
  */
@@ -81,6 +87,22 @@ public final class TrapAddiction {
 
     /** Riding it out is worth double. See the class note. */
     public static final float SICK_DECAY_BONUS = 2.0F;
+
+    /**
+     * And a bed in a ward is worth three times, for money.
+     *
+     * Replaces the sick bonus rather than stacking with it -- see
+     * {@link #evaluate} -- so the best the meter ever moves is triple, and a
+     * detox is "as good as the worst night of your life, three times over,
+     * without the night".
+     *
+     * The number is chosen against the two things it sits between. Below 2.0
+     * it would be worse than just being ill, which is a treatment nobody takes.
+     * Much above 3.0 and the dope habit -- 333 minutes to clear, the whole
+     * reason the poppy line is the hard one -- becomes an afternoon with a
+     * chequebook, and the meter stops being the price of that money.
+     */
+    public static final float WARD_DECAY_BONUS = 3.0F;
 
     /**
      * Where the bands start, as a fraction of the worst possible pressure.
@@ -342,6 +364,69 @@ public final class TrapAddiction {
         clearSymptoms(player);
     }
 
+    /** The in-game day each player last settled a ward bill on. Memory only. */
+    private static final Map<UUID, Long> TREATED = new HashMap<>();
+
+    /**
+     * Is this player standing in a ward that has been paid for today?
+     *
+     * <h2>Why the city has anything to do with a habit</h2>
+     *
+     * Because for eight versions it did not, and that was the strangest hole
+     * in the whole mod. The town built an oddział with beds, doctors, a daily
+     * bill and four days before somebody is lost -- and the one medical
+     * condition a PLAYER can actually have was treated by standing in a field
+     * waiting. Two systems, both about being ill, that had never heard of each
+     * other.
+     *
+     * <h2>What it does not do</h2>
+     *
+     * It does not sell you a cure. The meter still has to run down and the
+     * clock is still the clock -- see {@link #WARD_DECAY_BONUS} for the size
+     * of the discount and why it is that size. What you are buying is the
+     * thing the class note calls the cure: riding it out, except you are held
+     * while you do, and it is a room somebody built rather than an evening you
+     * lost. The dope habit is still four hours; it is a bad four hours you can
+     * pay to sit through instead of a bad four hours you cannot work through.
+     *
+     * <h2>Billed by the day, not by the pass</h2>
+     *
+     * Once per in-game day, exactly as the ward bills the city for everybody
+     * else. This method runs every five seconds, so a per-pass fee would be
+     * seventeen thousand emeralds a day and would present as the hospital
+     * emptying your pockets for standing near it.
+     *
+     * Failing to pay does not throw you out and does not stop you standing
+     * there -- it just stops working, loudly, on the actionbar. There is no
+     * bed to lose and nobody to discharge; a player who cannot cover today is
+     * simply a player back on the slow road until they can.
+     */
+    private static boolean inTreatment(ServerPlayerEntity player) {
+        ServerWorld world = player.getWorld();
+        TrapHospitals.Ward ward = TrapHospitals.wardAround(world, player.getBlockPos());
+        if (ward == null) {
+            TREATED.remove(player.getUuid());
+            return false;
+        }
+        long day = TrapMarket.today(player.getServer());
+        if (TREATED.getOrDefault(player.getUuid(), Long.MIN_VALUE) == day) {
+            return true;
+        }
+        if (!TrapHospitals.detox(player, ward)) {
+            player.sendMessage(TrapNotes.headline("Odwyk  ", Formatting.RED)
+                    .append(TrapNotes.say("kosztuje " + TrapHospitals.bill()
+                            + "e za dzień, a tyle nie masz.", Formatting.GRAY)), true);
+            return false;
+        }
+        TREATED.put(player.getUuid(), day);
+        player.sendMessage(TrapNotes.headline("Przyjęty  ", Formatting.AQUA)
+                .append(TrapNotes.say((ward.name() == null ? "oddział" : ward.name())
+                        + " zajmie się tobą do rana.", Formatting.GRAY))
+                .append(TrapNotes.under("Zostań w środku. Głód schodzi trzy razy szybciej "
+                        + "i nic cię nie boli, dopóki tu stoisz.")), false);
+        return true;
+    }
+
     // --- the pass -------------------------------------------------------------
 
     private static void tick(MinecraftServer server) {
@@ -374,6 +459,7 @@ public final class TrapAddiction {
         }
         long now = worldTime(player);
         boolean medicated = now < MEDICATED.getOrDefault(player.getUuid(), 0L);
+        boolean treated = inTreatment(player);
 
         Drug worstDrug = null;
         Band worst = Band.CLEAN;
@@ -392,8 +478,15 @@ public final class TrapAddiction {
                 TrapAwards.grant(player, "hooked");
             }
 
+            // The three rates, and only ever one of them. A ward REPLACES the
+            // sick bonus instead of multiplying it: the two are the same thing
+            // -- your body clearing it faster because it is in the worst of it
+            // -- and stacking them would pay a detox six times for doing the
+            // job once, precisely when the patient is worst off and least able
+            // to argue about the bill.
             float shed = drug.decayPerMinute() / EVALS_PER_MINUTE
-                    * (band == Band.SICK ? SICK_DECAY_BONUS : 1.0F);
+                    * (treated ? WARD_DECAY_BONUS
+                            : band == Band.SICK ? SICK_DECAY_BONUS : 1.0F);
             float left = hooked - shed;
             changed = true;
             if (left <= 0.05F) {
@@ -420,7 +513,13 @@ public final class TrapAddiction {
             }
         }
 
-        if (worst == Band.CLEAN || medicated) {
+        // Treated counts as medicated, and that is most of what the money
+        // buys. Triple decay on its own would be a faster version of the worst
+        // hour of the week -- you would still be shaking, still be blind, and
+        // still be unable to do anything but stand in the room. Being HELD
+        // through it is what a ward is for, and it is the half a player can
+        // feel while it is happening.
+        if (worst == Band.CLEAN || medicated || treated) {
             clearSymptoms(player);
         } else {
             symptoms(player, worstDrug, worst);

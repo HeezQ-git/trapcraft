@@ -71,6 +71,24 @@ public final class HomeSurvey {
         default boolean prop(int x, int y, int z) {
             return false;
         }
+
+        /**
+         * Did this square answer "wall" because nobody had the chunk loaded?
+         *
+         * The survey cannot tell the difference on its own, and that is the
+         * whole problem: an unloaded chunk is a wall to the fill, so a building
+         * with half of itself asleep comes back SEALED and SMALLER -- no hole
+         * to report, nothing that looks wrong, just fewer rooms and fewer beds
+         * than it has. Graded, that closes a station or drops a house a tier
+         * for a reason nobody can see and nobody can fix.
+         *
+         * Asked only of the shell, so a probe that walked forty blocks into
+         * sleeping ground outdoors does not poison a reading of a building that
+         * was entirely awake. Defaulted so a drawing need not answer.
+         */
+        default boolean asleep(int x, int y, int z) {
+            return false;
+        }
     }
 
     /** Blocks one room may hold before the survey calls it "not sealed". */
@@ -140,7 +158,8 @@ public final class HomeSurvey {
      * @param clash   the fill ran into another house's claim
      */
     public record Rooms(Set<Long> inside, Set<Long> props, Set<Long> terrace, List<Long> exits,
-                        boolean sealed, boolean clash, long escape, boolean buried) {
+                        boolean sealed, boolean clash, long escape, boolean buried,
+                        boolean asleep) {
         /** Is the square under this one part of the same house? */
         private boolean rests(long at) {
             long under = cell(cellX(at), cellY(at) - 1, cellZ(at));
@@ -220,7 +239,7 @@ public final class HomeSurvey {
     }
 
     private static final Rooms CLASHED =
-            new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, true, 0L, false);
+            new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, true, 0L, false, false);
 
     /**
      * It leaked, and WHERE it leaked.
@@ -231,7 +250,13 @@ public final class HomeSurvey {
      * of whatever gap it went through.
      */
     private static Rooms leaked(long escape) {
-        return new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, false, escape, false);
+        // asleep=false even here, and on purpose: a chunk nobody has loaded
+        // reads as WALL, and a wall cannot open a hole in a room. A survey that
+        // leaked found a real hole, so it is a failed building rather than an
+        // unreadable one -- and calling it unreadable would mean a place that
+        // really has had its roof taken off could never be closed.
+        return new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, false, escape,
+                false, false);
     }
 
     /** What one fill did: closed on itself, ran out of room, or hit a claim. */
@@ -255,7 +280,7 @@ public final class HomeSurvey {
             // which is a completely different problem and used to be reported
             // as the same one.
             return new Rooms(Set.of(), Set.of(), Set.of(), List.of(), false, false,
-                    cell(ax, ay, az), true);
+                    cell(ax, ay, az), true, false);
         }
 
         Set<Long> visited = new HashSet<>();
@@ -309,7 +334,13 @@ public final class HomeSurvey {
             queue.addAll(beyond);
         }
 
-        return new Rooms(inside, props(space, inside), terrace, exits, true, false, 0L, false);
+        Shell shell = props(space, inside);
+        return new Rooms(inside, shell.props(), terrace, exits, true, false, 0L, false,
+                shell.asleep());
+    }
+
+    /** What is standing against the rooms, and whether any of it was asleep. */
+    private record Shell(Set<Long> props, boolean asleep) {
     }
 
     /**
@@ -320,8 +351,9 @@ public final class HomeSurvey {
      * only question left is whether the wall is a wall or a wardrobe. Every
      * solid block touching a room gets asked once.
      */
-    private static Set<Long> props(Space space, Set<Long> inside) {
+    private static Shell props(Space space, Set<Long> inside) {
         Set<Long> props = new HashSet<>();
+        boolean asleep = false;
         for (long at : inside) {
             int x = cellX(at);
             int y = cellY(at);
@@ -331,13 +363,21 @@ public final class HomeSurvey {
                 int ny = y + (side == 2 ? 1 : side == 3 ? -1 : 0);
                 int nz = z + (side == 4 ? 1 : side == 5 ? -1 : 0);
                 long next = cell(nx, ny, nz);
-                if (!inside.contains(next) && !props.contains(next)
-                        && space.prop(nx, ny, nz)) {
+                if (inside.contains(next)) {
+                    continue;
+                }
+                // The shell is where a sleeping chunk shows up, and the only
+                // place worth asking: every wall of every room the survey is
+                // about to claim goes past here exactly once. An inside square
+                // can never be asleep -- asleep reads as solid, and solid never
+                // gets walked into.
+                asleep |= space.asleep(nx, ny, nz);
+                if (!props.contains(next) && space.prop(nx, ny, nz)) {
                     props.add(next);
                 }
             }
         }
-        return props;
+        return new Shell(props, asleep);
     }
 
     /**
@@ -455,7 +495,30 @@ public final class HomeSurvey {
                     continue;
                 }
                 if (space.taken(nx, ny, nz)) {
-                    return CLASH;
+                    // The ROOM running into somebody's claim is a clash: you
+                    // are standing in their house. A PROBE running into one is
+                    // not, and calling it one is what broke the block of flats.
+                    //
+                    // A probe is already following a door OUT of the house, and
+                    // the two things it can find are a room to merge and the
+                    // outdoors. Somebody's claim is the outdoors -- the street
+                    // between two buildings, the stairwell everybody's front
+                    // door opens onto, the flat below. So the door is a front
+                    // door and the probe is thrown away, exactly as when it
+                    // runs out of budget, and the claim keeps only what the
+                    // survey actually walked.
+                    //
+                    // Nothing is lost by being lenient here: found() still
+                    // refuses a house whose finished box overlaps another's, so
+                    // two houses cannot end up sharing ground. What went was
+                    // the refusal of houses that only shared a NEIGHBOURHOOD --
+                    // a claim box is a box, so a tall house forty blocks off
+                    // reaches over the street, and a front door probed into
+                    // fresh air was condemning the building it belonged to.
+                    if (known == null) {
+                        return CLASH;
+                    }
+                    return CAPPED;
                 }
                 if (space.door(nx, ny, nz)) {
                     doors.add(next);

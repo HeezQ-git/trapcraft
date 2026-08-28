@@ -61,7 +61,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
     private static final int DOUBLE_SLOT = FOOTER + 6;
     private static final int PURSE_SLOT = FOOTER + 8;
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
     private static final String[] RANKS = {
             "", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
     private static final String[] SUITS = {"♠", "♥", "♦", "♣"};
@@ -224,7 +224,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
                         .append(plain((playing ? staked : STAKES[stakeChoice]) + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line(playing ? "Zablokowane na tę rękę." : "Kliknij, żeby zmienić.",
+                line(playing ? "Zablokowane na tę rękę." : "Klik: wyżej, prawy klik: niżej.",
                         Formatting.DARK_GRAY))));
         return tag;
     }
@@ -249,7 +249,7 @@ public class BlackjackScreenHandler extends ScreenHandler {
             return;
         }
         if (index == STAKE_SLOT && !playing) {
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             click(1.4F);
             paint();
             return;

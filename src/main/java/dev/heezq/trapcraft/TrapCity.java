@@ -12,6 +12,7 @@ import net.minecraft.util.math.BlockPos;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -121,7 +122,8 @@ public final class TrapCity {
         EXCHANGE("Giełda", "Lada płaci lepiej za wszystko", 8000),
         CLINIC("Przychodnia", "Lokatorzy dłużej znoszą złe warunki", 5000),
         TRAM("Tramwaje", "Więcej ludzi naraz robi zakupy", 7000),
-        SCHOOL("Szkoła", "Wszyscy w mieście zarabiają więcej", 12000);
+        SCHOOL("Szkoła", "Wszyscy w mieście zarabiają więcej", 12000),
+        GOLEMS("Golemy policyjne", "Komenda wyprowadza żelazne golemy na patrol", 9000);
 
         private final String display;
         private final String blurb;
@@ -314,6 +316,66 @@ public final class TrapCity {
     public static final int BROKE = 600;
     public static final int FLUSH = 9000;
 
+    // --- what the council is buying today -------------------------------------
+
+    /**
+     * One day's public order: a thing the city wants, and what it will pay.
+     *
+     * <h2>Why the treasury needed somewhere to leak</h2>
+     *
+     * Money reached the purse from six directions and left it through two: a
+     * public work, and somebody at the counter taking a withdrawal out. The
+     * first is a one-off with a floor -- eight works and then nothing -- and
+     * the second is not the city spending money, it is a player moving their
+     * own between pockets. So a treasury that filled up stayed full, and a
+     * number that only ever goes up is a scoreboard however carefully it is
+     * calculated.
+     *
+     * An order is the missing direction. The council wants materials, it pays
+     * for them out of the purse the rates fill, and the emeralds land on a
+     * player who then pays duty on them. Rates in, wages out, and the loop is
+     * closed by a thing somebody carried across town.
+     *
+     * <h2>Only while there is something to build</h2>
+     *
+     * The list is gated on an unbuilt {@link Work} existing, which is the
+     * honest reading of what an order IS: the city is not buying stone for
+     * fun, it is buying stone for the thing it has not built yet. A city that
+     * has built everything stops posting work, and the last tier of the last
+     * work is therefore the end of the programme rather than an income that
+     * runs forever.
+     *
+     * <h2>The price can never beat the counter</h2>
+     *
+     * {@link TrapMath#stallPrice} of what the market CHARGES, which is the
+     * same premium a neighbour's stall pays and is deliberately under 100%.
+     * Anything at or over the counter's own asking price is a machine that
+     * turns emeralds into emeralds: buy the lot off the market, carry it eight
+     * blocks, sell it to the council, repeat. It would have been the fastest
+     * money in the mod and it would have looked like a feature for about a
+     * day.
+     */
+    public record Order(ShopStock.Entry entry, int lots, int paid) {
+    }
+
+    /** Days between the council changing its mind about what it wants. */
+    private static final int ORDER_DAYS = 1;
+    /** Smallest and largest order, in catalogue lots. */
+    private static final int ORDER_MIN = 6;
+    private static final int ORDER_SPAN = 12;
+    /**
+     * The purse has to hold this many times the order before it is posted.
+     *
+     * A council does not spend its last emerald on paving. More usefully: it
+     * stops the order existing at all on a treasury that cannot honour it,
+     * which is better than one that can be accepted and then refused at the
+     * counter.
+     */
+    private static final int ORDER_COVER = 3;
+
+    /** The day the standing order was filled, so it is only filled once. */
+    private static long orderFilled = -1;
+
     private static final Map<Duty, Integer> RATES = new EnumMap<>(Duty.class);
     private static final Map<Duty, Integer> TAKEN = new EnumMap<>(Duty.class);
     private static long treasury;
@@ -453,6 +515,122 @@ public final class TrapCity {
         TrapLedger.record(who, TrapLedger.Source.TAX, -owed);
         save();
         return owed;
+    }
+
+    /**
+     * What the council is buying today, or null if it is buying nothing.
+     *
+     * Seeded off the day and the world, exactly as {@link TrapContracts#board}
+     * is and for the same reason: an order that reshuffled every time somebody
+     * opened the vault would be a slot machine you play by closing a screen.
+     * Two players see the same order, and it is the same one tomorrow morning
+     * that it was tonight.
+     *
+     * Priced live rather than at posting, which is the one deliberate break
+     * from the contract board. A materials price moves with the index all day
+     * and a quote pinned at midnight would be visibly wrong by evening -- and
+     * unlike a delivery job there is no risk being paid for here, so there is
+     * nothing that wants freezing.
+     */
+    public static Order order(MinecraftServer server) {
+        if (!founded() || filledToday(server)) {
+            return null;
+        }
+        boolean building = false;
+        for (Work work : Work.values()) {
+            if (level(work) < TOP_TIER) {
+                building = true;
+                break;
+            }
+        }
+        if (!building) {
+            return null;   // nothing left to build, so nothing left to buy
+        }
+        List<ShopStock.Entry> shelf = new ArrayList<>();
+        shelf.addAll(ShopStock.of(ShopStock.BUILDING));
+        shelf.addAll(ShopStock.of(ShopStock.MATERIALS));
+        shelf.addAll(ShopStock.of(ShopStock.WOOD));
+        if (shelf.isEmpty()) {
+            return null;
+        }
+        long day = TrapMarket.today(server) / ORDER_DAYS;
+        var random = net.minecraft.util.math.random.Random.create(
+                day * 7919L + server.getOverworld().getSeed());
+        ShopStock.Entry entry = shelf.get(random.nextInt(shelf.size()));
+        int lots = ORDER_MIN + random.nextInt(ORDER_SPAN);
+        int paid = Math.max(1,
+                TrapMath.stallPrice(TrapMarket.buyPrice(server, entry))) * lots;
+        return treasury >= (long) paid * ORDER_COVER ? new Order(entry, lots, paid) : null;
+    }
+
+    /** Has today's order already been filled? */
+    public static boolean filledToday(MinecraftServer server) {
+        return orderFilled == TrapMarket.today(server) / ORDER_DAYS;
+    }
+
+    /**
+     * Somebody brings the council what it asked for.
+     *
+     * Fails closed at every step and in this order: the goods have to be in
+     * the bag before the purse is touched, and the purse has to pay before the
+     * goods come out of the bag. Getting that backwards is how a player ends
+     * up having handed over sixteen stacks of stone to a city that turned out
+     * to be broke.
+     *
+     * {@code handOver}, not {@code pay}: these emeralds have been in the world
+     * since payday and are only moving from the treasury to a pocket. Minting
+     * them here would have the index feel the council's entire building
+     * programme as inflation.
+     *
+     * @return what was paid, or 0 if nothing happened
+     */
+    public static int fill(ServerPlayerEntity who, Order order) {
+        if (order == null || filledToday(who.getServer())) {
+            return 0;
+        }
+        int wanted = order.lots() * order.entry().count();
+        if (countHeld(who, order.entry()) < wanted) {
+            return 0;
+        }
+        if (!spend(order.paid())) {
+            return 0;
+        }
+        takeFrom(who, order.entry(), wanted);
+        TrapMarket.handOver(who, order.paid());
+        // Declared income, because this is the council paying an invoice. It
+        // is the one line of work in the mod that the revenue office was never
+        // going to have to come looking for.
+        charge(who, order.paid(), Duty.INCOME);
+        TrapLedger.record(who, TrapLedger.Source.CONTRACT, order.paid());
+        orderFilled = TrapMarket.today(who.getServer()) / ORDER_DAYS;
+        save();
+        return order.paid();
+    }
+
+    /** How many of this line somebody is carrying. */
+    private static int countHeld(ServerPlayerEntity who, ShopStock.Entry entry) {
+        int found = 0;
+        var inventory = who.getInventory();
+        for (int slot = 0; slot < inventory.size(); slot++) {
+            if (entry.matches(inventory.getStack(slot))) {
+                found += inventory.getStack(slot).getCount();
+            }
+        }
+        return found;
+    }
+
+    private static void takeFrom(ServerPlayerEntity who, ShopStock.Entry entry, int wanted) {
+        int owed = wanted;
+        var inventory = who.getInventory();
+        for (int slot = 0; slot < inventory.size() && owed > 0; slot++) {
+            var stack = inventory.getStack(slot);
+            if (!entry.matches(stack)) {
+                continue;
+            }
+            int taken = Math.min(owed, stack.getCount());
+            stack.decrement(taken);
+            owed -= taken;
+        }
     }
 
     /**
@@ -882,7 +1060,25 @@ public final class TrapCity {
                     .append(TrapHospitals.all().size()).append(',')
                     .append(TrapHospitals.beds()).append(',')
                     .append(TrapHospitals.patients().size()).append(',')
-                    .append(TrapHospitals.spent()).append('\n');
+                    .append(TrapHospitals.spent()).append(',')
+                    // The second office, and the one whose numbers have to be
+                    // read TOGETHER: a budget that climbs while crimes climb
+                    // with it is a force that is being paid to lose, and
+                    // neither column says that on its own.
+                    .append(TrapPolice.all().size()).append(',')
+                    .append(TrapPolice.force()).append(',')
+                    .append(TrapPolice.budget()).append(',')
+                    .append(TrapPolice.funded()).append(',')
+                    .append(TrapPolice.spent()).append(',')
+                    .append(TrapPolice.fines()).append(',')
+                    .append(TrapCrime.total()).append(',')
+                    .append(TrapCrime.solved()).append(',')
+                    .append(TrapCrime.stolen()).append(',')
+                    // A whole percent, as an integer, deliberately: every
+                    // other float in this file goes through String.format,
+                    // which writes a comma for a decimal point under a locale
+                    // that uses one -- in a comma-separated file.
+                    .append(Math.round(TrapCrime.hardship() * 100)).append('\n');
             Files.writeString(logFile, row.toString(), java.nio.charset.StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE,
                     java.nio.file.StandardOpenOption.APPEND);
@@ -969,6 +1165,22 @@ public final class TrapCity {
                         .formatted(ill == 0 ? Formatting.DARK_GRAY : Formatting.YELLOW))
                 .append(Text.literal("  wypłacono " + TrapHospitals.spent() + "e")
                         .formatted(Formatting.DARK_GRAY)), false);
+        // The other standing outgoing, and the only one the council chooses.
+        // Printed whether or not there is a station, because "no police at
+        // all" is the reading that explains the burglaries.
+        int force = TrapPolice.force();
+        who.sendMessage(Text.empty()
+                .append(TrapNotes.say("  Policja", Formatting.WHITE))
+                .append(TrapNotes.say("  " + TrapPolice.all().size() + " komisariatów, "
+                                + force + " na etacie",
+                        force > 0 ? Formatting.GREEN : Formatting.RED))
+                .append(TrapNotes.say("  " + TrapPolice.budget() + "e dziennie"
+                                + (TrapPolice.funded() < TrapPolice.budget()
+                                ? ", wypłacono " + TrapPolice.funded() + "e" : ""),
+                        TrapPolice.funded() < TrapPolice.budget()
+                                ? Formatting.RED : Formatting.GOLD))
+                .append(TrapNotes.say("  zatrzymań " + TrapPolice.arrests() + " z "
+                        + TrapCrime.total() + " spraw", Formatting.DARK_GRAY)), false);
         for (Work work : Work.values()) {
             who.sendMessage(Text.literal("  " + work.display())
                     .formatted(built(work) ? Formatting.GREEN : Formatting.DARK_GRAY)
@@ -1069,7 +1281,14 @@ public final class TrapCity {
                 // yesterday has no ward figures and reads as "-" for them;
                 // slotting these in beside the other city columns would have
                 // every field after them read under the wrong heading.
-                .append("wards,ward_beds,ill,ward_spend\n");
+                .append("wards,ward_beds,ill,ward_spend,")
+                // On the END, like every column before them, for the reason
+                // the ward's are: a row written yesterday has no police
+                // figures and reads as "-" for them, whereas slotting these in
+                // beside the other city columns would have every field after
+                // them read under the wrong heading.
+                .append("stations,officers,police_budget,police_paid,police_spend,")
+                .append("fines,crimes,crimes_solved,crime_stolen,hardship_pct\n");
         return out.toString();
     }
 
@@ -1162,6 +1381,7 @@ public final class TrapCity {
         vaultAt = null;
         vaultWorld = null;
         lastBudget = -1;
+        orderFilled = -1;
         BUILT.clear();
         for (Duty duty : Duty.values()) {
             RATES.put(duty, duty.start());
@@ -1178,6 +1398,7 @@ public final class TrapCity {
                 switch (parts[0]) {
                     case "purse" -> treasury = Long.parseLong(parts[1]);
                     case "budget" -> lastBudget = Long.parseLong(parts[1]);
+                    case "order" -> orderFilled = Long.parseLong(parts[1]);
                     case "vault" -> {
                         if (parts.length >= 5) {
                             vaultWorld = parts[1];
@@ -1231,6 +1452,7 @@ public final class TrapCity {
             StringBuilder out = new StringBuilder();
             out.append("purse ").append(treasury).append('\n');
             out.append("budget ").append(lastBudget).append('\n');
+            out.append("order ").append(orderFilled).append('\n');
             if (founded()) {
                 out.append("vault ").append(vaultWorld).append(' ')
                         .append(vaultAt.getX()).append(' ').append(vaultAt.getY())

@@ -237,7 +237,14 @@ public final class TrapShops {
      * loaded -- so these are a SAMPLE of the economy rather than the economy
      * itself. Nothing depends on one of them arriving.
      */
-    private enum Trip { SHOP, WORK }
+    // STALL is a visitor-only errand and lives here rather than in TrapStalls
+    // for one reason: this file owns the walking. Doorsteps, patience, the
+    // forty-block ceiling on a planned path and the branch that hands a
+    // visitor back instead of sending them to a bed they have not got are
+    // three restarts' worth of lessons, and a second copy of them in the
+    // stalls would be a second place to relearn all of it. The money stays
+    // where the till is -- see TrapStalls.sellToVisitor.
+    private enum Trip { SHOP, WORK, STALL }
 
     private record Shopper(BlockPos target, String dimension, int bornAt, Trip trip) {
     }
@@ -354,6 +361,18 @@ public final class TrapShops {
             total += shop.till;
         }
         return total;
+    }
+
+    /**
+     * A hand in the till, or the police handing it back.
+     *
+     * Negative puts it back. Same shape and same reasoning as
+     * {@link TrapHomes#robbed}: one clamp, in one place, so a recovered
+     * pickpocketing cannot pay a shopkeeper twice.
+     */
+    static void robbed(Shop shop, int amount) {
+        shop.till = Math.max(0, shop.till - amount);
+        save();
     }
 
     // --- putting one up -------------------------------------------------------
@@ -1147,6 +1166,29 @@ public final class TrapShops {
     }
 
     /**
+     * The same, for the market square.
+     *
+     * Split from {@link #sendVisitor} rather than folded into it because the
+     * itinerary decides which one somebody is here for -- a trip that says
+     * SHOP and quietly ends at a stall is a {@code /visitors} readout that
+     * lies, and this mod's rule is that a feature quietly declining to happen
+     * must be indistinguishable from nothing only to the code.
+     */
+    public static boolean sendVisitorToStall(MinecraftServer server, VillagerEntity body) {
+        Random random = server.getOverworld().getRandom();
+        if (SHOPPERS.containsKey(body.getUuid())) {
+            return false;
+        }
+        TrapStalls.Stall stall = TrapStalls.openStall(server, random);
+        if (stall == null) {
+            return false;
+        }
+        ServerWorld world = worldOf(server, stall.dimension());
+        return world != null && send(server, world, stall.dimension(), stall.pos(),
+                Trip.STALL, random, body);
+    }
+
+    /**
      * Somebody sets off for work.
      *
      * A town's jobs ARE whatever players built -- the tills, the stalls, the
@@ -1172,7 +1214,19 @@ public final class TrapShops {
             }
         }
         if (TrapCity.founded()) {
-            sites.add(new Shopper(TrapCity.vaultAt(), TrapCity.vaultWorld(), 0, Trip.WORK));
+            // The ground above the treasury, never the treasury. A vault is a
+            // hole in the ground as often as it is a building, and a shift at
+            // the bottom of one is somebody teleported into the cellar to walk
+            // at a counter under six metres of rock: no path to plan, and no
+            // square beside it to be given up onto when the patience runs out.
+            // A clerk turns up where the queue would be -- the same doorstep
+            // the town's visitors arrive on, for the same reason.
+            ServerWorld hall = worldOf(server, TrapCity.vaultWorld());
+            BlockPos desk = hall == null ? null
+                    : TrapVisitors.doorstep(hall, TrapCity.vaultAt());
+            if (desk != null) {
+                sites.add(new Shopper(desk, TrapCity.vaultWorld(), 0, Trip.WORK));
+            }
         }
         if (sites.isEmpty()) {
             return false;
@@ -1303,10 +1357,10 @@ public final class TrapShops {
             double away = shopper.getBlockPos().getSquaredDistance(counter);
 
             if (away <= COUNTER * COUNTER) {
-                if (trip.trip() == Trip.WORK) {
-                    clockOn(server, shopper, counter);
-                } else {
-                    buy(server, shopper, trip);
+                switch (trip.trip()) {
+                    case WORK -> clockOn(server, shopper, counter);
+                    case STALL -> browse(server, shopper, trip);
+                    default -> buy(server, shopper, trip);
                 }
                 done.add(row.getKey());
                 continue;
@@ -1317,9 +1371,18 @@ public final class TrapShops {
                 // -- counter.up() is a wall or a lit fireplace often enough --
                 // so the nearest square somebody can stand on instead.
                 BlockPos stand = TrapSpawn.near(shopper.getWorld(), counter.up());
-                if (stand != null) {
-                    shopper.refreshPositionAndAngles(stand, shopper.getYaw(), 0.0F);
+                if (stand == null) {
+                    // And if there is no such square -- a till walled in, a
+                    // vault buried -- the trip is off and they go home. This
+                    // used to fall through to the next pass and reissue the
+                    // same impossible walk every second for the rest of the
+                    // world: one resident stood in a hole with "w pracy" over
+                    // their head, off the register's books for good.
+                    leave(server, shopper);
+                    done.add(row.getKey());
+                    continue;
                 }
+                shopper.refreshPositionAndAngles(stand, shopper.getYaw(), 0.0F);
                 continue;
             }
             if (now % 20 == 0) {
@@ -1398,6 +1461,36 @@ public final class TrapShops {
             return;
         }
         leave(server, shopper);   // not one of ours: they walk off like anybody else
+    }
+
+    /**
+     * Somebody from away reaches a stall, and either buys or does not.
+     *
+     * Thin on purpose. Every emerald in a stall sale belongs to
+     * {@link TrapStalls}, which owns the till and the chest under it; this is
+     * only the half that happens because a body finished a walk. The name over
+     * their head is the same {@code who  ·  Ne} the counters use, because the
+     * whole reason to watch somebody cross your market square is knowing what
+     * they left behind.
+     *
+     * No {@code wanted()} check before setting off, unlike a shop trip: a
+     * stall has no price policy to be drawn by and no keeper to be staffed by,
+     * so "does it have anything on it" is the only question, and
+     * {@link TrapStalls#openStall} has already asked it. A stall that sold its
+     * last lot in the meantime turns somebody away at the pitch, which is what
+     * an empty stall should do.
+     */
+    private static void browse(MinecraftServer server, VillagerEntity shopper,
+                               Shopper trip) {
+        ServerWorld world = (ServerWorld) shopper.getWorld();
+        TrapStalls.Stall stall = TrapStalls.at(world, trip.target());
+        int paid = stall == null ? 0
+                : TrapStalls.sellToVisitor(world, stall, shopper.getUuid());
+        if (paid > 0) {
+            shopper.setCustomName(Text.literal(plainName(shopper) + "  ·  " + paid + "e")
+                    .formatted(Formatting.GREEN));
+        }
+        leave(server, shopper);
     }
 
     private static void buy(MinecraftServer server, VillagerEntity shopper,

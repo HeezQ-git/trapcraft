@@ -63,6 +63,18 @@ import java.util.UUID;
  *       after {@link #LOST_DAYS} they are gone for good. That is the reason to
  *       build the building.
  * </ol>
+ *
+ * <h2>And two patients who are nobody's tenant</h2>
+ *
+ * Somebody passing through pays their own bill at the door -- see
+ * {@link TrapVisitors} -- and so does a player standing in the room getting
+ * clean, which is {@link #detox}. Both are the same rule read from the other
+ * side: the health service is a thing a city does for the people who live in
+ * it and pay rates into it, and neither of those two is one of them.
+ *
+ * Between them they are most of why a ward is worth building. Bites are rare,
+ * and a building whose only trade is the neighbour who left a window open is a
+ * building nobody puts up.
  */
 public final class TrapHospitals {
 
@@ -349,11 +361,30 @@ public final class TrapHospitals {
                 SoundCategory.NEUTRAL, 0.9F, 0.8F);
         world.spawnParticles(ParticleTypes.LARGE_SMOKE, where.getX() + 0.5,
                 where.getY() + 1.0, where.getZ() + 0.5, 20, 0.3, 0.5, 0.3, 0.02);
-        admit(world, home, who);
+        admit(world, home, who, "został ugryziony");
+    }
+
+    /**
+     * Somebody was hurt rather than bitten.
+     *
+     * The ward has had exactly one kind of patient since it was built, and the
+     * reason is that a bite was the only thing in the mod that could hurt a
+     * resident. Crime is the second, and it wants the same bed, the same bill
+     * and the same four days of not being treated -- so it comes through this
+     * door rather than growing a casualty ward of its own.
+     *
+     * @param what a past-tense phrase for the letters: "został pobity"
+     * @see TrapCrime
+     */
+    public static void hurt(ServerWorld world, TrapHomes.Home home, String who, String what) {
+        if (home == null || home.tenant() == null) {
+            return;
+        }
+        admit(world, home, who, what);
     }
 
     /** Take somebody ill onto the books and find them a bed if there is one. */
-    private static void admit(ServerWorld world, TrapHomes.Home home, String who) {
+    private static void admit(ServerWorld world, TrapHomes.Home home, String who, String what) {
         long day = TrapMarket.today(world.getServer());
         Patient patient = new Patient(home.id(), who);
         // Today is already dealt with: the bite IS today's news. Without this
@@ -366,11 +397,11 @@ public final class TrapHospitals {
             bed(world, patient, ward, day);
         }
         save();
-        home.write(who + " został ugryziony." + (ward == null
+        home.write(who + " " + what + "." + (ward == null
                 ? " Nie ma szpitala, który by go przyjął."
                 : " Leży w " + ward.name + "."));
         tell(world.getServer(), home, Text.literal(who).formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal(" z " + home.name() + " został ugryziony. ")
+                .append(Text.literal(" z " + home.name() + " " + what + ". ")
                         .formatted(Formatting.GRAY))
                 .append(ward == null
                         ? Text.literal("W tym mieście nie ma go gdzie leczyć -- zbuduj "
@@ -756,6 +787,75 @@ public final class TrapHospitals {
         return TrapCity.built(TrapCity.Work.CLINIC) ? Math.round(FEE * CLINIC_OFF) : FEE;
     }
 
+    /**
+     * How far a ward's room reaches from its own block.
+     *
+     * Deliberately generous and deliberately not the survey. {@link HomeSurvey}
+     * knows the exact room and answering "is this player inside it" through the
+     * flood fill would be a walk of the whole building four times a minute per
+     * player, which is a lot of work to decide something a radius decides. What
+     * this actually needs to be true is "standing in the ward rather than
+     * across the street", and eight blocks is that.
+     */
+    public static final int ROOM = 8;
+
+    /**
+     * The open ward somebody is standing in, or null.
+     *
+     * Different question from {@link #at}, which wants the block itself and is
+     * how the screen and the hammer find one. This is for a person in the room:
+     * see {@link TrapAddiction} for the only caller and why a ward is worth
+     * standing in.
+     */
+    public static Ward wardAround(ServerWorld world, BlockPos pos) {
+        String here = world.getRegistryKey().getValue().toString();
+        for (Ward ward : WARDS) {
+            if (ward.open && ward.dimension.equals(here)
+                    && ward.sign.isWithinDistance(pos, ROOM)) {
+                return ward;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Somebody who is not ill, is not a resident, and is here to get clean.
+     *
+     * The whole of what a ward gets out of a player. Everything else in this
+     * file is a bed with a body in it and a household waiting for them to come
+     * home; a player has no household, cannot be admitted, and would be a
+     * second kind of Patient with none of the fields that make one work. So
+     * there is no patient here at all -- the money moves and nothing is
+     * remembered, and what a detox actually IS lives in {@link TrapAddiction}
+     * where the meters are.
+     *
+     * Paid by the player, not the city, and that is the same rule a visitor is
+     * held to. The health service is a thing the town does for its RESIDENTS,
+     * funded out of a treasury they pay rates into; somebody who owns half the
+     * city and has been smoking their own stock is not on it.
+     *
+     * @return true if the fee was paid and the doctors have been seen
+     */
+    public static boolean detox(ServerPlayerEntity who, Ward ward) {
+        int fee = bill();
+        int duty = TrapCity.dutyOn(fee, TrapCity.Duty.INCOME);
+        if (TrapMarket.wealthOf(who) < fee + duty) {
+            return false;
+        }
+        // collect, not take: the doctors are people and their wage comes back
+        // through a shop door. Same pipe the visitors' fee runs down.
+        TrapMarket.collect(who, fee + duty);
+        TrapPayroll.credit(fee);
+        TrapCity.receive(duty, TrapCity.Duty.INCOME);
+        TrapLedger.record(who, TrapLedger.Source.TAX, -(fee + duty));
+        spent += fee;
+        ServerWorld world = worldOf(who.getServer(), ward.dimension);
+        if (world != null) {
+            seen(world, ward);
+        }
+        return true;
+    }
+
     /** Nobody treated them today. Eventually that is the end of it. */
     private static void untreated(MinecraftServer server, ServerWorld world,
                                   TrapHomes.Home home, Patient patient) {
@@ -777,7 +877,9 @@ public final class TrapHospitals {
         // Losing the person the letters are about ends the tenancy. Losing
         // somebody else is a household that has had a bad week.
         if (patient.who.equals(home.tenant())) {
-            TrapHomes.moveOut(server, world, home, "nie przeżył ugryzienia");
+            // Generic on purpose: this path is walked by a bite and by a
+            // stabbing now, and the letter already said which it was.
+            TrapHomes.moveOut(server, world, home, "nie przeżył");
         }
     }
 
@@ -864,9 +966,16 @@ public final class TrapHospitals {
             return "To wnętrze domu już zapisanego w rejestrze. "
                     + "Szpital potrzebuje własnego budynku.";
         }
+        if (reading.buried()) {
+            return "Blok szpitala stoi w litym bloku. Postaw go w POWIETRZU "
+                    + "wewnątrz pomieszczenia, nie w ścianie.";
+        }
         if (!reading.sealed()) {
-            return "Nie jest szczelny. Ściany, podłoga, sufit i drzwi -- potem "
-                    + "spróbuj ponownie.";
+            // With the coordinates. "It is not sealed" is a verdict; the spot
+            // the fill got out at is a job. The mailbox board has said this
+            // properly since it shipped and the ward never learned to.
+            return "Jest dziura -- ucieka na " + TrapPolice.where(reading.leak())
+                    + ", licząc od " + TrapPolice.where(reading.measuredFrom()) + ".";
         }
         if (reading.exits() == 0) {
             return "Nie ma wejścia. Potrzebne drzwi na zewnątrz.";
@@ -987,6 +1096,12 @@ public final class TrapHospitals {
      */
     public static TrapHomes.Readout inspect(ServerWorld world, Ward ward) {
         TrapHomes.Readout reading = look(world, ward.sign);
+        // A ward wider than one chunk, half of it asleep, measures as a small
+        // sealed room with no beds -- and closes. The station had this and it
+        // flapped open and shut all day; the shape here is the same one.
+        if (reading.asleep()) {
+            return reading;
+        }
         boolean was = ward.open;
         ward.open = fault(reading) == null;
         ward.beds = reading.beds();

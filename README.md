@@ -205,13 +205,41 @@ They first shipped at a fifth of those prices, against players holding 30–50k:
 the whole rack cost one stash. A sink priced under what its buyers already have
 is not a sink.
 
-Each one carries its own three-line description as default lore
-(`Kind.blurb()`) — what it does, how you use it, how often — so it explains
-itself in the hand, in a chest and on the shelf. The shelf tag rewrites lore
-wholesale, so `priceTag` puts any self-description back on top. Every figure in
-it is read from the same constants the guide book quotes, the cooldown
-included: the item draws a sweep that says you are waiting but never how long
-for.
+Each one carries its own description as default lore (`Kind.blurb(tier)`) —
+what it does, how you use it, how often, and what the next tier would cost — so
+it explains itself in the hand, in a chest and on the shelf. The shelf tag
+rewrites lore wholesale, so `priceTag` puts any self-description back on top.
+Every figure in it is read from the same constants the guide book quotes, the
+cooldown included: the item draws a sweep that says you are waiting but never
+how long for.
+
+**Three tiers each.** The one on the shelf is the floor; **sneak + right-click
+an enchanting table** spends cores for the next step, twice. A tier is −20% off
+the cooldown and +25% on the reach, the radius or the damage
+(`TrapMath.wandCooldown`/`wandReach`/`wandDamage`), so III comes round twice as
+often as I and reaches half again as far. Two multipliers for all five rather
+than a ladder per wand: one promise a player can hold in their head, and one
+set of numbers to keep honest against five tooltips and a book.
+
+A step costs **half the wand's shelf price, then all of it** — 12,500e then
+25,000e for Rush, 60,000e then 120,000e for Storms — read off the catalogue
+line (`ShopStock.matching`) rather than typed in, and paid through
+`TrapMarket.take` and the ledger like every other counter. It first shipped
+charging *cores* — more breeze rods, more nether stars — which reads well and
+prices nothing: those are market lines like everything else, and a shelf that
+sells a sniffer egg for pocket change turns "two more eggs" into an upgrade you
+buy with an afternoon's rent. Emeralds are the one unit the market cannot
+undercut, because they are the market. A finished wand has therefore cost half
+again what it cost to buy, which is the only sink at this end of the shop.
+
+The bench is code rather than a recipe because a vanilla ingredient matches on
+the *item* and cannot see components: a shapeless "wand plus payment" recipe
+would take a finished wand and hand back a fresh one. The lore quotes the
+*rule* rather than the figure — lore is baked at registration and rewritten on
+upgrade, and at neither moment is there a catalogue to read; clicking without
+the money says the number. Storms is the one exception to the ladder — the bolt
+lands harder and sooner, but never from further than 40 blocks, because reach
+on a wall-piercing bolt is the turret the cooldown was raised to prevent.
 
 Three things they get right that are easy to get wrong:
 
@@ -256,7 +284,7 @@ Two things worth knowing about how it works:
 
 ## The guide books
 
-`/guide` — five books under one command, with tab-completion:
+`/guide` — ten books under one command, with tab-completion:
 
 | Command | Covers |
 |---------|--------|
@@ -267,6 +295,9 @@ Two things worth knowing about how it works:
 | `/guide street` | paranoia, the ledger, contracts |
 | `/guide crew` | hiring hands, the ladders, what they cost |
 | `/guide casino` | running a floor |
+| `/guide city` | the vault, the rates, the public works |
+| `/guide housing` | mailboxes, grades, rent, the ward |
+| `/guide police` | the station, the budget dial, crime, fines |
 
 Every number on every page is read from the constant that governs it, so
 retuning a mechanic retunes the book and it can never quietly start lying.

@@ -46,7 +46,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
     private static final int STAKE_SLOT = 18;
     private static final int PURSE_SLOT = 26;
 
-    private static final int[] STAKES = {8, 32, 128};
+    private static final int[] STAKES = TrapMath.STAKES;
     /** Ticks the coin is in the air. Short: this game's appeal is that it's fast. */
     private static final int FLIGHT = 26;
 
@@ -135,7 +135,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                         + String.format("%.2f", TrapMath.TOSS_SIDE_PAY) + "x.", Formatting.GRAY),
                 line("Kant płaci " + (int) TrapMath.TOSS_EDGE_PAY + "x i wypada w",
                         Formatting.GRAY),
-                line("about " + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0
+                line("mniej więcej " + Math.round(TrapMath.TOSS_EDGE_CHANCE * 1000) / 10.0
                         + "% rzutów.", Formatting.GRAY),
                 Text.empty(),
                 line("Ta sama przewaga kasyna niezależnie od wyboru.", Formatting.DARK_GRAY))));
@@ -171,7 +171,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
                         .append(plain(STAKES[stakeChoice] + "e")
                                 .formatted(Formatting.GREEN, Formatting.BOLD)));
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
-                line("Kliknij, żeby zmienić.", Formatting.DARK_GRAY))));
+                line("Klik: wyżej, prawy klik: niżej.", Formatting.DARK_GRAY))));
         return tag;
     }
 
@@ -198,7 +198,7 @@ public class TossScreenHandler extends ScreenHandler implements TrapTables.Playi
             return;
         }
         if (index == STAKE_SLOT) {
-            stakeChoice = (stakeChoice + 1) % STAKES.length;
+            stakeChoice = TrapMath.cycle(stakeChoice, STAKES.length, button == 1);
             click(1.4F);
             paint();
             return;

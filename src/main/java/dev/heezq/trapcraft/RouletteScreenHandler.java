@@ -65,7 +65,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
     private static final int PURSE_SLOT = 53;
 
     /** Chip sizes, in emeralds. */
-    private static final int[] CHIPS = {1, 8, 32, 128};
+    private static final int[] CHIPS = TrapMath.CHIPS;
 
     /**
      * The pockets in the order they sit on a real wheel.
@@ -284,7 +284,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
                 line("Ile stawia jedno kliknięcie.", Formatting.GRAY),
                 Text.empty(),
                 line("LPM", Formatting.YELLOW)
-                        .append(plain(" zmienia wartość żetonu").formatted(Formatting.GRAY)))));
+                        .append(plain(" wyżej, PPM niżej").formatted(Formatting.GRAY)))));
         return tag;
     }
 
@@ -371,7 +371,7 @@ public class RouletteScreenHandler extends ScreenHandler implements TrapTables.P
         boolean secondary = button == 1 && type == SlotActionType.PICKUP;
 
         if (index == CHIP_SLOT) {
-            chipChoice = (chipChoice + 1) % CHIPS.length;
+            chipChoice = TrapMath.cycle(chipChoice, CHIPS.length, secondary);
             click(1.4F);
             repaint();
             return;

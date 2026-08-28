@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BLB",
+    "CWC",
+    "BBB"
+  ],
+  "key": {
+    "B": "minecraft:bricks",
+    "L": "minecraft:bell",
+    "C": "minecraft:copper_block",
+    "W": "minecraft:water_bucket"
+  },
+  "result": {
+    "id": "trapcraft:fire_house",
+    "count": 1
+  }
+}

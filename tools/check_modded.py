@@ -23,6 +23,7 @@ the volume runs mods that server.mrpack does not list. No container, no check
 find the Minecraft jar refuses to shrug and continue.
 """
 
+import glob
 import json
 import re
 import subprocess
@@ -31,7 +32,7 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-from check_stock import SELL_RATE, STOCK, catalogue
+from check_stock import MC_JARS, SELL_FLOOR, SELL_RATE, STOCK, catalogue
 
 CONTAINER = "mcserver-mc-1"
 SWEEPS = Path(__file__).resolve().parent.parent / \
@@ -51,18 +52,69 @@ def swept() -> dict[str, tuple[int, int]]:
     return found
 
 
-def pane_rate() -> float:
-    """What a pane costs, per item. Panes are the one exception to flat pricing.
+def cut_goods() -> dict[str, tuple[int, int]]:
+    """suffix -> (bundle, price) for the exceptions to flat pricing.
 
-    Read rather than assumed, because a check that costs panes at the block
-    price is LENIENT about every recipe that eats one -- and lenient is the
-    direction that lets a hole through.
+    A pane comes out of a recipe in greater number than the block went in, so
+    it cannot carry its mod's flat price. Read rather than assumed, because a
+    check that costs panes at the block price is LENIENT about every recipe
+    that eats one -- and lenient is the direction that lets a hole through.
     """
     source = SWEEPS.read_text()
-    found = re.search(r"PANES = new Sweep\([A-Z]+, (\d+), (\d+)\);", source)
-    if not found:
+    match = re.search(r"PANES = new Sweep\([A-Z]+, (\d+), (\d+)\);", source)
+    if not match:
         sys.exit("no PANES rule in ShopStock -- this check has rotted")
-    return int(found.group(2)) / int(found.group(1))
+    return {"_pane": (int(match.group(1)), int(match.group(2)))}
+
+
+def timber() -> list[tuple[str, int, int]]:
+    """(item tag, bundle, price) for the wood sweep, in first-match order."""
+    found = [(f"#minecraft:{tag.lower()}", int(count), int(price)) for tag, count, price
+             in re.findall(r"TIMBER\.put\(ItemTags\.([A-Z_]+), new int\[\]\{(\d+), (\d+)\}\);",
+                           SWEEPS.read_text())]
+    if not found:
+        sys.exit("no TIMBER table in ShopStock -- this check has rotted")
+    return found
+
+
+def item_tags(blobs: dict[str, bytes]) -> dict[str, set[str]]:
+    """Every item tag in the pack, nesting resolved, vanilla and modded merged.
+
+    Both halves are needed and neither is enough: a wood mod usually declares
+    its own #mod:aspen_logs and hangs it off vanilla's #minecraft:logs, so the
+    tag that decides the price only means anything once the mod's own tag files
+    are read alongside the game's.
+    """
+    raw: dict[str, list[str]] = {}
+    sources = [p for p in glob.glob(str(MC_JARS)) if "sources" not in p]
+    if not sources:
+        sys.exit("no mapped Minecraft jar in the Loom cache -- run ./gradlew build first")
+    readers = [zipfile.ZipFile(sources[0])] + \
+        [zipfile.ZipFile(BytesIO(blob)) for blob in blobs.values()]
+    for jar in readers:
+        for name in jar.namelist():
+            match = re.fullmatch(r"data/([a-z0-9_.-]+)/tags/item/(.+)\.json", name)
+            if not match:
+                continue
+            try:
+                body = json.loads(jar.read(name))
+            except ValueError:
+                continue
+            values = [v if isinstance(v, str) else v.get("id", "")
+                      for v in body.get("values", [])]
+            raw.setdefault(f"#{match.group(1)}:{match.group(2)}", []).extend(
+                v for v in values if v)
+
+    def members(tag: str, seen: set[str]) -> set[str]:
+        if tag in seen:
+            return set()
+        seen.add(tag)
+        out = set()
+        for value in raw.get(tag, []):
+            out |= members(value, seen) if value.startswith("#") else {value}
+        return out
+
+    return {tag: members(tag, set()) for tag in raw}
 
 
 def jars() -> dict[str, bytes]:
@@ -103,30 +155,59 @@ def slots(body: dict) -> list[list[str]] | None:
 
 def main() -> int:
     table = swept()
-    panes = pane_rate()
+    cut = cut_goods()
+    blobs = jars()
+    wood = timber()
+    tags = item_tags(blobs)
     unit = {ident: base / count for ident, count, base in catalogue(STOCK.read_text())}
     # The flat prices themselves, so a recipe of one modded item into another
     # is costed rather than skipped.
     for namespace, (count, price) in table.items():
         unit[f"@{namespace}"] = price / count
 
+    def line(ident: str) -> tuple[str, int, int] | None:
+        """(shelf, bundle, bundle price) for a swept item, or None if unswept.
+
+        Same order the mod stocks in: a mod with its own shelf keeps it, and
+        only what is left falls through to the wood tags.
+        """
+        namespace = ident.split(":")[0]
+        if namespace in table:
+            for suffix, (count, price) in cut.items():
+                if ident.endswith(suffix):
+                    return namespace, count, price
+            return (namespace, *table[namespace])
+        if ident in unit:
+            return None
+        for tag, count, price in wood:
+            if ident in tags.get(tag, ()):
+                return "timber", count, price
+        return None
+
     def shelf_price(ident: str) -> float | None:
         """What the shop sells one of these for, or None if it doesn't."""
-        namespace = ident.split(":")[0]
-        if namespace not in table:
-            return None
-        if ident.endswith("_pane"):
-            return panes
-        count, price = table[namespace]
-        return price / count
+        found = line(ident)
+        return None if found is None else found[2] / found[1]
+
+    def sell_back(ident: str) -> float:
+        """What the counter pays for one. Nothing, under the two-emerald floor.
+
+        TrapMarket.sellPrice refuses to buy back a line whose flat price is
+        under SELL_FLOOR, which is the whole reason the furniture can be sold
+        by the piece at 1e -- a check that costs those crafts at 45% would fail
+        the deploy over a loop the game will not let anybody run.
+        """
+        found = line(ident)
+        if found is None or found[2] < SELL_FLOOR:
+            return 0.0
+        return shelf_price(ident) * SELL_RATE
 
     worst: dict[str, tuple[float, str, float, float]] = {}
     counted = 0
-    for name, blob in jars().items():
+    for name, blob in blobs.items():
         with zipfile.ZipFile(BytesIO(blob)) as jar:
             for entry in jar.namelist():
-                match = re.fullmatch(r"data/([a-z_]+)/recipe/.+\.json", entry)
-                if not match or match.group(1) not in table:
+                if not re.fullmatch(r"data/[a-z0-9_.-]+/recipe/.+\.json", entry):
                     continue
                 try:
                     body = json.loads(jar.read(entry))
@@ -137,8 +218,8 @@ def main() -> int:
                     continue
                 result = body.get("result", {})
                 made = str(result.get("id", ""))
-                sells_for = shelf_price(made)
-                if sells_for is None:
+                shelf = line(made)
+                if shelf is None:
                     continue
                 cost = 0.0
                 for slot in ingredients:
@@ -156,28 +237,31 @@ def main() -> int:
                 counted += 1
                 # What the counter hands back for a craft, against what the
                 # craft cost at the same counter.
-                earns = sells_for * result.get("count", 1) * SELL_RATE
-                namespace = made.split(":")[0]
+                earns = sell_back(made) * result.get("count", 1)
                 margin = earns - cost
-                if margin > worst.get(namespace, (float("-inf"),))[0]:
-                    worst[namespace] = (margin, entry.rsplit("/", 1)[-1], cost, earns)
+                if margin > worst.get(shelf[0], (float("-inf"),))[0]:
+                    worst[shelf[0]] = (margin, entry.rsplit("/", 1)[-1], cost, earns)
 
+    shelves = dict(sorted(table.items()))
+    shelves["timber"] = (wood[0][1], wood[0][2])
     problems = []
-    for namespace, (count, price) in sorted(table.items()):
-        found = worst.get(namespace)
+    for shelf, (count, price) in shelves.items():
+        found = worst.get(shelf)
         if found is None:
-            print(f"  note: no costable recipe for {namespace}, price unverified")
+            print(f"  note: no costable recipe for {shelf}, price unverified")
             continue
         margin, culprit, cost, earns = found
         if margin > 0:
             problems.append(
-                f"{namespace}: crafting {culprit} nets {margin:+.3f}e a go "
+                f"{shelf}: crafting {culprit} nets {margin:+.3f}e a go "
                 f"({cost:.3f}e of ingredients sells back for {earns:.3f}e)")
+        elif price < SELL_FLOOR:
+            print(f"  ok   {shelf:16} {price / count:.3f}e each, never bought back")
         else:
-            print(f"  ok   {namespace:16} {price / count:.3f}e each, worst craft "
+            print(f"  ok   {shelf:16} {price / count:.3f}e each, worst craft "
                   f"{culprit} loses {-margin:.3f}e ({cost:.3f}e -> {earns:.3f}e)")
 
-    print(f"{counted} modded recipes costed across {len(table)} swept mods")
+    print(f"{counted} modded recipes costed across {len(shelves)} swept shelves")
     for problem in problems:
         print(f"  {problem}")
     return 1 if problems else 0

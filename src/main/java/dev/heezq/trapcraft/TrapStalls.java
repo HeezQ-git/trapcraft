@@ -49,6 +49,16 @@ import java.util.UUID;
  * because it never leaves a real container -- and restocking is putting things
  * in a barrel, which is a thing people already know how to do. The crew reach
  * for the nearest chest for the same reason.
+ *
+ * <h2>And somebody from away browses the row</h2>
+ *
+ * The one customer a stall has that is not a player. For a long time it had
+ * none at all: a stall earned exactly nothing unless a friend was logged in
+ * and walked over, which made a market square scenery rather than a business.
+ * {@link #sellToVisitor} is the other half, and it is deliberately visitors
+ * only -- the town's own custom belongs to the supermarkets, or the till, the
+ * shelves and the wage bill in {@link TrapShops} are an expensive way to own a
+ * barrel.
  */
 public final class TrapStalls {
     /** One shop: where it is, whose it is, and what it has taken. */
@@ -299,6 +309,109 @@ public final class TrapStalls {
                             + " -- " + keeps + "e w kasie.").formatted(Formatting.GRAY)), false);
         }
         return null;
+    }
+
+    /**
+     * A stall that is loaded and has something on it, or null.
+     *
+     * The counterpart of {@code TrapShops.openShop}, and deliberately without
+     * its weighting: a shop is picked against its markup because a keeper sets
+     * one, and a stall has no price editor at all -- every stall in town sells
+     * at the same {@link TrapMath#STALL_RATE}, so there is nothing to prefer
+     * one over another by except being open.
+     */
+    public static Stall openStall(MinecraftServer server,
+                                  net.minecraft.util.math.random.Random random) {
+        List<Stall> open = new ArrayList<>();
+        for (Stall stall : STALLS) {
+            ServerWorld world = worldOf(server, stall);
+            if (world != null && loaded(world, stall.pos) && !listing(world, stall).isEmpty()) {
+                open.add(stall);
+            }
+        }
+        return open.isEmpty() ? null : open.get(random.nextInt(open.size()));
+    }
+
+    /**
+     * Sell one lot to somebody passing through.
+     *
+     * Why a stall gets out-of-town trade and a resident never buys here: the
+     * supermarkets have the town's own custom and this has never had any
+     * custom at all. A stall was player-to-player only, which made it the one
+     * business in the mod that earned nothing while nobody was standing at it,
+     * and a market square whose stalls only move stock when a friend logs on
+     * is a market square that reads as scenery. Somebody from away browsing a
+     * row of stalls is what a market IS.
+     *
+     * Giving it to visitors rather than to residents keeps the two businesses
+     * apart on purpose. A supermarket is where the town shops; a stall is
+     * where the town SELLS. Hand a stall the resident trade as well and the
+     * till block, the shelves, the price policy and the wage bill behind
+     * {@link TrapShops} are an expensive way to own a barrel.
+     *
+     * <h2>The pitch fee has to be un-minted</h2>
+     *
+     * {@link TrapVisitors#spend} mints what it takes, because a visitor's
+     * money genuinely arrives from outside the world's supply. The player path
+     * below splits a sale three ways -- the till keeps
+     * {@link TrapMath#stallTake}, the city takes duty, and the remainder is a
+     * pitch fee that LEAVES circulation. Nothing holds that remainder, so
+     * minting it and walking away would have every visitor sale quietly
+     * inflate the index by the fee. It is a few emeralds a sale and it would
+     * never have presented as anything but prices drifting up for no reason.
+     *
+     * @return what they paid all in, or 0 if nothing was sold
+     */
+    public static int sellToVisitor(ServerWorld world, Stall stall, UUID who) {
+        Inventory box = stockOf(world, stall);
+        if (box == null) {
+            return 0;
+        }
+        Map<ShopStock.Entry, Integer> lines = listing(world, stall);
+        if (lines.isEmpty()) {
+            return 0;
+        }
+        List<ShopStock.Entry> shelf = new ArrayList<>(lines.keySet());
+        ShopStock.Entry entry = shelf.get(world.getRandom().nextInt(shelf.size()));
+
+        int price = TrapMath.stallPrice(
+                TrapMarket.buyPrice(world.getServer(), entry));
+        TrapCity.Duty band = TrapCity.forGoods(entry.category());
+        int duty = TrapCity.dutyOn(price, band);
+        // Afford BEFORE the stock comes off the shelf, for the reason written
+        // down in TrapShops.buy: a payer who turns out to be short one line
+        // later has already walked off with the shopping, and it presents as
+        // the chest being miscounted rather than as the money running out.
+        if (TrapVisitors.purseOf(who) < price + duty) {
+            return 0;
+        }
+        if (!take(box, entry, entry.count())) {
+            return 0;
+        }
+        if (!TrapVisitors.spend(who, price + duty)) {
+            return 0;
+        }
+        int keeps = TrapMath.stallTake(price);
+        TrapMarket.minted(-(price - keeps));   // the pitch fee, see above
+        stall.till += keeps;
+        TrapCity.receive(duty, band);
+        save();
+
+        world.playSound(null, stall.pos, net.minecraft.sound.SoundEvents.BLOCK_BARREL_CLOSE,
+                net.minecraft.sound.SoundCategory.BLOCKS, 0.7F, 1.3F);
+        world.spawnParticles(net.minecraft.particle.ParticleTypes.HAPPY_VILLAGER,
+                stall.pos.getX() + 0.5, stall.pos.getY() + 1.1, stall.pos.getZ() + 0.5,
+                6, 0.3, 0.2, 0.3, 0.01);
+
+        ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(stall.owner);
+        if (owner != null) {
+            owner.sendMessage(Text.literal("Sprzedano ").formatted(Formatting.GREEN)
+                    .append(Text.literal(entry.count() + "x " + entry.label())
+                            .formatted(Formatting.WHITE))
+                    .append(Text.literal(" komuś spoza miasta -- " + keeps + "e w kasie.")
+                            .formatted(Formatting.GRAY)), false);
+        }
+        return price + duty;
     }
 
     /** Pull one lot out of the stall's chest. False if it wasn't all there. */

@@ -30,7 +30,17 @@ public class TrapCraft implements ModInitializer {
         TrapPayroll.register();
         TrapHomes.register();
         TrapHospitals.register();
+        // Police before crime: the force reads nothing from the crime book at
+        // load, but every case that opens asks the force whether anybody is on
+        // the street, and a first roll against an unloaded register would
+        // report a town with no police to a town that has three stations.
+        TrapPolice.register();
+        TrapCrime.register();
         TrapShops.register();
+        // After the shops and the houses: a fire picks its address out of both
+        // registers, and a first roll against an unloaded one is a town where
+        // nothing can catch because nothing exists yet.
+        TrapFires.register();
         TrapClubs.register();
         TrapLaw.register();
         TrapTables.register();
@@ -53,6 +63,9 @@ public class TrapCraft implements ModInitializer {
         TrapDealing.register();
         TrapGuide.register();
         TrapLoot.register();
+        // After TrapContent: the chest pools it injects name the case and key
+        // items directly, so they have to exist by the time it registers.
+        TrapCases.register();
         TrapEssentials.register();
 
         // Ships our textures/models inside the server-generated pack so vanilla

@@ -457,6 +457,7 @@ def lang() -> None:
         "item.trapcraft.blend_bud": "Susz mieszany",
         "item.trapcraft.blend_joint": "Skręt mieszany",
         "item.trapcraft.nerve_tonic": "Lek na nerwy",
+        "block.trapcraft.nerve_tonic": "Lek na nerwy",
         "item.trapcraft.ledger": "Spis skrzyń",
         "item.trapcraft.wallet": "Portfel",
         # Renamed per-casino by the component; this only shows on a
@@ -487,6 +488,10 @@ def lang() -> None:
         "item.trapcraft.city_vault": "Skarbiec miasta",
         "block.trapcraft.hospital": "Szpital",
         "item.trapcraft.hospital": "Szpital",
+        "block.trapcraft.police": "Komisariat",
+        "item.trapcraft.police": "Komisariat",
+        "block.trapcraft.fire_house": "Remiza",
+        "item.trapcraft.fire_house": "Remiza",
         # "Shop Shelf", not "Market Shelf". Three things called market -- the
         # counter, the stall and this -- meant the word had stopped narrowing
         # anything down. The ID stays market_shelf: every placed block on the
@@ -530,6 +535,9 @@ def lang() -> None:
         entries[f"item.trapcraft.joint_{strain}"] = f"Skręt {nice}"
     for name, (nice, _, _) in WANDS.items():
         entries[f"item.trapcraft.{name}"] = nice
+    for tier, (box, key) in CASES.items():
+        entries[f"item.trapcraft.{tier}_case"] = box
+        entries[f"item.trapcraft.{tier}_key"] = key
     put(f"assets/{NS}/lang/en_us.json", dict(sorted(entries.items())))
 
 
@@ -1414,42 +1422,118 @@ def held(boost: float = 1.0, gui_rotation=None) -> dict:
     return display
 
 
-def nerve_tonic_model() -> dict:
-    """A stubby apothecary bottle with a cork, not a sprite of one.
+# A stubby apothecary bottle: dose, the air above it, neck, cork. Built like
+# the bong and tlok -- the liquid is the SKIN of the lower section rather than
+# something seen through a wall, because a translucent inner box inside a
+# translucent outer box z-fights on every client that renders the pack on the
+# cutout layer.
+_TONIC_BOXES = [
+    ((4, 0, 4), (12, 7, 12), "liquid"),
+    ((4, 7, 4), (12, 9.5, 12), "glass"),
+    ((6, 9.5, 6), (10, 13, 10), "glass"),
+    ((5.5, 13, 5.5), (10.5, 15, 10.5), "cork"),
+]
 
-    Built like the bong and tlok: the liquid is the skin of the lower section
-    rather than something seen through a wall, because a translucent inner box
-    inside a translucent outer box z-fights on every client that renders the
-    pack on the cutout layer.
+# How much smaller the bottle stands than it looks in the hand. At full size
+# one of them filled its block to the ceiling and four were a glass wall; the
+# hand wants a readable silhouette in a 16px slot and the shelf wants a bottle.
+# The two disagree, so they get their own geometry rather than a shared model.
+PLACED_SCALE = 0.55
+
+# Where the bottles stand, offset from the middle, and how far each is turned.
+# Deliberately not a grid and not all square-on: four bottles on the same axis
+# read as a stamped pattern rather than four bottles somebody put down. Angles
+# are limited to the five Minecraft allows an element to be rotated by.
+# NerveTonicBlock.SPOTS mirrors the offsets to build the outline.
+BOTTLE_SPOTS = {
+    1: [(0, 0, 0)],
+    2: [(-2.5, -1.5, 22.5), (2.5, 1.5, -22.5)],
+    3: [(-3, -1.5, 0), (2, -3, 22.5), (1, 3, -45)],
+    4: [(-3, -3, 22.5), (3, -2.5, -22.5), (-2.5, 3, -45), (3, 3, 45)],
+}
+
+_TONIC_TEXTURES = {
+    "glass": f"{NS}:item/tonic_glass",
+    "liquid": f"{NS}:item/tonic_liquid",
+    "cork": f"{NS}:item/tonic_cork",
+    "particle": f"{NS}:item/tonic_liquid",
+}
+
+
+def tonic_bottle(scale=1.0, dx=0.0, dz=0.0, angle=0.0) -> list:
+    """One bottle: shrunk about its own foot, slid along the floor, turned.
+
+    Scaling about x=z=8 and y=0 rather than the middle of the box keeps the
+    bottle standing ON the surface -- scaling about the centre would sink half
+    the shrinkage into the block below.
     """
+    elements = []
+    for frm, to, tex in _TONIC_BOXES:
+        low = [round(8 + (frm[0] - 8) * scale + dx, 3), round(frm[1] * scale, 3),
+               round(8 + (frm[2] - 8) * scale + dz, 3)]
+        high = [round(8 + (to[0] - 8) * scale + dx, 3), round(to[1] * scale, 3),
+                round(8 + (to[2] - 8) * scale + dz, 3)]
+        element = box(low, high, tex)
+        if angle:
+            element["rotation"] = {"origin": [8 + dx, 0, 8 + dz],
+                                   "axis": "y", "angle": angle}
+        elements.append(element)
+    return elements
+
+
+def nerve_tonic_model() -> dict:
+    """The bottle as it is held: full size, with the display transforms."""
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
-        "textures": {
-            "glass": f"{NS}:item/tonic_glass",
-            "liquid": f"{NS}:item/tonic_liquid",
-            "cork": f"{NS}:item/tonic_cork",
-            "particle": f"{NS}:item/tonic_liquid",
-        },
+        "textures": _TONIC_TEXTURES,
         "display": held(1.05, gui_rotation=(20, 215, 0)),
-        "elements": [
-            box([4, 0, 4], [12, 7, 12], "liquid"),          # the dose itself
-            box([4, 7, 4], [12, 9.5, 12], "glass"),         # air above it
-            box([6, 9.5, 6], [10, 13, 10], "glass"),        # neck
-            box([5.5, 13, 5.5], [10.5, 15, 10.5], "cork"),  # stopper
-        ],
+        "elements": tonic_bottle(),
+    }
+
+
+def placed_tonic_model(count: int) -> dict:
+    """The bottle as it stands on a shelf: small, and however many there are."""
+    elements = []
+    for dx, dz, angle in BOTTLE_SPOTS[count]:
+        elements += tonic_bottle(PLACED_SCALE, dx, dz, angle)
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": _TONIC_TEXTURES,
+        "elements": elements,
     }
 
 
 def nerve_tonic_assets() -> None:
-    put(f"assets/{NS}/models/block/nerve_tonic.json", nerve_tonic_model())
-    # Inherit the geometry rather than flattening to a sprite, same as the
-    # glassware -- a bottle drawn on a billboard has no bottle in it.
-    put(f"assets/{NS}/models/item/nerve_tonic.json", {
-        "parent": f"{NS}:block/nerve_tonic",
-    })
+    # Real geometry rather than a sprite, same as the glassware -- a bottle
+    # drawn on a billboard has no bottle in it.
+    put(f"assets/{NS}/models/item/nerve_tonic.json", nerve_tonic_model())
     put(f"assets/{NS}/items/nerve_tonic.json", {
         "model": {"type": "minecraft:model", "model": f"{NS}:item/nerve_tonic"},
+    })
+    # One carrier model per bottle count, which is also four states out of the
+    # small trapdoor pool -- see TrapPolymer.INERT.
+    for count in BOTTLE_SPOTS:
+        put(f"assets/{NS}/models/block/nerve_tonic_{count}.json",
+            placed_tonic_model(count))
+
+    # Break a cluster and you get every bottle in it back. Written the way
+    # vanilla candles are: one entry, one set_count per state, because a loot
+    # table cannot read a blockstate property as a number.
+    put(f"data/{NS}/loot_table/blocks/nerve_tonic.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [{
+            "type": "minecraft:item",
+            "name": f"{NS}:nerve_tonic",
+            "functions": [
+                {"function": "minecraft:set_count", "count": count,
+                 "conditions": [{"condition": "minecraft:block_state_property",
+                                 "block": f"{NS}:nerve_tonic",
+                                 "properties": {"bottles": str(count)}}]}
+                for count in BOTTLE_SPOTS
+            ] + [{"function": "minecraft:explosion_decay"}],
+        }]}],
     })
 
     # Honey for the base, sugar to take the edge off, and a flower because
@@ -1895,6 +1979,18 @@ def advancements() -> None:
     award("ward", "Miejsce do leczenia",
           "Otwórz szpital, żeby ugryzienie przestało być wyrokiem.",
           f"{NS}:hospital", "founded", trigger=has(f"{NS}:hospital"), frame="goal")
+    award("nick", "Ktoś tego pilnuje",
+          "Otwórz komisariat, żeby miasto miało kogo wysłać.",
+          f"{NS}:police", "founded", trigger=has(f"{NS}:police"), frame="goal")
+    award("collar", "Mamy go",
+          "Doczekaj się pierwszego zatrzymania na swoim komisariacie.",
+          "minecraft:chain", "nick", frame="goal")
+    award("brigade", "Wóz wyjeżdża",
+          "Otwórz remizę, żeby pożar nie był tylko twoim problemem.",
+          f"{NS}:fire_house", "founded", trigger=has(f"{NS}:fire_house"), frame="goal")
+    award("fire", "Wiadro w rękę",
+          "Ugaś pożar sam, zanim ktokolwiek zdążył przyjechać.",
+          "minecraft:water_bucket", "brigade", frame="challenge")
     award("shopkeeper", "Sklepikarz", "Otwórz sklep, w którym miasto może robić zakupy.",
           f"{NS}:shop_till", "open", trigger=has(f"{NS}:shop_till"))
     award("dirty", "Brudna kasa", "Przyjmij zapłatę, której żaden bank nie przyjmie.",
@@ -2405,6 +2501,61 @@ def wand_assets() -> None:
                 "R": "minecraft:blaze_rod",
             },
             "result": {"id": f"{NS}:{name}", "count": 1},
+        })
+
+
+# The four cases, and their keys. Order matters: it is the tier ladder, and
+# the trade-up recipes below are generated by pairing each with the next.
+#
+# These names are the ONLY copy. CaseOdds.java deliberately carries no display
+# strings and asks the language file for them through Text.translatable, so a
+# rename here renames the item everywhere it is mentioned -- tooltip, chat,
+# shop shelf and the guide -- rather than in three of the four.
+CASES = {
+    "street": ("Skrzynka Dzielnicowa", "Klucz Dzielnicowy"),
+    "docks": ("Skrzynka Portowa", "Klucz Portowy"),
+    "cartel": ("Skrzynka Kartelu", "Klucz Kartelu"),
+    "phantom": ("Skrzynka Widmo", "Klucz Widmo"),
+}
+
+# Must match CaseOdds.TRADE_UP. Four fits a 2x2 grid, which is the whole
+# reason it is four: the contract works in your inventory, with no bench.
+TRADE_UP = 4
+
+
+def case_assets() -> None:
+    """Flat sprites, and the one recipe in the feature.
+
+    No recipe for the cases themselves, deliberately -- a craftable case is a
+    case with a price, and the mechanic is that the box is free and the key is
+    not. The keys have no recipe either: they are bought or found.
+
+    What IS craftable is the trade-up, Counter-Strike's own contract. Four
+    keys of one tier become one of the next, which does nothing for somebody
+    buying keys (see CaseOddsTest: four of the cheaper always cost at least
+    the dearer) and everything for somebody sitting on a drawer of street keys
+    they found and can't sell.
+    """
+    tiers = list(CASES)
+    for index, tier in enumerate(tiers):
+        for name in (f"{tier}_case", f"{tier}_key"):
+            put(f"assets/{NS}/models/item/{name}.json", {
+                "parent": "minecraft:item/generated",
+                "textures": {"layer0": f"{NS}:item/{name}"},
+            })
+            put(f"assets/{NS}/items/{name}.json", {
+                "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+            })
+
+        if index + 1 >= len(tiers):
+            continue
+        above = tiers[index + 1]
+        put(f"data/{NS}/recipe/{above}_key_trade_up.json", {
+            "type": "minecraft:crafting_shaped",
+            "category": "misc",
+            "pattern": ["KK", "KK"],
+            "key": {"K": f"{NS}:{tier}_key"},
+            "result": {"id": f"{NS}:{above}_key", "count": 1},
         })
 
 
@@ -2988,6 +3139,118 @@ def hospital_assets() -> None:
     })
 
 
+def fire_house_assets() -> None:
+    """Brick, a garage door and a bell, spelled out as a solid cube.
+
+    Same reasoning as the nick, the ward and the vault: it claims a FULL_BLOCK
+    carrier, so it has to BE a full block or check_models.py finds the X-ray
+    hole -- and the elements are written out here rather than inherited from
+    block/cube because the checker measures coverage off a model's own
+    geometry.
+    """
+    put(f"assets/{NS}/models/block/fire_house.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "face": f"{NS}:block/fire_house_face",
+            "side": f"{NS}:block/fire_house_side",
+            "top": f"{NS}:block/fire_house_top",
+            "particle": f"{NS}:block/fire_house_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#face"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#top"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/fire_house.json",
+        {"parent": f"{NS}:block/fire_house"})
+    put(f"assets/{NS}/items/fire_house.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/fire_house"},
+    })
+    put(f"data/{NS}/loot_table/blocks/fire_house.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:fire_house"}]}],
+    })
+    # Brick for the shell, a bell over the door because the bell IS the
+    # silhouette, and a bucket of water in the middle -- the one vanilla item
+    # that already means "this is what you do about a fire", and the same
+    # bucket a player uses to put one out by hand. Copper for the engine.
+    #
+    # Dearer than the nick and cheaper than the ward. The nick is cheap because
+    # its real cost is the daily budget; the ward is dear because the city pays
+    # per patient forever. A remiza is in between for the same reason: it has a
+    # standing cost, but only on the days something goes wrong.
+    put(f"data/{NS}/recipe/fire_house.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["BLB", "CWC", "BBB"],
+        "key": {"B": "minecraft:bricks", "L": "minecraft:bell",
+                "C": "minecraft:copper_block", "W": "minecraft:water_bucket"},
+        "result": {"id": f"{NS}:fire_house", "count": 1},
+    })
+
+
+def police_assets() -> None:
+    """Concrete, a chequer band and a badge, spelled out as a solid cube.
+
+    Same reasoning as the ward and the vault: it claims a FULL_BLOCK carrier,
+    so it has to BE a full block or check_models.py finds the X-ray hole -- and
+    the elements are written out here rather than inherited from block/cube
+    because the checker measures coverage off a model's own geometry.
+    """
+    put(f"assets/{NS}/models/block/police.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "face": f"{NS}:block/police_face",
+            "side": f"{NS}:block/police_side",
+            "top": f"{NS}:block/police_top",
+            "particle": f"{NS}:block/police_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#face"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#top"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/police.json", {"parent": f"{NS}:block/police"})
+    put(f"assets/{NS}/items/police.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/police"},
+    })
+    put(f"data/{NS}/loot_table/blocks/police.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:police"}]}],
+    })
+    # Stone for the civic shell, a lantern because the lamp over the door is
+    # the whole silhouette, iron bars for the cells, and a shield in the middle
+    # -- the one vanilla item that already means "somebody stands between you
+    # and it". Cheaper than a hospital on purpose: the block is the easy half
+    # and the daily budget is where a police force actually costs a city.
+    put(f"data/{NS}/recipe/police.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["SLS", "BHB", "SSS"],
+        "key": {"S": "minecraft:stone_bricks", "L": "minecraft:lantern",
+                "B": "minecraft:iron_bars", "H": "minecraft:shield"},
+        "result": {"id": f"{NS}:police", "count": 1},
+    })
+
+
 def mailbox_assets() -> None:
     put(f"assets/{NS}/models/block/mailbox.json", mailbox_model())
     put(f"assets/{NS}/models/item/mailbox.json", {"parent": f"{NS}:block/mailbox"})
@@ -3040,7 +3303,7 @@ def tags() -> None:
     # machine" and "nothing works on anything".
     put("data/minecraft/tags/block/mineable/pickaxe.json", {
         "values": [f"{NS}:{b}" for b in (
-            "wash_pot", "acetylator", "city_vault", "police",
+            "wash_pot", "acetylator", "city_vault", "police", "fire_house",
             "dirty_emerald_block", "laundry",
             # Metal machines without requiresTool: any hand drops them, a
             # pickaxe just stops pretending it's no better than a fist.
@@ -3091,6 +3354,28 @@ def recipes() -> None:
         })
 
 
+def recipe_book() -> None:
+    """Every recipe in the book, from the moment you join.
+
+    Not one advancement in this mod granted a recipe, so every recipe this
+    generator writes was invisible in the book -- craftable by hand the whole
+    time, because doLimitedCrafting is off, but a pattern nobody could look
+    up is a pattern nobody has. A remiza went a fortnight unbuilt on that.
+
+    One advancement instead of one per recipe, and it reads the folder rather
+    than a list, so a recipe added tomorrow is in the book without anybody
+    remembering this function exists. No display block: that is what makes an
+    advancement invisible, and this one is plumbing, not an achievement.
+    """
+    ids = sorted(f"{NS}:{p.stem}"
+                 for p in (ROOT / f"data/{NS}/recipe").glob("*.json"))
+    put(f"data/{NS}/advancement/recipes.json", {
+        "criteria": {"joined": {"trigger": "minecraft:tick"}},
+        "requirements": [["joined"]],
+        "rewards": {"recipes": ids},
+    })
+
+
 def main() -> None:
     block_models()
     item_assets()
@@ -3123,11 +3408,14 @@ def main() -> None:
                  scratch_furniture())
     advancements()
     wand_assets()
+    case_assets()
     phone_assets()
     stall_assets()
     club_assets()
     mailbox_assets()
     hospital_assets()
+    police_assets()
+    fire_house_assets()
     vault_assets()
     shelf_assets()
     laundry_assets()
@@ -3136,6 +3424,9 @@ def main() -> None:
     tags()
     worldgen()
     recipes()
+    # Last, and it has to be: it counts the recipe folder everything above
+    # just finished writing.
+    recipe_book()
     print(f"wrote {written} json files under {ROOT}")
 
 

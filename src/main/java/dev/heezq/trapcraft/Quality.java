@@ -11,10 +11,10 @@ import net.minecraft.util.Formatting;
  * them lazily -- in both potency and emeralds.
  */
 public enum Quality {
-    SWILL("Słabe", Formatting.DARK_GRAY, 0.60F, 1),
-    MIDS("Zwykłe", Formatting.WHITE, 1.00F, 2),
-    LOUD("Mocne", Formatting.AQUA, 1.45F, 4),
-    FIRE("Topowe", Formatting.LIGHT_PURPLE, 2.00F, 7);
+    SWILL("Słabe", Formatting.DARK_GRAY, 0.60F, 3),
+    MIDS("Zwykłe", Formatting.WHITE, 1.00F, 6),
+    LOUD("Mocne", Formatting.AQUA, 1.45F, 12),
+    FIRE("Topowe", Formatting.LIGHT_PURPLE, 2.00F, 21);
 
     /** How many condition points are needed to reach each grade. */
     public static final int[] THRESHOLDS = {0, 3, 5, 7};
@@ -60,7 +60,13 @@ public enum Quality {
         return potency;
     }
 
-    /** What a trader pays for a stack of this grade. Fire is 7x Swill. */
+    /**
+     * What a trader pays for a stack of this grade. Fire is 7x Swill.
+     *
+     * The base every other drug price is derived from -- see
+     * {@link Purity#emeralds()} for why both tables were scaled 3x at once and
+     * what they are anchored against.
+     */
     public int emeralds() {
         return emeralds;
     }

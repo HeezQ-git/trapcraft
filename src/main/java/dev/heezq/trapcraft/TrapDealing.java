@@ -1016,8 +1016,11 @@ public final class TrapDealing {
      * other.
      *
      *          Swill  Mids  Loud  Fire
-     *   bud        1     2     4     7
-     *   joint      2     4     8    13
+     *   bud        3     6    12    20
+     *   joint      6    11    23    40
+     *
+     * Derived from {@link Quality#emeralds()}, so this table is a readout and
+     * not a second place to tune -- move the grade table and these follow.
      */
     /**
      * What one of these fetches on the street.

@@ -70,7 +70,13 @@ public final class TrapGuide {
                                 .executes(context -> give(context.getSource(), createCity())))
                         .then(CommandManager.literal("housing")
                                 .executes(context -> give(context.getSource(),
-                                        createHousing())))));
+                                        createHousing())))
+                        .then(CommandManager.literal("police")
+                                .executes(context -> give(context.getSource(),
+                                        createPolice())))
+                        .then(CommandManager.literal("fires")
+                                .executes(context -> give(context.getSource(),
+                                        createFires())))));
         registerWiki();
     }
 
@@ -130,6 +136,8 @@ public final class TrapGuide {
                 .append(pick("casino", "prowadzenie kasyna"))
                 .append(pick("city", "kasa miasta, podatki, sklepy"))
                 .append(pick("housing", "domy, klasy domów i czynsz"))
+                .append(pick("police", "policja, przestępczość, mandaty"))
+                .append(pick("fires", "pożary, remiza, wozy"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -261,6 +269,277 @@ public final class TrapGuide {
                 .append(hint("Domy: /guide housing"))));
         cityBook(pages);
         return book("Miasto", pages);
+    }
+
+    /**
+     * The tenth book: the office with a dial on it.
+     *
+     * Its own volume rather than six more pages of MIASTO, and for the reason
+     * the houses got theirs: the city book is already thirty-odd pages, and a
+     * police force is a job somebody DOES -- set the budget, build the cells,
+     * watch the blotter -- rather than a rate they read once. Both halves are
+     * in here, the force and what it is out there answering, because reading
+     * about one without the other tells you nothing.
+     */
+    /** Every page below reads its numbers off {@link TrapFires}. */
+    public static ItemStack createFires() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("STRAŻ POŻARNA"))
+                .append(Text.literal("\nremiza\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("Nalot to twoja wina, złodziej to wina miasta. "
+                        + "Pożar nie jest niczyją.\n\n"))
+                .append(hint("Komisariat: /guide police"))));
+
+        pages.add(page(Text.empty()
+                .append(title("1. CO SIĘ PALI\n\n"))
+                .append(body("Domy z lokatorem i sklepy -- tylko tam, "
+                        + "gdzie ktoś akurat jest.\n\n"))
+                .append(body("Jeden pożar naraz.\n\n"))
+                .append(hint("Żaden blok nie znika. Nic nie spłonie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. ILE MASZ CZASU\n\n"))
+                .append(body(BURN_SECONDS + " sekund.\n\n"))
+                .append(body("Potem: dom traci nastrój i lokator idzie "
+                        + "do szpitala, a sklep traci część kasy.\n\n"))
+                .append(hint("Czynsz na tydzień, nie budynek."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. WIADRO\n\n"))
+                .append(body("Stań przy pożarze z WIADREM WODY. Gasi od "
+                        + "razu i zostaje puste wiadro.\n\n"))
+                .append(body("Zawsze działa, nawet bez remizy.\n\n"))
+                .append(hint("Remiza kupuje to, żeby cię tam nie było."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. REMIZA\n\n"))
+                .append(body("Zrób blok remizy i postaw go w gotowym "
+                        + "budynku, tak jak szpital.\n\n"))
+                .append(body("Podłoga: " + TrapFires.MIN_FLOOR + " kratek\n"))
+                .append(body("Zamknięta, z wyjazdem\n"))
+                .append(body("Wszędzie światło\n"))
+                .append(body("Skrzynia na sprzęt"))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. WOZY\n\n"))
+                .append(body("Jeden wóz na " + TrapFires.FLOOR_PER_ENGINE
+                        + " kratek podłogi, najwyżej " + TrapFires.MAX_ENGINES + ".\n\n"))
+                .append(body("Wyjeżdżają do " + TrapFires.REACH + " bloków.\n\n"))
+                .append(hint("Większy garaż to więcej wozów naraz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. KTO PŁACI\n\n"))
+                .append(body("Miasto: " + TrapFires.CALLOUT + "e za wyjazd, "
+                        + "ze skarbca.\n\n"))
+                .append(body("Pusta kasa to wóz, który nie wyjeżdża.\n\n"))
+                .append(hint("Dlatego skarbiec ma mieć zapas."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. GDZIE BUDOWAĆ\n\n"))
+                .append(body("W środku miasta, nie na skraju. Wóz jedzie "
+                        + "tyle, ile ma do przejechania.\n\n"))
+                .append(hint("/fires pokazuje, co się pali i kto jedzie."))));
+        return book("Straż pożarna", pages);
+    }
+
+    /**
+     * How long a fire burns, in seconds, for the page above.
+     *
+     * Read off {@link TrapFires} rather than typed, which is the rule this
+     * whole file exists to keep: retune the fire and the book retunes with it.
+     */
+    private static final int BURN_SECONDS = TrapFires.BURNS_SECONDS;
+
+    public static ItemStack createPolice() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("PRAWO I PORZĄDEK"))
+                .append(Text.literal("\nkomisariat\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("Miasto kradnie samo sobie. Tu jest napisane, "
+                        + "kto ma temu zapobiec i ile to kosztuje.\n\n"))
+                .append(hint("Kasa miasta: /guide city"))));
+        policeBook(pages);
+        return book("Prawo i porządek", pages);
+    }
+
+    /** Every page below reads its numbers off {@link TrapPolice}. */
+    private static void policeBook(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("1. KOMISARIAT\n\n"))
+                .append(body("Zrób blok komisariatu, wejdź do gotowego "
+                        + "budynku i postaw go w środku.\n\n"))
+                .append(hint("Sprawdza pokój tak jak szpital."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1b. WYMAGANIA\n\n"))
+                .append(body("Cele: " + TrapPolice.MIN_CELLS + " łóżka\n"))
+                .append(body("Podłoga: " + TrapPolice.MIN_FLOOR + " kratek\n"))
+                .append(body("Zamknięty, z drzwiami\n"))
+                .append(body("Wszędzie światło\n"))
+                .append(body("Skrzynia na zbrojownię\n\n"))
+                .append(hint("Zbudowany, nie wykopany."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1c. CO ROBI CELA\n\n"))
+                .append(body("Każde łóżko to jedna cela.\n\n"))
+                .append(body("Cela to też jeden etat. Miasto nie obsadzi "
+                        + "więcej funkcjonariuszy, niż ma cel.\n\n"))
+                .append(hint("Chcesz większy patrol - dostaw łóżka."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. BUDŻET\n\n"))
+                .append(body("Suwak jest przy SKARBCU MIASTA, nie na "
+                        + "komisariacie.\n\n"))
+                .append(body("LPM +" + TrapPolice.BUDGET_STEP + "e, PPM -"
+                        + TrapPolice.BUDGET_STEP + "e. Do "
+                        + TrapPolice.MAX_BUDGET + "e dziennie.\n\n"))
+                .append(hint("To rada uchwala budżet."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2b. ILU ICH BĘDZIE\n\n"))
+                .append(body("Jeden funkcjonariusz kosztuje "
+                        + TrapPolice.WAGE + "e dziennie.\n\n"))
+                .append(body("Płacisz " + TrapPolice.WAGE * 4 + "e - masz "
+                        + "czterech, o ile są cele.\n\n"))
+                .append(hint("Pensje wracają do miasta przez sklepy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2c. WYPOSAŻENIE\n\n"))
+                .append(body("Każde " + TrapPolice.GEAR_AT + "e budżetu to "
+                        + "jeden stopień, do " + TrapPolice.TOP_GEAR + ".\n\n"))
+                .append(body("Wyżej: szybsi, dalej widzą, mocniej biją "
+                        + "i więcej wytrzymają.\n\n"))
+                .append(hint("Straż miejska daje stopień gratis."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2d. PUSTA KASA\n\n"))
+                .append(body("Miasto płaci tyle, ile ma. Brakuje - część "
+                        + "patrolu zostaje w domu.\n\n"))
+                .append(warn("Nieopłacona komenda to jutrzejsze "
+                        + "włamania."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. PATROL\n\n"))
+                .append(body("Funkcjonariusze chodzą po mieście: od domu "
+                        + "do sklepu, od sklepu do skarbca.\n\n"))
+                .append(hint("Trzymają się swojego komisariatu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. POTWORY\n\n"))
+                .append(body("Co zobaczą wrogiego w zasięgu, to biją "
+                        + "pałką.\n\n"))
+                .append(body("Zombie potrafi ich zabić. Komenda wystawi "
+                        + "kogoś na miejsce poległego.\n\n"))
+                .append(hint("Lepsze wyposażenie = dłużej żyją."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3c. NAPAD NA MIASTO\n\n"))
+                .append(body("Czasem z drogi przychodzi banda grabieżców "
+                        + "prosto na mieszkańców.\n\n"))
+                .append(body("Większe miasto i gorętszy handel = więcej "
+                        + "ich przyjdzie.\n\n"))
+                .append(warn("Po to płaci się komendzie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3d. KUSZA\n\n"))
+                .append(body("Od " + TrapPolice.SHOOT_AT + ". stopnia wyposażenia "
+                        + "funkcjonariusz dostaje kuszę.\n\n"))
+                .append(body("Strzela na " + Math.round(TrapPolice.SHOOT_RANGE)
+                        + " kratek. Niżej ma samą pałkę.\n\n"))
+                .append(hint("Do sprawcy się nie strzela, jego się zakuwa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. PRZESTĘPCZOŚĆ\n\n"))
+                .append(body("Miasto samo produkuje przestępstwa. Nie "
+                        + "przychodzą z zewnątrz.\n\n"))
+                .append(hint("/crime pokazuje, co je napędza."))));
+
+        MutableText kinds = Text.empty().append(title("4b. RODZAJE\n\n"));
+        for (TrapCrime.Kind kind : TrapCrime.Kind.values()) {
+            kinds.append(body(kind.display() + "  " + kind.weight() + "%\n"));
+        }
+        pages.add(page(kinds.append(Text.literal("\n"))
+                .append(hint("Zabójstwa są rzadkie i nocne."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c. CO JE NAPĘDZA\n\n"))
+                .append(body("Ludność - więcej ludzi, więcej spraw\n"))
+                .append(body("Bieda - +" + Math.round(TrapMath.CRIME_HARDSHIP_LIFT * 100)
+                        + "%\n"))
+                .append(body("Heat - +" + Math.round(TrapMath.CRIME_HEAT_LIFT * 100) + "%\n"))
+                .append(body("Noc - x" + TrapMath.NIGHT_CRIME + "\n\n"))
+                .append(hint("Napraw domy, a spadnie samo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. ILE TEGO JEST\n\n"))
+                .append(body("W mieście 20 osób mniej więcej raz na pół godziny gry.\n\n"))
+                .append(body("Sufit to " + TrapMath.CRIME_CEILING + " dziennie, cokolwiek "
+                        + "by się działo.\n\n"))
+                .append(hint("/crime pokazuje aktualne tempo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4e. CO TRACISZ\n\n"))
+                .append(body("Kradzież i włamanie zabierają pieniądze ze "
+                        + "SKRZYNKI i z KASY sklepu.\n\n"))
+                .append(warn("Zbieraj czynsz. Pełna skrzynka to cel."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4f. ROZBÓJ\n\n"))
+                .append(body("Napadnięty lokator ląduje w szpitalu, tak "
+                        + "samo jak ugryziony.\n\n"))
+                .append(warn("Bez szpitala może nie przeżyć."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. POŚCIG\n\n"))
+                .append(body("Sprawca ucieka z miejsca zdarzenia. Ma "
+                        + "czerwoną nazwę.\n\n"))
+                .append(body("Biegnie szybciej niż patrol bez kasy i "
+                        + "wolniej niż opłacony.\n\n"))
+                .append(warn("Tu widać, za co płacisz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. ZATRZYMANIE\n\n"))
+                .append(body("Złapany oddaje, co zabrał, i idzie do celi "
+                        + "na kilka dni.\n\n"))
+                .append(body("Grzywna trafia do kasy miasta.\n\n"))
+                .append(hint("Cele pełne - wychodzi za kaucją."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. UMORZENIE\n\n"))
+                .append(body("Jeśli nikt go nie dopadnie, po kilku minutach "
+                        + "sprawa jest umorzona.\n\n"))
+                .append(warn("Pieniądze przepadają na dobre."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. MANDATY\n\n"))
+                .append(body("Funkcjonariusz podchodzi też do CIEBIE, "
+                        + "jeśli masz się czym tłumaczyć.\n\n"))
+                .append(hint("Nie zabiera towaru i nie aresztuje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. CZEGO SZUKAJĄ\n\n"))
+                .append(body("Ponad " + TrapPolice.LOOKS_AWAY + " sztuk "
+                        + "towaru przy sobie\n"))
+                .append(body("Świeży heat\n"))
+                .append(body("Zaległość w urzędzie\n\n"))
+                .append(hint("Skręt w kieszeni nikogo nie obchodzi."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. JAK UNIKAĆ\n\n"))
+                .append(body("Nie noś zapasu przez miasto. Pierz kasę. "
+                        + "Płać domiary.\n\n"))
+                .append(hint("Jeden mandat na kilka minut, nie więcej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7. KOMENDY\n\n"))
+                .append(body("/police - budżet, etaty, komisariaty\n"))
+                .append(body("/raid <gracz> - banda na kogoś (op)\n"))
+                .append(body("/crime - statystyki i otwarte sprawy\n"))
+                .append(body("/city - rachunki miasta\n\n"))
+                .append(hint("Tablica na komisariacie mówi to samo."))));
     }
 
     /** Every page below reads its numbers off {@link HomeSurvey}. */
@@ -968,10 +1247,11 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("4. KOSZTY STAŁE\n\n"))
-                .append(body("Każdy automat kosztuje "
+                .append(body("Automat z graczem kosztuje "
                         + TrapMath.MACHINE_UPKEEP + "e co 30 sekund.\n\n"))
-                .append(warn("Płacisz też wtedy, gdy nikt na nim nie "
-                        + "gra."))));
+                .append(warn("Ciemny kosztuje ćwierć tego. Płacisz "
+                        + "za niego dalej, ale budowanie na zapas nie "
+                        + "zabija sali."))));
 
         pages.add(page(Text.empty()
                 .append(title("4b. HARACZ\n\n"))
@@ -1155,6 +1435,7 @@ public final class TrapGuide {
         contracts(pages);
         market(pages);
         wands(pages);
+        cases(pages);
         street(pages);
         return book("Poradnik uliczny", pages);
     }
@@ -1201,7 +1482,7 @@ public final class TrapGuide {
                 .append(body(" wycisza nerwy na "
                         + TrapContent.NerveTonicItem.CALM_TICKS / 20
                         + " sekund.\n\n"))
-                .append(hint("Miód, cukier, kwiatek."))));
+                .append(hint("Miód, cukier, kwiatek.\nKucnij, by postawić butelkę."))));
 
         pages.add(page(Text.empty()
                 .append(title("1d. WYŁĄCZANIE\n\n"))
@@ -1646,6 +1927,108 @@ public final class TrapGuide {
                 .append(warn("Sklep nie odkupuje różdżek.\n\n"))
                 .append(body("Za żadne pieniądze.\n\n"))
                 .append(hint("Kupujesz ją raz i jest twoja."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6h. ULEPSZENIA\n\n"))
+                .append(body("Każda ma trzy poziomy.\n\n"))
+                .append(body("Skradanie + PPM w stół zaklęć podnosi o jeden.\n\n"))
+                .append(hint("Nie zadziała, gdy różdżka stygnie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6h2. ILE TO KOSZTUJE\n\n"))
+                .append(body("II: pół ceny z półki.\nIII: cała cena.\n\n"))
+                .append(body("Emki z kieszeni albo z portfela.\n\n"))
+                .append(hint("Burza: 60 tys., potem 120 tys."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6h3. CO DAJĄ\n\n"))
+                .append(body("II: -20% czasu, +25% zasięgu.\n\n"))
+                .append(body("III: -40% i +50%.\n\n"))
+                .append(hint("Burza zyskuje siłę, nie zasięg."))));
+    }
+
+    /**
+     * The colours players actually say out loud.
+     *
+     * The GUI shows {@code Grade.title()} -- "Klasa wojskowa" -- because that
+     * is the grade's name. In the book it is the colour, because that is what
+     * anybody who has opened one of these before calls it, and because the
+     * formal name plus its percentage is two characters wider than a page.
+     */
+    private static final String[] BANDS =
+            {"Niebieski", "Fioletowy", "Różowy", "Czerwony", "Złoty"};
+
+    /**
+     * Cases and keys.
+     *
+     * Every number on these pages comes out of {@link CaseOdds}, for the same
+     * reason the wand chapter reads WandItem: this is a chapter somebody opens
+     * to decide whether to spend 22,000e, and a book quoting last month's
+     * odds would be worse than no book. The names are literals -- renaming a
+     * case is a thing somebody does on purpose, in one file, and noticing.
+     */
+    private static void cases(List<RawFilteredPair<Text>> pages) {
+        pages.add(page(Text.empty()
+                .append(title("7. SKRZYNKI\n\n"))
+                .append(body("Skrzynki są za darmo. Klucze nie.\n\n"))
+                .append(body("Skrzynka bez klucza leży w kufrze i czeka.\n\n"))
+                .append(hint("W tym cała zabawa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7a. SKĄD SKRZYNKI\n\n"))
+                .append(body("Wypadają z potworów, które zabijesz.\n\n"))
+                .append(body("Im groźniejszy, tym lepsza.\n\n"))
+                .append(hint("Warden, Wither i smok: pewna Widmo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7b. SKĄD KLUCZE\n\n"))
+                .append(body("Ze skrzyń w świecie. Wioska da dzielnicowy, "
+                        + "end city widmowy.\n\n"))
+                .append(body("Albo z półki KLUCZE na rynku.\n\n"))
+                .append(hint("Kto zwiedza, płaci butami."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7c. CZTERY POZIOMY\n\n"))
+                .append(body("Klucz kosztuje:\n"))
+                .append(item("Dzielnicowy "
+                        + CaseOdds.Tier.STREET.keyPrice() + "e\n"
+                        + "Portowy "
+                        + CaseOdds.Tier.DOCKS.keyPrice() + "e\n"
+                        + "Kartelu "
+                        + CaseOdds.Tier.CARTEL.keyPrice() + "e\n"
+                        + "Widmo "
+                        + CaseOdds.Tier.PHANTOM.keyPrice() + "e\n\n"))
+                .append(hint("Klucz pasuje tylko do swojej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d. SZANSE\n\n"))
+                .append(item(BANDS[0] + " " + CaseOdds.Grade.MIL_SPEC.chance() + "\n"
+                        + BANDS[1] + " " + CaseOdds.Grade.RESTRICTED.chance() + "\n"
+                        + BANDS[2] + " " + CaseOdds.Grade.CLASSIFIED.chance() + "\n"
+                        + BANDS[3] + " " + CaseOdds.Grade.COVERT.chance() + "\n"
+                        + BANDS[4] + " " + CaseOdds.Grade.EXOTIC.chance() + "\n\n"))
+                .append(hint("Te same, co w tamtej grze."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7e. CO WYPADA\n\n"))
+                .append(body("Netheryt, elytry, jaja smoka.\n\n"))
+                .append(body("Na złocie: różdżka.\n\n"))
+                .append(hint("Średnio skrzynka daje więcej towaru, "
+                        + "niż kosztuje klucz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7f. WYMIANA\n\n"))
+                .append(body(CaseOdds.TRADE_UP + " klucze niższego poziomu "
+                        + "dają 1 wyższego.\n\n"))
+                .append(body("Kwadrat w siatce.\n\n"))
+                .append(hint("Dla kluczy, które znalazłeś."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7g. UWAGA\n\n"))
+                .append(warn("Sklep nie skupuje ani skrzynek, ani "
+                        + "kluczy.\n\n"))
+                .append(body("Klucz otwiera albo leży.\n\n"))
+                .append(hint("Zwiedzanie ma dawać skrzynki, nie emki."))));
     }
 
     private static void street(List<RawFilteredPair<Text>> pages) {

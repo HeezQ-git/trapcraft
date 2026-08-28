@@ -498,7 +498,7 @@ public final class TrapHouse {
      * @param free how many of this house's machines are standing empty
      */
     public static void beat(House house, int varieties, int machines, int free) {
-        int bill = machines * TrapMath.MACHINE_UPKEEP
+        int bill = TrapMath.upkeepOn(machines, free)
                 + TrapMath.protectionOn(house.handleThisBeat)
                 + (house.pitBoss ? TrapMath.PIT_BOSS_WAGE : 0);
         house.handleThisBeat = 0;
