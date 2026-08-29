@@ -2750,14 +2750,24 @@ public final class TrapCrew {
         }
         for (BlockPos pos : BlockPos.iterateOutwards(hand.patch, hand.reachBlocks(), 4,
                 hand.reachBlocks())) {
-            // Cheap test to find the candidate, then resolve the winner once.
+            // Cheap test to find the candidate, then resolve it once.
             // TrapBoxes.at costs an entity lookup and this scan is thousands
-            // of squares wide.
-            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory box
-                    && box.size() >= BOX_SLOTS) {
-                hand.box = pos.toImmutable();
-                return TrapBoxes.at(world, pos);
+            // of squares wide, so nothing gets resolved until it has already
+            // proved it is a container at all.
+            if (!(world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory)) {
+                continue;
             }
+            // Measured AFTER resolving, never before: getBlockEntity hands
+            // back one half of a double chest, so a size rule read off it is
+            // a rule about the wrong number. A machine standing nearer than
+            // the chest costs one lookup and is then skipped -- a handful per
+            // pass, not the thousands the cheap test exists to avoid.
+            net.minecraft.inventory.Inventory box = TrapBoxes.at(world, pos);
+            if (box == null || box.size() < BOX_SLOTS) {
+                continue;
+            }
+            hand.box = pos.toImmutable();
+            return box;
         }
         hand.box = null;
         return null;
