@@ -223,6 +223,49 @@ public final class TrapMath {
     public static final float SELL_RATE = 0.45f;
 
     /**
+     * The price level: what a day-one price costs in today's money.
+     *
+     * The index breathes and always comes home -- that is deliberate, and it
+     * is also why a server that has earned four hundred thousand emeralds
+     * still pays day-one prices for everything and finds the game easy. Mean
+     * reversion says "this much money is the new normal"; it has no way to say
+     * "and so a loaf costs more than it did in the first week".
+     *
+     * This is the part that never comes home. It follows the world's REAL
+     * wealth -- the money supply divided by the level it has already been
+     * pushed to -- so it cannot chase its own tail: prices rising makes wages
+     * and takings rise with them, which would otherwise read as more wealth
+     * and push prices again. Deflated, a board that has already doubled needs
+     * the world to genuinely get richer before it doubles again.
+     *
+     * Sub-linear on purpose. At {@link #LEVEL_ELASTICITY} an economy has to
+     * grow tenfold to roughly double the board, so the treadmill flattens
+     * instead of running away, and the cap is a guard rail rather than a
+     * design.
+     */
+    public static final float LEVEL_MAX = 10.0f;
+    /** How hard real wealth lifts the board. 1 would be pure inflation. */
+    public static final float LEVEL_ELASTICITY = 0.35f;
+    /**
+     * How fast the board may climb, per beat.
+     *
+     * Beats are thirty seconds, so this is about a quarter of a flat price an
+     * hour of play: fast enough to notice between sessions, slow enough that
+     * nobody is quoted a different number for the same stack twice in one
+     * shopping trip. Turning this up is how you make a server that has run
+     * away from its prices catch up faster.
+     */
+    public static final float LEVEL_RISE = 0.002f;
+    /** And how fast it may fall. Deflation is the slow direction. */
+    public static final float LEVEL_FALL = 0.0006f;
+    /** How far a whole shelf may wander from the rest of the board. */
+    public static final float SECTOR_DRIFT = 0.10f;
+    /** Beats one shelf's mood lasts. Forty is about a Minecraft day. */
+    public static final int SECTOR_WINDOW = 40;
+    /** How far the town's own money may bid the board, either way. */
+    public static final float BIDDING = 0.12f;
+
+    /**
      * How expensive everything is right now, from the money in circulation.
      *
      * More emeralds chasing the same goods means higher prices -- the shop is
@@ -260,6 +303,68 @@ public final class TrapMath {
     }
 
     /**
+     * Where the board is heading, from the world's real wealth.
+     *
+     * Real, not nominal: the supply is divided by the level it has already
+     * paid for. A world holding 400,000e at a board of 1.0 is rich and gets
+     * dearer; the same world holding 2,400,000e at a board of 6.0 is the same
+     * world and stops there.
+     */
+    public static float priceTarget(float level, float baseline) {
+        float real = baseline / Math.max(1.0f, level);
+        return Math.min(LEVEL_MAX,
+                (float) Math.pow(Math.max(1.0f, real / MARKET_BASELINE), LEVEL_ELASTICITY));
+    }
+
+    /**
+     * Where the board comes to rest for a world of this size.
+     *
+     * The fixed point of {@link #priceTarget} -- the level at which the target
+     * IS the level, so nothing moves any more. Worth deriving rather than
+     * quoting the per-beat target at people: that one falls as the board
+     * climbs to meet it, which is correct and reads as a broken gauge. "Headed
+     * for x6.2" today and x5.1 tomorrow, with nothing having gone wrong.
+     */
+    public static float priceRest(float baseline) {
+        double ratio = Math.max(1.0f, baseline / MARKET_BASELINE);
+        return (float) Math.min(LEVEL_MAX,
+                Math.pow(ratio, LEVEL_ELASTICITY / (1.0 + LEVEL_ELASTICITY)));
+    }
+
+    /**
+     * One beat of the board creeping towards that.
+     *
+     * Never below 1: the flat prices in the catalogue are the floor, because
+     * they were written as the price of the thing rather than as a starting
+     * offer, and a world that loses all its money should get cheap by the
+     * index and then stop.
+     */
+    public static float levelAfter(float level, float baseline) {
+        return Math.max(1.0f,
+                approach(level, priceTarget(level, baseline), LEVEL_RISE, LEVEL_FALL));
+    }
+
+    /**
+     * What the town's own money does to prices.
+     *
+     * Takes the number the shops already trade on -- see the other
+     * {@link #townDemand}, which is emeralds per head against
+     * {@link #COMFORTABLE} -- rather than counting heads again here. A town
+     * with wages in its pocket is competing with the player for the same
+     * shelf and bids it up; a town with an empty purse is not, and prices
+     * slide. Two ways of measuring the same town is how a mod ends up
+     * arguing with itself.
+     *
+     * Symmetric around a comfortable town, so this is a swing rather than a
+     * tax: the whole point is that funding the payroll and starving it are
+     * both visible on the board.
+     */
+    public static float bidding(float townDemand) {
+        return 1.0f + BIDDING
+                * (Math.min(DEMAND_CAP, Math.max(0.0f, townDemand)) - 1.0f);
+    }
+
+    /**
      * One item's wobble right now, as a multiplier around 1.
      *
      * Each item is always walking from one random target to the next, a window
@@ -273,10 +378,33 @@ public final class TrapMath {
      * worth reading.
      */
     public static float drift(long beat, String itemId) {
-        long window = Math.floorDiv(beat, DRIFT_WINDOW);
-        float phase = Math.floorMod(beat, (long) DRIFT_WINDOW) / (float) DRIFT_WINDOW;
-        float from = wobble(window, itemId);
-        float to = wobble(window + 1, itemId);
+        return walk(beat, itemId, DRIFT_WINDOW, DRIFT);
+    }
+
+    /**
+     * A whole shelf's mood, on a much slower clock.
+     *
+     * Per-item drift is noise: everything wobbles, nothing means anything, and
+     * a board where every line moves independently is a board nobody reads.
+     * This is the part that has a story in it -- ore is up this week, timber
+     * is down -- because it moves a whole category together over about a
+     * Minecraft day, which is long enough to be worth acting on and short
+     * enough to catch.
+     *
+     * Keyed off the category rather than the item, so stone and bricks agree
+     * with each other, and namespaced so a category called "food" and an item
+     * called "food" can never collide.
+     */
+    public static float sector(long beat, String categoryId) {
+        return walk(beat, "sector:" + categoryId, SECTOR_WINDOW, SECTOR_DRIFT);
+    }
+
+    /** One key walking between random targets, eased so nothing lurches. */
+    private static float walk(long beat, String key, int window, float amplitude) {
+        long era = Math.floorDiv(beat, window);
+        float phase = Math.floorMod(beat, (long) window) / (float) window;
+        float from = wobbleBy(era, key, amplitude);
+        float to = wobbleBy(era + 1, key, amplitude);
         // Smoothstep: no kink at the handover, so nothing lurches on the beat
         // a window rolls over.
         return from + (to - from) * (phase * phase * (3.0f - 2.0f * phase));
@@ -290,10 +418,14 @@ public final class TrapMath {
      * world until you like it isn't a strategy.
      */
     public static float wobble(long seed, String key) {
+        return wobbleBy(seed, key, DRIFT);
+    }
+
+    private static float wobbleBy(long seed, String key, float amplitude) {
         int hash = mix((int) seed * 31 + key.hashCode());
-        // 0..1 from the low bits, then mapped onto +/- DRIFT.
+        // 0..1 from the low bits, then mapped onto +/- the amplitude.
         float unit = (hash >>> 8 & 0xFFFF) / (float) 0xFFFF;
-        return 1.0f + (unit * 2.0f - 1.0f) * DRIFT;
+        return 1.0f + (unit * 2.0f - 1.0f) * amplitude;
     }
 
     /**
@@ -360,9 +492,19 @@ public final class TrapMath {
         return value ^ (value >>> 16);
     }
 
-    /** Never free, whatever the market does. */
-    public static int buyPrice(int base, float index, float drift, float flow) {
-        return Math.max(1, Math.round(base * index * drift * flow));
+    /**
+     * Never free, whatever the market does.
+     *
+     * Three multipliers rather than a named list of forces, because the forces
+     * keep being added to: {@code board} is everything that moves the whole
+     * catalogue at once (the index, the price level, the town), {@code own} is
+     * everything that moves this line alone (its drift, its shelf's mood), and
+     * {@code flow} is what the last few minutes of orders did to it. Composed
+     * by the caller in {@link TrapMarket}, which is the only place that knows
+     * what exists.
+     */
+    public static int buyPrice(int base, float board, float own, float flow) {
+        return Math.max(1, Math.round(base * board * own * flow));
     }
 
     /**
@@ -3134,5 +3276,289 @@ public final class TrapMath {
      */
     public static int wandPrice(int shelf, int tier) {
         return Math.max(1, shelf * (wandTier(tier) + 1) / 2);
+    }
+    // --- the bookmaker ----------------------------------------------------------
+
+    /**
+     * How many rating points make a ten-to-one favourite.
+     *
+     * The same logistic every rating system in sport uses, because it is the
+     * one that behaves at both ends: a five point edge is worth a little, a
+     * forty point edge is worth a lot, and nobody is ever certain.
+     *
+     * Tuned against the widest gap that can actually be drawn, which is the
+     * spread INSIDE a competition rather than across the board: about eighteen
+     * points, top of the Champions League to the bottom of it. That prices the
+     * favourite at roughly 1.55 once the draw is carved out, which is what a
+     * real book quotes for a good side at home to a poor one. Fixtures are
+     * never drawn across competitions, so the fifty-point gap between Real
+     * Madryt and Widzew is a number this scale is never asked about.
+     */
+    public static final float BOOK_SCALE = 45.0f;
+
+    /**
+     * The book's cut on every price it prints.
+     *
+     * Seven percent per outcome, so a two-way market runs at about a 7.5%
+     * overround and a three-way at 7.5% as well. This is the whole reason
+     * betting blind loses: the prices are short of the truth by this much, and
+     * nothing else on the board is rigged.
+     */
+    public static final float BOOK_MARGIN = 0.07f;
+
+    /** Shortest and longest price the board will print, in hundredths. */
+    public static final int BOOK_MIN_ODDS = 102;
+    public static final int BOOK_MAX_ODDS = 6000;
+
+    /** Most a single slip can return, whatever the multiplication says. */
+    public static final int BOOK_MAX_PAYOUT = 60_000;
+
+    /** Selections allowed on one slip. Four legs, like every coupon. */
+    public static final int BOOK_MAX_LEGS = 4;
+
+    /** What the stake buttons offer. Shorter ladder than the casino's. */
+    public static final int[] BOOK_STAKES = {8, 16, 32, 64, 128, 256, 512, 1024};
+
+    /**
+     * What one recent result is worth, in rating points.
+     *
+     * Every constant from here down was halved once, and the reason is worth
+     * keeping: at twice these numbers the hidden factors outweighed reputation
+     * itself, and a punter who read the two panels perfectly returned about
+     * thirty percent on turnover. That is not a game with an edge in it, it is
+     * a money printer with a television attached. At these numbers the same
+     * perfect reader returns roughly a tenth of what they stake and a careless
+     * one still loses -- which is the shape this is supposed to have.
+     * BookmakerTest simulates both ends and fails if either drifts.
+     *
+     * Five results are kept, so form swings a competitor by five points either
+     * way: about a quarter of the widest gap inside a competition. Enough that
+     * a side on a bad run is worth laying off, never enough to turn an
+     * outsider into a favourite on its own.
+     */
+    public static final int BOOK_FORM = 1;
+
+    /** Points lost per key absentee. Three out is a different side. */
+    public static final int BOOK_ABSENCE = 2;
+
+    /**
+     * What rest is worth, indexed by rounds off since the last outing.
+     *
+     * Backing up straight after a fixture is a real penalty and a fortnight
+     * off is a real edge, which is exactly the sort of thing a board of prices
+     * cannot say and a schedule can.
+     */
+    public static final int[] BOOK_REST = {-3, -1, 0, 1, 2};
+
+    /**
+     * Playing at home.
+     *
+     * The one modifier the book DOES price, because it is on the fixture list
+     * -- everybody can see who is at home, so an edge nobody has to look for
+     * is not an edge. Everything else in this section is missing from the
+     * price and readable on the television, which is the game.
+     */
+    public static final int BOOK_HOME = 5;
+
+    /** Points per previous win over this exact opponent, and the cap on them. */
+    public static final int BOOK_H2H = 1;
+    public static final int BOOK_H2H_CAP = 3;
+
+    /** How often a level football match ends level, and how fast that falls off. */
+    public static final float BOOK_DRAW_BASE = 0.28f;
+    public static final float BOOK_DRAW_FALL = 45.0f;
+
+    /**
+     * What a run of recent results is worth.
+     *
+     * 'W' won, 'R' drew or placed, 'P' lost. Most recent first, though the
+     * order does not matter to the arithmetic -- it matters to the person
+     * reading it off the screen, which is why it is kept as a string rather
+     * than a count.
+     */
+    public static int formPoints(String form) {
+        int points = 0;
+        for (int i = 0; i < form.length(); i++) {
+            if (form.charAt(i) == 'W') {
+                points += BOOK_FORM;
+            } else if (form.charAt(i) == 'P') {
+                points -= BOOK_FORM;
+            }
+        }
+        return points;
+    }
+
+    /** Rounds of rest, clamped into the table above. */
+    public static int restPoints(int rounds) {
+        return BOOK_REST[Math.max(0, Math.min(BOOK_REST.length - 1, rounds))];
+    }
+
+    /** What this pair's own history is worth to the one who has won more. */
+    public static int headToHeadPoints(int mine, int theirs) {
+        return Math.max(-BOOK_H2H_CAP, Math.min(BOOK_H2H_CAP, (mine - theirs) * BOOK_H2H));
+    }
+
+    /**
+     * What the result is decided on, as opposed to what the price is set on.
+     *
+     * The gap between this and {@link #pricedRating} IS the game: the book
+     * knows the reputation and who is at home, and nothing else. Form,
+     * absences, rest, the going and the pair's own history are all printed on
+     * the television and none of them are in the price.
+     */
+    public static float trueRating(int reputation, String form, int absences, int rest,
+                                   int suits, int headToHead, boolean home) {
+        return reputation
+                + formPoints(form)
+                - absences * BOOK_ABSENCE
+                + restPoints(rest)
+                + suits
+                + headToHead
+                + (home ? BOOK_HOME : 0);
+    }
+
+    /** What the board is priced off. Reputation and the fixture list, no more. */
+    public static float pricedRating(int reputation, boolean home) {
+        return reputation + (home ? BOOK_HOME : 0);
+    }
+
+    /** The chance the first of two beats the second, ignoring draws. */
+    public static float duelChance(float mine, float theirs) {
+        return 1.0f / (1.0f + (float) Math.pow(10.0, (theirs - mine) / BOOK_SCALE));
+    }
+
+    /**
+     * How likely a football match is to end level.
+     *
+     * Highest when the two are matched and falling away as the gap opens,
+     * which is what the draw column of any real coupon looks like. Never more
+     * than {@link #BOOK_DRAW_BASE}, so the other two always share the rest.
+     */
+    public static float drawChance(float mine, float theirs) {
+        return (float) (BOOK_DRAW_BASE * Math.exp(-Math.abs(mine - theirs) / BOOK_DRAW_FALL));
+    }
+
+    /**
+     * Home, draw, away -- three chances that sum to one.
+     *
+     * The draw is carved out first and the remainder split by the duel
+     * formula, rather than modelled as a third competitor. A draw is not a
+     * team and giving it a rating produces a market where two evenly matched
+     * sides are less likely to draw than two mismatched ones.
+     */
+    public static float[] matchChances(float mine, float theirs) {
+        float draw = drawChance(mine, theirs);
+        float mineWins = duelChance(mine, theirs);
+        return new float[]{(1 - draw) * mineWins, (1 - draw) * (1 - mineWins), draw};
+    }
+
+    /**
+     * Every runner's chance of winning a field, normalised to one.
+     *
+     * Exponential in the rating, on the same scale as the duel formula, so a
+     * race between two of them prices identically to a match between the same
+     * two. Anything else and the board would contradict itself across sports.
+     */
+    public static float[] fieldChances(float[] ratings) {
+        float best = Float.NEGATIVE_INFINITY;
+        for (float rating : ratings) {
+            best = Math.max(best, rating);
+        }
+        float[] weights = new float[ratings.length];
+        float total = 0;
+        for (int i = 0; i < ratings.length; i++) {
+            // Shifted by the best before exponentiating: the raw numbers are
+            // around a hundred and exp(100/26) overflows nothing but does throw
+            // away precision on the short ones.
+            weights[i] = (float) Math.exp((ratings[i] - best) / BOOK_SCALE * Math.log(10));
+            total += weights[i];
+        }
+        for (int i = 0; i < weights.length; i++) {
+            weights[i] /= total;
+        }
+        return weights;
+    }
+
+    /**
+     * The chance of finishing in the first `places`, from the win chances.
+     *
+     * Harville: the race is run by drawing the winner out of the field in
+     * proportion to its chance, then drawing second out of what is left, and
+     * so on. Exact rather than approximated -- a field of eight and three
+     * places is 336 orderings, which costs nothing and means the place market
+     * cannot quietly disagree with the win market it is derived from.
+     */
+    public static float[] placeChances(float[] win, int places) {
+        float[] out = new float[win.length];
+        harville(win, new boolean[win.length], 1.0f, 0, Math.min(places, win.length), out);
+        return out;
+    }
+
+    private static void harville(float[] win, boolean[] taken, float carried,
+                                 int depth, int places, float[] out) {
+        if (depth >= places) {
+            return;
+        }
+        float left = 0;
+        for (int i = 0; i < win.length; i++) {
+            if (!taken[i]) {
+                left += win[i];
+            }
+        }
+        if (left <= 0) {
+            return;
+        }
+        for (int i = 0; i < win.length; i++) {
+            if (taken[i]) {
+                continue;
+            }
+            float here = carried * win[i] / left;
+            out[i] += here;
+            taken[i] = true;
+            harville(win, taken, here, depth + 1, places, out);
+            taken[i] = false;
+        }
+    }
+
+    /**
+     * A price, in hundredths, from a chance -- shortened by the book's cut.
+     *
+     * Clamped at both ends. An unclamped board prints 1.00 against a horse
+     * that cannot lose (a free bet) and 400.00 against one that cannot win (a
+     * lottery ticket somebody will buy every round until it lands), and
+     * neither is a market.
+     */
+    public static int price(float chance) {
+        if (chance <= 0) {
+            return BOOK_MAX_ODDS;
+        }
+        int odds = Math.round(100.0f * (1.0f - BOOK_MARGIN) / chance);
+        return Math.max(BOOK_MIN_ODDS, Math.min(BOOK_MAX_ODDS, odds));
+    }
+
+    /**
+     * What a coupon pays per emerald, in hundredths.
+     *
+     * Legs multiply, which is why a four-fold at even money is not four times
+     * better than a single -- it is fifteen times better and about a third as
+     * likely, and it carries the book's cut four times over. Long enough that
+     * everybody tries one, short enough that nobody lives on them.
+     */
+    public static int slipOdds(int[] legs) {
+        long odds = 100;
+        for (int leg : legs) {
+            odds = odds * leg / 100;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(100, odds));
+    }
+
+    /** What a winning slip hands over, ceiling included. */
+    public static int slipReturn(int stake, int odds) {
+        return (int) Math.min(BOOK_MAX_PAYOUT, (long) stake * odds / 100);
+    }
+
+    /** A price as people say it out loud: 250 -> "2.50". */
+    public static String odds(int hundredths) {
+        return String.format(java.util.Locale.ROOT, "%.2f", hundredths / 100.0f);
     }
 }

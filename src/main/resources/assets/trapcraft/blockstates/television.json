@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "trapcraft:block/television"
+    },
+    "facing=east": {
+      "model": "trapcraft:block/television",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "trapcraft:block/television",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "trapcraft:block/television",
+      "y": 270
+    }
+  }
+}

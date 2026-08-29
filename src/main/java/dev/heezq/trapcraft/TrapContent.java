@@ -122,6 +122,8 @@ public final class TrapContent {
     public static Item blackjackItem;
     public static Block scratch;
     public static Item scratchItem;
+    public static Block television;
+    public static Item televisionItem;
     public static Block casinoBar;
     public static Item casinoBarItem;
     public static RegistryEntry<StatusEffect> wiredEffect;
@@ -667,6 +669,15 @@ public final class TrapContent {
         scratchItem = registerItem("scratch",
                 (settings, model) -> new RackItem(scratch, settings, model));
 
+        // ticksRandomly: the screen-light in TelevisionBlock.randomTick is the
+        // only thing that asks for it, and a set that never flickers is a
+        // picture of a television.
+        television = registerBlock("television", TelevisionBlock::new,
+                AbstractBlock.Settings.create().strength(2.0F)
+                        .sounds(BlockSoundGroup.WOOD).ticksRandomly());
+        televisionItem = registerItem("television",
+                (settings, model) -> new RackItem(television, settings, model));
+
         casinoBar = registerBlock("casino_bar", BarBlock::new,
                 AbstractBlock.Settings.create().strength(2.5F)
                         .sounds(BlockSoundGroup.WOOD));
@@ -790,6 +801,7 @@ public final class TrapContent {
                     entries.add(blackjackItem);
                     entries.add(scratchItem);
                     entries.add(casinoBarItem);
+                    entries.add(televisionItem);
                     entries.add(casinoCard());
                     entries.add(hammer);
                     for (Item wand : WANDS.values()) {

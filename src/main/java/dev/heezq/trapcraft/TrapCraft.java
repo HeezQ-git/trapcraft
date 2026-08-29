@@ -49,6 +49,9 @@ public class TrapCraft implements ModInitializer {
         TrapDealers.register();
         TrapHouse.register();
         TrapFloor.register();
+        // After TrapHouse: every stake and payout goes through it, and the
+        // catch-up run on load settles fixtures the moment the world opens.
+        TrapSports.register();
         TrapVisitors.register();
         TrapHeat.registerCommands();
         TrapStickup.registerCommands();
