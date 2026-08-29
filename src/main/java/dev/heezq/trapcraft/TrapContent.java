@@ -95,6 +95,8 @@ public final class TrapContent {
     public static Item hospitalItem;
     public static Block police;
     public static Item policeItem;
+    public static Block court;
+    public static Item courtItem;
     public static Block fireHouse;
     public static Item fireHouseItem;
     public static Block marketShelf;
@@ -582,6 +584,14 @@ public final class TrapContent {
         policeItem = registerItem("police",
                 (settings, model) -> new RackItem(police, settings, model));
 
+        // Andesite and brass rather than the station's concrete: a courthouse
+        // is the older building on the square in every town that has both.
+        court = registerBlock("court", CourtBlock::new,
+                AbstractBlock.Settings.create().strength(3.5F).requiresTool()
+                        .sounds(BlockSoundGroup.STONE).luminance(state -> 8));
+        courtItem = registerItem("court",
+                (settings, model) -> new RackItem(court, settings, model));
+
         fireHouse = registerBlock("fire_house", FireHouseBlock::new,
                 AbstractBlock.Settings.create().strength(3.5F).requiresTool()
                         .sounds(BlockSoundGroup.STONE).luminance(state -> 8));
@@ -776,6 +786,7 @@ public final class TrapContent {
                     entries.add(cityVaultItem);
                     entries.add(hospitalItem);
                     entries.add(policeItem);
+                    entries.add(courtItem);
                     entries.add(fireHouseItem);
                     entries.add(shopTillItem);
                     entries.add(marketShelfItem);

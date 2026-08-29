@@ -1440,6 +1440,11 @@ public final class TrapPolice {
         if (charge.restitution() > 0) {
             note.append(TrapNotes.say("   odzyskano ", Formatting.DARK_GRAY))
                     .append(TrapNotes.say(charge.restitution() + "e", Formatting.GREEN));
+        } else if (TrapCourt.any()) {
+            // Nothing came back at the kerb because there is a bench in town
+            // now. Said out loud, or a collar with no money next to it reads
+            // as the arrest having gone wrong.
+            note.append(TrapNotes.say("   sprawa idzie do sądu", Formatting.GOLD));
         }
         announce(world.getServer(), note);
     }

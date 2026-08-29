@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "QLQ",
+    "GBG",
+    "QQQ"
+  ],
+  "key": {
+    "Q": "minecraft:quartz_block",
+    "L": "minecraft:bell",
+    "G": "minecraft:gold_ingot",
+    "B": "minecraft:book"
+  },
+  "result": {
+    "id": "trapcraft:court",
+    "count": 1
+  }
+}

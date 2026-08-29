@@ -174,8 +174,33 @@ public final class TrapCrew {
     public static final int MAX_HANDS = 5;
     /** How close a hand has to be to a job to do it. */
     private static final int ARM = 4;
+    /**
+     * Stops one courier will keep, and how much they carry in one go.
+     *
+     * Three because a round is a decision. A courier who could serve every
+     * counter you own is a pipe, and what this wants to be is a person with a
+     * round -- the interesting question is which three of your shops are worth
+     * a wage to keep stocked, and a bigger number deletes it.
+     *
+     * Eight stacks because that is what a villager's own bag holds, and the
+     * bag is where the load rides. Nothing to serialise, nothing to leak: a
+     * courier caught by a restart mid-run comes back holding the goods.
+     */
+    public static final int ROUTE_STOPS = 3;
+    private static final int LOAD_STACKS = 8;
     /** Passes of getting nowhere before we accept they can't path there. */
     private static final int STUCK_PASSES = 8;
+    /**
+     * The longest trip worth asking a courier to walk.
+     *
+     * {@link TrapShops}' number and its reasoning: a pathfinder gives out
+     * somewhere past forty blocks, so anything further is a walk target that
+     * quietly does nothing while somebody stands in the road. Not shared as a
+     * constant because the two are the same answer to the same question
+     * rather than one thing -- a change to how shoppers cross town should not
+     * silently change how deliveries do.
+     */
+    private static final int WALKABLE = 40;
     /**
      * Positions one pass will look at before giving up on finding work.
      *
@@ -349,7 +374,15 @@ public final class TrapCrew {
         // hand on every server. New jobs go on the end.
         WASH("Pranie kasy", "trapcraft:laundry", 1200, 18,
                 "Ładuje bęben brudną kasą i wyjmuje ją czystą.",
-                "bęben pralniczy i brudna kasa w skrzyni");
+                "bęben pralniczy i brudna kasa w skrzyni"),
+        // The only job with somewhere to be. Everything above happens inside
+        // the patch and is found by walking squares. This one is found by
+        // reading a list the boss wrote, which is why work() handles it before
+        // findWork rather than through it. On the end for WASH's reason, and
+        // the reason is now load-bearing twice over.
+        DELIVER("Kurierka", "minecraft:chest_minecart", 900, 14,
+                "Rozwozi towar ze skrzyni do twoich sklepów i straganów.",
+                "trasa (mapa na tablicy) i towar na sprzedaż w skrzyni");
 
         private final String display;
         private final String iconId;
@@ -477,6 +510,22 @@ public final class TrapCrew {
         Job lastJob;
         /** Working nights. Costs more and never stops. */
         boolean nights;
+        /**
+         * Where a courier takes things, in the order they were added.
+         *
+         * Tills and market stalls, always the boss's own and always in the
+         * hand's own dimension -- a handcart does not go through a portal, and
+         * the two ends of a run have to be loaded at once for the goods to
+         * move at all.
+         *
+         * Positions rather than a Shop or Stall reference, because both of
+         * those are objects {@link TrapShops} and {@link TrapStalls} own and
+         * rebuild on load. A till somebody broke is a stop that quietly finds
+         * nothing, which is exactly what it should be.
+         */
+        final List<BlockPos> route = new ArrayList<>();
+        /** Which stop is next. Round-robin, so a route is a round. */
+        int stop;
         /** Jobs done since the last breather. */
         int worked;
         /** Server tick they are back on the clock. */
@@ -606,6 +655,13 @@ public final class TrapCrew {
             if (world != null) {
                 world.getChunkManager().addTicket(TICKET, new ChunkPos(hand.patch),
                         ticketRadius(hand.reachBlocks()));
+                // And the shops on their round, or a courier walks to a
+                // counter that does not exist yet and comes home with the
+                // load. Two chunks is the counter and its back room; a stop
+                // is a building, not a patch.
+                for (BlockPos stop : hand.route) {
+                    world.getChunkManager().addTicket(TICKET, new ChunkPos(stop), 2);
+                }
             }
         }
     }
@@ -650,7 +706,8 @@ public final class TrapCrew {
                        String tempo, boolean present, List<Job> taught,
                        int done, int paid, int missed, int owed,
                        String dimension, int x, int y, int z,
-                       String chest, List<Job> starved, boolean nights) {
+                       String chest, List<Job> starved, boolean nights,
+                       List<String> round, int roadSeconds) {
         /** Where they work, short enough for a tooltip. */
         public String spot() {
             return x + " " + y + " " + z;
@@ -701,15 +758,51 @@ public final class TrapCrew {
                     starved.add(job);
                 }
             }
+            // A courier with nowhere to go is starved in exactly the sense the
+            // board already means it: taught, paid for, and unable to do a
+            // thing. It cannot come out of backed() because the answer is
+            // about the ROUND rather than about the chest.
+            if (hand.can(Job.DELIVER) && hand.route.isEmpty()) {
+                starved.add(Job.DELIVER);
+            }
             out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
                     paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught,
                     hand.done, hand.paid, hand.missed, hand.owed, hand.dimension,
                     hand.patch.getX(), hand.patch.getY(), hand.patch.getZ(),
                     box == null || hand.box == null ? null
                             : hand.box.getX() + " " + hand.box.getY() + " " + hand.box.getZ(),
-                    starved, hand.nights));
+                    starved, hand.nights, roundOf(world, hand), roadOf(world, hand)));
         }
         return out;
+    }
+
+    /**
+     * The round as the board should print it: a name, or why the stop is dead.
+     *
+     * Resolved rather than remembered, because a saved position is only a
+     * position -- the shop it pointed at may have been broken, sold, or had
+     * its last chest taken out from under it, and all three are things a
+     * player wants to read off the board rather than deduce from a courier
+     * who has stopped.
+     */
+    private static List<String> roundOf(ServerWorld world, Hand hand) {
+        List<String> out = new ArrayList<>();
+        for (BlockPos stop : hand.route) {
+            Drop drop = world == null ? null : dropAt(world, hand.boss, stop);
+            out.add((drop == null ? "?? " : drop.name() + (drop.mine() ? "  " : " (obcy)  "))
+                    + stop.getX() + " " + stop.getY() + " " + stop.getZ());
+        }
+        return out;
+    }
+
+    /** Seconds the longest stop on the round costs, there and back. */
+    private static int roadOf(ServerWorld world, Hand hand) {
+        int worst = 0;
+        for (BlockPos stop : hand.route) {
+            worst = Math.max(worst, TrapMath.crewRoadTicks(
+                    Math.sqrt(stop.getSquaredDistance(hand.patch)), hand.interval()));
+        }
+        return worst / 20;
     }
 
     /**
@@ -915,6 +1008,21 @@ public final class TrapCrew {
      */
     private static void release(VillagerEntity mob) {
         mob.removeCommandTag(HAND_TAG);
+        // Whatever they were mid-delivery with. Both ways out of the job come
+        // through here -- sacked, and walked out over wages -- and neither had
+        // any reason to think about a bag until couriers existed. A townsperson
+        // who kept it would be a stack of your goods permanently inside
+        // somebody who is now just a neighbour, invisible and unrecoverable.
+        // On the floor, because that is where a person who has finished
+        // carrying your things puts them down.
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        for (int slot = 0; slot < bag.size(); slot++) {
+            ItemStack held = bag.getStack(slot);
+            if (!held.isEmpty()) {
+                mob.dropStack((ServerWorld) mob.getWorld(), held.copy());
+                bag.setStack(slot, ItemStack.EMPTY);
+            }
+        }
         var scale = mob.getAttributeInstance(EntityAttributes.SCALE);
         if (scale != null) {
             scale.setBaseValue(1.0);
@@ -1599,6 +1707,20 @@ public final class TrapCrew {
             return;   // on a break; they are stood about on purpose
         }
 
+        // Before the leash, and it has to be: a courier standing in your shop
+        // is by definition off their patch, and the stray check below would
+        // drag them home holding the delivery. The bag says which of the two
+        // they are, so there is no state here that can disagree with the world.
+        // Not gated on knowing the job: somebody who is HOLDING your goods has
+        // to be able to put them down, and a boss who unteaches Kurierka
+        // mid-run would otherwise have buried a load inside a villager. It
+        // also quietly tidies up after the vanilla habit of picking bread and
+        // carrots up off the floor -- those go in the chest, where they help.
+        if (carrying(mob)) {
+            dropOff(world, mob, hand);
+            return;
+        }
+
         // Keep them on the job. The old one wandered out of the field and came
         // back minutes later because nothing ever told it not to: a villager
         // with no walk target goes and finds one. Handing it a target every
@@ -1621,6 +1743,15 @@ public final class TrapCrew {
         }
 
         net.minecraft.inventory.Inventory box = nearestBox(world, hand);
+        // A delivery is a job with no square to stand on, so it cannot come
+        // out of findWork. lastJob is set the same way, which is what keeps a
+        // courier who also picks from spending the whole day on the road.
+        if (hand.can(Job.DELIVER) && hand.lastJob != Job.DELIVER
+                && setOff(world, mob, hand, box)) {
+            hand.lastJob = Job.DELIVER;
+            hand.idle = 0;
+            return;
+        }
         BlockPos job = findWork(world, mob, hand, box);
         if (job == null) {
             hand.idle = 0;
@@ -1951,6 +2082,9 @@ public final class TrapCrew {
             case FEED -> stock.boneMeal();
             case SOW -> stock.seeds();
             case WASH -> stock.dirty();
+            // Handled by the board rather than here: what a courier needs is
+            // a ROUND and something a shop would take, and neither is a
+            // question about this chest alone. See cardsFor.
             default -> true;
         };
     }
@@ -2419,6 +2553,563 @@ public final class TrapCrew {
         return drop.isEmpty();
     }
 
+    // --- the round ------------------------------------------------------------
+    //
+    // The only job with somewhere else to be. Everything above happens on the
+    // patch and is found by walking squares; a delivery is found by reading a
+    // list the boss wrote, so it is handled here rather than through findWork,
+    // and it takes two passes instead of one -- load and set off, then hand
+    // over -- because a courier who appeared at the counter and was home again
+    // inside the same tick would be a hopper with a face. You are supposed to
+    // see them standing in your shop.
+
+    /**
+     * One stop on a round: the counter, its stock, and whose it is.
+     *
+     * {@code mine} is the whole of the difference between the two kinds of
+     * stop. Your own shop is a shelf you are filling and a till you are
+     * emptying -- the goods stay yours the whole way. Somebody else's is a
+     * SALE: their till pays for what arrives at {@link TrapMath#WHOLESALE} of
+     * what they will charge for it, the money rides home in the same bag, and
+     * their takings are none of your business.
+     */
+    private record Drop(BlockPos counter, List<net.minecraft.inventory.Inventory> stock,
+                        String name, TrapShops.Shop shop, TrapStalls.Stall stall,
+                        boolean mine) {
+        /**
+         * Would this counter actually put that on sale?
+         *
+         * The whole reason a courier is not a pipe. Without it the first run
+         * takes the bone meal, the seed corn and the spare hoe to market and
+         * the farm quietly stops working -- and the player's complaint is
+         * about the crew rather than about a chest they filled themselves.
+         *
+         * A shop takes anything it has a price for, weed and coca included --
+         * over a counter that is legal, declared and taxed. A stall only ever
+         * dealt in catalogue lines, so that is all one may be sent.
+         */
+        boolean takes(MinecraftServer server, ItemStack stack) {
+            return shop != null
+                    ? TrapShops.lineFor(server, stack, shop) != null
+                    : ShopStock.matching(stack) != null;
+        }
+    }
+
+    /**
+     * Resolve one saved position into a stop, or nobody.
+     *
+     * Owner-checked every time rather than at the moment it was added. A shop
+     * can be sold, a stall can be broken and rebuilt by somebody else, and a
+     * courier who kept delivering to it on last week's authority would be
+     * stocking a stranger's shelves out of your barrel.
+     */
+    private static Drop dropAt(ServerWorld world, UUID boss, BlockPos pos) {
+        TrapShops.Shop shop = TrapShops.shopAt(world, pos);
+        if (shop != null) {
+            List<net.minecraft.inventory.Inventory> stock = TrapShops.stockOf(world, shop);
+            return stock.isEmpty() ? null : new Drop(pos, stock, shop.name(), shop, null,
+                    shop.owner().equals(boss));
+        }
+        TrapStalls.Stall stall = TrapStalls.at(world, pos);
+        if (stall == null) {
+            return null;
+        }
+        net.minecraft.inventory.Inventory under = TrapStalls.stockOf(world, stall);
+        return under == null ? null : new Drop(pos, List.of(under),
+                "stragan " + stall.ownerName(), null, stall, stall.owner().equals(boss));
+    }
+
+    /** The takings sat in this stop's till, or nothing if it is not yours. */
+    private static int tillOf(Drop drop) {
+        if (!drop.mine()) {
+            return 0;
+        }
+        return drop.shop() != null ? drop.shop().till()
+                : drop.stall() != null ? drop.stall().till() : 0;
+    }
+
+    /**
+     * What a neighbour's counter will pay for one stack that just arrived.
+     *
+     * Priced off their OWN shelf price, markup and all, so a shop that charges
+     * a fortune also pays its suppliers well -- the markup dial finally has a
+     * second thing hanging off it. Zero for your own shop: you cannot sell
+     * yourself your own tomatoes.
+     */
+    private static int worth(MinecraftServer server, Drop drop, ItemStack stack) {
+        if (drop.mine() || stack.isEmpty()) {
+            return 0;
+        }
+        if (drop.shop() != null) {
+            TrapShops.Line line = TrapShops.lineFor(server, stack, drop.shop());
+            return line == null ? 0
+                    : TrapMath.wholesale(line.price(), stack.getCount() / line.count());
+        }
+        ShopStock.Entry entry = ShopStock.matching(stack);
+        return entry == null ? 0 : TrapMath.wholesale(
+                TrapMath.stallPrice(TrapMarket.buyPrice(server, entry)),
+                stack.getCount() / entry.count());
+    }
+
+    /**
+     * Is this one out on a run? The bag is the answer, and the only record.
+     *
+     * A villager's own eight slots, which vanilla saves and loads with the
+     * body. Nothing to serialise, nothing to leak, and a courier caught by a
+     * restart halfway to town comes back still holding the goods -- where a
+     * flag in our own file would have come back holding nothing and insisting
+     * otherwise. It also means a courier a zombie gets DROPS the load, which
+     * is the right amount of consequence for sending one out at dusk.
+     */
+    private static boolean carrying(VillagerEntity mob) {
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        for (int slot = 0; slot < bag.size(); slot++) {
+            if (!bag.getStack(slot).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Fill the bag from the chest and put them on the road.
+     *
+     * @return true if a run actually started
+     */
+    private static boolean setOff(ServerWorld world, VillagerEntity mob, Hand hand,
+                                  net.minecraft.inventory.Inventory box) {
+        if (box == null || hand.route.isEmpty()) {
+            return false;
+        }
+        MinecraftServer server = world.getServer();
+        // Round-robin from wherever they finished, and every stop tried before
+        // giving up: a shop that wants nothing this minute must not be able to
+        // block the two behind it in the list.
+        for (int turn = 0; turn < hand.route.size(); turn++) {
+            int at = (hand.stop + turn) % hand.route.size();
+            Drop drop = dropAt(world, hand.boss, hand.route.get(at));
+            if (drop == null) {
+                continue;
+            }
+            // The chunk at the far end has to be awake for there to be a
+            // container in it at all. Stamped before anything is picked up,
+            // and re-stamped by keepAwake for as long as the stop is listed.
+            world.getChunkManager().addTicket(TICKET, new ChunkPos(drop.counter()), 2);
+            // Somewhere to put them down, BEFORE the bag is filled. A shop
+            // with no room to stand in gets no delivery -- the same answer
+            // TrapShops gives a shopper -- and finding that out afterwards
+            // would leave a courier holding goods and walking at a wall.
+            if (TrapSpawn.near(world, drop.counter().up()) == null) {
+                continue;
+            }
+            // A neighbour's counter buys with its takings, so an empty till
+            // is a wasted trip -- loaded up, walked across town and carried
+            // all the way back. Skipped here rather than discovered there.
+            if (!drop.mine() && (drop.shop() != null ? drop.shop().till()
+                    : drop.stall().till()) <= 0) {
+                continue;
+            }
+            net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+            int taken = 0;
+            boolean full = false;
+            for (int slot = 0; slot < box.size() && taken < LOAD_STACKS && !full; slot++) {
+                ItemStack stack = box.getStack(slot);
+                if (stack.isEmpty() || !drop.takes(server, stack)) {
+                    continue;
+                }
+                // addStack takes what it CAN and hands back the rest, so the
+                // count is the only honest measure of what moved. Emptying the
+                // box slot on anything short of a clean insert duplicated
+                // whatever the bag had no room for.
+                ItemStack left = bag.addStack(stack.copy());
+                int moved = stack.getCount() - left.getCount();
+                if (moved <= 0) {
+                    break;
+                }
+                stack.decrement(moved);
+                if (stack.isEmpty()) {
+                    box.setStack(slot, ItemStack.EMPTY);
+                }
+                box.markDirty();
+                taken++;
+                full = !left.isEmpty();
+            }
+            if (taken == 0 && tillOf(drop) <= 0) {
+                continue;   // nothing to bring and nothing to fetch
+            }
+            hand.stop = at;
+            haul(world, mob, drop.counter());
+            walkTo(mob, drop.counter(), hand);
+            cheer(world, hand.patch, SoundEvents.ENTITY_VILLAGER_YES, 1.1F);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * They are stood at the counter holding it. Put it on the shelf.
+     *
+     * Anything the shop turns out not to have room for goes home in the bag
+     * and back into the chest on the next pass, rather than on the floor of
+     * somebody's supermarket.
+     */
+    private static void dropOff(ServerWorld world, VillagerEntity mob, Hand hand) {
+        MinecraftServer server = world.getServer();
+        BlockPos where = hand.stop < hand.route.size() ? hand.route.get(hand.stop) : null;
+        Drop drop = where == null ? null : dropAt(world, hand.boss, where);
+        if (drop == null) {
+            // The shop was broken, sold or emptied while they were walking to
+            // it. Take it home; the chest they came from is the one place the
+            // goods are certainly still wanted.
+            goHome(world, mob, hand);
+            return;
+        }
+        if (!mob.getBlockPos().isWithinDistance(drop.counter(), ARM)) {
+            // Past what a pathfinder will plan there is nothing to watch and
+            // nothing that works, so they are stood at the door instead --
+            // TrapShops' trade, for TrapShops' reason. This is the path a
+            // load with leftovers takes to the next shop on the round.
+            if (!mob.getBlockPos().isWithinDistance(drop.counter(), WALKABLE)
+                    && !haul(world, mob, drop.counter())) {
+                goHome(world, mob, hand);
+                return;
+            }
+            walkTo(mob, drop.counter(), hand);
+            if (++hand.idle >= STUCK_PASSES) {
+                hand.idle = 0;
+                if (!haul(world, mob, drop.counter())) {
+                    // Somebody built over the only place to stand while they
+                    // were on their way. Home, with the load, rather than a
+                    // courier walking at a wall until they are fired.
+                    goHome(world, mob, hand);
+                }
+            }
+            return;
+        }
+        hand.idle = 0;
+        int put = drop.mine() ? unload(mob, drop.stock())
+                : sellInto(server, world, hand, mob, drop);
+        // And back the other way. Your own till goes in the same bag the goods
+        // came out of, which is the whole of "the courier collects": no second
+        // trip, no second button, and a day's takings walking down the road is
+        // a thing that can be taken off them.
+        int lifted = tillOf(drop) <= 0 ? 0 : drop.shop() != null
+                ? TrapShops.lift(drop.shop()) : TrapStalls.lift(drop.stall());
+        if (lifted > 0) {
+            pocket(mob, lifted);
+        }
+        if (put > 0 || lifted > 0) {
+            cheer(world, drop.counter(), SoundEvents.BLOCK_BARREL_CLOSE, 1.0F);
+            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, drop.counter().getX() + 0.5,
+                    drop.counter().getY() + 1.2, drop.counter().getZ() + 0.5,
+                    12, 0.4, 0.4, 0.4, 0.02);
+        }
+        hand.stop = (hand.stop + 1) % hand.route.size();
+        hand.done++;
+        // The road, charged here rather than on the way out. By now the goods
+        // are on the shelf, so a boss who logs out mid-breather has had the
+        // delivery -- where charging it first would have eaten a load every
+        // time somebody quit at the wrong second. A wasted trip still costs
+        // it; they made the journey either way. See TrapMath.crewRoadTicks for
+        // why distance costs anything at all when the walk is a teleport.
+        hand.restUntil = server.getTicks() + TrapMath.crewRoadTicks(
+                Math.sqrt(drop.counter().getSquaredDistance(hand.patch)), hand.interval());
+        // Always home, never straight on to the next stop. One run is one
+        // stop: it ends at the chest, so leftovers, takings and a payment all
+        // land somewhere the boss will look, and a courier cannot end up
+        // touring a market square forever because one till keeps filling up.
+        if (!robbed(world, mob, hand, drop.counter())) {
+            goHome(world, mob, hand);
+        }
+    }
+
+    /**
+     * Hand goods over a neighbour's counter and take their money for it.
+     *
+     * Stack by stack, and only as far as their till stretches -- a shop that
+     * has sold nothing today buys nothing today, which is the honest version
+     * of "supply your neighbour" and needs no credit, no debt and no ledger
+     * between two players who are never online at the same time.
+     *
+     * Anything they could not pay for stays in the bag and goes home.
+     *
+     * @return stacks actually sold
+     */
+    private static int sellInto(MinecraftServer server, ServerWorld world, Hand hand,
+                                VillagerEntity mob, Drop drop) {
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        int purse = drop.shop() != null ? drop.shop().till() : drop.stall().till();
+        int sold = 0;
+        int earned = 0;
+        for (int slot = 0; slot < bag.size(); slot++) {
+            ItemStack stack = bag.getStack(slot);
+            int asking = worth(server, drop, stack);
+            // Priced, affordable and shelved, checked in that order and the
+            // money moved LAST. Paying first and discovering afterwards that
+            // the shelf was full meant a refund path, and a refund path in a
+            // trade between two players is three ways to lose an emerald.
+            if (asking <= 0 || asking > purse) {
+                continue;
+            }
+            boolean placed = false;
+            for (net.minecraft.inventory.Inventory box : drop.stock()) {
+                if (store(box, stack)) {
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                continue;   // no room; the remainder rides home
+            }
+            int paid = drop.shop() != null ? TrapShops.payOut(drop.shop(), asking)
+                    : TrapStalls.payOut(drop.stall(), asking);
+            purse -= paid;
+            bag.setStack(slot, ItemStack.EMPTY);
+            sold++;
+            earned += paid;
+        }
+        bag.markDirty();
+        if (earned > 0) {
+            pocket(mob, earned);
+            ServerPlayerEntity boss = world.getServer().getPlayerManager()
+                    .getPlayer(hand.boss);
+            if (boss != null) {
+                TrapLedger.record(boss, TrapLedger.Source.STALL, earned);
+                boss.sendMessage(Text.literal("Kurier sprzedał ").formatted(Formatting.GRAY)
+                        .append(Text.literal(sold + " partii").formatted(Formatting.WHITE))
+                        .append(Text.literal(" do " + drop.name() + " za ")
+                                .formatted(Formatting.GRAY))
+                        .append(Text.literal(earned + "e").formatted(Formatting.GREEN)),
+                        true);
+            }
+        }
+        return sold;
+    }
+
+    /**
+     * The road home, and who might be waiting on it.
+     *
+     * Rolled at the stop rather than at the patch, because the bag is at its
+     * fullest here -- the goods have gone in, the till has come out, and a
+     * courier walking away from a busy shop at midnight with the day's takings
+     * is the most obvious target this mod has ever produced. That is the
+     * point: every input to {@link TrapMath#courierRobbedChance} is something
+     * the boss chose, and the counterplay is to change one of them.
+     *
+     * A hit empties the bag and opens an ordinary {@link TrapCrime} case, so
+     * everything downstream -- the runner, the chase, the arrest, the court --
+     * happens without a line of special handling anywhere.
+     *
+     * @return true if they were done
+     */
+    private static boolean robbed(ServerWorld world, VillagerEntity mob, Hand hand,
+                                  BlockPos from) {
+        MinecraftServer server = world.getServer();
+        ServerPlayerEntity boss = server.getPlayerManager().getPlayer(hand.boss);
+        if (boss == null) {
+            return false;
+        }
+        int value = bagValue(server, mob);
+        if (value <= 0) {
+            return false;
+        }
+        float chance = TrapMath.courierRobbedChance(value, TrapPolice.deterrence(),
+                !world.isDay(), Math.sqrt(from.getSquaredDistance(hand.patch)));
+        if (world.getRandom().nextFloat() >= chance) {
+            return false;
+        }
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        for (int slot = 0; slot < bag.size(); slot++) {
+            bag.setStack(slot, ItemStack.EMPTY);
+        }
+        bag.markDirty();
+        BlockPos scene = mob.getBlockPos();
+        haul(world, mob, hand.patch);
+
+        world.playSound(null, scene, SoundEvents.ENTITY_VILLAGER_HURT,
+                SoundCategory.NEUTRAL, 1.0F, 0.8F);
+        world.spawnParticles(ParticleTypes.ANGRY_VILLAGER, scene.getX() + 0.5,
+                scene.getY() + 1.4, scene.getZ() + 0.5, 16, 0.5, 0.4, 0.5, 0.02);
+        TrapCrime.Case sprawa = TrapCrime.mugged(server, world, scene, boss,
+                "kurier " + plainName(mob), value);
+        boss.sendMessage(TrapNotes.headline("NAPAD NA KURIERA", Formatting.RED)
+                .append(TrapNotes.say("   " + plainName(mob), Formatting.WHITE))
+                .append(TrapNotes.say("   stracił " + value + "e w towarze i kasie",
+                        Formatting.RED))
+                .append(TrapNotes.under(sprawa == null
+                        ? "Nikt tego nie widział."
+                        : "Zgłoszone. Reszta zależy od policji.")), false);
+        if (sprawa != null) {
+            TrapWaypoints.offer(boss, "Napad na kuriera", scene, TrapWaypoints.RED);
+        }
+        return true;
+    }
+
+    /**
+     * What is in the bag, in emeralds.
+     *
+     * Money at face value and goods at what the market would pay, because a
+     * robber does not care which of the two they are walking off with -- and
+     * because the case that comes out of this has to be worth ONE number, so
+     * that restitution is a payment rather than an inventory to serialise.
+     */
+    private static int bagValue(MinecraftServer server, VillagerEntity mob) {
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        int total = 0;
+        for (int slot = 0; slot < bag.size(); slot++) {
+            ItemStack stack = bag.getStack(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (stack.isOf(Items.EMERALD)) {
+                total += stack.getCount();
+                continue;
+            }
+            if (stack.isOf(Items.EMERALD_BLOCK)) {
+                total += stack.getCount() * 9;
+                continue;
+            }
+            ShopStock.Entry entry = ShopStock.matching(stack);
+            if (entry != null) {
+                total += TrapMarket.buyPrice(server, entry)
+                        * (stack.getCount() / Math.max(1, entry.count()));
+                continue;
+            }
+            // Weed, coca and what they become. Worth more than anything else
+            // a courier carries and priced nowhere else, so the street is the
+            // only honest number for it.
+            int street = TrapDealing.streetPrice(stack);
+            if (street > 0) {
+                total += street * stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    /** Emeralds into the bag, packed the way a payout always is. */
+    private static void pocket(VillagerEntity mob, int amount) {
+        int[] packed = TrapMath.packEmeralds(amount);
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        if (packed[0] > 0) {
+            bag.addStack(new ItemStack(Items.EMERALD_BLOCK, packed[0]));
+        }
+        if (packed[1] > 0) {
+            bag.addStack(new ItemStack(Items.EMERALD, packed[1]));
+        }
+        bag.markDirty();
+    }
+
+    /**
+     * Back to the patch, and the load into the chest it came out of.
+     *
+     * This ALWAYS ends with an empty bag, on the floor if it has to be. The
+     * hand-over branch in {@link #work} runs before everything else, so a load
+     * that cannot be put down anywhere is not a stuck delivery -- it is a hand
+     * who never picks, cures or rolls again, silently, for as long as the
+     * chest stays full. Crops on the floor is what {@link #stow} already
+     * decides in exactly this situation, and it is visible.
+     */
+    private static void goHome(ServerWorld world, VillagerEntity mob, Hand hand) {
+        net.minecraft.inventory.Inventory home = nearestBox(world, hand);
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        List<ItemStack> load = new ArrayList<>();
+        for (int slot = 0; slot < bag.size(); slot++) {
+            if (!bag.getStack(slot).isEmpty()) {
+                load.add(bag.getStack(slot).copy());
+                bag.setStack(slot, ItemStack.EMPTY);
+            }
+        }
+        bag.markDirty();
+        // Only if they are actually away. Any hand can end up in here -- a
+        // villager picks bread and carrots up off the floor whatever it was
+        // hired for -- and teleporting somebody two blocks to the middle of
+        // their own patch for that is a visible twitch with no cause.
+        if (!mob.getBlockPos().isWithinDistance(hand.patch, hand.reachBlocks())) {
+            haul(world, mob, hand.patch);
+        }
+        stow(world, home, hand.patch, load);
+    }
+
+    /** Empty the bag into the first of these that will have it. */
+    private static int unload(VillagerEntity mob,
+                              List<net.minecraft.inventory.Inventory> into) {
+        net.minecraft.inventory.SimpleInventory bag = mob.getInventory();
+        int put = 0;
+        for (int slot = 0; slot < bag.size(); slot++) {
+            ItemStack stack = bag.getStack(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            for (net.minecraft.inventory.Inventory box : into) {
+                if (store(box, stack)) {
+                    break;
+                }
+            }
+            if (stack.isEmpty()) {
+                bag.setStack(slot, ItemStack.EMPTY);
+                put++;
+            }
+        }
+        bag.markDirty();
+        return put;
+    }
+
+    /**
+     * Put a shop or a stall on this hand's round, or take it off again.
+     *
+     * Toggled from where the boss is STOOD, exactly as the spot is moved,
+     * because the alternative is a coordinate box and this mod has never asked
+     * anybody to type an address. The nearest till or stall of yours within a
+     * few blocks is the one you meant; if there are two that close, that is
+     * a market square and either is a fine guess.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String round(ServerPlayerEntity boss, int index, BlockPos from) {
+        if (index < 0 || index >= CREW.size()) {
+            return "Tej osoby nie ma już na liście.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "To nie jest twój człowiek.";
+        }
+        ServerWorld world = boss.getWorld();
+        if (!world.getRegistryKey().getValue().toString().equals(hand.dimension)) {
+            return "On pracuje w innym wymiarze. Wózek nie przejdzie portalem.";
+        }
+        BlockPos found = null;
+        for (BlockPos pos : BlockPos.iterateOutwards(from, 6, 4, 6)) {
+            if (dropAt(world, boss.getUuid(), pos) != null) {
+                found = pos.toImmutable();
+                break;
+            }
+        }
+        if (found == null) {
+            return "Stań przy kasie albo straganie -- swoim lub cudzym. Musi mieć skrzynię.";
+        }
+        if (hand.route.remove(found)) {
+            save();
+            boss.sendMessage(Text.literal("Skreślone z trasy. Zostało "
+                    + hand.route.size() + ".").formatted(Formatting.GRAY), false);
+            return null;
+        }
+        if (hand.route.size() >= ROUTE_STOPS) {
+            return ROUTE_STOPS + " przystanki to maksimum. Skreśl któryś, stojąc przy nim.";
+        }
+        hand.route.add(found);
+        save();
+        world.playSound(null, found, SoundEvents.ENTITY_VILLAGER_YES,
+                SoundCategory.NEUTRAL, 0.9F, 1.2F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, found.getX() + 0.5,
+                found.getY() + 1.2, found.getZ() + 0.5, 12, 0.4, 0.4, 0.4, 0.02);
+        boss.sendMessage(Text.literal("Dopisane do trasy. ").formatted(Formatting.GREEN)
+                .append(Text.literal(hand.route.size() + " z " + ROUTE_STOPS
+                        + ", kurs " + TrapMath.crewRoadTicks(Math.sqrt(
+                        found.getSquaredDistance(hand.patch)), hand.interval()) / 20
+                        + "s w obie strony.").formatted(Formatting.GRAY)), false);
+        return null;
+    }
+
     // --- payday ---------------------------------------------------------------
 
     /**
@@ -2644,6 +3335,18 @@ public final class TrapCrew {
                 if (parts.length >= 15) {
                     hand.nights = "1".equals(parts[14]);
                 }
+                if (parts.length >= 16 && !"-".equals(parts[15])) {
+                    for (String stop : parts[15].split(";")) {
+                        String[] bit = stop.split(",");
+                        if (bit.length == 3 && hand.route.size() < ROUTE_STOPS) {
+                            hand.route.add(new BlockPos(Integer.parseInt(bit[0]),
+                                    Integer.parseInt(bit[1]), Integer.parseInt(bit[2])));
+                        }
+                    }
+                }
+                if (parts.length >= 17) {
+                    hand.stop = Math.max(0, Integer.parseInt(parts[16]));
+                }
                 CREW.add(hand);
             }
         } catch (Exception failure) {
@@ -2764,7 +3467,16 @@ public final class TrapCrew {
                         .append(hand.onClock).append(' ')
                         .append(hand.missed).append(' ')
                         .append(hand.owed).append(' ')
-                        .append(hand.nights ? 1 : 0).append('\n');
+                        .append(hand.nights ? 1 : 0).append(' ')
+                        // The round, and a dash for nobody. Commas inside one
+                        // whitespace field, which is the only way this format
+                        // has ever been allowed to grow -- see the shop
+                        // register for what happens when it grows sideways.
+                        .append(hand.route.isEmpty() ? "-" : hand.route.stream()
+                                .map(stop -> stop.getX() + "," + stop.getY() + ","
+                                        + stop.getZ())
+                                .collect(java.util.stream.Collectors.joining(";")))
+                        .append(' ').append(hand.stop).append('\n');
             }
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {

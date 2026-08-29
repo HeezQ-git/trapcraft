@@ -3049,6 +3049,87 @@ xxxxxxxxxxxxxxxx
 """
 
 
+# --- the courthouse ---------------------------------------------------------
+#
+# Pale civic stone, a brass pediment and a set of scales. The station next door
+# is grey concrete with a blue chequer, so this had to be readable AS a
+# different institution from the same distance: lighter stone, warm metal
+# instead of cold, and a shape -- a triangle over columns -- that means
+# "courthouse" in the same way the chequer means "police".
+#
+# The scales are drawn as one beam and two pans rather than as an object,
+# because at sixteen pixels an object becomes a smudge and a symbol survives.
+
+COURT_PAL = {
+    "s": "#b9b2a4",     # limestone
+    "S": "#cdc6b8",     # limestone, lit
+    "g": "#9a9386",     # course line
+    "d": "#7d776c",     # shadow
+    "y": "#c9a227",     # brass
+    "Y": "#e5c964",     # brass, lit
+    "b": "#8a6f1c",     # brass, shaded
+    "w": "#efe9dc",     # plaster
+    "x": "#3a352e",     # outline
+}
+
+COURT_FACE = """
+xxxxxxxxxxxxxxxx
+xSSSSSSSSSSSSSSx
+xssssbYYbssssssx
+xsssbYYYYbssssdx
+xssbYYYYYYbsssdx
+xsgggggggggggsdx
+xswxswxswxswxsdx
+xswxswxswxswxsdx
+xswxswxswxswxsdx
+xsssssyyysssssdx
+xssssyyYyyssssdx
+xsssyxyYyxysssdx
+xssybbyYybbyssdx
+xsdddddddddddddx
+xSSSSSSSSSSSSSSx
+xxxxxxxxxxxxxxxx
+"""
+
+COURT_SIDE = """
+xxxxxxxxxxxxxxxx
+xSSSSSSSSSSSSSSx
+xssssssssssssssx
+xsgggggggggggggx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xswxsswxsswxssdx
+xsgggggggggggggx
+xssssssssssssssx
+xsdddddddddddddx
+xSSSSSSSSSSSSSSx
+xxxxxxxxxxxxxxxx
+"""
+
+COURT_TOP = """
+xxxxxxxxxxxxxxxx
+xSSSSSSSSSSSSSSx
+xssgssssssssgssx
+xsgggggggggggssx
+xssgssssssssgssx
+xssgssssssssgssx
+xssgssssssssgssx
+xssgssssssssgssx
+xssgssssssssgssx
+xssgssssssssgssx
+xssgssssssssgssx
+xsgggggggggggssx
+xssgssssssssgssx
+xssgssssssssgssx
+xSSSSSSSSSSSSSSx
+xxxxxxxxxxxxxxxx
+"""
+
+
 # --- the mailbox ------------------------------------------------------------
 #
 # Post box green with a brass slot and a red flag, because those three colours
@@ -3951,6 +4032,9 @@ def main() -> None:
     write(render(FIRE_FACE, FIRE_PAL), "block", "fire_house_face.png")
     write(render(FIRE_SIDE, FIRE_PAL), "block", "fire_house_side.png")
     write(render(FIRE_TOP, FIRE_PAL), "block", "fire_house_top.png")
+    write(render(COURT_FACE, COURT_PAL), "block", "court_face.png")
+    write(render(COURT_SIDE, COURT_PAL), "block", "court_side.png")
+    write(render(COURT_TOP, COURT_PAL), "block", "court_top.png")
     write(render(POLICE_FACE, POLICE_PAL), "block", "police_face.png")
     write(render(POLICE_SIDE, POLICE_PAL), "block", "police_side.png")
     write(render(POLICE_TOP, POLICE_PAL), "block", "police_top.png")

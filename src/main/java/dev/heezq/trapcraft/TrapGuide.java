@@ -502,10 +502,55 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("5b. ZATRZYMANIE\n\n"))
-                .append(body("Złapany oddaje, co zabrał, i idzie do celi "
-                        + "na kilka dni.\n\n"))
-                .append(body("Grzywna trafia do kasy miasta.\n\n"))
+                .append(body("Złapany idzie do celi na kilka dni, a "
+                        + "grzywna trafia do kasy miasta.\n\n"))
                 .append(hint("Cele pełne - wychodzi za kaucją."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b2. A PIENIĄDZE?\n\n"))
+                .append(body("Bez sądu wracają od razu - tyle, ile "
+                        + "miasto akurat ma.\n\n"))
+                .append(body("Z sądem trafiają na rozprawę i możesz "
+                        + "dostać WIĘCEJ albo NIC."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8. SĄD\n\n"))
+                .append(body("Postaw blok sądu. Od tej pory policja "
+                        + "stawia przed nim każdą kradzież i każdy "
+                        + "rozbój.\n\n"))
+                .append(hint("Jeden sąd wystarczy na całe miasto."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8b. ROZPRAWA\n\n"))
+                .append(body("Odbywa się " + TrapCourt.LISTING_DAYS
+                        + " dni po zatrzymaniu.\n\n"))
+                .append(body("Wygrana: odzyskujesz skradzione plus "
+                        + Math.round(TrapMath.COURT_DAMAGES * 100)
+                        + "% odszkodowania.\n\n"))
+                .append(warn("Przegrana: nie dostajesz nic."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8c. CO DECYDUJE\n\n"))
+                .append(body("Rodzaj przestępstwa - jednych dowodzi "
+                        + "się łatwiej niż innych\n"))
+                .append(body("Dowody policji - budżet komisariatu\n"))
+                .append(body("Prawnik - twoje pieniądze\n\n"))
+                .append(hint("Tablica sądu pokazuje szanse na liczbę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8d. PRAWNIK\n\n"))
+                .append(body("Do " + TrapMath.LAWYERS + " poziomów, każdy "
+                        + "kolejny droższy. Cena to część tego, co "
+                        + "straciłeś.\n\n"))
+                .append(hint("Pierwszy zawsze się opłaca. Trzeci to już "
+                        + "zakład."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8e. CZY WARTO\n\n"))
+                .append(body("Bez sądu masz pewne grosze. Z sądem masz "
+                        + "szansę na wszystko i ryzyko zera.\n\n"))
+                .append(hint("Opłaca się tym bardziej, im lepszy masz "
+                        + "komisariat."))));
 
         pages.add(page(Text.empty()
                 .append(title("5c. UMORZENIE\n\n"))
@@ -533,13 +578,21 @@ public final class TrapGuide {
                         + "Płać domiary.\n\n"))
                 .append(hint("Jeden mandat na kilka minut, nie więcej."))));
 
+        // Split when /court made a sixth line: the page truncates silently at
+        // fourteen, so an over-long command list is a command nobody is ever
+        // told about.
         pages.add(page(Text.empty()
                 .append(title("7. KOMENDY\n\n"))
                 .append(body("/police - budżet, etaty, komisariaty\n"))
-                .append(body("/raid <gracz> - banda na kogoś (op)\n"))
                 .append(body("/crime - statystyki i otwarte sprawy\n"))
-                .append(body("/city - rachunki miasta\n\n"))
+                .append(body("/court - wokanda i wyroki\n\n"))
                 .append(hint("Tablica na komisariacie mówi to samo."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7b. KOMENDY, DALEJ\n\n"))
+                .append(body("/city - rachunki miasta\n"))
+                .append(body("/raid <gracz> - banda na kogoś (op)\n\n"))
+                .append(hint("Tablica sądu pokazuje twoje sprawy."))));
     }
 
     /** Every page below reads its numbers off {@link HomeSurvey}. */
@@ -3254,6 +3307,69 @@ public final class TrapGuide {
                 .append(body("Stół rzemieślniczy nie jest potrzebny.\n\n"))
                 .append(hint("Tablica /crew pokazuje, które zawody "
                         + "skrzynia jest w stanie obsłużyć."))));
+
+        // The courier is the only job with somewhere else to be, so it is the
+        // only one the "one chest" pages above do not already explain. Four
+        // pages, because four things about it are surprising: the round is
+        // set by STANDING somewhere, the shop decides what travels, distance
+        // costs wage, and a stop can quietly die.
+        pages.add(page(Text.empty()
+                .append(title("7d. KURIER\n\n"))
+                .append(body("Bierze towar ze skrzyni i zanosi go do "
+                        + "twoich sklepów i straganów.\n\n"))
+                .append(hint("Zbieranie + Kurierka = farma, która sama "
+                        + "się sprzedaje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d2. TRASA\n\n"))
+                .append(body("Stań przy swojej kasie albo straganie i "
+                        + "kliknij mapę na tablicy /crew.\n\n"))
+                .append(body("Do " + TrapCrew.ROUTE_STOPS + " przystanków. "
+                        + "Kliknij drugi raz w tym samym miejscu, żeby "
+                        + "skreślić."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d3. CO ZAWIEZIE\n\n"))
+                .append(body("Tylko to, co dany sklep naprawdę "
+                        + "sprzedaje.\n\n"))
+                .append(hint("Dzięki temu nie wywiezie ci na rynek "
+                        + "mączki kostnej ani nasion."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d4. ODLEGŁOŚĆ\n\n"))
+                .append(warn("Po każdym kursie odpoczywa tym dłużej, im "
+                        + "dalej był.\n\n"))
+                .append(body("Wyższe tempo skraca kurs. Sklep obok "
+                        + "działki opłaca się o wiele bardziej niż na "
+                        + "drugim końcu miasta."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d5. I Z POWROTEM\n\n"))
+                .append(body("Z twojego sklepu przywozi utarg i wrzuca "
+                        + "go do skrzyni na działce.\n\n"))
+                .append(hint("Nie musisz już obchodzić kas."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d6. CUDZY SKLEP\n\n"))
+                .append(body("Możesz wpisać w trasę sklep sąsiada. "
+                        + "Kurier sprzedaje mu towar po "
+                        + Math.round(TrapMath.WHOLESALE * 100)
+                        + "% ceny jego półki.\n\n"))
+                .append(hint("Płaci jego kasa. Pusta kasa nic nie "
+                        + "kupi."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d7. NAPAD\n\n"))
+                .append(warn("Kurier z pełną torbą bywa napadany.\n\n"))
+                .append(body("Im większa wartość i im dalej, tym "
+                        + "częściej. Nocą prawie dwa razy częściej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d8. CO POTEM\n\n"))
+                .append(body("Napad to sprawa dla policji jak każda "
+                        + "inna. Złapią sprawcę - idzie do sądu.\n\n"))
+                .append(hint("Komisariat i sąd zwracają ci to, co "
+                        + "kurier stracił."))));
     }
 
     private static void network(List<RawFilteredPair<Text>> pages) {
