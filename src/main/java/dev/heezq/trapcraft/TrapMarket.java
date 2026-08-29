@@ -27,7 +27,17 @@ import java.util.Map;
 /**
  * The market: what things cost right now, and why.
  *
- * Three forces, multiplied together.
+ * Five forces, multiplied together.
+ *
+ * **The price level** is the era: what a day-one price costs in today's money.
+ * It is the only one that does not come home, and it exists because the other
+ * four cannot say what a rich server needs said. Everything below breathes
+ * around a flat price written on the first day, so a world that has earned
+ * four hundred thousand emeralds still pays those prices and finds the game
+ * easy. This one follows the world's REAL wealth -- the supply deflated by
+ * the level it has already paid for -- and creeps, so the board catches up
+ * over sessions rather than between two ticks. See
+ * {@link TrapMath#levelAfter}.
  *
  * **Supply** is the money in circulation. It moves the whole board at once and
  * it moves for real reasons: every emerald spent at the shop, fed to a slot
@@ -40,14 +50,24 @@ import java.util.Map;
  * **Drift** is each item walking between random targets, so prices creep while
  * you shop instead of standing still until tomorrow.
  *
+ * **Sector** is a whole shelf's mood, on a much slower clock than drift: ore
+ * is up this week and timber is down, which is a thing worth knowing, where
+ * "everything wobbles independently" is only noise.
+ *
  * **Pressure** is order flow: buying an item pushes its own price up, selling
  * pushes it down, and it fades over the following minutes. This is the force
  * players can actually steer, and the reason clearing a shelf costs more at
  * the end than at the start.
  *
- * All three are deterministic given the beat, so two players standing at the
+ * The town rides along with supply: a town with wages in its pocket is
+ * competing for the same shelf and bids it up, and a town whose purse has run
+ * dry is not. Which makes the tax rates, the wage bill and the public works a
+ * lever on prices rather than a separate game. See {@link TrapMath#bidding}.
+ *
+ * All of it is deterministic given the beat, so two players standing at the
  * same stall are quoted the same number. See {@link TrapMath#marketIndex},
- * {@link TrapMath#drift} and {@link TrapMath#pressureAfter}.
+ * {@link TrapMath#drift}, {@link TrapMath#sector} and
+ * {@link TrapMath#pressureAfter}.
  */
 public final class TrapMarket {
     /** How much of a fresh reading is folded into the running average. */
@@ -64,6 +84,23 @@ public final class TrapMarket {
      * {@link TrapMath#baselineAfter}.
      */
     private static float baseline = TrapMath.MARKET_BASELINE;
+    /**
+     * What a day-one price costs in today's money.
+     *
+     * The one force here that does not come home. See
+     * {@link TrapMath#levelAfter} for why a market that only breathes ends up
+     * being a price list with extra steps.
+     */
+    private static float level = 1.0f;
+    /** What the town's own money is doing to demand. Sampled per beat. */
+    private static float town = 1.0f;
+    /**
+     * What the level was at the last morning report, so the next one can say
+     * how far it moved. Saved, because the server restarts far more often than
+     * a day turns over and an unsaved copy would report a day's inflation as
+     * nothing at all.
+     */
+    private static float announcedLevel = 1.0f;
     private static long beat = 0;
     private static long lastDay = -1;
     /** Order flow per item id. Absent means settled. */
@@ -171,6 +208,19 @@ public final class TrapMarket {
                                 : "Stabilnie."))
                         .formatted(Formatting.DARK_GRAY))
                 .append(Text.literal("\n  pozycji wciąż ruszonych handlem: " + PRESSURE.size())
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  Drożyzna  ").formatted(Formatting.GOLD))
+                .append(Text.literal("x" + String.format("%.2f", level))
+                        .formatted(level > 1.05f ? Formatting.RED : Formatting.WHITE))
+                .append(Text.literal(" do cen z pierwszego dnia, zmierza do x"
+                                + String.format("%.2f", TrapMath.priceRest(baseline)))
+                        .formatted(Formatting.DARK_GRAY))
+                .append(Text.literal("\n  Miasto  "
+                                + (town >= 1.0f ? "+" : "")
+                                + Math.round((town - 1.0f) * 100.0f)
+                                + "%, bo w kasie miasta jest "
+                                + TrapPayroll.purse() + "e na "
+                                + TrapHomes.population() + " osób")
                         .formatted(Formatting.DARK_GRAY));
         source.sendFeedback(() -> line, false);
     }
@@ -220,9 +270,54 @@ public final class TrapMarket {
         return PRESSURE.getOrDefault(entry.id(), 0.0f);
     }
 
+    /** What a day-one price costs today, from {@link TrapMath#levelAfter}. */
+    public static float level() {
+        return level;
+    }
+
+    /** What the town's own money is adding to demand, around 1. */
+    public static float town() {
+        return town;
+    }
+
+    /**
+     * A flat price, in today's money.
+     *
+     * The catalogue is not the only place in this mod with prices written into
+     * it. What a customer pays for a joint and what a contract pays for the
+     * run are flat numbers too, and a price level that lifted only the shop
+     * would leave every street earner on first-week rates while the shelves
+     * walked away from them -- which is not a harder game, it is a dead half
+     * of one.
+     *
+     * One method, so "which prices float" has one answer and one place to add
+     * the next of them. Rent, wages, fines and the cost of public works are
+     * deliberately NOT through here yet: each is a balance question of its
+     * own, and the ones that pay for player time came first.
+     */
+    public static int atTodaysPrices(int flat) {
+        return Math.max(1, Math.round(flat * level));
+    }
+
+    /**
+     * Everything that moves the whole catalogue at once.
+     *
+     * The money in circulation, the era, and what the town can afford to bid.
+     * None of it is news about any particular item, which is why
+     * {@link #movement} leaves all three out.
+     */
+    public static float board() {
+        return index() * level * town;
+    }
+
+    /** Everything that moves one line and nothing else: its drift, its shelf. */
+    private static float own(ShopStock.Entry entry) {
+        return TrapMath.drift(beat, entry.id())
+                * TrapMath.sector(beat, entry.category().id());
+    }
+
     public static int buyPrice(MinecraftServer server, ShopStock.Entry entry) {
-        return TrapMath.buyPrice(entry.base(), index(),
-                TrapMath.drift(beat, entry.id()),
+        return TrapMath.buyPrice(entry.base(), board(), own(entry),
                 TrapMath.flowFactor(pressureOf(entry)));
     }
 
@@ -265,9 +360,8 @@ public final class TrapMarket {
      * therefore not news about this item. Drift and order flow are.
      */
     public static int movement(MinecraftServer server, ShopStock.Entry entry) {
-        float own = TrapMath.drift(beat, entry.id())
-                * TrapMath.flowFactor(pressureOf(entry));
-        return Math.round((own - 1.0f) * 100.0f);
+        float moved = own(entry) * TrapMath.flowFactor(pressureOf(entry));
+        return Math.round((moved - 1.0f) * 100.0f);
     }
 
     // --- what players do to it -----------------------------------------------
@@ -395,8 +489,14 @@ public final class TrapMarket {
         supply = supply * (1 - SMOOTHING) + counted * SMOOTHING;
         // Inside resample so it inherits the nobody-online guard: an anchor
         // that kept drifting overnight would have the whole server wake up to
-        // a market that had quietly decided their savings were normal.
+        // a market that had quietly decided their savings were normal. The
+        // price level and the town are here for the same reason -- prices
+        // should climb over a world that is being PLAYED, not over one that
+        // was left running.
         baseline = TrapMath.baselineAfter(baseline, supply);
+        level = TrapMath.levelAfter(level, baseline);
+        town = TrapMath.bidding(
+                TrapMath.townDemand(TrapPayroll.purse(), TrapHomes.population()));
     }
 
     /**
@@ -538,6 +638,13 @@ public final class TrapMarket {
                 : index < 0.85f ? "Pieniądza mało, więc ceny są niskie."
                 : "Ceny mniej więcej takie jak wczoraj.";
 
+        // The one number that never comes back, said out loud once a day.
+        // A price level nobody is told about is just prices being wrong.
+        int inflation = Math.round((level / Math.max(1.0f, announcedLevel) - 1.0f) * 100.0f);
+        announcedLevel = level;
+        String era = inflation >= 1
+                ? "  Drożyzna: ceny bazowe +" + inflation + "%." : "";
+
         Text line = Text.literal("").append(Text.literal("Rynek  ")
                         .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(Text.literal(mood + " ").formatted(Formatting.GRAY))
@@ -548,7 +655,8 @@ public final class TrapMarket {
                 .append(Text.literal(name(worst)).formatted(Formatting.WHITE))
                 .append(Text.literal(" w dół o " + Math.abs(movement(server, worst)) + "%")
                         .formatted(Formatting.RED))
-                .append(Text.literal(".").formatted(Formatting.GRAY));
+                .append(Text.literal(".").formatted(Formatting.GRAY))
+                .append(Text.literal(era).formatted(Formatting.RED));
 
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             player.sendMessage(line, false);
@@ -706,6 +814,12 @@ public final class TrapMarket {
             // instant 46% correction is a worse bug than the one it fixes.
             baseline = header.length > 3
                     ? Float.parseFloat(header[3]) : TrapMath.MARKET_BASELINE;
+            // A file from before the era existed loads at 1.0, which is the
+            // truth of it: that world HAS been paying day-one prices. It then
+            // climbs from there over the next few sessions rather than
+            // repricing the whole board while somebody is stood at the stall.
+            level = header.length > 4 ? Float.parseFloat(header[4]) : 1.0f;
+            announcedLevel = header.length > 5 ? Float.parseFloat(header[5]) : level;
 
             PRESSURE.clear();
             VAULTS.clear();
@@ -731,7 +845,8 @@ public final class TrapMarket {
         try {
             StringBuilder out = new StringBuilder()
                     .append(supply).append(' ').append(lastDay).append(' ').append(beat)
-                    .append(' ').append(baseline);
+                    .append(' ').append(baseline).append(' ').append(level)
+                    .append(' ').append(announcedLevel);
             PRESSURE.forEach((id, held) ->
                     out.append('\n').append(id).append(' ').append(held));
             // Tagged, because an item id always has a namespace colon in it

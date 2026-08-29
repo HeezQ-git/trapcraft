@@ -46,13 +46,31 @@ seeds ──plant on farmland──> plant (4 stages) ──break──> fresh b
 fresh buds ──drying rack, 4 min──> cured buds ──+ paper──> joint ──smoke──> Baked
 ```
 
-Three strains, each with its own effect profile:
+Six strains: three you can find, three you cross-breed by growing two of the
+first three side by side.
 
 | Strain | Baked level | Duration | On top of that |
 |--------|-------------|----------|----------------|
 | Kush   | II          | 90s      | Slowness, Regeneration |
 | Haze   | I           | 60s      | Speed, Jump Boost |
 | Purp   | III         | 120s     | Night Vision, Nausea |
+| Diesel   (K+H) | II  | 100s     | Speed, Regeneration, Resistance |
+| Midnight (K+P) | IV  | 140s     | Night Vision, Slowness, Resistance |
+| Sunset   (H+P) | II  | 90s      | Jump Boost II, Night Vision, Slow Falling |
+
+The mixing station takes two to four cured buds and returns one jar carrying a
+`Blend` component, so the set of mixes is data rather than an enum: six strains
+taken two to four at a time, repeats allowed, is 203. **Every mix whose strains
+are all different has a name** — 15 pairs, 20 triples, 15 quads — plus three
+that want the same bud twice, for 53 in `Blend.NAMED`. A named mix gets
+its own colour, a potency above what averaging its parts would give, and a bonus
+effect none of its parts have; anything else averages out and stays nameless.
+
+That rule is the feature. With six names out of 203 the likely outcome of
+walking to the station was a nameless jar, so people mixed once and went back to
+selling plain bud. Both the guide book's catalogue pages and the website table
+are generated from `Blend.NAMED`, and `BlendTest` fails the build if a
+combination loses its name or a name grows too wide for a book line.
 
 **Baked** is a real custom status effect, not stacked vanilla ones. It burns
 saturation then hunger (the munchies), heals you slowly while you're well fed,

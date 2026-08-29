@@ -2611,12 +2611,24 @@ def phone_assets() -> None:
 
 
 def stall_model() -> dict:
-    """A market stall: counter, striped awning, goods on the top.
+    """A market stall: timber frame, recessed counter, striped awning.
+
+    The awning used to hang out to -1..17 to buy a silhouette, and it bought
+    one -- along with a pixel of itself inside every neighbouring block. Two
+    stalls side by side z-fought along the seam, and one against a wall grew a
+    striped rash on the wall. Nothing here leaves the cube any more: the
+    overhang is faked from the inside instead. Corner posts sit flush with the
+    block, the counter is recessed two pixels between them, and the awning is
+    the only thing at full width -- so it still steps out over a shaded
+    counter, but only over its own.
 
     Closed shell like every other block here -- Polymer serves it on a
-    FULL_BLOCK carrier, so gaps would show a world lit as if the block were
-    solid. The awning overhangs the counter to give it a silhouette.
+    FULL_BLOCK carrier, so a straight line through it is a line into a world
+    the client has already culled. The posts are what close the corners that
+    recessing the counter opens up; drop them and you can see down the four
+    vertical edges.
     """
+    corners = [(0, 0), (14, 0), (0, 14), (14, 14)]
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
@@ -2627,9 +2639,14 @@ def stall_model() -> dict:
             "particle": f"{NS}:block/stall_counter",
         },
         "elements": [
-            box([0, 0, 0], [16, 10, 16], "counter", up="goods"),      # counter
-            box([0, 10, 0], [16, 13, 16], "goods", up="goods"),       # produce on top
-            box([-1, 13, -1], [17, 16, 17], "awning", up="awning"),   # overhanging awning
+            # Frame posts, corner to corner. A row of stalls reads as a
+            # colonnade rather than as one long striped wall.
+            *[box([x, 0, z], [x + 2, 13, z + 2], "counter") for x, z in corners],
+            box([2, 0, 2], [14, 9, 14], "counter"),                # counter, recessed
+            box([1, 9, 1], [15, 10, 15], "counter"),               # countertop, proud of it
+            box([2, 10, 2], [14, 12, 14], "goods"),                # produce on the counter
+            box([1, 12, 1], [15, 13, 15], "awning"),               # valance under the eave
+            box([0, 13, 0], [16, 16, 16], "awning", up="awning"),  # awning
         ],
     }
 

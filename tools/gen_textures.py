@@ -1146,6 +1146,9 @@ STALL_PAL = {
     "n": "#e8e2d2",   # awning stripe, cream
     "N": "#f6f2e6",   # awning, lit cream
     "g": "#3f7a33",   # produce
+    "G": "#5f9e42",   # produce, lit
+    "o": "#c07a2a",   # citrus
+    "O": "#e8a441",   # citrus, lit
     "e": "#3ba55c",   # emerald
     "E": "#6ee49a",   # emerald, lit
     "k": "#2b2018",   # shadow under the counter
@@ -1189,25 +1192,28 @@ ccccnnnnccccnnnn
 ccccnnnnccccnnnn
 """
 
+# Goods on the counter, seen edge-on: the awning covers the top of the
+# stall now, so this is only ever the band between countertop and eave.
+# Two rows tiled the height of the sprite, so any slice of it lands on a
+# whole band whatever uv the element derives.
 STALL_GOODS = """
-kkkkkkkkkkkkkkkk
-kkgkkkEkkkkgkkkk
-kgggkkekkkgggkkk
-kkgkkkkkkkkgkkkk
-kkkkkeEkkkkkkkkk
-kkkkkkekkkkkkgkk
-kkgkkkkkkkkkgggk
-kgggkkkkEkkkkgkk
-kkgkkkkkekkkkkkk
-kkkkkkkkkkkkkkkk
-kkkkgkkkkkeEkkkk
-kkkgggkkkkekkkkk
-kkkkgkkkkkkkkkkk
-kkkkkkkkkkkkkkkk
-kkkkkkEkkkkkkkkk
-kkkkkkekkkkkkkkk
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
 """
-
 
 # --- the coin toss and the card table -------------------------------------
 

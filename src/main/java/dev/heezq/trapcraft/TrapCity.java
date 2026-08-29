@@ -1078,7 +1078,11 @@ public final class TrapCity {
                     // other float in this file goes through String.format,
                     // which writes a comma for a decimal point under a locale
                     // that uses one -- in a comma-separated file.
-                    .append(Math.round(TrapCrime.hardship() * 100)).append('\n');
+                    .append(Math.round(TrapCrime.hardship() * 100)).append(',')
+                    // A whole percent for the same reason as the line above:
+                    // a locale that writes 3,95 for a float would put a second
+                    // comma in a comma-separated file.
+                    .append(Math.round(TrapMarket.level() * 100)).append('\n');
             Files.writeString(logFile, row.toString(), java.nio.charset.StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.CREATE,
                     java.nio.file.StandardOpenOption.APPEND);
@@ -1288,7 +1292,12 @@ public final class TrapCity {
                 // beside the other city columns would have every field after
                 // them read under the wrong heading.
                 .append("stations,officers,police_budget,police_paid,police_spend,")
-                .append("fines,crimes,crimes_solved,crime_stolen,hardship_pct\n");
+                .append("fines,crimes,crimes_solved,crime_stolen,hardship_pct,")
+                // On the END, like every column before it. This is the one
+                // that says whether the board has caught up with how rich the
+                // server got -- a supply column climbing beside a flat level
+                // is exactly the complaint the price level was added to fix.
+                .append("market_level_pct\n");
         return out.toString();
     }
 

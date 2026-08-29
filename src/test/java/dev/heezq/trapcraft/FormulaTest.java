@@ -218,6 +218,102 @@ class FormulaTest {
     }
 
     @Test
+    void aRicherWorldEventuallyPaysMore() {
+        // The counterweight to aRicherWorldIsNotAPermanentlyDearerOne, and the
+        // reason the price level exists at all. The index coming home is
+        // correct -- but a server that has earned 400,000e should not still be
+        // paying the prices that were written for its first afternoon.
+        float level = 1.0f;
+        for (int beat = 0; beat < 4000; beat++) {
+            level = TrapMath.levelAfter(level, 400_000f);
+        }
+        assertEquals(TrapMath.priceRest(400_000f), level, 0.02f,
+                "a rich world should end up where /market said it would: " + level);
+        assertTrue(level > 3.0f, "and that should be a real move: " + level);
+        assertTrue(level < TrapMath.LEVEL_MAX, "but not the guard rail: " + level);
+
+        // And it stays there. This is the one force that does not come home.
+        float settled = level;
+        for (int beat = 0; beat < 4000; beat++) {
+            level = TrapMath.levelAfter(level, 400_000f);
+        }
+        assertEquals(settled, level, 0.05f, "the era should not evaporate: " + level);
+    }
+
+    @Test
+    void thePriceLevelCannotChaseItsOwnTail() {
+        // Prices rising makes wages, takings and sell-backs rise with them, so
+        // a level read off the NOMINAL money supply would see its own effect
+        // as fresh wealth and go again -- once around that loop per beat, for
+        // ever. Deflating the supply by the level already paid for is what
+        // stops it. Simulated at full pass-through, which is the worst case.
+        float level = 1.0f;
+        for (int beat = 0; beat < 20_000; beat++) {
+            level = TrapMath.levelAfter(level, 400_000f * level);
+        }
+        assertTrue(level <= TrapMath.LEVEL_MAX,
+                "the board must not run away from a world it inflated: " + level);
+        float real = (float) Math.pow(200.0, TrapMath.LEVEL_ELASTICITY);
+        assertEquals(Math.min(real, TrapMath.LEVEL_MAX), level, 0.05f,
+                "it should settle on the world's REAL wealth: " + level);
+    }
+
+    @Test
+    void thePriceLevelCreeps() {
+        // Slow enough that nobody is quoted two different numbers for the same
+        // stack in one shopping trip. A board that repriced itself the moment
+        // somebody got paid would read as a bug.
+        float one = TrapMath.levelAfter(1.0f, 9_000_000f);
+        assertEquals(1.0f + TrapMath.LEVEL_RISE, one, 0.0001f);
+        // And it gives back more slowly than it takes, so a bad week is not a
+        // free reset of everybody's savings.
+        float down = 4.0f - TrapMath.levelAfter(4.0f, 0f);
+        assertTrue(down < TrapMath.LEVEL_RISE, "deflation is the slow way: " + down);
+    }
+
+    @Test
+    void flatPricesAreTheFloor() {
+        // The catalogue was written as what a thing is worth, not as an
+        // opening offer: an emptied-out world gets cheap by the index and
+        // stops there.
+        float level = 3.0f;
+        for (int beat = 0; beat < 100_000; beat++) {
+            level = TrapMath.levelAfter(level, 0f);
+        }
+        assertEquals(1.0f, level, 0.0001f);
+    }
+
+    @Test
+    void aWholeShelfMovesTogether() {
+        assertEquals(TrapMath.sector(70, "materials"), TrapMath.sector(70, "materials"), 0.0f);
+        assertNotEquals(TrapMath.sector(70, "materials"), TrapMath.sector(70, "food"));
+        for (long beat = 0; beat < 400; beat++) {
+            float mood = TrapMath.sector(beat, "materials");
+            assertTrue(Math.abs(mood - 1.0f) <= TrapMath.SECTOR_DRIFT + 0.001f,
+                    "a shelf should not wander off on its own: " + mood);
+        }
+    }
+
+    @Test
+    void aShelfMovesSlowerThanTheThingsOnIt() {
+        // Otherwise it is a second helping of drift rather than a story about
+        // ore being up this week.
+        assertTrue(TrapMath.SECTOR_WINDOW > TrapMath.DRIFT_WINDOW);
+    }
+
+    @Test
+    void aTownWithMoneyBidsPricesUp() {
+        // Read off the same number the shops trade on, so funding the payroll
+        // and starving it both show up on the board -- and in opposite
+        // directions, or it is a tax rather than a market.
+        assertEquals(1.0f, TrapMath.bidding(1.0f), 0.0001f);
+        assertTrue(TrapMath.bidding(2.0f) > 1.0f);
+        assertTrue(TrapMath.bidding(0.0f) < 1.0f);
+        assertEquals(1.0f + TrapMath.BIDDING, TrapMath.bidding(99f), 0.0001f,
+                "a town that got lucky once must not own the price of bread");
+    }
+
+    @Test
     void twoPlayersAtTheSameStallSeeTheSamePrice() {
         assertEquals(TrapMath.drift(40, "minecraft:diamond"),
                 TrapMath.drift(40, "minecraft:diamond"), 0.0f);

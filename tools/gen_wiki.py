@@ -21,6 +21,7 @@ import glob
 import html
 import io
 import json
+import math
 import pathlib
 import re
 import sys
@@ -654,9 +655,16 @@ def craft_row(pairs) -> str:
         recipe_grid(name, label) for name, label in pairs) + "</div>"
 
 
+def mixes_possible() -> int:
+    """Every mix the station accepts: n strains taken 2..4, repeats allowed."""
+    n = len(DATA["strains"])
+    return sum(math.comb(n + k - 1, k) for k in (2, 3, 4))
+
+
 def blend_rows() -> str:
     out = []
-    for b in DATA["blends"]:
+    # Widest last: the table reads as the ladder the potencies actually are.
+    for b in sorted(DATA["blends"], key=lambda b: (len(b["parts"]), b["name"])):
         bonus = ", ".join(b["bonus"]) or "—"
         out.append([f'<span class="dot" style="--tint:{b["colour"]}"></span>'
                     f'<strong>{esc(b["name"])}</strong>',
@@ -837,19 +845,23 @@ def build() -> str:
     <h3 class="sub">Mieszanki</h3>
     <p>Mieszalnik bierze od dwóch do czterech rodzajów suszu i robi z nich coś, co nie
     jest żadnym z nich. Sześć odmian brane po dwie do czterech daje
-    <strong>203 różne przepisy</strong>, a kilka z nich ma nazwy warte odkrycia.
+    <strong>{mixes_possible()} różnych przepisów</strong>, a {len(DATA["blends"])} z nich ma
+    własną nazwę.
     Wrzucasz całe stacki; maszyna przerabia wszystko jednym kliknięciem.</p>
     <p class="note">Klasa idzie z <em>najgorszego</em> slotu. Uśrednianie pozwoliłoby
     jedną szyszką klasy Topowe przemycić trzy Słabe.</p>"""))
 
 
-    sections.append(section("03", "blends", "Mieszanki", "203 przepisy, sześć z nazwą", f"""
+    sections.append(section("03", "blends", "Mieszanki",
+                            f"{mixes_possible()} przepisów, {len(DATA['blends'])} z nazwą", f"""
     <p class="lede">Od dwóch do czterech rodzajów suszu wrzucasz do mieszalnika i wychodzi
     z niego coś, co nie jest żadnym z nich. Efekty to suma składników, każdy przeskalowany
     swoim udziałem — mieszanka w trzech czwartych z Kusha działa głównie jak Kush.</p>
     <p>Powtórki się liczą, więc dwa Kush i jeden Purp to nie to samo, co po jednym
     z każdego. Sześć odmian brane po dwie do czterech, bez znaczenia kolejności, daje
-    <strong>203 różne przepisy</strong>. Te poniżej dają więcej, niż wynikałoby z sumy:</p>
+    <strong>{mixes_possible()} różnych przepisów</strong>. KAŻDY skład z samych różnych
+    odmian ma nazwę, kolor i efekt, którego nie daje żaden ze składników — to te poniżej.
+    Powtórzona odmiana zwykle daje mieszankę bezimienną:</p>
     {blend_rows()}
     <p class="note">Klasa mieszanki idzie z <em>najgorszego</em> slotu, a mieszalnik mówi
     ci to przed zatwierdzeniem. Zmieszanie klasy Topowe ze Słabymi da Słabe.</p>"""))
@@ -1639,7 +1651,8 @@ def build() -> str:
     body = "".join(sections)
 
     return TEMPLATE.format(nav=nav, sections=body, lines=d["declared_lines"],
-                           strains=len(d["strains"]), awards=len(d["awards"]))
+                           strains=len(d["strains"]), awards=len(d["awards"]),
+                           blends=len(d["blends"]))
 
 
 TEMPLATE = """<!doctype html>
@@ -2001,7 +2014,7 @@ footer a:hover {{ text-decoration: underline; }}
       <div class="figs">
         <div><b>{lines}</b><span>wycenionych pozycji</span></div>
         <div><b>{strains}</b><span>odmian</span></div>
-        <div><b>203</b><span>mieszanek</span></div>
+        <div><b>{blends}</b><span>nazwanych mieszanek</span></div>
         <div><b>{awards}</b><span>osiągnięć</span></div>
       </div>
     </header>
