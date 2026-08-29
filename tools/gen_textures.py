@@ -1146,6 +1146,9 @@ STALL_PAL = {
     "n": "#e8e2d2",   # awning stripe, cream
     "N": "#f6f2e6",   # awning, lit cream
     "g": "#3f7a33",   # produce
+    "G": "#5f9e42",   # produce, lit
+    "o": "#c07a2a",   # citrus
+    "O": "#e8a441",   # citrus, lit
     "e": "#3ba55c",   # emerald
     "E": "#6ee49a",   # emerald, lit
     "k": "#2b2018",   # shadow under the counter
@@ -1189,25 +1192,28 @@ ccccnnnnccccnnnn
 ccccnnnnccccnnnn
 """
 
+# Goods on the counter, seen edge-on: the awning covers the top of the
+# stall now, so this is only ever the band between countertop and eave.
+# Two rows tiled the height of the sprite, so any slice of it lands on a
+# whole band whatever uv the element derives.
 STALL_GOODS = """
-kkkkkkkkkkkkkkkk
-kkgkkkEkkkkgkkkk
-kgggkkekkkgggkkk
-kkgkkkkkkkkgkkkk
-kkkkkeEkkkkkkkkk
-kkkkkkekkkkkkgkk
-kkgkkkkkkkkkgggk
-kgggkkkkEkkkkgkk
-kkgkkkkkekkkkkkk
-kkkkkkkkkkkkkkkk
-kkkkgkkkkkeEkkkk
-kkkgggkkkkekkkkk
-kkkkgkkkkkkkkkkk
-kkkkkkkkkkkkkkkk
-kkkkkkEkkkkkkkkk
-kkkkkkekkkkkkkkk
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
+kGGkkOOkkCCkkEEk
+gGGgoOOocCCceEEe
 """
-
 
 # --- the coin toss and the card table -------------------------------------
 
@@ -3891,6 +3897,205 @@ WITHDRAWAL_ICON = """
 """
 
 
+# ---------------------------------------------------------------- television
+
+# A wood-veneer console set with a charcoal face: the shape everybody's
+# grandparents had in the corner, and the one that still reads as "television"
+# at sixteen pixels when a flat panel reads as a black rectangle.
+TV_PAL = {
+    "w": "#8d7a55",     # veneer, dark grain
+    "W": "#b39a68",     # veneer, light grain
+    "c": "#2a3038",     # charcoal case
+    "C": "#3d454f",     # charcoal, lit
+    "s": "#4a525c",     # speaker grille
+    "b": "#191d23",     # bezel body
+    "B": "#39424e",     # bezel, top highlight
+    "m": "#5a6070",     # metal, shadow
+    "M": "#9098a8",     # metal, body
+    "L": "#ccd3de",     # metal, highlight
+    "r": "#d9503f",     # power lamp
+    "k": "#0d1014",     # tube, off
+    "n": "#1d242c",     # tube, glow under the scan line
+    "g": "#4fd07a",     # ticker, green
+    "G": "#b7ffcf",     # ticker, green under the scan line
+    "y": "#d8a63a",     # ticker, amber
+    "Y": "#ffe08a",     # ticker, amber under the scan line
+}
+
+TV_CASE = """
+WWwWWWwWWWWwWWWw
+wWWWwWWWwWWWWwWW
+WWwWWWWwWWWwWWWW
+WwWWWwWWWWwWWWwW
+WWWwWWWwWWWwWWWW
+wWWWWwWWWwWWWWwW
+WWwWWWwWWWWwWWWw
+WWWwWWWWwWWWwWWW
+wWWWwWWWwWWWWwWW
+WWwWWWWwWWWwWWWw
+WWWwWWWwWWWWwWWW
+wWWWWwWWWwWWWwWW
+WWwWWWwWWWWwWWWw
+WWWwWWWWwWWWwWWW
+wWWWwWWWwWWWWwWW
+cccccccccccccccc
+"""
+
+# The lid, with the aerial's mount sitting where the rods come out of it.
+TV_TOP = """
+cccccccccccccccc
+cWWwWWWwWWWwWWWc
+cwWWWwWWWWwWWWWc
+cWWWwWWWwWWWwWWc
+cWwWWWWwWWWWwWWc
+cWWWwWWWwWWWwWWc
+cWWwWWmMMmWWWWWc
+cwWWWWmLLmWWWWWc
+cWWWwWmLLmWWWWWc
+cWWwWWmMMmWWWWWc
+cWWWwWWWwWWWwWWc
+cWwWWWWwWWWWwWWc
+cWWWwWWWwWWWwWWc
+cwWWWwWWWWwWWWWc
+cWWwWWWwWWWwWWWc
+cccccccccccccccc
+"""
+
+# The face behind the bezel. Only its top band, its two side margins and the
+# strip under the controls are ever visible -- the middle is covered by the
+# tube. The grille and the standby lamp live in that top band because it is
+# the only part of this texture anybody will ever see.
+TV_FRONT = """
+WWWWWWWWWWWWWWWW
+WcssscccccccccrW
+WcssscccccccccCW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WccccccccccccccW
+WWWWWWWWWWWWWWWW
+"""
+
+# The bezel is drawn on four thin frame pieces, each wearing the WHOLE map --
+# so this has to be a material, not a picture. A lit top edge over a dark body
+# over a black lip reads as moulded plastic at any squeeze.
+TV_BEZEL = """
+BBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBB
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb
+kkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkk
+"""
+
+# The control strip, squeezed to under two pixels tall on the model: every row
+# is the same on purpose, so what survives the squeeze is the arrangement
+# across it -- grille, gap, two knobs.
+TV_DIAL = """
+cccccccccccccccc
+csssscsssscmMmcc
+csssscsssscmLmcc
+csssscsssscmMmcc
+csssscsssscmMmcc
+csssscsssscmLmcc
+csssscsssscmMmcc
+csssscsssscmMmcc
+csssscsssscmLmcc
+csssscsssscmMmcc
+csssscsssscmMmcc
+csssscsssscmLmcc
+csssscsssscmMmcc
+csssscsssscmMmcc
+csssscsssscmLmcc
+cccccccccccccccc
+"""
+
+# The aerial. A pixel and a bit wide on the model, so only what varies DOWN it
+# survives: bright at the tip, dull at the mount.
+TV_ROD = """
+LLLLLLLLLLLLLLLL
+LLLLLLLLLLLLLLLL
+MMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMM
+MMMMMMMMMMMMMMMM
+mmmmmmmmmmmmmmmm
+MMMMMMMMMMMMMMMM
+mmmmmmmmmmmmmmmm
+mmmmmmmmmmmmmmmm
+MMMMMMMMMMMMMMMM
+mmmmmmmmmmmmmmmm
+mmmmmmmmmmmmmmmm
+mmmmmmmmmmmmmmmm
+mmmmmmmmmmmmmmmm
+mmmmmmmmmmmmmmmm
+"""
+
+
+def tv_screen_frames() -> list[str]:
+    """Prices scrolling past, with the tube's scan line sweeping down them.
+
+    Two tickers running opposite ways rather than one picture sliding about:
+    a single direction reads as the whole screen being dragged, and a screen
+    that is being dragged is a screen that is broken.
+
+    Nothing on here is legible and nothing is meant to be -- the numbers a
+    player actually reads are in the container screen. This is the set being
+    ON, which is the difference between furniture and a room somebody sits in.
+    """
+    body = [
+        "gggghhgghhgggh",
+        "hhhhhhhhhhhhhh",
+        "yyyyyyhhyyyyhh",
+        "hhhhhhhhhhhhhh",
+        "ggghhggggddgg2",
+        "hhhhhhhhhhhhhh",
+        "yyyyhhyyyhhyyh",
+        "hhhhhhhhhhhhhh",
+        "gghhggghhggggh",
+        "hhhhhhhhhhhhhh",
+        "yyyyyhhyyhhyyy",
+        "hhhhhhhhhhhhhh",
+        "gggghhggghhggh",
+        "hhhhhhhhhhhhhh",
+    ]
+    # 'h', 'd' and '2' are stand-ins for the tube's own black, written as
+    # letters so a shift never lands a '.' (transparent) inside the picture.
+    body = [row.replace("h", "k").replace("d", "k").replace("2", "k")
+            for row in body]
+
+    frames = []
+    for step in range(6):
+        rows = ["k" * 16]
+        for index, row in enumerate(body):
+            shift = (step if index % 4 == 0 else -step) % len(row)
+            rolled = row[shift:] + row[:shift]
+            if index == (step * 2) % len(body):
+                rolled = rolled.replace("k", "n").replace("g", "G").replace("y", "Y")
+            rows.append("k" + rolled + "k")
+        rows.append("k" * 16)
+        frames.append("\n".join(rows))
+    return frames
+
+
 def filled(ascii_map: str, background: str) -> str:
     """Replace transparent padding with a painted background character.
 
@@ -4035,6 +4240,14 @@ def main() -> None:
     write(render(COURT_FACE, COURT_PAL), "block", "court_face.png")
     write(render(COURT_SIDE, COURT_PAL), "block", "court_side.png")
     write(render(COURT_TOP, COURT_PAL), "block", "court_top.png")
+    write(render(TV_CASE, TV_PAL), "block", "tv_case.png")
+    write(render(TV_TOP, TV_PAL), "block", "tv_top.png")
+    write(render(TV_FRONT, TV_PAL), "block", "tv_front.png")
+    write(render(TV_BEZEL, TV_PAL), "block", "tv_bezel.png")
+    write(render(TV_DIAL, TV_PAL), "block", "tv_dial.png")
+    write(render(TV_ROD, TV_PAL), "block", "tv_rod.png")
+    write_animated([render(frame, TV_PAL) for frame in tv_screen_frames()],
+                   3, "block", "tv_screen.png")
     write(render(POLICE_FACE, POLICE_PAL), "block", "police_face.png")
     write(render(POLICE_SIDE, POLICE_PAL), "block", "police_side.png")
     write(render(POLICE_TOP, POLICE_PAL), "block", "police_top.png")

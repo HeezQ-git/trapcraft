@@ -1,0 +1,33 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:television"
+    },
+    "title": "Kana\u0142 sportowy",
+    "description": "Postaw telewizor i w\u0142\u0105cz zak\u0142ady.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:television"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "got"
+    ]
+  ],
+  "parent": "trapcraft:floor"
+}

@@ -63,6 +63,7 @@ public final class TrapLedger {
         STALL(true, "stall"),
         CASINO(true, "casino"),
         CONTRACT(true, "contracts"),
+        BOUNTY(true, "nagrody"),
         CREW(true, "pensje ekipy"),
         RENT(true, "rent"),
         TAX(true, "tax"),

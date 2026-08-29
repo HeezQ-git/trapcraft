@@ -1003,7 +1003,13 @@ public final class TrapDealing {
     private static int premium(int base) {
         // Always at least one emerald better than the trader, or the low grades
         // round back down to the same price and the premium is invisible.
-        return Math.max(base + 1, Math.round(base * PREMIUM));
+        int paid = Math.max(base + 1, Math.round(base * PREMIUM));
+        // In today's money, like everything on the shelves. The grade tables
+        // are written in first-day emeralds and the shop's are not any more,
+        // so without this a Fire joint would buy less and less every week
+        // while the work behind it stayed the same. See
+        // {@link TrapMarket#atTodaysPrices}.
+        return TrapMarket.atTodaysPrices(paid);
     }
 
     /**

@@ -470,6 +470,8 @@ def lang() -> None:
         "item.trapcraft.toss": "Rzut monetą",
         "block.trapcraft.blackjack": "Blackjack",
         "block.trapcraft.scratch": "Zdrapki",
+        "block.trapcraft.television": "Telewizor",
+        "item.trapcraft.television": "Telewizor",
         "block.trapcraft.casino_bar": "Bar",
         "item.trapcraft.casino_bar": "Bar",
         "item.trapcraft.scratch": "Zdrapki",
@@ -1787,6 +1789,98 @@ def scratch_furniture() -> list:
     ]
 
 
+def television_model() -> dict:
+    """A console set: closed cabinet, proud bezel, tube recessed behind it.
+
+    The cabinet fills the cube EXACTLY, which is what lets the carrier claim
+    FULL_BLOCK honestly -- no sightline through it on any axis, so no X-ray
+    hole against a wall. Everything that gives it a silhouette is bolted to
+    the OUTSIDE of that cube, where proud geometry is free and hollow geometry
+    would have cost a leaf state and swayed in the wind like a hedge.
+
+    The screen sits at z=-0.55, INSIDE a bezel that stands out to z=-1.1, so
+    the tube reads as recessed without the cabinet having a hole in it. Its
+    faces name their own uv -- the whole drawing on a twelve-by-nine plate --
+    because a box outside the cube derives a uv outside the sprite, and a
+    negative v samples whatever the atlas happened to stitch above it.
+    """
+    screen_uv = [0, 0, 16, 16]
+    elements = [
+        # The cabinet. One box, and the only one that matters to check_models.
+        box([0, 0, 0], [16, 16, 16], "case", north="front", up="top", down="top"),
+        # Bezel: four sides of a frame standing a pixel proud of the face.
+        box([1, 11.5, -1.1], [15, 13.5, 0], "bezel", uv=screen_uv),
+        box([1, 2.5, -1.1], [15, 4.5, 0], "bezel", uv=screen_uv),
+        box([1, 4.5, -1.1], [3, 11.5, 0], "bezel", uv=screen_uv),
+        box([13, 4.5, -1.1], [15, 11.5, 0], "bezel", uv=screen_uv),
+        # The tube, sunk behind the frame.
+        box([3, 4.5, -0.55], [13, 11.5, -0.5], "screen", uv=screen_uv),
+        # Control strip along the bottom of the face: two dials and a grille.
+        box([2, 0.6, -0.7], [14, 2.2, 0], "dial", uv=screen_uv),
+        # Aerial: rabbit ears. Splayed about Z so they open left and right --
+        # about X they lean towards and away from the viewer, which from the
+        # front is two rods drawn exactly on top of each other and reads as one
+        # mast. An aerial is only an aerial when you can see the V.
+        {**box([7.4, 16, 7.4], [8.6, 25, 8.6], "rod", uv=screen_uv),
+         "rotation": {"origin": [8, 16, 8], "axis": "z", "angle": 22.5}},
+        {**box([7.4, 16, 7.4], [8.6, 25, 8.6], "rod", uv=screen_uv),
+         "rotation": {"origin": [8, 16, 8], "axis": "z", "angle": -22.5}},
+    ]
+    return {
+        "parent": "minecraft:block/block",
+        "ambientocclusion": False,
+        "textures": {
+            "case": f"{NS}:block/tv_case",
+            "front": f"{NS}:block/tv_front",
+            "top": f"{NS}:block/tv_top",
+            "bezel": f"{NS}:block/tv_bezel",
+            "screen": f"{NS}:block/tv_screen",
+            "dial": f"{NS}:block/tv_dial",
+            "rod": f"{NS}:block/tv_rod",
+            "particle": f"{NS}:block/tv_case",
+        },
+        "elements": elements,
+        # Vanilla's block parent points these at a full cube; a set with an
+        # aerial needs its own, or the item burst out of the slot.
+        "display": {
+            "gui": {"rotation": [30, 225, 0], "translation": [0, -1, 0],
+                    "scale": [0.5, 0.5, 0.5]},
+            "fixed": {"scale": [0.45, 0.45, 0.45]},
+            "ground": {"scale": [0.25, 0.25, 0.25]},
+            "head": {"scale": [0.8, 0.8, 0.8]},
+        },
+    }
+
+
+def television_assets() -> None:
+    put(f"assets/{NS}/models/block/television.json", television_model())
+    put(f"assets/{NS}/models/item/television.json", {"parent": f"{NS}:block/television"})
+    put(f"assets/{NS}/items/television.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/television"},
+    })
+    put(f"assets/{NS}/blockstates/television.json", {
+        "variants": facing_variants(f"{NS}:block/television"),
+    })
+    # Iron for the case, glass for the tube, an amethyst shard for the picture
+    # and redstone for whatever is behind it.
+    put(f"data/{NS}/recipe/television.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["III", "GAG", "IRI"],
+        "key": {"I": "minecraft:iron_ingot", "G": "minecraft:glass",
+                "A": "minecraft:amethyst_shard", "R": "minecraft:redstone"},
+        "result": {"id": f"{NS}:television", "count": 1},
+    })
+    put(f"data/{NS}/loot_table/blocks/television.json", {
+        "type": "minecraft:block",
+        "pools": [{
+            "rolls": 1,
+            "entries": [{"type": "minecraft:item", "name": f"{NS}:television"}],
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+        }],
+    })
+
+
 def facing_variants(model: str, half: str | None = None) -> dict:
     """Blockstate variants for a TurnableBlock, spun like a furnace.
 
@@ -2023,6 +2117,16 @@ def advancements() -> None:
           "minecraft:snowball", "floor", frame="goal")
     award("whole_floor", "Kasa kasyna", "Wygraj coś na wszystkich czterech automatach.",
           "minecraft:emerald", "floor", frame="challenge")
+
+    # The bookmaker. Under floor rather than root: it is the same instinct
+    # and the same emeralds, and a player who has never stood at a machine is
+    # not going to go looking for a television.
+    award("bookmaker", "Kanał sportowy", "Postaw telewizor i włącz zakłady.",
+          f"{NS}:television", "floor", trigger=has(f"{NS}:television"))
+    award("punter", "Trafione", "Rozlicz pierwszy wygrany kupon.",
+          "minecraft:emerald", "bookmaker", frame="goal")
+    award("coupon", "Czwórka", "Trafi kupon z czterema pozycjami.",
+          "minecraft:written_book", "punter", frame="challenge")
 
     award("followed", "Ktoś cię śledził",
           "Sprzedaj z ręki raz za dużo i przekonaj się, kto patrzył.",
@@ -2619,12 +2723,24 @@ def phone_assets() -> None:
 
 
 def stall_model() -> dict:
-    """A market stall: counter, striped awning, goods on the top.
+    """A market stall: timber frame, recessed counter, striped awning.
+
+    The awning used to hang out to -1..17 to buy a silhouette, and it bought
+    one -- along with a pixel of itself inside every neighbouring block. Two
+    stalls side by side z-fought along the seam, and one against a wall grew a
+    striped rash on the wall. Nothing here leaves the cube any more: the
+    overhang is faked from the inside instead. Corner posts sit flush with the
+    block, the counter is recessed two pixels between them, and the awning is
+    the only thing at full width -- so it still steps out over a shaded
+    counter, but only over its own.
 
     Closed shell like every other block here -- Polymer serves it on a
-    FULL_BLOCK carrier, so gaps would show a world lit as if the block were
-    solid. The awning overhangs the counter to give it a silhouette.
+    FULL_BLOCK carrier, so a straight line through it is a line into a world
+    the client has already culled. The posts are what close the corners that
+    recessing the counter opens up; drop them and you can see down the four
+    vertical edges.
     """
+    corners = [(0, 0), (14, 0), (0, 14), (14, 14)]
     return {
         "parent": "minecraft:block/block",
         "ambientocclusion": False,
@@ -2635,9 +2751,14 @@ def stall_model() -> dict:
             "particle": f"{NS}:block/stall_counter",
         },
         "elements": [
-            box([0, 0, 0], [16, 10, 16], "counter", up="goods"),      # counter
-            box([0, 10, 0], [16, 13, 16], "goods", up="goods"),       # produce on top
-            box([-1, 13, -1], [17, 16, 17], "awning", up="awning"),   # overhanging awning
+            # Frame posts, corner to corner. A row of stalls reads as a
+            # colonnade rather than as one long striped wall.
+            *[box([x, 0, z], [x + 2, 13, z + 2], "counter") for x, z in corners],
+            box([2, 0, 2], [14, 9, 14], "counter"),                # counter, recessed
+            box([1, 9, 1], [15, 10, 15], "counter"),               # countertop, proud of it
+            box([2, 10, 2], [14, 12, 14], "goods"),                # produce on the counter
+            box([1, 12, 1], [15, 13, 15], "awning"),               # valance under the eave
+            box([0, 13, 0], [16, 16, 16], "awning", up="awning"),  # awning
         ],
     }
 
@@ -3468,6 +3589,7 @@ def main() -> None:
                  {"A": "minecraft:paper", "G": "minecraft:gold_ingot",
                   "P": "#minecraft:planks", "W": "minecraft:red_wool"},
                  scratch_furniture())
+    television_assets()
     advancements()
     wand_assets()
     case_assets()

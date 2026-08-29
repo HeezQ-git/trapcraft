@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "III",
+    "GAG",
+    "IRI"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass",
+    "A": "minecraft:amethyst_shard",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "trapcraft:television",
+    "count": 1
+  }
+}

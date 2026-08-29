@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.MathHelper;
 
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * A custom mix: two to four buds put through the mixing station.
@@ -24,8 +26,9 @@ import java.util.Map;
  * Effects are the union of the parts, each scaled by its share, so a mix that
  * is three-quarters Kush feels mostly like Kush. On top of that sit
  * {@link Recipe named synergies}: specific combinations that do something the
- * arithmetic wouldn't give you. Those are the reason to experiment rather than
- * just picking your favourite strain and doubling it.
+ * arithmetic wouldn't give you. Fifty-three of the 203 are named, and the fifty
+ * that follow a rule -- every mix whose strains are all different -- are what
+ * make the station worth walking to with whatever you happen to be carrying.
  */
 public record Blend(List<Strain> parts, int grade) {
     /**
@@ -75,51 +78,302 @@ public record Blend(List<Strain> parts, int grade) {
     }
 
     /**
+     * A bonus effect, in seconds. Fifty-three recipes' worth of
+     * {@code new StatusEffectInstance(x, 90 * 20, 0, false, true)} is a wall
+     * nobody can read a mistake out of.
+     */
+    private static StatusEffectInstance fx(RegistryEntry<StatusEffect> type, int seconds, int amp) {
+        return new StatusEffectInstance(type, seconds * 20, amp, false, true);
+    }
+
+    /**
+     * The combinations worth finding, and there is a rule to them: EVERY mix of
+     * strains that are all different has a name. Two of six is fifteen names,
+     * three is twenty, four is fifteen -- fifty in total, plus the three below
+     * that want the same bud twice.
+     *
+     * The rule is the point. Before it, six of the two hundred and three
+     * possible mixes were named, so the overwhelmingly likely outcome of
+     * walking up to the station with an armful of buds was a nameless jar worth
+     * less than what went into it, and the station was a thing people tried
+     * once. Now the question at the hopper is "which mix", not "will this be
+     * anything" -- and a mix that ISN'T anything is specifically one where you
+     * doubled a bud up, which is a thing you did on purpose.
+     *
      * Order doesn't matter and duplicates do, so these match as multisets.
      * Everything not listed here still blends -- it just doesn't get a name.
      */
     private static final List<Recipe> NAMED = List.of(
-            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.PURP),
-                    "Trinity", 0xE8D44A, 1.35F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.HERO_OF_THE_VILLAGE,
-                            60 * 20, 0, false, true))),
+            // --- two strains: every pair has a name
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE),
+                    "Bootleg", 0x74A83C, 1.22F,
+                    List.of(fx(StatusEffects.HASTE, 90, 0))),
 
-            new Recipe(List.of(Strain.MIDNIGHT, Strain.MIDNIGHT, Strain.PURP),
-                    "Void", 0x2A1B4A, 1.45F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.INVISIBILITY,
-                            40 * 20, 0, false, true))),
+            new Recipe(List.of(Strain.KUSH, Strain.PURP),
+                    "Molasses", 0x5E4E70, 1.20F,
+                    List.of(fx(StatusEffects.ABSORPTION, 90, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.DIESEL),
+                    "Anvil", 0x5F7A3E, 1.24F,
+                    List.of(fx(StatusEffects.STRENGTH, 60, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.MIDNIGHT),
+                    "Undertow", 0x3E5C63, 1.22F,
+                    List.of(fx(StatusEffects.WATER_BREATHING, 120, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.SUNSET),
+                    "Ember", 0x8E7A38, 1.20F,
+                    List.of(fx(StatusEffects.FIRE_RESISTANCE, 90, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP),
+                    "Static", 0x8C7ABF, 1.18F,
+                    List.of(fx(StatusEffects.GLOWING, 60, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.DIESEL),
+                    "Courier", 0x8FBE4E, 1.26F,
+                    List.of(fx(StatusEffects.SATURATION, 15, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.MIDNIGHT),
+                    "Bluebird", 0x7A93C6, 1.22F,
+                    List.of(fx(StatusEffects.LUCK, 120, 0))),
 
             new Recipe(List.of(Strain.HAZE, Strain.SUNSET),
                     "Daybreak", 0xFFC65A, 1.20F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.SLOW_FALLING,
-                            90 * 20, 0, false, true))),
+                    List.of(fx(StatusEffects.SLOW_FALLING, 90, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.DIESEL),
+                    "Swamp", 0x6E7A52, 1.24F,
+                    List.of(fx(StatusEffects.HEALTH_BOOST, 120, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.MIDNIGHT),
+                    "Ghost", 0x5A4A8E, 1.26F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 20, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.SUNSET),
+                    "Sherbet", 0xC77AA8, 1.20F,
+                    List.of(fx(StatusEffects.REGENERATION, 60, 0))),
+
+            new Recipe(List.of(Strain.DIESEL, Strain.MIDNIGHT),
+                    "Trawler", 0x5E7A78, 1.24F,
+                    List.of(fx(StatusEffects.DOLPHINS_GRACE, 90, 0))),
+
+            new Recipe(List.of(Strain.DIESEL, Strain.SUNSET),
+                    "Payday", 0xA8934A, 1.22F,
+                    List.of(fx(StatusEffects.HERO_OF_THE_VILLAGE, 45, 0))),
+
+            new Recipe(List.of(Strain.MIDNIGHT, Strain.SUNSET),
+                    "Tide", 0x7A6A9E, 1.24F,
+                    List.of(fx(StatusEffects.CONDUIT_POWER, 90, 0))),
+
+            // --- three strains
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.PURP),
+                    "Trinity", 0xE8D44A, 1.35F,
+                    List.of(fx(StatusEffects.HERO_OF_THE_VILLAGE, 60, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.DIESEL),
+                    "Overtime", 0x7E9A44, 1.38F,
+                    List.of(fx(StatusEffects.HASTE, 120, 1),
+                            fx(StatusEffects.SATURATION, 10, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.MIDNIGHT),
+                    "Graveyard", 0x4A6470, 1.36F,
+                    List.of(fx(StatusEffects.HASTE, 150, 0),
+                            fx(StatusEffects.WATER_BREATHING, 150, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.SUNSET),
+                    "Brunch", 0xA8B04A, 1.34F,
+                    List.of(fx(StatusEffects.SATURATION, 15, 0),
+                            fx(StatusEffects.ABSORPTION, 120, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.DIESEL),
+                    "Roadside", 0x6E6A50, 1.38F,
+                    List.of(fx(StatusEffects.STRENGTH, 90, 0),
+                            fx(StatusEffects.HEALTH_BOOST, 150, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.MIDNIGHT),
+                    "Cellar", 0x4A3E64, 1.40F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 30, 0),
+                            fx(StatusEffects.ABSORPTION, 120, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.SUNSET),
+                    "Jam", 0x9A5E70, 1.34F,
+                    List.of(fx(StatusEffects.FIRE_RESISTANCE, 150, 0),
+                            fx(StatusEffects.ABSORPTION, 90, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Foreman", 0x4E6A50, 1.42F,
+                    List.of(fx(StatusEffects.STRENGTH, 90, 0),
+                            fx(StatusEffects.HASTE, 120, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.DIESEL, Strain.SUNSET),
+                    "Backfire", 0x8A8A3E, 1.38F,
+                    List.of(fx(StatusEffects.FIRE_RESISTANCE, 180, 0),
+                            fx(StatusEffects.HASTE, 120, 1))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Lullaby", 0x6A6A8E, 1.36F,
+                    List.of(fx(StatusEffects.SLOW_FALLING, 150, 0),
+                            fx(StatusEffects.HEALTH_BOOST, 150, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.DIESEL),
+                    "Kerosene", 0x8ABF5E, 1.40F,
+                    List.of(fx(StatusEffects.SPEED, 120, 1),
+                            fx(StatusEffects.GLOWING, 60, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.MIDNIGHT),
+                    "Redeye", 0x6A6ABF, 1.42F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 40, 0),
+                            fx(StatusEffects.LUCK, 120, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.SUNSET),
+                    "Carnival", 0xC78ABF, 1.36F,
+                    List.of(fx(StatusEffects.LEVITATION, 4, 0),
+                            fx(StatusEffects.SLOW_FALLING, 90, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Nightrun", 0x6E93A8, 1.44F,
+                    List.of(fx(StatusEffects.SPEED, 150, 1),
+                            fx(StatusEffects.DOLPHINS_GRACE, 120, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.DIESEL, Strain.SUNSET),
+                    "Highway", 0xA8B84E, 1.40F,
+                    List.of(fx(StatusEffects.SPEED, 120, 1),
+                            fx(StatusEffects.HASTE, 120, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Aurora", 0x8AA8C6, 1.38F,
+                    List.of(fx(StatusEffects.CONDUIT_POWER, 120, 0),
+                            fx(StatusEffects.SLOW_FALLING, 120, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Refinery", 0x5E6A6E, 1.44F,
+                    List.of(fx(StatusEffects.HEALTH_BOOST, 180, 0),
+                            fx(StatusEffects.STRENGTH, 90, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.DIESEL, Strain.SUNSET),
+                    "Sunstroke", 0xB8865E, 1.38F,
+                    List.of(fx(StatusEffects.FIRE_RESISTANCE, 180, 0),
+                            fx(StatusEffects.NAUSEA, 30, 0))),
+
+            new Recipe(List.of(Strain.PURP, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Twilight", 0x8A6ABF, 1.42F,
+                    List.of(fx(StatusEffects.CONDUIT_POWER, 150, 0),
+                            fx(StatusEffects.INVISIBILITY, 25, 0))),
+
+            new Recipe(List.of(Strain.DIESEL, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Dockyard", 0x7A8A6E, 1.44F,
+                    List.of(fx(StatusEffects.DOLPHINS_GRACE, 150, 0),
+                            fx(StatusEffects.WATER_BREATHING, 180, 0))),
+
+            // --- four strains: the whole board
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.PURP, Strain.DIESEL),
+                    "Cathedral", 0x8A9A5E, 1.52F,
+                    List.of(fx(StatusEffects.HERO_OF_THE_VILLAGE, 120, 0),
+                            fx(StatusEffects.HASTE, 150, 1))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.PURP, Strain.MIDNIGHT),
+                    "Blackout", 0x4A4A7A, 1.58F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 60, 0),
+                            fx(StatusEffects.STRENGTH, 90, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.PURP, Strain.SUNSET),
+                    "Sundial", 0xBF9A5E, 1.54F,
+                    List.of(fx(StatusEffects.SLOW_FALLING, 180, 0),
+                            fx(StatusEffects.LUCK, 180, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Freight", 0x5E7A7A, 1.62F,
+                    List.of(fx(StatusEffects.HASTE, 180, 1),
+                            fx(StatusEffects.STRENGTH, 90, 1))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.DIESEL, Strain.SUNSET),
+                    "Firecracker", 0xA8A83E, 1.56F,
+                    List.of(fx(StatusEffects.FIRE_RESISTANCE, 240, 0),
+                            fx(StatusEffects.STRENGTH, 120, 1))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.HAZE, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Fogbank", 0x7A8AA8, 1.56F,
+                    List.of(fx(StatusEffects.CONDUIT_POWER, 180, 0),
+                            fx(StatusEffects.SLOW_FALLING, 180, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Foundry", 0x5E5E5E, 1.66F,
+                    List.of(fx(StatusEffects.STRENGTH, 120, 1),
+                            fx(StatusEffects.HEALTH_BOOST, 240, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.DIESEL, Strain.SUNSET),
+                    "Harvest", 0x9A8A4A, 1.58F,
+                    List.of(fx(StatusEffects.SATURATION, 20, 0),
+                            fx(StatusEffects.ABSORPTION, 180, 1))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.PURP, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Seance", 0x6A5E9A, 1.64F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 60, 0),
+                            fx(StatusEffects.LUCK, 180, 0))),
+
+            new Recipe(List.of(Strain.KUSH, Strain.DIESEL, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Drydock", 0x6A7A6A, 1.62F,
+                    List.of(fx(StatusEffects.DOLPHINS_GRACE, 180, 0),
+                            fx(StatusEffects.WATER_BREATHING, 240, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.DIESEL, Strain.MIDNIGHT),
+                    "Neon", 0x6ABFA8, 1.68F,
+                    List.of(fx(StatusEffects.SPEED, 150, 2),
+                            fx(StatusEffects.GLOWING, 90, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.DIESEL, Strain.SUNSET),
+                    "Kaleidoscope", 0xD86ACF, 1.60F,
+                    List.of(fx(StatusEffects.NIGHT_VISION, 120, 0),
+                            fx(StatusEffects.JUMP_BOOST, 120, 1))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.PURP, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Prism", 0xA88ACF, 1.66F,
+                    List.of(fx(StatusEffects.LEVITATION, 5, 0),
+                            fx(StatusEffects.SLOW_FALLING, 200, 0))),
+
+            new Recipe(List.of(Strain.HAZE, Strain.DIESEL, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Redline", 0x8AA86E, 1.70F,
+                    List.of(fx(StatusEffects.SPEED, 180, 2),
+                            fx(StatusEffects.HASTE, 180, 1))),
+
+            new Recipe(List.of(Strain.PURP, Strain.DIESEL, Strain.MIDNIGHT, Strain.SUNSET),
+                    "Eclipse", 0x4A5A6A, 1.70F,
+                    List.of(fx(StatusEffects.CONDUIT_POWER, 200, 0),
+                            fx(StatusEffects.INVISIBILITY, 60, 0))),
+
+            // --- and three that want the same bud twice
+            new Recipe(List.of(Strain.MIDNIGHT, Strain.MIDNIGHT, Strain.PURP),
+                    "Void", 0x2A1B4A, 1.45F,
+                    List.of(fx(StatusEffects.INVISIBILITY, 40, 0))),
 
             new Recipe(List.of(Strain.DIESEL, Strain.DIESEL, Strain.HAZE),
                     "Turbo", 0xB8E04A, 1.30F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.SPEED,
-                            80 * 20, 2, false, true))),
+                    List.of(fx(StatusEffects.SPEED, 80, 2))),
 
             new Recipe(List.of(Strain.KUSH, Strain.KUSH, Strain.MIDNIGHT),
                     "Tar", 0x2F3A28, 1.40F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.RESISTANCE,
-                            90 * 20, 1, false, true),
-                            new StatusEffectInstance(
-                                    net.minecraft.entity.effect.StatusEffects.SLOWNESS,
-                                    90 * 20, 1, false, true))),
+                    List.of(fx(StatusEffects.RESISTANCE, 90, 1),
+                            fx(StatusEffects.SLOWNESS, 90, 1))));
 
-            new Recipe(List.of(Strain.PURP, Strain.SUNSET, Strain.HAZE, Strain.DIESEL),
-                    "Kaleidoscope", 0xD86ACF, 1.60F,
-                    List.of(new StatusEffectInstance(
-                            net.minecraft.entity.effect.StatusEffects.NIGHT_VISION,
-                            120 * 20, 0, false, true),
-                            new StatusEffectInstance(
-                                    net.minecraft.entity.effect.StatusEffects.JUMP_BOOST,
-                                    120 * 20, 1, false, true))));
+    /**
+     * Keyed by the sorted parts, which is exactly the shape {@link #parts} is
+     * kept in -- so a lookup is one hash instead of fifty-three list compares,
+     * each of which used to sort both sides first. That mattered once the table
+     * stopped being six long: {@link TrapContent#blendBud} asks four times per
+     * stack it describes, and a dealer describes every stack it holds.
+     *
+     * toUnmodifiableMap throws on a duplicate key, so two recipes claiming the
+     * same combination is a crash at class-load rather than one of them
+     * silently never being reachable.
+     */
+    private static final Map<List<Strain>, Recipe> BY_PARTS = NAMED.stream()
+            .collect(Collectors.toUnmodifiableMap(
+                    recipe -> recipe.needs().stream().sorted().toList(), recipe -> recipe));
+
+    /** Every named mix, for the guide book. */
+    public static List<Recipe> recipes() {
+        return NAMED;
+    }
 
     public Quality quality() {
         return Quality.byIndex(grade);
@@ -141,14 +395,9 @@ public record Blend(List<Strain> parts, int grade) {
 
     /** The named recipe this is, or null for an ordinary mix. */
     public Recipe named() {
-        for (Recipe recipe : NAMED) {
-            if (recipe.needs().size() == parts.size()
-                    && recipe.needs().stream().sorted().toList()
-                    .equals(parts.stream().sorted().toList())) {
-                return recipe;
-            }
-        }
-        return null;
+        // parts is sorted by the constructor and so are the keys, so this is
+        // the multiset match the old loop was doing the long way round.
+        return BY_PARTS.get(parts);
     }
 
     public String display() {

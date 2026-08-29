@@ -269,6 +269,20 @@ public final class TrapPolice {
      * garrison in the yard.
      */
     private static final int GOLEM_TALL = 3;
+    /**
+     * How far round an address a golem may be stood up, and how far up.
+     *
+     * The vertical half is the tight one on purpose. A one-storey roof is
+     * three blocks over its own floor and has a perfectly good view of the
+     * sky, so a taller search answers "outdoors" with somebody's roof and the
+     * garrison spends the night up there.
+     */
+    private static final int GOLEM_SPREAD = 8;
+    private static final int GOLEM_RISE = 2;
+    /** Addresses tried before the round gives up and looks again in 12s. */
+    private static final int GOLEM_TRIES = 6;
+    /** Near enough to the sign to count as still inside the building. */
+    private static final double WALLED_IN = 12.0;
 
     /** One station. */
     public static final class Station {
@@ -741,10 +755,10 @@ public final class TrapPolice {
         // Golems are shared out EVENLY rather than first-come, and officers
         // are not, because the two are limited by different things. A copper
         // needs a cell to sleep in, so a station with eight of them should get
-        // eight; a golem stands in the yard, so the only sensible question is
-        // which parts of town are covered -- and handing them all to whichever
-        // station happens to be first in the register leaves half the city
-        // with none.
+        // eight; a golem is stood out on the street, so the only sensible
+        // question is which parts of town are covered -- and handing them all
+        // to whichever station happens to be first in the register leaves half
+        // the city with none.
         int iron = golems();
         int yards = 0;
         for (Station each : STATIONS) {
@@ -1049,8 +1063,9 @@ public final class TrapPolice {
                               Patrol patrol) {
         double home = golem.getBlockPos().getSquaredDistance(station.sign);
         if (home > (double) LOST * LOST) {
-            BlockPos back = TrapSpawn.near(world, station.sign.up(),
-                    TrapSpawn.SEARCH, GOLEM_TALL);
+            // Onto the round, not onto the sign: a lift home that lands it in
+            // the lobby is the same trap {@link #street} exists to avoid.
+            BlockPos back = street(world, station);
             if (back != null) {
                 golem.refreshPositionAndAngles(back,
                         world.getRandom().nextFloat() * 360f, 0f);
@@ -1605,6 +1620,7 @@ public final class TrapPolice {
                 station.golems.add(was.getOrDefault(body.getUuid(),
                         new Patrol(body.getUuid())));
                 plate(body);
+                unwall(world, station, body);
             } else {
                 // Stood down: the works have not been bought, or the station
                 // that owned this one lost its shift. No drop, because a golem
@@ -1624,20 +1640,10 @@ public final class TrapPolice {
     }
 
     private static IronGolemEntity forge(ServerWorld world, Station station) {
-        // Wider than an officer's spread: a golem is a block wide and knocks
-        // back nothing, so two of them sharing a doorway is a doorway with
-        // nothing getting through it.
         var random = world.getRandom();
-        BlockPos stand = null;
-        for (int tries = 0; tries < 6 && stand == null; tries++) {
-            stand = TrapSpawn.near(world, station.sign.up()
-                    .add(random.nextInt(15) - 7, 0, random.nextInt(15) - 7), 4, GOLEM_TALL);
-        }
+        BlockPos stand = street(world, station);
         if (stand == null) {
-            stand = TrapSpawn.near(world, station.sign.up(), TrapSpawn.SEARCH, GOLEM_TALL);
-        }
-        if (stand == null) {
-            return null;   // no room in the yard tonight; the next round tries again
+            return null;   // nowhere outdoors tonight; the next round tries again
         }
         IronGolemEntity golem = EntityType.IRON_GOLEM.create(world, SpawnReason.EVENT);
         if (golem == null) {
@@ -1654,6 +1660,93 @@ public final class TrapPolice {
         world.spawnParticles(ParticleTypes.END_ROD, stand.getX() + 0.5, stand.getY() + 1.2,
                 stand.getZ() + 0.5, 14, 0.4, 0.6, 0.4, 0.02);
         return golem;
+    }
+
+    /**
+     * A square out in the town a golem can be stood on -- and got off again.
+     *
+     * This is the whole of the bug, and it is not cosmetic. A golem is 1.4
+     * blocks wide, so a one-block doorway is a wall to it, and it cannot open
+     * a door either. The station's sign is INSIDE the station -- the
+     * inspection is a flood fill from it -- so a search seven blocks round the
+     * sign stands the city's entire garrison in the lobby, where it is walled
+     * in for good. Live server: five golems in the front corridor of the nick
+     * and a town with no patrol at all.
+     *
+     * So the address comes from the ROUND rather than the yard: the same
+     * houses, counters and vault {@link #worthGuarding} sends the beat to, one
+     * rolled per golem, which is what puts them across different parts of town
+     * instead of in one heap. The square is then the nearest one to that
+     * address with sky over it.
+     *
+     * Sky is the indoor test because it is the only cheap one that is right.
+     * {@code isSkyVisible} is sky light 15, and sky light drops a level per
+     * step through a doorway -- so it refuses a spot one step inside somebody's
+     * front room, which a headroom check happily accepts.
+     */
+    private static BlockPos street(ServerWorld world, Station station) {
+        var random = world.getRandom();
+        for (int tries = 0; tries < GOLEM_TRIES; tries++) {
+            BlockPos address = worthGuarding(world, station, random);
+            if (address == null) {
+                // Nothing registered near this nick: a ring round it, on a
+                // fresh bearing each try, for {@link #nextLeg}'s reason.
+                double angle = random.nextDouble() * Math.PI * 2;
+                int out = RING_MIN + random.nextInt(RING_RANGE);
+                address = station.sign.add((int) (Math.cos(angle) * out), 0,
+                        (int) (Math.sin(angle) * out));
+            }
+            // Loaded chunks only. The search reads blockstates, and reading
+            // one out there force-generates terrain from a tick -- the trap
+            // {@link #ground} already carries a comment about.
+            if (!world.isChunkLoaded(address.getX() >> 4, address.getZ() >> 4)) {
+                continue;
+            }
+            BlockPos stand = BlockPos.findClosest(address, GOLEM_SPREAD, GOLEM_RISE,
+                            spot -> TrapSpawn.safe(world, spot, GOLEM_TALL)
+                                    && outdoors(world, spot))
+                    .map(BlockPos::toImmutable)
+                    .orElse(null);
+            if (stand != null) {
+                return stand;
+            }
+        }
+        return null;
+    }
+
+    /** Sky over it -- in a world that has a sky. */
+    private static boolean outdoors(ServerWorld world, BlockPos pos) {
+        // The nether has no sky light anywhere, so the test would refuse every
+        // square in the dimension and a nick down there would silently never
+        // muster. Under a bedrock ceiling the question has no answer worth
+        // asking anyway.
+        return !world.getDimension().hasSkyLight() || world.isSkyVisible(pos);
+    }
+
+    /**
+     * A golem that got walled in, stood back out on the street.
+     *
+     * Every golem the city built before {@link #street} existed was made
+     * within seven blocks of the sign, and {@link #muster} re-adopts anything
+     * alive and tagged -- so without this the broken ones outlive the fix and
+     * stand in that corridor forever.
+     *
+     * Only ones still at the NICK are moved. A golem under a tree halfway
+     * across town fails the sky test too, and yanking one off its own beat
+     * every twelve seconds would be the worse bug.
+     */
+    private static void unwall(ServerWorld world, Station station, IronGolemEntity golem) {
+        BlockPos stood = golem.getBlockPos();
+        if (!stood.isWithinDistance(station.sign, WALLED_IN) || outdoors(world, stood)) {
+            return;
+        }
+        BlockPos out = street(world, station);
+        if (out == null) {
+            return;
+        }
+        golem.refreshPositionAndAngles(out, world.getRandom().nextFloat() * 360f, 0f);
+        world.spawnParticles(ParticleTypes.END_ROD, out.getX() + 0.5, out.getY() + 1.2,
+                out.getZ() + 0.5, 10, 0.4, 0.6, 0.4, 0.02);
     }
 
     /**

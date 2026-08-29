@@ -502,8 +502,24 @@ public final class TrapCrew {
         BlockPos patch;
         int pace;
         int reach;
+        /**
+         * The highest rung ever paid for, which is not always the one they are
+         * on. A hand can be turned back down -- a slower hand costs less every
+         * payday, and a farm that is ahead of itself does not need the top
+         * rung -- and turning them up again to somewhere they have already
+         * been is free. See TrapMath.crewRungCost.
+         */
+        int paceMax;
+        int reachMax;
         /** Bit per {@link Job} ordinal. Blank on hire -- see SLOTS. */
         int jobs;
+        /**
+         * Everything they have ever been taught, which is a superset of what
+         * is switched on. SLOTS caps what a hand can do at once, not what a
+         * hand can know: switching one off to make room for another is how you
+         * change your mind, and switching it back on costs nothing.
+         */
+        int owned;
         /** Passes since anything actually got done. Not saved -- it's a mood. */
         int idle;
         /** What they did last, so the other job they know gets a turn. */
@@ -568,10 +584,17 @@ public final class TrapCrew {
             return (jobs & (1 << job.ordinal())) != 0;
         }
 
-        void teach(Job job) {
-            jobs |= 1 << job.ordinal();
+        /** Paid for, whether or not it is switched on right now. */
+        boolean owns(Job job) {
+            return (owned & (1 << job.ordinal())) != 0;
         }
 
+        void teach(Job job) {
+            jobs |= 1 << job.ordinal();
+            owned |= 1 << job.ordinal();
+        }
+
+        /** Switch off, keeping the teaching. Nothing paid for is ever lost. */
         void forget(Job job) {
             jobs &= ~(1 << job.ordinal());
         }
@@ -602,10 +625,15 @@ public final class TrapCrew {
             return nights ? Math.round(total * NIGHT_RATE) : total;
         }
 
-        /** Top of both ladders and both slots filled. */
+        /**
+         * Top of both ladders and both slots paid for -- what was BOUGHT, not
+         * what is switched on. Somebody who owns the lot and has turned half
+         * of it off to save wages has still bought the lot.
+         */
         boolean maxed() {
-            return pace >= PACE_TICKS.length - 1
-                    && reach >= REACH_BLOCKS.length - 1 && full();
+            return paceMax >= PACE_TICKS.length - 1
+                    && reachMax >= REACH_BLOCKS.length - 1
+                    && Integer.bitCount(owned) >= SLOTS;
         }
     }
 
@@ -702,8 +730,9 @@ public final class TrapCrew {
      * it is either a number you are happy with or it is not, and either way
      * nobody has to guess.
      */
-    public record Card(int index, int pace, int reach, int reachBlocks, int wage,
-                       String tempo, boolean present, List<Job> taught,
+    public record Card(int index, int pace, int reach, int paceMax, int reachMax,
+                       int reachBlocks, int wage,
+                       String tempo, boolean present, List<Job> taught, List<Job> owned,
                        int done, int paid, int missed, int owed,
                        String dimension, int x, int y, int z,
                        String chest, List<Job> starved, boolean nights,
@@ -739,9 +768,13 @@ public final class TrapCrew {
                 continue;
             }
             List<Job> taught = new ArrayList<>();
+            List<Job> owned = new ArrayList<>();
             for (Job job : Job.values()) {
                 if (hand.can(job)) {
                     taught.add(job);
+                }
+                if (hand.owns(job)) {
+                    owned.add(job);
                 }
             }
             // Read the chest the hand actually uses -- the nearest container
@@ -765,8 +798,9 @@ public final class TrapCrew {
             if (hand.can(Job.DELIVER) && hand.route.isEmpty()) {
                 starved.add(Job.DELIVER);
             }
-            out.add(new Card(i, hand.pace, hand.reach, hand.reachBlocks(), hand.wage(),
-                    paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught,
+            out.add(new Card(i, hand.pace, hand.reach, hand.paceMax, hand.reachMax,
+                    hand.reachBlocks(), hand.wage(),
+                    paceLabel(hand.pace), find(boss.getServer(), hand) != null, taught, owned,
                     hand.done, hand.paid, hand.missed, hand.owed, hand.dimension,
                     hand.patch.getX(), hand.patch.getY(), hand.patch.getZ(),
                     box == null || hand.box == null ? null
@@ -826,41 +860,51 @@ public final class TrapCrew {
 
         int cost;
         String bought;
+        // Whether this is a thing they have already been sold, which is NOT
+        // the same as costing nothing: Picking is free the first time too.
+        boolean again;
         if (job != null) {
             if (hand.can(job)) {
                 return "On już to potrafi.";
             }
             if (hand.full()) {
-                return "Jedna osoba uniesie dwa zawody. Usuń jeden albo zatrudnij kogoś jeszcze.";
+                return "Jedna osoba uniesie dwa zawody. Wyłącz jeden albo zatrudnij kogoś jeszcze.";
             }
-            cost = job.cost();
+            again = hand.owns(job);
+            cost = again ? 0 : job.cost();
             bought = job.display();
         } else if (pace) {
             if (hand.pace >= PACE_TICKS.length - 1) {
                 return "Szybciej już nie potrafi.";
             }
-            cost = PACE_COST[hand.pace + 1];
+            again = hand.pace + 1 <= hand.paceMax;
+            cost = TrapMath.crewRungCost(PACE_COST, hand.pace + 1, hand.paceMax);
             bought = PACE_NAME[hand.pace + 1];
         } else {
             if (hand.reach >= REACH_BLOCKS.length - 1) {
                 return "Większego zasięgu nikt nie ogarnie.";
             }
-            cost = REACH_COST[hand.reach + 1];
+            again = hand.reach + 1 <= hand.reachMax;
+            cost = TrapMath.crewRungCost(REACH_COST, hand.reach + 1, hand.reachMax);
             bought = REACH_BLOCKS[hand.reach + 1] + " bloków zasięgu";
         }
 
         if (TrapMarket.wealthOf(boss) < cost) {
             return "To kosztuje " + cost + "e, a tyle nie masz.";
         }
-        // Tuition, and somebody is being paid it. See payTheTown.
-        payTheTown(boss, cost);
-        TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
+        // Tuition, and somebody is being paid it. See payTheTown. Nothing
+        // changes hands when they are only going back to a rung you already
+        // bought -- the town was paid for that one the first time.
+        if (cost > 0) {
+            payTheTown(boss, cost);
+            TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
+        }
         if (job != null) {
             hand.teach(job);
         } else if (pace) {
-            hand.pace++;
+            hand.paceMax = Math.max(hand.paceMax, ++hand.pace);
         } else {
-            hand.reach++;
+            hand.reachMax = Math.max(hand.reachMax, ++hand.reach);
         }
         save();
 
@@ -873,9 +917,11 @@ public final class TrapCrew {
             world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, mob.getX(), mob.getY() + 1.4,
                     mob.getZ(), 12, 0.35, 0.35, 0.35, 0.02);
         }
-        boss.sendMessage(Text.literal("Nauczono: ").formatted(Formatting.GREEN)
+        boss.sendMessage(Text.literal(again ? "Z powrotem: " : "Nauczono: ")
+                .formatted(Formatting.GREEN)
                 .append(Text.literal(bought).formatted(Formatting.WHITE))
-                .append(Text.literal(". Pensja teraz " + hand.wage() + "e.")
+                .append(Text.literal((again ? ", za darmo -- już kupione. Pensja teraz "
+                        : ". Pensja teraz ") + hand.wage() + "e.")
                         .formatted(Formatting.GRAY)), false);
         if (hand.maxed()) {
             TrapAwards.grant(boss, "foreman");
@@ -884,12 +930,56 @@ public final class TrapCrew {
     }
 
     /**
-     * Drop a job to free the slot. Nothing comes back.
+     * Turn a rung DOWN. Free, refunds nothing, and remembers the peak.
+     *
+     * The other half of the ladder. A hand bought up to the top rung during a
+     * build costs 96e a packet forever afterwards, and the only way out of
+     * that used to be firing them and buying the whole ladder again -- so the
+     * top rung was a trap and people stopped climbing. Now the wage follows
+     * the rung they are ON, and the rung they are on is a dial.
+     *
+     * @param pace true for tempo, false for reach
+     * @return why it didn't happen, or null if it did
+     */
+    public static String drop(ServerPlayerEntity boss, int index, boolean pace) {
+        if (index < 0 || index >= CREW.size()) {
+            return "Tej osoby nie ma już na liście.";
+        }
+        Hand hand = CREW.get(index);
+        if (!hand.boss.equals(boss.getUuid())) {
+            return "To nie jest twój człowiek.";
+        }
+        if ((pace ? hand.pace : hand.reach) <= 0) {
+            return pace ? "Wolniej się nie da." : "Mniejszego zasięgu nie ma.";
+        }
+        String now;
+        if (pace) {
+            hand.pace--;
+            now = PACE_NAME[hand.pace];
+        } else {
+            hand.reach--;
+            now = REACH_BLOCKS[hand.reach] + " bloków zasięgu";
+        }
+        save();
+
+        VillagerEntity mob = find(boss.getServer(), hand);
+        if (mob != null) {
+            equip(mob, hand);
+        }
+        boss.sendMessage(Text.literal("Zwolniono: ").formatted(Formatting.GRAY)
+                .append(Text.literal(now).formatted(Formatting.WHITE))
+                .append(Text.literal(". Pensja teraz " + hand.wage()
+                        + "e. Powrót w górę za darmo.").formatted(Formatting.GRAY)), false);
+        return null;
+    }
+
+    /**
+     * Switch a job off to free the slot. Free, and it stays taught.
      *
      * Has to exist, because with only two slots a misclick would otherwise be
-     * permanent and the board would be a minefield. No refund, for the same
-     * reason firing gives none: what you paid bought the teaching, and the
-     * teaching happened.
+     * permanent and the board would be a minefield. No refund and no loss
+     * either: what you paid bought the teaching, the teaching happened, and
+     * switching it back on later costs nothing.
      */
     public static String forget(ServerPlayerEntity boss, int index, Job job) {
         if (index < 0 || index >= CREW.size()) {
@@ -904,10 +994,14 @@ public final class TrapCrew {
         }
         hand.forget(job);
         save();
-        boss.sendMessage(Text.literal("Zapomniał: ").formatted(Formatting.GRAY)
+        VillagerEntity off = find(boss.getServer(), hand);
+        if (off != null) {
+            equip(off, hand);
+        }
+        boss.sendMessage(Text.literal("Wyłączono: ").formatted(Formatting.GRAY)
                 .append(Text.literal(job.display()).formatted(Formatting.WHITE))
-                .append(Text.literal(". Pensja teraz " + hand.wage() + "e.")
-                        .formatted(Formatting.GRAY)), false);
+                .append(Text.literal(". Pensja teraz " + hand.wage()
+                        + "e. Włączysz z powrotem za darmo.").formatted(Formatting.GRAY)), false);
         return null;
     }
 
@@ -1354,8 +1448,11 @@ public final class TrapCrew {
         List<PlanHand> hands = new ArrayList<>();
         for (Hand hand : CREW) {
             if (hand.boss.equals(owner)) {
-                hands.add(new PlanHand(hand.dimension, hand.patch, hand.pace, hand.reach,
-                        hand.jobs));
+                // The PEAKS, not where they happen to be standing today. A
+                // plan is what the crew cost to build, and a hand turned down
+                // for the winter still cost every rung it was sold.
+                hands.add(new PlanHand(hand.dimension, hand.patch,
+                        hand.paceMax, hand.reachMax, hand.owned));
             }
         }
         if (hands.isEmpty()) {
@@ -1446,8 +1543,9 @@ public final class TrapCrew {
             }
             Hand hand = new Hand(boss.getUuid(), mob.getUuid(), wanted.dimension(),
                     wanted.patch());
-            hand.pace = clamp(wanted.pace(), PACE_TICKS.length);
-            hand.reach = clamp(wanted.reach(), REACH_BLOCKS.length);
+            hand.paceMax = hand.pace = clamp(wanted.pace(), PACE_TICKS.length);
+            hand.reachMax = hand.reach = clamp(wanted.reach(), REACH_BLOCKS.length);
+            hand.owned = own(wanted.jobs());
             hand.jobs = trim(wanted.jobs());
             equip(mob, hand);
             CREW.add(hand);
@@ -2151,7 +2249,8 @@ public final class TrapCrew {
             // never once pull it -- the drum equivalent of pulling a rack early.
             return state.get(LaundryBlock.LOAD) == 0 && stock.dirty() ? Job.WASH : null;
         }
-        if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock) {
+        if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock
+                || block instanceof PoppyCropBlock) {
             return block instanceof CropBlock crop && crop.isMature(state) ? Job.PICK : null;
         }
         if (block instanceof CropBlock crop) {
@@ -2240,14 +2339,25 @@ public final class TrapCrew {
             roll(world, box, at);
             return;
         }
-        if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock) {
+        if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock
+                || block instanceof PoppyCropBlock) {
             // Through the block's own harvest, not getDroppedStacks: breaking
             // one of these runs the loot table and returns a SEED. The buds
             // only come off a right-click, and a hand that broke the plant was
             // demolishing the farm and stashing seeds.
+            //
+            // Poppy was missing from both this list and jobAt's, and that
+            // omission is the whole reason the line was dead: it is the only
+            // crop in the mod a hired hand would not look at, on a server
+            // where the money to hire hands is exactly what the players have.
+            // The field is now theirs; the scoring table, the wash pot and the
+            // acetylator are still yours, which is the half that was ever
+            // interesting.
             List<ItemStack> picked = block instanceof CannabisCropBlock weed
                     ? weed.harvest(world, at, state)
-                    : ((CocaCropBlock) block).harvest(world, at, state);
+                    : block instanceof CocaCropBlock coca
+                    ? coca.harvest(world, at, state)
+                    : ((PoppyCropBlock) block).harvest(world, at, state);
             stow(world, box, at, picked);
             cheer(world, at, SoundEvents.BLOCK_CROP_BREAK, 1.0F);
             return;
@@ -3300,7 +3410,10 @@ public final class TrapCrew {
      * The three training fields are optional on read. A file written before
      * any of this existed is six fields long and loads as an untrained hand,
      * which is exactly what those hands are -- nobody had bought them anything
-     * yet, so there is nothing to migrate.
+     * yet, so there is nothing to migrate. The three peak fields on the end
+     * are optional for the same reason and migrate the same way: a hand from
+     * before anything could be turned down has been sold precisely what it is
+     * standing on.
      */
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-crew.txt");
@@ -3322,6 +3435,13 @@ public final class TrapCrew {
                     hand.reach = clamp(Integer.parseInt(parts[7]), REACH_BLOCKS.length);
                     hand.jobs = trim(Integer.parseInt(parts[8]));
                 }
+                // Before any of this could be turned down, where a hand stood
+                // WAS everything it had been sold, so a file without the three
+                // peak fields migrates by saying exactly that. Nobody loses a
+                // rung they paid for.
+                hand.paceMax = hand.pace;
+                hand.reachMax = hand.reach;
+                hand.owned = hand.jobs;
                 // The books. Optional for the same reason the training was:
                 // a file written before anybody counted has nothing to say
                 // about it, and a hand with no history is exactly right.
@@ -3335,17 +3455,30 @@ public final class TrapCrew {
                 if (parts.length >= 15) {
                     hand.nights = "1".equals(parts[14]);
                 }
-                if (parts.length >= 16 && !"-".equals(parts[15])) {
-                    for (String stop : parts[15].split(";")) {
-                        String[] bit = stop.split(",");
-                        if (bit.length == 3 && hand.route.size() < ROUTE_STOPS) {
-                            hand.route.add(new BlockPos(Integer.parseInt(bit[0]),
-                                    Integer.parseInt(bit[1]), Integer.parseInt(bit[2])));
+                if (parts.length >= 18) {
+                    hand.paceMax = Math.max(hand.pace,
+                            clamp(Integer.parseInt(parts[15]), PACE_TICKS.length));
+                    hand.reachMax = Math.max(hand.reach,
+                            clamp(Integer.parseInt(parts[16]), REACH_BLOCKS.length));
+                    // Not trimmed: SLOTS caps what is switched on, not what
+                    // has been paid for.
+                    hand.owned = hand.jobs | own(Integer.parseInt(parts[17]));
+                }
+                // The courier's round, appended after the ladders rather than
+                // instead of them: two branches grew this line at the same
+                // point and both sets of fields are real. New things still go
+                // on the END, which is the only rule this format has ever had.
+                if (parts.length >= 20) {
+                    if (!"-".equals(parts[18])) {
+                        for (String stop : parts[18].split(";")) {
+                            String[] bit = stop.split(",");
+                            if (bit.length == 3 && hand.route.size() < ROUTE_STOPS) {
+                                hand.route.add(new BlockPos(Integer.parseInt(bit[0]),
+                                        Integer.parseInt(bit[1]), Integer.parseInt(bit[2])));
+                            }
                         }
                     }
-                }
-                if (parts.length >= 17) {
-                    hand.stop = Math.max(0, Integer.parseInt(parts[16]));
+                    hand.stop = Math.max(0, Integer.parseInt(parts[19]));
                 }
                 CREW.add(hand);
             }
@@ -3435,6 +3568,18 @@ public final class TrapCrew {
      * most -- and it means a reload never produces a hand the board could not
      * have built.
      */
+    /**
+     * Keep only bits that name a real job.
+     *
+     * The taught mask goes through trim, which drops junk as a side effect of
+     * capping at SLOTS. This one is not capped -- you may own every job -- so
+     * it has to say so itself, or a corrupt digit in the save file would count
+     * as owning jobs that do not exist and hand out the foreman badge for it.
+     */
+    private static int own(int saved) {
+        return saved & ((1 << Job.values().length) - 1);
+    }
+
     private static int trim(int saved) {
         int kept = 0;
         int held = 0;
@@ -3468,6 +3613,9 @@ public final class TrapCrew {
                         .append(hand.missed).append(' ')
                         .append(hand.owed).append(' ')
                         .append(hand.nights ? 1 : 0).append(' ')
+                        .append(hand.paceMax).append(' ')
+                        .append(hand.reachMax).append(' ')
+                        .append(hand.owned).append(' ')
                         // The round, and a dash for nobody. Commas inside one
                         // whitespace field, which is the only way this format
                         // has ever been allowed to grow -- see the shop

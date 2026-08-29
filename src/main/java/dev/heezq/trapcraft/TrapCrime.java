@@ -3,6 +3,8 @@ package dev.heezq.trapcraft;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -15,6 +17,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
@@ -287,6 +290,27 @@ public final class TrapCrime {
                     && body.getCommandTags().contains(SUSPECT_TAG)
                     && byBody(body.getUuid()) == null) {
                 body.discard();
+            }
+        });
+        // Grab him. See {@link #collar} for why this is a right-click and not
+        // a swing, and {@link #killed} for what a swing does instead.
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
+            if (world.isClient() || !(player instanceof ServerPlayerEntity who)
+                    || !(entity instanceof VillagerEntity body)
+                    || !entity.getCommandTags().contains(SUSPECT_TAG)) {
+                return ActionResult.PASS;
+            }
+            collar(who, (ServerWorld) world, body);
+            // SUCCESS either way: a suspect whose case has already been closed
+            // by somebody else must still eat the click, or the nitwit behind
+            // it opens an empty trade screen a tick later.
+            return ActionResult.SUCCESS;
+        });
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damage) -> {
+            if (entity instanceof VillagerEntity body
+                    && entity.getCommandTags().contains(SUSPECT_TAG)
+                    && entity.getWorld() instanceof ServerWorld world) {
+                killed(world, body);
             }
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -665,13 +689,11 @@ public final class TrapCrime {
                     // Comma, because "-412 88" reads as one negative number.
                     .append(TrapNotes.say("   " + sprawa.where.getX() + ", "
                             + sprawa.where.getZ(), Formatting.DARK_GRAY))
-                    .append(TrapNotes.under("Sprawca ucieka. Policja ma "
+                    .append(TrapNotes.under("Sprawca ucieka. Zostały "
                             + TRAIL_TICKS / 20 / 60 + " minuty.")));
-            for (ServerPlayerEntity player : world.getPlayers()) {
-                if (player.getBlockPos().isWithinDistance(sprawa.where, WITNESS_RANGE)) {
-                    TrapWaypoints.offer(player, "Zabójstwo", sprawa.where, TrapWaypoints.RED);
-                }
-            }
+            // The waypoint is openCase's job now, for every offence and not
+            // just this one. A second offer here would stack two markers on
+            // one body.
         } else {
             tell(server, home.owner(), TrapNotes.headline("ROZBÓJ", Formatting.RED)
                     .append(TrapNotes.say("   " + sprawa.victim, Formatting.WHITE))
@@ -784,11 +806,26 @@ public final class TrapCrime {
                 SoundCategory.NEUTRAL, 0.8F, 0.7F);
         world.spawnParticles(ParticleTypes.ANGRY_VILLAGER, sprawa.where.getX() + 0.5,
                 sprawa.where.getY() + 1.4, sprawa.where.getZ() + 0.5, 10, 0.4, 0.4, 0.4, 0.02);
+        // A marker for anybody close enough to have heard it, not just for the
+        // killings. Murder had this from the start and every other offence
+        // did not, which is most of why the arrest never happened: the case
+        // was live for four minutes and the only way to learn that was to
+        // walk into the man by accident. The waypoint IS the discoverability.
+        if (sprawa.body != null) {
+            for (ServerPlayerEntity player : world.getPlayers()) {
+                if (player.getBlockPos().isWithinDistance(sprawa.where, WITNESS_RANGE)) {
+                    TrapWaypoints.offer(player, sprawa.kind.display(), sprawa.where,
+                            TrapWaypoints.RED);
+                }
+            }
+            tellAll(server, TrapNotes.say("  Sprawca ucieka. Dogoń go i kliknij prawym"
+                    + " -- pieniądze wracają, miasto płaci nagrodę.", Formatting.DARK_GRAY));
+        }
         if (TrapPolice.onDuty() == 0) {
             // The one message that explains the whole system in one line, and
             // it only goes out when there is genuinely nobody to send.
-            tellAll(server, TrapNotes.say("  Nikt po to nie pojedzie -- na ulicy nie ma "
-                    + "policji.", Formatting.DARK_GRAY));
+            tellAll(server, TrapNotes.say("  Na ulicy nie ma policji. Nikt inny po to "
+                    + "nie pojedzie.", Formatting.DARK_GRAY));
         }
     }
 
@@ -900,12 +937,13 @@ public final class TrapCrime {
     // --- the arrest -----------------------------------------------------------
 
     /**
-     * A copper got a hand on somebody.
+     * Somebody got a hand on somebody.
      *
-     * Called by {@link TrapPolice} and by nothing else. Everything about what
-     * they DID lives on this side of the line: the restitution, the fine, the
-     * charge sheet. The other file knows how to catch a person and nothing at
-     * all about burglary.
+     * Called by {@link TrapPolice} and by {@link #collar}, and by nothing
+     * else. Everything about what they DID lives on this side of the line:
+     * the restitution, the fine, the charge sheet. Neither caller knows
+     * anything at all about burglary -- one knows how to walk an officer at a
+     * runner, the other knows a player just clicked one.
      *
      * @return the charge, or null if this body was not a live case
      */
@@ -1017,6 +1055,112 @@ public final class TrapCrime {
     /** Cases waiting on a judge, for the courthouse to count. */
     public static int parked() {
         return PARKED.size();
+    }
+
+    // --- the citizen's arrest -------------------------------------------------
+
+    /**
+     * What the person it happened to can actually do about it.
+     *
+     * Everything above this line ran for months with exactly one actor able to
+     * close a case, and that actor was an NPC. A hundred and eighteen offences
+     * went on the books and not one was ever solved -- not because the odds
+     * were wrong, but because a landlord could stand in his own doorway,
+     * read the name in red over the man walking off with his rent, and have
+     * nothing to press. Crime was a weather system he paid a force to fail at.
+     *
+     * A right-click and not a swing, for two reasons. The suspect is a NITWIT
+     * so there is no trade screen to fight over, and a sword ends the evening
+     * with a body rather than a conviction -- {@link #killed} is what that
+     * costs.
+     *
+     * <h2>Where the reward comes from</h2>
+     *
+     * The town's own purse, through the same door the court fine goes out of,
+     * because a reward for policing is a thing a town pays for and nothing
+     * here is minted. It is deliberately NOT a living: at a couple of
+     * offences a day this is a few hundred emeralds against a rent roll of
+     * several thousand. The real payment for catching the man who did your
+     * house is the restitution, and that was always in {@link #caught}
+     * waiting for somebody to trigger it.
+     */
+    private static void collar(ServerPlayerEntity who, ServerWorld world, VillagerEntity body) {
+        Case sprawa = byBody(body.getUuid());
+        if (sprawa == null) {
+            // Already closed -- a copper beat them to it, or the other player
+            // stood half a block closer. Say so rather than failing silently.
+            who.sendMessage(TrapNotes.say("  Ktoś już go zgarnął.",
+                    Formatting.DARK_GRAY), true);
+            return;
+        }
+        String name = body.getCustomName() == null ? sprawa.suspect()
+                : body.getCustomName().getString();
+        Kind kind = sprawa.kind();
+        Charge charge = caught(world, body);
+        if (charge == null) {
+            return;   // lost the race between the two lines above
+        }
+        body.discard();
+
+        // Afford it BEFORE handing it over. Same rule TrapPayroll's own
+        // javadoc sets out: a half-paid reward is a duplication bug in a hat.
+        int bounty = TrapPayroll.spend(kind.fine()) ? kind.fine() : 0;
+        if (bounty > 0) {
+            TrapMarket.pay(who, bounty);
+            TrapCity.charge(who, bounty, TrapCity.Duty.INCOME);
+            TrapLedger.record(who, TrapLedger.Source.BOUNTY, bounty);
+        }
+        TrapAwards.grant(who, "collar");
+
+        world.playSound(null, who.getBlockPos(), SoundEvents.BLOCK_CHAIN_PLACE,
+                SoundCategory.NEUTRAL, 1.0F, 0.8F);
+        world.playSound(null, who.getBlockPos(), SoundEvents.ENTITY_VILLAGER_NO,
+                SoundCategory.NEUTRAL, 0.9F, 0.8F);
+        world.spawnParticles(ParticleTypes.ANGRY_VILLAGER, body.getX(),
+                body.getY() + 1.6, body.getZ(), 12, 0.3, 0.3, 0.3, 0.02);
+
+        var note = TrapNotes.headline("OBYWATELSKIE ZATRZYMANIE", Formatting.AQUA)
+                .append(TrapNotes.say("   " + name, Formatting.WHITE))
+                .append(TrapNotes.say("   " + charge.crime(), Formatting.RED))
+                .append(TrapNotes.say("\n  zatrzymał "
+                        + who.getGameProfile().getName(), Formatting.DARK_GRAY));
+        if (charge.restitution() > 0) {
+            note.append(TrapNotes.say("   odzyskano ", Formatting.DARK_GRAY))
+                    .append(TrapNotes.say(charge.restitution() + "e", Formatting.GREEN));
+        }
+        note.append(bounty > 0
+                ? TrapNotes.say("   nagroda " + bounty + "e", Formatting.GOLD)
+                : TrapNotes.say("   miasto nie ma na nagrodę", Formatting.DARK_GRAY));
+        announce(world.getServer(), note);
+    }
+
+    /**
+     * Somebody used the sword.
+     *
+     * The case closes and the money does not come back, which is the whole
+     * lesson and the reason this is eight lines rather than a mechanic: the
+     * emeralds were on him. Without this the case simply sat open for its
+     * four minutes and then went cold -- the same outcome, reached in silence,
+     * which is the version a player reads as the feature being broken.
+     */
+    private static void killed(ServerWorld world, VillagerEntity body) {
+        Case sprawa = byBody(body.getUuid());
+        if (sprawa == null) {
+            return;
+        }
+        OPEN.remove(sprawa);
+        cold++;
+        save();
+        tellOwner(world.getServer(), sprawa, TrapNotes.headline("SPRAWCA NIE ŻYJE",
+                        Formatting.DARK_RED)
+                .append(TrapNotes.say("   " + sprawa.kind().display(), Formatting.WHITE))
+                .append(TrapNotes.say("   " + sprawa.victim(), Formatting.DARK_GRAY))
+                .append(sprawa.loot() > 0
+                        ? TrapNotes.say("   " + sprawa.loot() + "e przepadło z nim",
+                                Formatting.RED)
+                        : Text.empty())
+                .append(TrapNotes.under("Trzeba go było złapać, nie zabić -- "
+                        + "kliknij prawym, a pieniądze wracają.")));
     }
 
     /**

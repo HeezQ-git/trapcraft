@@ -76,7 +76,10 @@ public final class TrapGuide {
                                         createPolice())))
                         .then(CommandManager.literal("fires")
                                 .executes(context -> give(context.getSource(),
-                                        createFires())))));
+                                        createFires())))
+                        .then(CommandManager.literal("zaklady")
+                                .executes(context -> give(context.getSource(),
+                                        createBookmaker())))));
         registerWiki();
     }
 
@@ -138,6 +141,7 @@ public final class TrapGuide {
                 .append(pick("housing", "domy, klasy domów i czynsz"))
                 .append(pick("police", "policja, przestępczość, mandaty"))
                 .append(pick("fires", "pożary, remiza, wozy"))
+                .append(pick("zaklady", "zakłady sportowe i telewizor"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -500,60 +504,41 @@ public final class TrapGuide {
                         + "wolniej niż opłacony.\n\n"))
                 .append(warn("Tu widać, za co płacisz."))));
 
+        int lowest = Integer.MAX_VALUE;
+        int highest = 0;
+        for (TrapCrime.Kind kind : TrapCrime.Kind.values()) {
+            lowest = Math.min(lowest, kind.fine());
+            highest = Math.max(highest, kind.fine());
+        }
         pages.add(page(Text.empty()
-                .append(title("5b. ZATRZYMANIE\n\n"))
+                .append(title("5b. ZŁAP GO SAM\n\n"))
+                .append(body("Nie musisz czekać na patrol. Dogoń go i "
+                        + "kliknij PRAWYM.\n\n"))
+                .append(body("Miasto płaci za to " + lowest + "-" + highest
+                        + "e, zależnie od sprawy.\n\n"))
+                .append(hint("Tyle samo, co grzywna sądowa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. NIE ZABIJAJ GO\n\n"))
+                .append(body("Martwy sprawca nie oddaje niczego. "
+                        + "Pieniądze przepadają razem z nim.\n\n"))
+                .append(warn("Zakuwa się, nie zarzyna."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d. ZATRZYMANIE\n\n"))
                 .append(body("Złapany idzie do celi na kilka dni, a "
                         + "grzywna trafia do kasy miasta.\n\n"))
                 .append(hint("Cele pełne - wychodzi za kaucją."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b2. A PIENIĄDZE?\n\n"))
+                .append(title("5d2. A PIENIĄDZE?\n\n"))
                 .append(body("Bez sądu wracają od razu - tyle, ile "
                         + "miasto akurat ma.\n\n"))
                 .append(body("Z sądem trafiają na rozprawę i możesz "
                         + "dostać WIĘCEJ albo NIC."))));
 
         pages.add(page(Text.empty()
-                .append(title("8. SĄD\n\n"))
-                .append(body("Postaw blok sądu. Od tej pory policja "
-                        + "stawia przed nim każdą kradzież i każdy "
-                        + "rozbój.\n\n"))
-                .append(hint("Jeden sąd wystarczy na całe miasto."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8b. ROZPRAWA\n\n"))
-                .append(body("Odbywa się " + TrapCourt.LISTING_DAYS
-                        + " dni po zatrzymaniu.\n\n"))
-                .append(body("Wygrana: odzyskujesz skradzione plus "
-                        + Math.round(TrapMath.COURT_DAMAGES * 100)
-                        + "% odszkodowania.\n\n"))
-                .append(warn("Przegrana: nie dostajesz nic."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8c. CO DECYDUJE\n\n"))
-                .append(body("Rodzaj przestępstwa - jednych dowodzi "
-                        + "się łatwiej niż innych\n"))
-                .append(body("Dowody policji - budżet komisariatu\n"))
-                .append(body("Prawnik - twoje pieniądze\n\n"))
-                .append(hint("Tablica sądu pokazuje szanse na liczbę."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8d. PRAWNIK\n\n"))
-                .append(body("Do " + TrapMath.LAWYERS + " poziomów, każdy "
-                        + "kolejny droższy. Cena to część tego, co "
-                        + "straciłeś.\n\n"))
-                .append(hint("Pierwszy zawsze się opłaca. Trzeci to już "
-                        + "zakład."))));
-
-        pages.add(page(Text.empty()
-                .append(title("8e. CZY WARTO\n\n"))
-                .append(body("Bez sądu masz pewne grosze. Z sądem masz "
-                        + "szansę na wszystko i ryzyko zera.\n\n"))
-                .append(hint("Opłaca się tym bardziej, im lepszy masz "
-                        + "komisariat."))));
-
-        pages.add(page(Text.empty()
-                .append(title("5c. UMORZENIE\n\n"))
+                .append(title("5e. UMORZENIE\n\n"))
                 .append(body("Jeśli nikt go nie dopadnie, po kilku minutach "
                         + "sprawa jest umorzona.\n\n"))
                 .append(warn("Pieniądze przepadają na dobre."))));
@@ -593,6 +578,45 @@ public final class TrapGuide {
                 .append(body("/city - rachunki miasta\n"))
                 .append(body("/raid <gracz> - banda na kogoś (op)\n\n"))
                 .append(hint("Tablica sądu pokazuje twoje sprawy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8. SĄD\n\n"))
+                .append(body("Postaw blok sądu. Od tej pory policja "
+                        + "stawia przed nim każdą kradzież i każdy "
+                        + "rozbój.\n\n"))
+                .append(hint("Jeden sąd wystarczy na całe miasto."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8b. ROZPRAWA\n\n"))
+                .append(body("Odbywa się " + TrapCourt.LISTING_DAYS
+                        + " dni po zatrzymaniu.\n\n"))
+                .append(body("Wygrana: odzyskujesz skradzione plus "
+                        + Math.round(TrapMath.COURT_DAMAGES * 100)
+                        + "% odszkodowania.\n\n"))
+                .append(warn("Przegrana: nie dostajesz nic."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8c. CO DECYDUJE\n\n"))
+                .append(body("Rodzaj przestępstwa - jednych dowodzi "
+                        + "się łatwiej niż innych\n"))
+                .append(body("Dowody policji - budżet komisariatu\n"))
+                .append(body("Prawnik - twoje pieniądze\n\n"))
+                .append(hint("Tablica sądu pokazuje szanse na liczbę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8d. PRAWNIK\n\n"))
+                .append(body("Do " + TrapMath.LAWYERS + " poziomów, każdy "
+                        + "kolejny droższy. Cena to część tego, co "
+                        + "straciłeś.\n\n"))
+                .append(hint("Pierwszy zawsze się opłaca. Trzeci to już "
+                        + "zakład."))));
+
+        pages.add(page(Text.empty()
+                .append(title("8e. CZY WARTO\n\n"))
+                .append(body("Bez sądu masz pewne grosze. Z sądem masz "
+                        + "szansę na wszystko i ryzyko zera.\n\n"))
+                .append(hint("Opłaca się tym bardziej, im lepszy masz "
+                        + "komisariat."))));
     }
 
     /** Every page below reads its numbers off {@link HomeSurvey}. */
@@ -1593,6 +1617,23 @@ public final class TrapGuide {
                         + "indeksem."))));
 
         pages.add(page(Text.empty()
+                .append(title("4c3. DROŻYZNA\n\n"))
+                .append(body("Indeks wraca do normy. Drożyzna nie.\n\n"))
+                .append(body("Im bogatszy serwer, tym wyżej ceny "
+                        + "bazowe. Powoli.\n\n"))
+                .append(body("Ulica idzie w górę razem z nim.\n"))
+                .append(hint("/market pokaże ile."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c4. PÓŁKI I MIASTO\n\n"))
+                .append(body("Cała półka ma swój nastrój na jakiś dzień: "
+                        + "raz droższe rudy, raz tańsze drewno.\n\n"))
+                .append(body("Bogate miasto podbija ceny, biedne "
+                        + "je puszcza - do "
+                        + Math.round(TrapMath.BIDDING * 100)
+                        + "% w każdą stronę."))));
+
+        pages.add(page(Text.empty()
                 .append(title("4d. PORTFEL\n\n"))
                 .append(item("Nić   Bryłka Nić\nSkóra Szmar  Skóra\nSkóra Skóra  Skóra\n\n"))
                 .append(body("Mieści dowolną ilość szmaragdów w jednym "
@@ -2198,7 +2239,153 @@ public final class TrapGuide {
                         + "partię w skręty."))));
     }
 
+    /**
+     * The bookmaker.
+     *
+     * Written as a method rather than a leaflet, because it is the only system
+     * in this mod where the player can be genuinely BETTER at it and every
+     * figure that decides whether they are is a constant three files away. The
+     * margin, the number of results kept, what an absentee costs and the
+     * coupon's ceiling are all read from {@link TrapMath} here, so retuning
+     * the board retunes the book that teaches it.
+     */
+    public static ItemStack createBookmaker() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("ZAKŁADY"))
+                .append(Text.literal("\nporadnik gracza\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("1 Telewizor  2 Kursy\n3 Co czytać  4 Kupon\n"
+                        + "5 Wypłata    6 Sporty\n"))
+                .append(hint("Można tu wygrywać. Na ślepo -- nie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1. TELEWIZOR\n\n"))
+                .append(body("Zrób "))
+                .append(item("Telewizor"))
+                .append(body(" i postaw go. Kliknij PPM.\n\n"))
+                .append(body("Osiem rozgrywek chodzi cały czas, nawet "
+                        + "gdy nikt nie patrzy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. KURSY\n\n"))
+                .append(body("Bukmacher wycenia spotkanie z DWÓCH rzeczy: "
+                        + "renomy zawodnika i tego, kto gra u siebie.\n\n"))
+                .append(warn("Z niczego więcej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2b. MARŻA\n\n"))
+                .append(body("Od każdego kursu odchodzi "
+                        + Math.round(TrapMath.BOOK_MARGIN * 100) + "%.\n\n"))
+                .append(body("Dlatego obstawianie faworyta bez myślenia "
+                        + "przynosi mniej więcej tyle samo na minusie.\n\n"))
+                .append(hint("To nie pech. To cennik."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. CO CZYTAĆ\n\n"))
+                .append(body("Wejdź w spotkanie. Karty obu stron pokazują "
+                        + "cztery rzeczy, których w kursie NIE MA."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3a. FORMA\n\n"))
+                .append(body("Pięć ostatnich wyników, najnowszy pierwszy.\n\n"))
+                .append(body("W wygrana, R remis, P porażka.\n\n"))
+                .append(hint("To prawdziwe wyniki z tego serwera."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. SKŁAD\n\n"))
+                .append(body("Braki w składzie. Do trzech.\n\n"))
+                .append(body("Każdy brakujący to " + TrapMath.BOOK_ABSENCE
+                        + " punkty siły mniej.\n\n"))
+                .append(warn("Trzech brakujących to inna drużyna."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3c. ODPOCZYNEK\n\n"))
+                .append(body("Ile rund minęło od ostatniego występu.\n\n"))
+                .append(body("Gra drugi raz z rzędu: "
+                        + TrapMath.BOOK_REST[0] + ".\n"))
+                .append(body("Wypoczęty: +"
+                        + TrapMath.BOOK_REST[TrapMath.BOOK_REST.length - 1] + "."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3d. WARUNKI\n\n"))
+                .append(body("Nawierzchnia, tor, podłoże, pogoda, tempo.\n\n"))
+                .append(body("Każdy zawodnik ma STYL. Zgadza się ze "
+                        + "stylem -- jest silniejszy. Nie zgadza -- słabszy.\n\n"))
+                .append(hint("Mączkarz na trawie to inny zawodnik."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3e. BILANS\n\n"))
+                .append(body("Ile razy ta dwójka już się tu spotkała i "
+                        + "jak to się kończyło.\n\n"))
+                .append(body("Warte najwyżej " + TrapMath.BOOK_H2H_CAP
+                        + " punkty, więc to przechyłka, nie argument."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3f. JAK TO SKŁADAĆ\n\n"))
+                .append(body("Nigdzie nie zobaczysz wyliczonej szansy. "
+                        + "Ekran podaje SKŁADNIKI, nie odpowiedź.\n\n"))
+                .append(hint("Trzy z czterech mówią to samo: bierz.\n"
+                        + "Kłócą się: odpuść."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. KUPON\n\n"))
+                .append(body("Kliknij kurs, żeby dodać typ. Do "
+                        + TrapMath.BOOK_MAX_LEGS + " pozycji.\n\n"))
+                .append(body("Kursy się mnożą.\n\n"))
+                .append(warn("Marża też. Czwórka to cztery razy "
+                        + "zapłacona prowizja."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. LIMITY\n\n"))
+                .append(body("Jedno spotkanie -- jeden typ na kuponie.\n\n"))
+                .append(body("Maksymalna wypłata: "
+                        + TrapMath.BOOK_MAX_PAYOUT + "e.\n\n"))
+                .append(hint("Kupon znika po zamknięciu telewizora. "
+                        + "Postawiony -- zostaje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. WYPŁATA\n\n"))
+                .append(body("Spotkania kończą się same, po kilku "
+                        + "minutach. Kupon rozlicza się przy ostatniej "
+                        + "pozycji.\n\n"))
+                .append(body("Jesteś w grze: pieniądze od razu.\n"))
+                .append(body("Nie ma cię: czekają w telewizorze."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. PODATEK\n\n"))
+                .append(body("Miasto bierze daninę hazardową od każdej "
+                        + "postawionej stawki.\n\n"))
+                .append(body("Od obrotu, nie od wygranej.\n\n"))
+                .append(hint("Tak samo jak w kasynie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. SPORTY\n\n"))
+                .append(body("Piłka: 1 X 2, z remisem.\n"))
+                .append(body("Tenis, kosz: dwóch.\n"))
+                .append(body("F1, konie: cała stawka.\n\n"))
+                .append(hint("W wyścigach jest drugi rynek: MIEJSCE. "
+                        + "Krótszy kurs, częściej wchodzi."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. NAZWISKA\n\n"))
+                .append(body("Wszyscy są prawdziwi i ich renoma odpowiada "
+                        + "temu, jak jest naprawdę.\n\n"))
+                .append(body("Kto zna te ligi, ten wie, kto jest kim, "
+                        + "zanim jeszcze spojrzy na kurs."))));
+
+        return book("Zakłady", pages);
+    }
+
     private static ItemStack book(String title, List<RawFilteredPair<Text>> pages) {
+        // A written book carries a hundred pages and drops the rest without
+        // saying so -- the last chapter of a volume simply stops existing, and
+        // it looks like the pages were never written. The street guide sits in
+        // the nineties, so anything added there is one page from silent.
+        if (pages.size() > 100) {
+            TrapCraft.LOGGER.warn("{}: {} pages, everything past 100 is lost",
+                    title, pages.size());
+        }
         WrittenBookContentComponent content = new WrittenBookContentComponent(
                 RawFilteredPair.of(title), "Trap House", 0, pages, true);
         ItemStack stack = new ItemStack(Items.WRITTEN_BOOK);
@@ -2424,15 +2611,55 @@ public final class TrapGuide {
                 .append(body("Jedna słaba szyszka psuje całą partię."))));
 
         pages.add(page(Text.empty()
-                .append(title("6f. NAZWANE MIESZANKI\n\n"))
-                .append(body("Niektóre składy dają więcej niż suma "
-                        + "części:\n\n"))
-                .append(body("Trinity  K+H+P\nVoid  M+M+P\nDaybreak  H+S\nTurbo  D+D+H\nTar  K+K+M\n"))));
+                .append(title("6f. NAZWY\n\n"))
+                .append(body("Każdy skład z samych RÓŻNYCH "
+                        + "odmian ma nazwę, kolor i własny "
+                        + "efekt.\n\n"))
+                .append(hint("Powtórzysz odmianę - zwykle "
+                        + "wyjdzie bezimienna."))));
+
+        namedBlendPages(pages);
+    }
+
+    /**
+     * The catalogue, off {@link Blend#recipes()} rather than typed out.
+     *
+     * Hand-typed it was five names on one page; it is fifty-three now, and a
+     * list that long retyped into a book is a list that disagrees with the game
+     * by the end of the week. The page break is counted here rather than
+     * trusted to {@code check_pages.py}, whose loop-bound guesser cannot see
+     * how long this table is -- {@link BlendTest} holds both numbers to the
+     * book's real limits instead.
+     */
+    private static void namedBlendPages(List<RawFilteredPair<Text>> pages) {
+        // 14 lines fit; two go to the title and one to the footer. Names are
+        // capped at 12 characters so "name + space + four initials" clears the
+        // 19-column line -- BlendTest fails the build if one grows past that.
+        final int perPage = 11;
+        List<Blend.Recipe> all = new java.util.ArrayList<>(Blend.recipes());
+        all.sort(java.util.Comparator.comparingInt((Blend.Recipe r) -> r.needs().size())
+                .thenComparing(Blend.Recipe::display));
+
+        for (int from = 0; from < all.size(); from += perPage) {
+            StringBuilder lines = new StringBuilder();
+            for (Blend.Recipe recipe : all.subList(from, Math.min(from + perPage, all.size()))) {
+                lines.append(recipe.display()).append(' ');
+                for (Strain part : recipe.needs()) {
+                    lines.append(part.display().charAt(0));
+                }
+                lines.append('\n');
+            }
+            int sheet = from / perPage + 1;
+            pages.add(page(Text.empty()
+                    .append(title("6g" + sheet + ". SPIS\n\n"))
+                    .append(body(lines.toString()))));
+        }
 
         pages.add(page(Text.empty()
-                .append(title("6f2. I JESZCZE\n\n"))
-                .append(body("Kaleidoscope  P+S+H+D\n\n"))
-                .append(hint("Litery to pierwsze litery nazw odmian."))));
+                .append(title("6h. LITERY\n\n"))
+                .append(body("K Kush   H Haze\nP Purp   D Diesel\nM Midnight\nS Sunset\n\n"))
+                .append(hint("Mieszalnik pokazuje nazwę, zanim "
+                        + "zatwierdzisz."))));
     }
 
     private static void baked(List<RawFilteredPair<Text>> pages) {
@@ -2642,16 +2869,31 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("6. EFEKT WIRED\n\n"))
-                .append(body("Kokaina daje szybkość i siłę.\n\n"))
-                .append(warn("Przez cały czas trwania nic cię nie "
-                        + "kosztuje."))));
+                .append(body("Szybszy chód, mocniejszy cios i SZYBSZE "
+                        + "KOPANIE.\n\n"))
+                .append(hint("To jest towar do roboty, nie do klimatu."))));
 
         pages.add(page(Text.empty()
-                .append(title("6b. RACHUNEK\n\n"))
+                .append(title("6b. DO CZEGO\n\n"))
+                .append(body("Im czystszy proszek, tym dłużej i mocniej "
+                        + "idzie kilof.\n\n"))
+                .append(hint("Cięte starcza na jeden korytarz, idealne "
+                        + "na całą żyłę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. RACHUNEK\n\n"))
                 .append(warn("Kiedy efekt się kończy, cała kara spada "
                         + "na ciebie NARAZ.\n\n"))
-                .append(hint("Nie bierz kolejnej działki tuż przed "
-                        + "walką."))));
+                .append(body("Wolno chodzisz, słabo bijesz i szybko "
+                        + "głodniejesz.\n\n"))
+                .append(hint("Kilof zjazd omija -- kop dalej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6d. KIEDY NIE BRAĆ\n\n"))
+                .append(warn("Nie bierz kolejnej działki tuż przed "
+                        + "walką.\n\n"))
+                .append(hint("Zjazd zastanie cię z pustym paskiem "
+                        + "i bez siły."))));
     }
 
     // --- the chemist's handbook -----------------------------------------------
@@ -3099,6 +3341,16 @@ public final class TrapGuide {
                         + TrapCrew.PACE_COST[top] + "e.\n\n"))
                 .append(hint("Tempo kupuj w pierwszej kolejności."))));
 
+        // The page that makes the ladder safe to climb. Buying the top rung
+        // used to be a wage you carried forever, so people stopped at rung two
+        // and the 2200e one may as well not have existed.
+        pages.add(page(Text.empty()
+                .append(title("4c. W DÓŁ TEŻ\n\n"))
+                .append(body("Shift+LPM na Tempie obniża poziom "
+                        + "o jeden. Pensja spada od razu.\n\n"))
+                .append(hint("Powrót w górę jest DARMOWY - raz "
+                        + "kupiony poziom zostaje twój."))));
+
         pages.add(page(Text.empty()
                 .append(title("5. ZASIĘG DZIAŁKI\n\n"))
                 .append(body("Na start pracuje w kwadracie "
@@ -3246,7 +3498,7 @@ public final class TrapGuide {
     private static void jobs(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("6. DWA ZAWODY\n\n"))
-                .append(body("Jedna osoba może mieć maksymalnie "
+                .append(body("Jedna osoba robi naraz maksymalnie "
                         + TrapCrew.SLOTS + " zawody.\n\n"))
                 .append(body("Potrzebujesz trzeciej rzeczy? Zatrudnij "
                         + "trzecią osobę. Limit: " + TrapCrew.MAX_HANDS
@@ -3256,8 +3508,14 @@ public final class TrapGuide {
                 .append(title("6b. ZMIANA ZAWODU\n\n"))
                 .append(body("Zbieranie plonów jest darmowe i ma "
                         + "każdy.\n\n"))
-                .append(hint("Shift+LPM usuwa wykupiony zawód, żeby "
-                        + "zwolnić miejsce."))));
+                .append(hint("Shift+LPM WYŁĄCZA zawód i zwalnia "
+                        + "miejsce. Nauka zostaje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. LIMIT TO NIE WIEDZA\n\n"))
+                .append(body("Limit " + TrapCrew.SLOTS + " dotyczy tego, co robi "
+                        + "NARAZ. Ucz ile chcesz i przełączaj.\n\n"))
+                .append(hint("Włączanie z powrotem nic nie kosztuje."))));
 
         // Five to a page. The whole list on one page was already at the ~14
         // line ceiling this book truncates at, and laundering pushed it over

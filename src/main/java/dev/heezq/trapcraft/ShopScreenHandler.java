@@ -419,7 +419,12 @@ public class ShopScreenHandler extends ScreenHandler {
                 Text.empty(),
                 line("Indeks  " + Math.round(index * 100) + "%", Formatting.DARK_GRAY),
                 line("Każdy wydany, wygrany i wypłacony", Formatting.DARK_GRAY),
-                line("szmaragd go rusza. Ceny co 30s.", Formatting.DARK_GRAY))));
+                line("szmaragd go rusza. Ceny co 30s.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("Drożyzna  x" + String.format("%.2f", TrapMarket.level()),
+                        Formatting.DARK_GRAY),
+                line("Im bogatszy serwer, tym wyżej ceny", Formatting.DARK_GRAY),
+                line("bazowe. Rośnie powoli, spada wolniej.", Formatting.DARK_GRAY))));
         display.setStack(MOOD_SLOT, mood);
 
         int purse = TrapMarket.wealthOf(shopper);

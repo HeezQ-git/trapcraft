@@ -21,6 +21,7 @@ import glob
 import html
 import io
 import json
+import math
 import pathlib
 import re
 import sys
@@ -306,6 +307,92 @@ def advancements() -> list[dict]:
 DATA = {}
 
 
+def leagues() -> list[dict]:
+    """Every competition, read out of TrapSports.
+
+    The rosters are the point of this section -- "real teams whose real
+    standing decides the price" is a claim the page has to be able to show,
+    not assert -- and a hand-typed table of a hundred and twenty names would
+    be wrong within a week of the first retune. So the names, the reputations,
+    the styles and the whole suits matrix come out of the Java.
+    """
+    src = java("TrapSports")
+    out = []
+    for block in re.finditer(
+            r'new League\(\s*"([^"]+)",\s*"([^"]+)",\s*(\w+),\s*(\w+|null),\s*'
+            r'(\w+),\s*(\w+),\s*(\d+),\s*(true|false),\s*(true|false),\s*'
+            r'(\d+),\s*(\d+),\s*new Runner\[\]\{(.*?)\n    \}\);',
+            src, re.S):
+        name, sport, conditions, _venues, styles, suits = block.group(1, 2, 3, 4, 5, 6)
+        field, draws, home, places, slots, roster = block.group(7, 8, 9, 10, 11, 12)
+        runners = [
+            {"name": m.group(1), "reputation": int(m.group(2)),
+             "style": int(m.group(3)), "note": m.group(4)}
+            for m in re.finditer(r'r\("([^"]+)",\s*(\d+),\s*(\d+),\s*"([^"]+)"\)', roster)
+        ]
+        out.append({
+            "name": name, "sport": sport,
+            "conditions": strings(conditions, src),
+            "styles": strings(styles, src),
+            "suits": matrix(suits, src),
+            "field": int(field), "draws": draws == "true", "home": home == "true",
+            "places": int(places), "slots": int(slots),
+            "runners": sorted(runners, key=lambda r: -r["reputation"]),
+        })
+    if not out:
+        sys.exit("gen_wiki: no leagues parsed out of TrapSports -- the source moved")
+    check_leagues(out)
+    return out
+
+
+def check_leagues(competitions: list[dict]) -> None:
+    """The same invariants TrapSports asserts at class-init, checked on the desk.
+
+    TrapSports throws in a static initialiser if any of these are wrong, which
+    is correct -- a suits table whose rows do not line up with its conditions
+    silently gives a runner its neighbour's bonus, and there is no symptom.
+    But a static initialiser only runs when the server boots, and "the server
+    will not start" is a thing to find out here rather than on a live world.
+
+    The roster rule is not theoretical: the gonitwa shipped with fourteen
+    horses and room for two races of eight, which is sixteen, and it would
+    have taken the server down at boot.
+    """
+    for c in competitions:
+        where = f"gen_wiki: {c['name']}"
+        if len(c["suits"]) != len(c["conditions"]):
+            sys.exit(f"{where}: {len(c['suits'])} suits rows for "
+                     f"{len(c['conditions'])} conditions")
+        for row in c["suits"]:
+            if len(row) != len(c["styles"]):
+                sys.exit(f"{where}: a suits row has {len(row)} columns for "
+                         f"{len(c['styles'])} styles")
+        for runner in c["runners"]:
+            if not 0 <= runner["style"] < len(c["styles"]):
+                sys.exit(f"{where}: {runner['name']} has style {runner['style']}")
+        need = c["field"] * c["slots"]
+        if len(c["runners"]) < need:
+            sys.exit(f"{where}: {c['slots']} fixtures of {c['field']} need {need} "
+                     f"runners and the roster has {len(c['runners'])} -- TrapSports "
+                     f"throws on this at boot")
+
+
+def strings(name: str, src: str) -> list[str]:
+    raw = need(name + r'\s*=\s*\{([^}]*)\}', src, name)
+    return re.findall(r'"([^"]*)"', raw)
+
+
+def matrix(name: str, src: str) -> list[list[int]]:
+    # re.S here rather than need(): the tables span lines, and need() searches
+    # without it. A single-line search silently finds nothing and the whole
+    # section renders empty, which is the failure this script exists to avoid.
+    found = re.search(name + r'\s*=\s*\{(.*?)\n    \};', src, re.S)
+    if not found:
+        sys.exit(f"gen_wiki: couldn't find the {name} table -- the source moved")
+    return [[int(n) for n in re.findall(r'-?\d+', row)]
+            for row in re.findall(r'\{([^}]*)\}', found.group(1))]
+
+
 def gather() -> None:
     math = java("TrapMath")
     crew = java("TrapCrew")
@@ -321,6 +408,24 @@ def gather() -> None:
     DATA["shop_rate"] = int(need(r"SHOP_RATE = (\d+)", city, "SHOP_RATE"))
     DATA["house_rate"] = int(need(r"HOUSE_RATE = (\d+)", city, "HOUSE_RATE"))
     DATA["club_door"] = ints("DOOR", clubs)
+
+    sports = java("TrapSports")
+    DATA["leagues"] = leagues()
+    DATA["book_margin"] = float(need(r"BOOK_MARGIN = ([\d.]+)f", math, "BOOK_MARGIN"))
+    DATA["book_scale"] = float(need(r"BOOK_SCALE = ([\d.]+)f", math, "BOOK_SCALE"))
+    DATA["book_form"] = int(need(r"BOOK_FORM = (\d+)", math, "BOOK_FORM"))
+    DATA["book_absence"] = int(need(r"BOOK_ABSENCE = (\d+)", math, "BOOK_ABSENCE"))
+    DATA["book_rest"] = ints("BOOK_REST", math)
+    DATA["book_home"] = int(need(r"BOOK_HOME = (\d+)", math, "BOOK_HOME"))
+    DATA["book_h2h_cap"] = int(need(r"BOOK_H2H_CAP = (\d+)", math, "BOOK_H2H_CAP"))
+    DATA["book_legs"] = int(need(r"BOOK_MAX_LEGS = (\d+)", math, "BOOK_MAX_LEGS"))
+    DATA["book_payout"] = int(need(r"BOOK_MAX_PAYOUT = ([\d_]+)", math,
+                                   "BOOK_MAX_PAYOUT").replace("_", ""))
+    DATA["book_stakes"] = ints("BOOK_STAKES", math)
+    DATA["book_draw_base"] = float(need(r"BOOK_DRAW_BASE = ([\d.]+)f", math, "draw base"))
+    DATA["book_min_ticks"] = int(need(r"MIN_TICKS = 20 \* 60 \* (\d+)", sports, "MIN_TICKS"))
+    DATA["book_max_ticks"] = int(need(r"MAX_TICKS = 20 \* 60 \* (\d+)", sports, "MAX_TICKS"))
+    DATA["book_slips"] = int(need(r"MAX_SLIPS = (\d+)", sports, "MAX_SLIPS"))
 
     DATA["strains"] = strains()
     DATA["quality"] = graded("Quality")
@@ -659,9 +764,16 @@ def craft_row(pairs) -> str:
         recipe_grid(name, label) for name, label in pairs) + "</div>"
 
 
+def mixes_possible() -> int:
+    """Every mix the station accepts: n strains taken 2..4, repeats allowed."""
+    n = len(DATA["strains"])
+    return sum(math.comb(n + k - 1, k) for k in (2, 3, 4))
+
+
 def blend_rows() -> str:
     out = []
-    for b in DATA["blends"]:
+    # Widest last: the table reads as the ladder the potencies actually are.
+    for b in sorted(DATA["blends"], key=lambda b: (len(b["parts"]), b["name"])):
         bonus = ", ".join(b["bonus"]) or "—"
         out.append([f'<span class="dot" style="--tint:{b["colour"]}"></span>'
                     f'<strong>{esc(b["name"])}</strong>',
@@ -781,7 +893,8 @@ def build() -> str:
         # that comes for a farm; §08c is the office the city pays. Two things
         # called police on one page is a page that answers neither question.
         ("10", "heat", "Naloty"), ("11", "street", "Ulica"),
-        ("12", "casino", "Kasyno"), ("13", "commands", "Komendy"),
+        ("12", "casino", "Kasyno"), ("12b", "bets", "Zakłady"),
+        ("13", "commands", "Komendy"),
         ("14", "awards", "Osiągnięcia"),
     ]
     nav = "".join(
@@ -842,19 +955,23 @@ def build() -> str:
     <h3 class="sub">Mieszanki</h3>
     <p>Mieszalnik bierze od dwóch do czterech rodzajów suszu i robi z nich coś, co nie
     jest żadnym z nich. Sześć odmian brane po dwie do czterech daje
-    <strong>203 różne przepisy</strong>, a kilka z nich ma nazwy warte odkrycia.
+    <strong>{mixes_possible()} różnych przepisów</strong>, a {len(DATA["blends"])} z nich ma
+    własną nazwę.
     Wrzucasz całe stacki; maszyna przerabia wszystko jednym kliknięciem.</p>
     <p class="note">Klasa idzie z <em>najgorszego</em> slotu. Uśrednianie pozwoliłoby
     jedną szyszką klasy Topowe przemycić trzy Słabe.</p>"""))
 
 
-    sections.append(section("03", "blends", "Mieszanki", "203 przepisy, sześć z nazwą", f"""
+    sections.append(section("03", "blends", "Mieszanki",
+                            f"{mixes_possible()} przepisów, {len(DATA['blends'])} z nazwą", f"""
     <p class="lede">Od dwóch do czterech rodzajów suszu wrzucasz do mieszalnika i wychodzi
     z niego coś, co nie jest żadnym z nich. Efekty to suma składników, każdy przeskalowany
     swoim udziałem — mieszanka w trzech czwartych z Kusha działa głównie jak Kush.</p>
     <p>Powtórki się liczą, więc dwa Kush i jeden Purp to nie to samo, co po jednym
     z każdego. Sześć odmian brane po dwie do czterech, bez znaczenia kolejności, daje
-    <strong>203 różne przepisy</strong>. Te poniżej dają więcej, niż wynikałoby z sumy:</p>
+    <strong>{mixes_possible()} różnych przepisów</strong>. KAŻDY skład z samych różnych
+    odmian ma nazwę, kolor i efekt, którego nie daje żaden ze składników — to te poniżej.
+    Powtórzona odmiana zwykle daje mieszankę bezimienną:</p>
     {blend_rows()}
     <p class="note">Klasa mieszanki idzie z <em>najgorszego</em> slotu, a mieszalnik mówi
     ci to przed zatwierdzeniem. Zmieszanie klasy Topowe ze Słabymi da Słabe.</p>"""))
@@ -1516,6 +1633,17 @@ def build() -> str:
     {table(["Zawód", "Koszt", "Pensja", "Co robi"], job_rows)}
     <p>Powyższe czasy to to, co zmierzyłbyś stoperem, razem z przerwą — a nie surowy odstęp
     między przebiegami.</p>
+    <h3 class="sub">Wszystko da się cofnąć</h3>
+    <p>Pensja idzie za tym, co jest <strong>włączone teraz</strong>, a nie za tym, co
+    kiedykolwiek kupiłeś. <strong>Shift+LPM</strong> na Tempie albo Zasięgu obniża poziom
+    o jeden i od razu obcina pensję; zwykły klik podnosi z powrotem — i skoro ten poziom
+    już raz kupiłeś, <strong>powrót w górę jest za darmo</strong>. Robotnik napędzony
+    na maksa na czas budowy może przespać zimę na najwolniejszym poziomie za 0e dodatku.</p>
+    <p>Zawody działają tak samo. <strong>Shift+LPM</strong> na wyuczonym zawodzie
+    <strong>wyłącza</strong> go — zwalnia jedno z dwóch miejsc i zdejmuje jego dodatek
+    z pensji — ale nauka zostaje. Możesz mieć wyuczonych pięć zawodów i włączone dwa,
+    przełączać je zależnie od pory roku, i nigdy nie płacić drugi raz. Limit dwóch dotyczy
+    tego, co robi <em>naraz</em>, nie tego, co umie.</p>
     <h3 class="sub">Jedna skrzynia</h3>
     <p>To jest rzecz, którą wszyscy mylą. Robotnik korzysta z <strong>pojemnika najbliższego
     swojemu miejscu pracy</strong> — tego jednego i żadnego innego — do wszystkiego: tam wkłada
@@ -1531,8 +1659,8 @@ def build() -> str:
     kosztowało za pierwszym razem. <code>/crew plans</code> pokazuje listę. Jeśli ekipa
     kiedykolwiek odejdzie przez brak wypłat, zapisuje się sama pod nazwą <code>walkout</code>,
     więc nic naprawdę nie przepada — po prostu płacisz drugi raz.</p>
-    <p class="note">Wszystko, czego ich uczysz, podnosi pensję. Robotnik, którego nie masz czym
-    zająć, to strata pieniędzy. Za spóźnioną wypłatę dostajesz ostrzeżenie, a nie odejście:
+    <p class="note">Wszystko, co masz <em>włączone</em>, podnosi pensję. Robotnik, którego nie
+    masz czym zająć, to strata pieniędzy — wyłącz mu, czego akurat nie potrzebujesz. Za spóźnioną wypłatę dostajesz ostrzeżenie, a nie odejście:
     {d['grace']} wypłat na zero, czyli około dwóch dni, a zapłacenie jednej umarza całe
     zaległości.</p>"""))
 
@@ -1611,10 +1739,114 @@ def build() -> str:
     sali kosztuje stałą pensję przeciwko proporcjonalnym kradzieżom, a sala bez opieki zarabia
     prawie zero.</p>"""))
 
+    # --- the bookmaker -------------------------------------------------------
+    #
+    # Two tables carry this section and both are generated: the competition
+    # list, so nobody has to count rosters by hand, and one full suits matrix,
+    # so the page shows the SHAPE of the readable edge -- which is the thing
+    # somebody has to understand before any of the prose means anything.
+    league_rows = []
+    for competition in d["leagues"]:
+        if competition["field"] > 2:
+            market = f'zwycięzca + miejsce (pierwsza {competition["places"]})'
+        elif competition["draws"]:
+            market = "1 X 2"
+        else:
+            market = "zwycięzca"
+        league_rows.append([
+            f'<strong>{esc(competition["name"])}</strong>',
+            esc(competition["sport"]),
+            str(len(competition["runners"])),
+            f'{competition["field"]} w stawce' if competition["field"] > 2 else "para",
+            market,
+            f'<span class="dim">{esc(", ".join(competition["conditions"]))}</span>',
+        ])
+
+    tennis = next(c for c in d["leagues"] if c["name"] == "ATP")
+    suits_rows = []
+    for row, condition in enumerate(tennis["conditions"]):
+        cells = [esc(condition)]
+        for column in range(len(tennis["styles"])):
+            points = tennis["suits"][row][column]
+            tone = "up" if points > 0 else "down" if points < 0 else "dim"
+            cells.append(f'<span class="{tone}">{points:+d}</span>')
+        suits_rows.append(cells)
+
+    top = sorted((r for c in d["leagues"] for r in c["runners"]),
+                 key=lambda r: -r["reputation"])[:6]
+    roster_cards = "".join(
+        f'<div class="card reveal"><h4>{esc(r["name"])}</h4>'
+        f'<p class="dim">{esc(r["note"])}</p></div>' for r in top)
+
+    rest_low, rest_high = d["book_rest"][0], d["book_rest"][-1]
+    sections.append(section("12b", "bets", "Zakłady sportowe",
+                            "kurs wie mniej niż ty", f"""
+    <p class="lede">Postaw <strong>telewizor</strong> i masz osiem rozgrywek chodzących
+    non stop — Liga Mistrzów, Ekstraklasa, ATP, WTA, Formuła 1, gonitwy i dwie ligi
+    koszykówki. Spotkania startują same co
+    {d['book_min_ticks']}–{d['book_max_ticks']} minut, niezależnie od tego, czy ktoś
+    patrzy. Wszyscy zawodnicy są prawdziwi, a ich renoma odpowiada temu, jak jest
+    naprawdę: kto zna te ligi, ten wie, kto jest kim, jeszcze zanim spojrzy na kurs.</p>
+
+    <h3 class="sub">Dlaczego da się tu wygrać</h3>
+    <p>Bukmacher wycenia spotkanie z <strong>dwóch</strong> rzeczy: renomy zawodnika
+    i tego, kto gra u siebie (+{d['book_home']} do siły). Z niczego więcej. Wynik
+    rozstrzyga się z <strong>sześciu</strong>, i te cztery brakujące są wypisane
+    słowami na ekranie każdego spotkania:</p>
+    {table(["Czynnik", "Ile jest wart", "Gdzie to zobaczysz"], [
+        ["Forma", f"±{d['book_form'] * 5} pkt (pięć ostatnich wyników, po "
+                  f"{d['book_form']} pkt każdy)",
+         "Karta zawodnika: W wygrana, R remis, P porażka"],
+        ["Absencje", f"−{d['book_absence']} pkt za każdego brakującego, do trzech",
+         "Karta zawodnika: „brakuje 2 zawodników”"],
+        ["Odpoczynek", f"od {rest_low} do +{rest_high} pkt",
+         "Karta zawodnika: ile rund przerwy"],
+        ["Warunki", "zależnie od stylu, patrz tabela niżej",
+         "Nagłówek spotkania + „Styl” na karcie"],
+        ["Bezpośrednie starcia", f"do ±{d['book_h2h_cap']} pkt",
+         "Środkowa karta, liczone z tego serwera"],
+    ])}
+    <p class="note">Nigdzie nie zobaczysz wyliczonej szansy ani podpowiedzi, kto jest
+    lepszy. Ekran podaje <em>składniki</em>, nie odpowiedź — inaczej to nie byłby zakład,
+    tylko przycisk „odbierz”.</p>
+
+    <h3 class="sub">Warunki kontra styl</h3>
+    <p>Każdy zawodnik ma styl, każde spotkanie ma warunki, a to, czy do siebie pasują,
+    jest warte kilka punktów siły — i nie ma tego w kursie. Tenis, jako przykład
+    (pozostałe rozgrywki mają własne tabele o tym samym kształcie):</p>
+    {table(["Nawierzchnia"] + [esc(s) for s in tennis["styles"]], suits_rows)}
+    <p class="note">Mączkarz na trawie to inny zawodnik. To jest cała gra.</p>
+
+    <h3 class="sub">Marża, czyli dlaczego na ślepo się nie da</h3>
+    <p>Od każdego kursu odchodzi <strong>{round(d['book_margin'] * 100)}%</strong>.
+    Obstawianie faworyta bez patrzenia na nic innego przynosi mniej więcej dokładnie
+    tyle na minusie — to nie pech, tylko cennik. Żeby wyjść na plus, przewaga, którą
+    wyczytasz z ekranu, musi być większa niż ta marża. Trzy z czterech czynników mówiące
+    to samo zwykle wystarczą; czynniki, które się kłócą, to spotkanie do odpuszczenia.</p>
+
+    <h3 class="sub">Kupon</h3>
+    <p>Do <strong>{d['book_legs']} pozycji</strong> na kuponie, kursy się mnożą — ale
+    marża też, więc czwórka to cztery razy zapłacona prowizja. Z jednego spotkania
+    wchodzi tylko jeden typ. Stawki od {d['book_stakes'][0]}e do
+    {d['book_stakes'][-1]}e, maksymalna wypłata {d['book_payout']}e, do
+    {d['book_slips']} kuponów w grze naraz. Kupon rozlicza się sam przy ostatniej
+    pozycji: jesteś w grze — pieniądze od razu, nie ma cię — czekają w telewizorze.</p>
+    <p class="note">Miasto bierze daninę hazardową od każdej postawionej stawki, od
+    obrotu, a nie od wygranej. Tak samo jak w kasynie.</p>
+
+    <h3 class="sub">Co jest na antenie</h3>
+    {table(["Rozgrywki", "Sport", "Zawodników", "Format", "Rynki", "Warunki"],
+           league_rows)}
+    <div class="cards">{roster_cards}</div>
+    <p class="note">Forma na ekranie to prawdziwe wyniki z tego serwera, nie ozdoba.
+    Bezpośrednie starcia też. Kto ogląda wyniki, ten zna formę, zanim wejdzie
+    w spotkanie.</p>"""))
+
     cmd_rows = [
         ["<code>/wiki</code>", "Ta strona, jako klikalny link na czacie"],
         ["<code>/guide</code>",
-         "Dziewięć poradników — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania"],
+         "Poradniki — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania, zakłady"],
+        ["<code>/guide zaklady</code>", "Zakłady sportowe: co czytać z telewizora"],
         ["<code>/guide housing</code>", "Domy, klasy i skąd lokatorzy biorą pieniądze"],
         ["<code>/market</code>", "Dlaczego wszystko kosztuje tyle, ile kosztuje"],
         ["<code>/stalls</code>", "Kto sprzedaje i gdzie"],
@@ -1644,7 +1876,8 @@ def build() -> str:
     body = "".join(sections)
 
     return TEMPLATE.format(nav=nav, sections=body, lines=d["declared_lines"],
-                           strains=len(d["strains"]), awards=len(d["awards"]))
+                           strains=len(d["strains"]), awards=len(d["awards"]),
+                           blends=len(d["blends"]))
 
 
 TEMPLATE = """<!doctype html>
@@ -1837,6 +2070,8 @@ main {{ padding: 0 var(--pad) 8rem; }}
   padding: .2rem 0 .2rem 1.1rem; color: var(--bone-dim); font-style: italic;
 }}
 .dim {{ color: var(--bone-dim); }}
+.up {{ color: var(--acc); }}
+.down {{ color: var(--warn); }}
 .acc {{ color: var(--acc); }}
 .warn {{ color: var(--warn); }}
 code {{ font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .86em; color: var(--bone);
@@ -2006,7 +2241,7 @@ footer a:hover {{ text-decoration: underline; }}
       <div class="figs">
         <div><b>{lines}</b><span>wycenionych pozycji</span></div>
         <div><b>{strains}</b><span>odmian</span></div>
-        <div><b>203</b><span>mieszanek</span></div>
+        <div><b>{blends}</b><span>nazwanych mieszanek</span></div>
         <div><b>{awards}</b><span>osiągnięć</span></div>
       </div>
     </header>

@@ -172,6 +172,10 @@ public final class TrapContracts {
             if (form == Contract.Form.POWDER.ordinal()) {
                 payout = Math.round(payout * powderRate(grade));
             }
+            // Priced in today's money, and then frozen: a job is quoted when
+            // it is offered and pays what it said it would, the same way it is
+            // priced cold against heat. See {@link TrapMarket#atTodaysPrices}.
+            payout = TrapMarket.atTodaysPrices(payout);
             int seconds = BASE_SECONDS + distance / 100 * SECONDS_PER_100;
 
             jobs.add(new Contract(strain.ordinal(), grade, quantity,

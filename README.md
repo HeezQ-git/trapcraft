@@ -46,13 +46,31 @@ seeds ──plant on farmland──> plant (4 stages) ──break──> fresh b
 fresh buds ──drying rack, 4 min──> cured buds ──+ paper──> joint ──smoke──> Baked
 ```
 
-Three strains, each with its own effect profile:
+Six strains: three you can find, three you cross-breed by growing two of the
+first three side by side.
 
 | Strain | Baked level | Duration | On top of that |
 |--------|-------------|----------|----------------|
 | Kush   | II          | 90s      | Slowness, Regeneration |
 | Haze   | I           | 60s      | Speed, Jump Boost |
 | Purp   | III         | 120s     | Night Vision, Nausea |
+| Diesel   (K+H) | II  | 100s     | Speed, Regeneration, Resistance |
+| Midnight (K+P) | IV  | 140s     | Night Vision, Slowness, Resistance |
+| Sunset   (H+P) | II  | 90s      | Jump Boost II, Night Vision, Slow Falling |
+
+The mixing station takes two to four cured buds and returns one jar carrying a
+`Blend` component, so the set of mixes is data rather than an enum: six strains
+taken two to four at a time, repeats allowed, is 203. **Every mix whose strains
+are all different has a name** — 15 pairs, 20 triples, 15 quads — plus three
+that want the same bud twice, for 53 in `Blend.NAMED`. A named mix gets
+its own colour, a potency above what averaging its parts would give, and a bonus
+effect none of its parts have; anything else averages out and stays nameless.
+
+That rule is the feature. With six names out of 203 the likely outcome of
+walking to the station was a nameless jar, so people mixed once and went back to
+selling plain bud. Both the guide book's catalogue pages and the website table
+are generated from `Blend.NAMED`, and `BlendTest` fails the build if a
+combination loses its name or a name grows too wide for a book line.
 
 **Baked** is a real custom status effect, not stacked vanilla ones. It burns
 saturation then hunger (the munchies), heals you slowly while you're well fed,
@@ -282,9 +300,42 @@ Two things worth knowing about how it works:
   cancelled it every tick. Setting the memory both moves them *and* starves the
   strolls, which require it to be absent.
 
+## The bookmaker
+
+A **telewizor** in the corner and eight competitions running on their own clock
+— Champions League, Ekstraklasa, ATP, WTA, Formula 1, horse racing and two
+basketball leagues. Every competitor is real and rated at roughly what they are
+actually worth, so somebody who follows the sport knows who is who before the
+price loads.
+
+The design is one asymmetry, and everything else follows from it:
+
+- The **board is priced** off reputation and home advantage. Nothing else.
+- The **result is decided** off those plus recent form, who is missing, how
+  long since they last played, whether today's going suits their style, and
+  what this exact pair has done to each other before.
+- All four of those missing factors are **printed on the screen in words**, for
+  both sides, before the off. What is never printed is a probability, a rating
+  or a tip: the studio page states the inputs and the player does the
+  arithmetic. Anything else and the screen plays the game for you.
+
+`BookmakerTest` simulates both ends of that claim, because both are easy to
+break by retuning one constant: a punter who always backs the favourite must
+lose at roughly the margin, and a punter who reads every panel must win — but
+not by much. The hidden factors were halved once already, when a perfect
+reader was returning thirty percent on turnover and the television had stopped
+being a game and become a printing press wired into `TrapMarket`.
+
+Coupons take up to four legs, odds multiply and so does the margin. Stakes go
+through `TrapHouse` with a null house — the unowned-machine path — so the city
+collects gaming duty on the handle and the ledger sees both ends. Winnings that
+land while their owner is logged out wait in the set until they come back for
+them, since the one thing an economy cannot survive is a payout that silently
+did not happen.
+
 ## The guide books
 
-`/guide` — ten books under one command, with tab-completion:
+`/guide` — twelve books under one command, with tab-completion:
 
 | Command | Covers |
 |---------|--------|
@@ -298,6 +349,8 @@ Two things worth knowing about how it works:
 | `/guide city` | the vault, the rates, the public works |
 | `/guide housing` | mailboxes, grades, rent, the ward |
 | `/guide police` | the station, the budget dial, crime, fines |
+| `/guide fires` | the brigade, the engines, what burns |
+| `/guide zaklady` | the bookmaker: what to read off the television |
 
 Every number on every page is read from the constant that governs it, so
 retuning a mechanic retunes the book and it can never quietly start lying.

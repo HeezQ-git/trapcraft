@@ -594,6 +594,45 @@ class PoliceTest {
                         + "which puts seven officers on seven different bearings");
     }
 
+    /**
+     * The garrison has to be able to walk out of wherever it is made.
+     *
+     * A golem is 1.4 blocks wide and cannot open a door, so a one-block
+     * doorway is a wall to it. Made round the station sign -- which the
+     * inspection's flood fill proves is INSIDE the building -- the city's
+     * whole army lives in the lobby, which is exactly what the live server
+     * had: five of them in the front corridor and a town with no patrol.
+     */
+    @Test
+    void aGolemIsStoodSomewhereItCanWalkOutOf() throws Exception {
+        String police = source("TrapPolice.java");
+
+        int forge = police.indexOf("private static IronGolemEntity forge(");
+        assertTrue(forge > 0, "forge() must exist");
+        assertFalse(police.substring(forge, police.indexOf("\n    }", forge))
+                        .contains("station.sign"),
+                "a spot searched round the sign is a spot inside the station, and a "
+                        + "golem does not fit back out through the door");
+
+        int street = police.indexOf("private static BlockPos street(");
+        assertTrue(street > 0, "street() must exist -- it is the only thing keeping the "
+                + "garrison outdoors");
+        String spot = police.substring(street, police.indexOf("\n    }", street));
+        assertTrue(spot.contains("outdoors(world"),
+                "and it has to actually test for a roof; headroom alone happily accepts "
+                        + "the middle of somebody's front room");
+        assertTrue(spot.contains("worthGuarding("),
+                "the addresses come from the round, which is what spreads the garrison "
+                        + "across the town instead of piling it in one yard");
+        assertTrue(spot.contains("isChunkLoaded"),
+                "reading a blockstate out in an unloaded chunk force-generates terrain "
+                        + "from a tick");
+
+        assertTrue(police.contains("unwall(world, station, body)"),
+                "and the ones already walled in have to be let out -- muster() re-adopts "
+                        + "anything alive and tagged, so they outlive the fix otherwise");
+    }
+
     @Test
     void aStationCannotStaffMoreThanItHouses() throws Exception {
         String police = source("TrapPolice.java");

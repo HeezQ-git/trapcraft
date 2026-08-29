@@ -212,9 +212,14 @@ public class CrewScreenHandler extends ScreenHandler {
         for (TrapCrew.Job job : card.taught()) {
             knows.append(knows.isEmpty() ? "" : ", ").append(job.display());
         }
-        lore.add(line("Umie " + card.taught().size() + " z " + TrapCrew.SLOTS
+        lore.add(line("Robi " + card.taught().size() + " z " + TrapCrew.SLOTS
                 + (knows.isEmpty() ? " -- na razie nic" : ": " + knows),
                 card.taught().isEmpty() ? Formatting.RED : Formatting.WHITE));
+        int off = card.owned().size() - card.taught().size();
+        if (off > 0) {
+            lore.add(line("Umie jeszcze " + off + ", wyłączone. Włączysz za darmo.",
+                    Formatting.DARK_GRAY));
+        }
         lore.add(Text.empty());
         // "Present" is worth a line of its own: a hand who isn't there does no
         // work and takes no wages, and from the outside that is
@@ -238,9 +243,11 @@ public class CrewScreenHandler extends ScreenHandler {
 
     private ItemStack ladder(TrapCrew.Card card, boolean pace) {
         int rung = pace ? card.pace() : card.reach();
+        int peak = pace ? card.paceMax() : card.reachMax();
         int rungs = (pace ? TrapCrew.PACE_TICKS : TrapCrew.REACH_BLOCKS).length;
         boolean top = rung >= rungs - 1;
-        int cost = top ? 0 : (pace ? TrapCrew.PACE_COST : TrapCrew.REACH_COST)[rung + 1];
+        int cost = top ? 0 : TrapMath.crewRungCost(
+                pace ? TrapCrew.PACE_COST : TrapCrew.REACH_COST, rung + 1, peak);
         boolean can = !top && TrapMarket.wealthOf(boss) >= cost;
 
         ItemStack tag = new ItemStack(top ? Items.GOLD_INGOT
@@ -265,26 +272,60 @@ public class CrewScreenHandler extends ScreenHandler {
                     : line("Dalej: " + TrapCrew.REACH_BLOCKS[rung + 1] + " bloków.",
                     Formatting.WHITE));
             lore.add(Text.empty());
-            lore.add(line(cost + "e", Formatting.GOLD)
-                    .append(plain(", pensja wzrośnie do " + (card.wage()
-                            + (pace ? TrapCrew.PACE_WAGE[rung + 1] - TrapCrew.PACE_WAGE[rung]
-                            : TrapCrew.REACH_WAGE[rung + 1] - TrapCrew.REACH_WAGE[rung]))
+            lore.add(line(cost == 0 ? "Za darmo -- już kupione." : cost + "e", Formatting.GOLD)
+                    .append(plain(", pensja wzrośnie do " + wageAfter(card,
+                            pace ? TrapCrew.PACE_WAGE[rung + 1] - TrapCrew.PACE_WAGE[rung]
+                                    : TrapCrew.REACH_WAGE[rung + 1] - TrapCrew.REACH_WAGE[rung])
                             + "e.").formatted(Formatting.DARK_GRAY)));
-            lore.add(line(can ? "Kliknij, żeby kupić." : "Nie stać cię.",
+            lore.add(line(can ? "Kliknij, żeby podnieść." : "Nie stać cię.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
+        }
+        // The way back down, which is what makes the way up safe to take: the
+        // wage follows the rung they are ON, so a hand bought to the top for a
+        // build can be turned down for the winter and back up for nothing.
+        if (rung > 0) {
+            lore.add(Text.empty());
+            lore.add(line("Shift+LPM obniża do ", Formatting.YELLOW)
+                    .append(plain(pace ? TrapCrew.PACE_NAME[rung - 1]
+                            : TrapCrew.REACH_BLOCKS[rung - 1] + " bloków")
+                            .formatted(Formatting.WHITE))
+                    .append(plain(" -- pensja " + wageAfter(card,
+                            pace ? TrapCrew.PACE_WAGE[rung - 1] - TrapCrew.PACE_WAGE[rung]
+                                    : TrapCrew.REACH_WAGE[rung - 1] - TrapCrew.REACH_WAGE[rung])
+                            + "e.").formatted(Formatting.DARK_GRAY)));
+            lore.add(line("Kupione poziomy zostają. Powrót za darmo.",
+                    Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
+    /**
+     * What the packet becomes if this rung is bought or given up.
+     *
+     * The night rate has to be applied to the difference too. Adding a raw
+     * table figure to a wage that has already been multiplied by 1.25 quietly
+     * under-quoted every night worker on the server by a quarter of the rung
+     * they were about to buy.
+     */
+    private int wageAfter(TrapCrew.Card card, int delta) {
+        return card.wage() + Math.round(delta * (card.nights() ? TrapCrew.NIGHT_RATE : 1f));
+    }
+
     private ItemStack jobTag(TrapCrew.Card card, TrapCrew.Job job) {
         boolean known = card.taught().contains(job);
+        // Paid for once, switched on and off for nothing after that. The two
+        // slots cap what a hand DOES, not what it knows.
+        boolean owned = card.owned().contains(job);
         boolean full = card.taught().size() >= TrapCrew.SLOTS;
-        boolean can = !known && !full && TrapMarket.wealthOf(boss) >= job.cost();
-        ItemStack tag = new ItemStack(known ? icon(job) : can ? icon(job) : Items.GRAY_DYE);
+        int cost = owned ? 0 : job.cost();
+        boolean can = !known && !full && TrapMarket.wealthOf(boss) >= cost;
+        ItemStack tag = new ItemStack(known || can ? icon(job) : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
                 plain(job.display()).formatted(known ? Formatting.GREEN
-                        : can ? Formatting.WHITE : Formatting.DARK_GRAY, Formatting.BOLD));
+                        : can ? Formatting.WHITE : Formatting.DARK_GRAY, Formatting.BOLD)
+                        .append(plain(!known && owned ? "  wyłączony" : "")
+                                .formatted(Formatting.GOLD)));
         List<Text> lore = new ArrayList<>();
         lore.add(line(job.blurb(), Formatting.GRAY));
         lore.add(Text.empty());
@@ -304,14 +345,21 @@ public class CrewScreenHandler extends ScreenHandler {
             } else {
                 lore.add(line("Gotowe. Skrzynia ma czym pracować.", Formatting.GREEN));
             }
-            lore.add(line("Shift+LPM usuwa ten zawód.", Formatting.YELLOW));
+            lore.add(line("Shift+LPM wyłącza go i zwalnia miejsce.", Formatting.YELLOW));
+            lore.add(line("Nauka zostaje -- włączysz z powrotem za darmo.",
+                    Formatting.DARK_GRAY));
         } else {
-            lore.add(line(job.cost() == 0 ? "Za darmo." : job.cost() + "e", Formatting.GOLD)
-                    .append(plain(job.wage() == 0 ? ", bez dodatku do pensji."
-                                    : ", potem +" + job.wage() + "e do każdej wypłaty.")
-                            .formatted(Formatting.DARK_GRAY)));
-            lore.add(line(full ? "Oba miejsca zajęte. Najpierw usuń jeden."
-                            : can ? "Kliknij, żeby nauczyć." : "Nie stać cię.",
+            lore.add(owned
+                    ? line("Wyuczony, ale wyłączony.", Formatting.GOLD)
+                    .append(plain("  Znów +" + job.wage() + "e do pensji.")
+                            .formatted(Formatting.DARK_GRAY))
+                    : line(cost == 0 ? "Za darmo." : cost + "e", Formatting.GOLD)
+                            .append(plain(job.wage() == 0 ? ", bez dodatku do pensji."
+                                            : ", potem +" + job.wage() + "e do każdej wypłaty.")
+                                    .formatted(Formatting.DARK_GRAY)));
+            lore.add(line(full ? "Oba miejsca zajęte. Najpierw wyłącz jeden."
+                            : can ? (owned ? "Kliknij, żeby włączyć." : "Kliknij, żeby nauczyć.")
+                            : "Nie stać cię.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
@@ -335,10 +383,14 @@ public class CrewScreenHandler extends ScreenHandler {
                 line("Każdy ma swoje miejsce. Przenieś je", Formatting.GRAY),
                 line("kompasem, stojąc gdzie chcesz.", Formatting.GRAY),
                 Text.empty(),
-                line("DWA ZAWODY NA OSOBĘ. Potrzebujesz", Formatting.WHITE),
-                line("trzeciej rzeczy? Zatrudnij trzecią osobę.", Formatting.WHITE),
+                line("DWA ZAWODY NARAZ. Potrzebujesz trzeciej", Formatting.WHITE),
+                line("rzeczy? Wyłącz jeden albo zatrudnij kogoś.", Formatting.WHITE),
                 line("Szkolenie kosztuje z góry ORAZ podnosi", Formatting.WHITE),
-                line("pensję na stałe.", Formatting.WHITE),
+                line("pensję, dopóki jest WŁĄCZONE.", Formatting.WHITE),
+                Text.empty(),
+                line("Shift+LPM wyłącza zawód albo obniża", Formatting.GOLD),
+                line("Tempo/Zasięg -- pensja od razu spada.", Formatting.GOLD),
+                line("Powrót w górę zawsze za darmo.", Formatting.GOLD),
                 Text.empty(),
                 line("Pracują, kiedy jesteś gdzie indziej,", Formatting.GRAY),
                 line("o ile jesteś zalogowany.", Formatting.GRAY),
@@ -608,7 +660,10 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         TrapCrew.Card card = crew.get(selected);
         if (index == PACE_SLOT || index == REACH_SLOT) {
-            answer(TrapCrew.buy(boss, card.index(), null, index == PACE_SLOT));
+            boolean pace = index == PACE_SLOT;
+            answer(type == SlotActionType.QUICK_MOVE
+                    ? TrapCrew.drop(boss, card.index(), pace)
+                    : TrapCrew.buy(boss, card.index(), null, pace));
             return;
         }
         if (index == WHIP_SLOT) {
