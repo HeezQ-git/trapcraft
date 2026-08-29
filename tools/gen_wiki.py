@@ -572,7 +572,12 @@ def gather() -> None:
         # it broke this script the day the mod went Polish.
         r'INCOME\("[^"]*", "[^"]*",\s*(\d+)', city, "the income duty's opening rate"))
     DATA["wage"] = int(need(r"int WAGE = (\d+)", crew, "WAGE"))
-    DATA["max_hands"] = int(need(r"MAX_HANDS = (\d+)", crew, "MAX_HANDS"))
+    # MAX_HANDS is an expression now, not a literal, so it is computed here
+    # the same way the mod computes it rather than scraped.
+    DATA["free_hands"] = int(need(r"FREE_HANDS = (\d+)", crew, "FREE_HANDS"))
+    DATA["place_cost"] = ints("PLACE_COST", crew)
+    DATA["max_hands"] = DATA["free_hands"] + len(DATA["place_cost"])
+    DATA["place_ladder"] = " + ".join(f"{c}e" for c in DATA["place_cost"])
 
     # --- the poppy line and the habit ---------------------------------------
     # Same rule as everything above: read it, never retype it. The habit page
@@ -1301,6 +1306,10 @@ def build() -> str:
     <p class="note">Czas liczy się na szmaragd, a nie na wsad, więc bęben to przepustowość,
     a nie darmowy mnożnik — a dorzucanie w trakcie zeruje licznik, więc wrzuć wszystko naraz
     i odejdź. Jak jeden nie wystarcza, postaw drugi.</p>
+    <p class="note">Robotnik z zawodem <em>Pranie kasy</em> opróżnia bęben za ciebie i wkłada
+    utarg do skrzyni <strong>w blokach szmaragdu</strong>, a resztę luzem. Ta sama kasa —
+    rynek, spis skarbców i portfel liczą blok za dziewięć — tylko dziewięć razy gęściej
+    upakowana, żeby nocna zmiana nie zapchała podwójnej skrzyni do rana.</p>
     <p>Pranie zmniejsza też dzienną ekspozycję wobec urzędu — ale tylko do wysokości
     <strong>tego, co twoje biznesy realistycznie mogły utargować</strong>. Sklep, który nic
     nie sprzedał, niczego nie wyjaśnia, choćby właściciel bardzo chciał. Prawdziwy biznes
@@ -1604,8 +1613,10 @@ def build() -> str:
 
     sections.append(section("09", "crew", "Ekipa", "ktoś, kto zbierze za ciebie", f"""
     <p class="lede">{d['hire']}e za zatrudnienie, potem {d['wage']}e za każde pięć minut,
-    <strong>kiedy pracują</strong>, niezależnie od tego, czy coś zebrali. {d['max_hands']}
-    osób to maksimum dla jednej ekipy.</p>
+    <strong>kiedy pracują</strong>, niezależnie od tego, czy coś zebrali. {d['free_hands']}
+    miejsc w ekipie dostajesz za darmo; kolejne dokupujesz z tablicy jednorazowo
+    ({d['place_ladder']}), do {d['max_hands']} osób. Miejsce to sama zgoda na większą
+    ekipę — najem i pensja dochodzą osobno.</p>
     <p>Domyślnie pracują <strong>tylko za dnia</strong> — o zmroku szukają łóżka na działce
     i kładą się spać — a licznik pensji staje razem z nimi, więc noce nic nie kosztują.
     Przestaw kogoś <strong>na nocną zmianę</strong> z tablicy, a nie przestanie pracować
@@ -1642,7 +1653,10 @@ def build() -> str:
     <h3 class="sub">Jedna skrzynia</h3>
     <p>To jest rzecz, którą wszyscy mylą. Robotnik korzysta z <strong>pojemnika najbliższego
     swojemu miejscu pracy</strong> — tego jednego i żadnego innego — do wszystkiego: tam wkłada
-    plony i stamtąd bierze materiały. Skręcanie wymaga <strong>suszonych szyszek i papieru
+    plony i stamtąd bierze materiały. Liczy się pojemnik <strong>wielkości skrzyni</strong>
+    (27 miejsc i więcej): skrzynia, beczka, shulker, szafka. Piec, lejek, dozownik czy
+    patelnia stojące bliżej są ignorowane — inaczej robotnik wpychałby zbiory do slotu
+    na paliwo. Skręcanie wymaga <strong>suszonych szyszek i papieru
     w tej skrzyni</strong>; świeże szyszki prosto z rośliny nie wystarczą, a stół rzemieślniczy
     nie jest w to zamieszany. Inny pojemnik postawiony bliżej po cichu staje się tym używanym.</p>
     <p class="note">Tablica ekipy pokazuje, z której skrzyni faktycznie korzysta, i oznacza

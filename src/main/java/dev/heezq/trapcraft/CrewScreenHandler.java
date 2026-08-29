@@ -33,24 +33,36 @@ import java.util.List;
  * only honest way to show a ladder: "Pace 2 of 4, next rung 320e" is one item
  * with lore, and three paragraphs of tellraw pretending to be one.
  *
- *   [hand][hand][hand][hand][hand] . [book] . [hire]
+ *   [hand][hand][hand][hand][hand][hand][hand][hand][hand]
  *   [pace][reach] [job][job][job][job][job][job][job]
  *   [job][job][job][move][wages][nights][plans][whip][fire]
+ *    .   .   .   .   .   .  [book][place][hire]
  *
- * The selected hand is the one everything on the bottom two rows applies to,
- * which is why the top row is heads you click rather than a list you read.
+ * The selected hand is the one the two middle rows apply to, which is why the
+ * top row is heads you click rather than a list you read.
  *
- * The book used to sit in the fifth head's slot, which was fine right up until
- * somebody hired a fifth hand: the head was painted, then painted over, and
- * the slot stayed clickable -- so hand five existed, worked, took a wage, and
- * could only be selected by clicking a book.
+ * The whole top row is heads and nothing else, and that is what sets the
+ * ceiling on {@link TrapCrew#MAX_HANDS}: a tenth place would be somebody on
+ * the payroll with nowhere to click. The book and the hire button used to
+ * share that row and cost two of the nine, which is why they moved down when
+ * places went on sale. The book had sat in the fifth head's slot before that,
+ * and the day somebody hired a fifth hand the head was painted, painted over,
+ * and left clickable -- hand five existed, worked, took a wage, and could only
+ * be selected by clicking a book. Twice now the head row has been the thing
+ * that was quietly too small; it gets a whole row to itself for that reason.
  */
 public class CrewScreenHandler extends ScreenHandler {
-    private static final int ROWS = 3;
+    // Four rows, not three: the top one is nine heads now, so everything that
+    // used to share it had to go somewhere.
+    private static final int ROWS = 4;
     private static final int SIZE = ROWS * 9;
 
-    private static final int HELP_SLOT = 6;
-    private static final int HIRE_SLOT = 8;
+    /** The head row. One per hand, and the reason the crew caps at nine. */
+    private static final int HEADS = 9;
+
+    private static final int HELP_SLOT = 33;
+    private static final int PLACE_SLOT = 34;
+    private static final int HIRE_SLOT = 35;
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
     private static final int JOBS_FROM = 11;
@@ -84,6 +96,12 @@ public class CrewScreenHandler extends ScreenHandler {
             throw new IllegalStateException(
                     "crew board: " + TEACHABLE.size() + " jobs won't fit before the whip");
         }
+        // And the same promise for the head row. Lengthening PLACE_COST is a
+        // one-line change that would otherwise sell a place nobody can click.
+        if (TrapCrew.MAX_HANDS > HEADS) {
+            throw new IllegalStateException(
+                    "crew board: " + TrapCrew.MAX_HANDS + " hands won't fit one row");
+        }
     }
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
@@ -92,7 +110,7 @@ public class CrewScreenHandler extends ScreenHandler {
     private int selected = 0;
 
     public CrewScreenHandler(int syncId, PlayerInventory playerInventory) {
-        super(ScreenHandlerType.GENERIC_9X3, syncId);
+        super(ScreenHandlerType.GENERIC_9X4, syncId);
         this.boss = (ServerPlayerEntity) playerInventory.player;
 
         for (int index = 0; index < SIZE; index++) {
@@ -102,11 +120,11 @@ public class CrewScreenHandler extends ScreenHandler {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(playerInventory, col + row * 9 + 9,
-                        8 + col * 18, 84 + row * 18));
+                        8 + col * 18, 103 + row * 18 + (ROWS - 4) * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 161 + (ROWS - 4) * 18));
         }
         paint();
     }
@@ -129,6 +147,7 @@ public class CrewScreenHandler extends ScreenHandler {
             display.setStack(i, head(crew.get(i), i, i == selected));
         }
         display.setStack(HELP_SLOT, help());
+        display.setStack(PLACE_SLOT, placeTag());
         display.setStack(HIRE_SLOT, hireTag());
 
         if (!crew.isEmpty()) {
@@ -397,7 +416,8 @@ public class CrewScreenHandler extends ScreenHandler {
     }
 
     private ItemStack hireTag() {
-        boolean room = crew.size() < TrapCrew.MAX_HANDS;
+        int cap = TrapCrew.capOf(boss);
+        boolean room = crew.size() < cap;
         boolean can = room && TrapMarket.wealthOf(boss) >= TrapCrew.HIRE_COST;
         ItemStack tag = new ItemStack(can ? Items.EMERALD : Items.GRAY_DYE);
         tag.set(DataComponentTypes.CUSTOM_NAME,
@@ -406,13 +426,70 @@ public class CrewScreenHandler extends ScreenHandler {
         tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
                 line(TrapCrew.HIRE_COST + "e, potem " + TrapCrew.WAGE
                         + "e co pięć minut.", Formatting.GRAY),
-                line(crew.size() + " z " + TrapCrew.MAX_HANDS + " miejsc zajętych.",
+                line(crew.size() + " z " + cap + " miejsc zajętych.",
                         Formatting.DARK_GRAY),
                 Text.empty(),
-                line(!room ? "Nie masz już miejsca."
+                // "Full" and "as full as it gets" are different sentences, and
+                // the first one has a button next to it.
+                line(!room ? (cap < TrapCrew.MAX_HANDS
+                                ? "Brak miejsca. Dokup je obok."
+                                : "Nie masz już miejsca i nie da się dokupić.")
                                 : can ? "Kliknij, żeby zatrudnić TAM, GDZIE STOISZ."
                                 : "Nie stać cię.",
                         can ? Formatting.YELLOW : Formatting.DARK_GRAY))));
+        return tag;
+    }
+
+    /**
+     * Room on the books, sold by the place.
+     *
+     * Its own button rather than a bigger hire fee, because the two are
+     * different kinds of money: a place is permanent and a hire has a wage
+     * standing behind it. Rolled together, the permanent half would hide
+     * behind the recurring one and the board would be quoting a price for
+     * something nobody had decided to buy.
+     */
+    private ItemStack placeTag() {
+        int bought = TrapCrew.placesOf(boss);
+        int cap = TrapCrew.capOf(boss);
+        int cost = TrapCrew.placeCost(boss);
+        boolean left = cost > 0;
+        boolean can = left && TrapMarket.wealthOf(boss) >= cost;
+
+        ItemStack tag = new ItemStack(can ? Items.AMETHYST_SHARD : Items.GRAY_DYE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain(left ? "Dokup miejsce w ekipie" : "Ekipa rozbudowana do końca")
+                        .formatted(can ? Formatting.LIGHT_PURPLE : Formatting.DARK_GRAY,
+                                Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        lore.add(line("Kupujesz MIEJSCE, nie człowieka. Najem", Formatting.GRAY));
+        lore.add(line("i pensja dochodzą osobno.", Formatting.GRAY));
+        lore.add(Text.empty());
+        lore.add(line(TrapCrew.FREE_HANDS + " miejsc za darmo, dokupione " + bought
+                + " z " + TrapCrew.PLACE_COST.length + ".", Formatting.DARK_GRAY));
+        lore.add(line("Limit ekipy: ", Formatting.GRAY)
+                .append(plain(cap + " osób").formatted(Formatting.WHITE)));
+        lore.add(Text.empty());
+        if (left) {
+            lore.add(line(cost + "e", Formatting.GOLD)
+                    .append(plain(" -- jednorazowo, zostaje na zawsze.")
+                            .formatted(Formatting.DARK_GRAY)));
+            // The rest of the ladder up front. These double, and a player who
+            // finds that out one click at a time has been sold a surprise.
+            StringBuilder rest = new StringBuilder();
+            for (int i = bought + 1; i < TrapCrew.PLACE_COST.length; i++) {
+                rest.append(rest.isEmpty() ? "" : ", ").append(TrapCrew.PLACE_COST[i]).append('e');
+            }
+            if (!rest.isEmpty()) {
+                lore.add(line("Dalej: " + rest + ".", Formatting.DARK_GRAY));
+            }
+            lore.add(Text.empty());
+            lore.add(line(can ? "Kliknij, żeby dokupić miejsce." : "Nie stać cię.",
+                    can ? Formatting.YELLOW : Formatting.DARK_GRAY));
+        } else {
+            lore.add(line("Wszystkie miejsca wykupione.", Formatting.DARK_GRAY));
+        }
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
     }
 
@@ -582,7 +659,7 @@ public class CrewScreenHandler extends ScreenHandler {
             super.onSlotClick(index, button, type, clicker);
             return;
         }
-        if (index < crew.size() && index < TrapCrew.MAX_HANDS) {
+        if (index < crew.size() && index < HEADS) {
             selected = index;
             click(SoundEvents.UI_BUTTON_CLICK.value(), 1.4F);
             paint();
@@ -590,6 +667,12 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         if (index == HIRE_SLOT) {
             answer(TrapCrew.hire(boss, boss.getBlockPos()));
+            return;
+        }
+        // Above the "no crew, nothing to do" guard on purpose: buying room is
+        // the one thing on this board that makes sense with nobody on it.
+        if (index == PLACE_SLOT) {
+            answer(TrapCrew.buyPlace(boss));
             return;
         }
         if (crew.isEmpty()) {
@@ -630,7 +713,7 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         if (index == FIRE_SLOT) {
             // Deliberately awkward. Firing is the one button here that destroys
-            // something you paid for, and a stray click on a 3x9 grid is not a
+            // something you paid for, and a stray click on a 4x9 grid is not a
             // decision.
             if (type == SlotActionType.QUICK_MOVE) {
                 answer(TrapCrew.fire(boss, card.index()));

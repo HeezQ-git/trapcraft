@@ -3243,13 +3243,16 @@ public final class TrapGuide {
                         + "działką.\n\n"))
                 .append(body("Nowy robotnik nie umie nic - wszystkiego "
                         + "trzeba go nauczyć.\n\n"))
-                .append(hint("Maksymalnie " + TrapCrew.MAX_HANDS
-                        + " osób."))));
+                .append(hint(TrapCrew.FREE_HANDS + " miejsc w ekipie masz "
+                        + "za darmo. Kolejne dokupisz z tablicy, do "
+                        + TrapCrew.MAX_HANDS + "."))));
 
         pages.add(page(Text.empty()
                 .append(title("2. SKRZYNIA\n\n"))
                 .append(body("Wszystko, co zbierze, ląduje w pojemniku "
                         + "NAJBLIŻSZYM jego działki.\n\n"))
+                .append(hint("Skrzynia, beczka albo szafka. Piec ani "
+                        + "lejek się nie liczą.\n\n"))
                 .append(body("Z tej samej skrzyni bierze nasiona "
                         + "i mączkę kostną."))));
 
@@ -3448,8 +3451,9 @@ public final class TrapGuide {
                 .append(body("Jedna osoba robi naraz maksymalnie "
                         + TrapCrew.SLOTS + " zawody.\n\n"))
                 .append(body("Potrzebujesz trzeciej rzeczy? Zatrudnij "
-                        + "trzecią osobę. Limit: " + TrapCrew.MAX_HANDS
-                        + "."))));
+                        + "trzecią osobę. Miejsc: " + TrapCrew.FREE_HANDS
+                        + " za darmo, do " + TrapCrew.MAX_HANDS
+                        + " za dopłatą."))));
 
         pages.add(page(Text.empty()
                 .append(title("6b. ZMIANA ZAWODU\n\n"))

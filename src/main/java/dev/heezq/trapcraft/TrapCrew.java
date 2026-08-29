@@ -161,17 +161,72 @@ public final class TrapCrew {
      * this particular person is FOR, and wanting a third thing done means
      * wanting a third person on the books.
      *
-     * The cap on people went up to match. Ten jobs against five hands is ten
-     * slots for ten jobs, so a full operation is reachable -- but it is five
-     * wages, and the wage is what stops that being free.
+     * The free cap on people went up to match. Ten jobs against five hands is
+     * ten slots for ten jobs, so a full operation is reachable on the places
+     * the game gives you -- but it is five wages, and the wage is what stops
+     * that being free.
      *
      * It used to have one slot spare, and laundering took it. Doing everything
-     * at once is now an exact fit rather than a comfortable one: there is no
-     * longer a hand who can double up on the job you actually care about while
-     * the rest of the list is still covered.
+     * at once is an exact fit on five hands rather than a comfortable one:
+     * there is no longer a hand who can double up on the job you actually care
+     * about while the rest of the list is still covered. Wanting that spare
+     * back is what {@link #PLACE_COST} is for, and it is a purchase.
      */
     public static final int SLOTS = 2;
-    public static final int MAX_HANDS = 5;
+
+    /**
+     * Places on the books that come for nothing.
+     *
+     * Five, which is what the cap used to be full stop. It stays the number
+     * you get free, so a player who already ran a full crew wakes up owing
+     * nobody anything and loses nothing they had.
+     */
+    public static final int FREE_HANDS = 5;
+
+    /**
+     * What each place past the free five costs, in the order they are bought.
+     *
+     * Doubling, and deliberately steeper than anything else on this board: the
+     * top pace rung is 2200e, so even the FIRST bought place is the largest
+     * single purchase in the crew system. That is the point. A place is not an
+     * upgrade to somebody, it is permission to run a bigger operation, and the
+     * thing that has to stop it being a formality is the five wages already on
+     * the books before anybody clicks it.
+     *
+     * One-off, and it does not come back -- exactly like the hire fee it sits
+     * next to. Firing somebody frees the place, not the money.
+     */
+    public static final int[] PLACE_COST = {1500, 3500, 8000, 18000};
+
+    /**
+     * The free places plus every one that can be bought.
+     *
+     * Nine, and the crew board's head row is nine slots wide, which is not a
+     * coincidence: a tenth place would be a hand on the payroll that no click
+     * can reach. Lengthening PLACE_COST means growing that row first, and
+     * {@link CrewScreenHandler} refuses to open rather than trust anybody to
+     * remember that.
+     */
+    public static final int MAX_HANDS = FREE_HANDS + PLACE_COST.length;
+    /**
+     * Slots something needs before a hand will treat it as its chest.
+     *
+     * A hand takes the NEAREST inventory to its patch, and a furnace, a
+     * brewing stand, a hopper, a dropper and a Farmer's Delight skillet are
+     * all inventories. Somebody who put a smelter at the edge of their field
+     * had a worker quietly stuffing wheat into it -- three slots, then "full",
+     * then the rest of the harvest on the floor next to a chest that was
+     * empty, and nothing about that reads as "wrong container".
+     *
+     * Judged on SIZE rather than on a list of block classes, because such a
+     * list is a list of VANILLA's machines and there are two hundred and
+     * forty mods here. Everything built to store things is a chest's
+     * twenty-seven or more; every machine vanilla has is far under it. Getting
+     * it wrong costs a hand a container it could have used, which shows up on
+     * the board as "BRAK SKRZYNI" -- a line to read, not a harvest on the
+     * ground.
+     */
+    private static final int BOX_SLOTS = 27;
     /** How close a hand has to be to a job to do it. */
     private static final int ARM = 4;
     /** Passes of getting nowhere before we accept they can't path there. */
@@ -651,6 +706,72 @@ public final class TrapCrew {
     /** How many hands this player is carrying. */
     public static int sizeOf(ServerPlayerEntity boss) {
         return (int) CREW.stream().filter(hand -> hand.boss.equals(boss.getUuid())).count();
+    }
+
+    /**
+     * Places bought past the free five, per boss.
+     *
+     * Keyed by player rather than hung off a Hand, because it has to outlive
+     * every hand there is: fire the lot and the room you paid for is still
+     * yours. Hanging it on a hand would quietly refund nobody and delete the
+     * purchase the moment the last one walked.
+     */
+    private static final Map<UUID, Integer> PLACES = new HashMap<>();
+
+    /** How many places past the free five this player has bought. */
+    public static int placesOf(ServerPlayerEntity boss) {
+        return PLACES.getOrDefault(boss.getUuid(), 0);
+    }
+
+    /** How many hands this player may have at once, bought places included. */
+    public static int capOf(ServerPlayerEntity boss) {
+        return TrapMath.crewCap(FREE_HANDS, placesOf(boss), PLACE_COST.length);
+    }
+
+    /** What one more place would cost, or 0 when there are none left to sell. */
+    public static int placeCost(ServerPlayerEntity boss) {
+        return TrapMath.crewPlaceCost(PLACE_COST, placesOf(boss));
+    }
+
+    /**
+     * Buy one more place on the books.
+     *
+     * Sells the ROOM and nothing else: the hire fee and the wage behind it are
+     * still ahead of you. Deliberately not one button that also hires -- that
+     * would put the cheap half in front of the expensive half and hide the
+     * wage behind the permit, and the wage is the entire decision.
+     *
+     * @return why it didn't happen, or null if it did
+     */
+    public static String buyPlace(ServerPlayerEntity boss) {
+        int bought = placesOf(boss);
+        int cost = TrapMath.crewPlaceCost(PLACE_COST, bought);
+        if (cost == 0) {
+            return MAX_HANDS + " osób to absolutne maksimum. Więcej miejsc nie ma.";
+        }
+        if (TrapMarket.wealthOf(boss) < cost) {
+            return "Kolejne miejsce kosztuje " + cost + "e.";
+        }
+        // Same route as the hire fee and the wages: the town is the other side
+        // of every crew transaction, so a permit that minted itself would be
+        // the one piece of crew money the market never sees.
+        payTheTown(boss, cost);
+        TrapLedger.record(boss, TrapLedger.Source.CREW, -cost);
+        PLACES.put(boss.getUuid(), bought + 1);
+        savePlaces();
+
+        ServerWorld world = boss.getWorld();
+        world.playSound(null, boss.getBlockPos(), SoundEvents.ENTITY_VILLAGER_YES,
+                SoundCategory.NEUTRAL, 0.9F, 0.8F);
+        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, boss.getX(),
+                boss.getY() + 1.2, boss.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
+        boss.sendMessage(Text.literal("Miejsce wykupione. ")
+                .formatted(Formatting.GREEN, Formatting.BOLD)
+                .append(Text.literal("Ekipa może mieć teraz "
+                        + (FREE_HANDS + bought + 1) + " osób. Samo miejsce nikogo "
+                        + "nie zatrudnia -- najem i pensja dochodzą osobno.")
+                        .formatted(Formatting.GRAY)), false);
+        return null;
     }
 
     /** What this player's whole payroll comes to per packet. */
@@ -1213,8 +1334,15 @@ public final class TrapCrew {
      * @return why it didn't happen, or null if it did
      */
     public static String hire(ServerPlayerEntity boss, BlockPos patch) {
-        if (sizeOf(boss) >= MAX_HANDS) {
-            return MAX_HANDS + " osób to maksimum dla jednej ekipy.";
+        int cap = capOf(boss);
+        if (sizeOf(boss) >= cap) {
+            // Two different fulls. "You have run out of room" is a shop; "there
+            // is no more room to be had" is a ceiling, and a player told the
+            // second when the first is true never finds the button that fixes it.
+            return cap >= MAX_HANDS
+                    ? MAX_HANDS + " osób to absolutne maksimum dla jednej ekipy."
+                    : cap + " miejsc zajętych. Dokup kolejne na tablicy /crew za "
+                            + placeCost(boss) + "e.";
         }
         if (TrapMarket.wealthOf(boss) < HIRE_COST) {
             return "Zatrudnienie kosztuje " + HIRE_COST + "e.";
@@ -1404,7 +1532,7 @@ public final class TrapCrew {
         if (plan == null) {
             return "Nie ma zapisu o tej nazwie. /crew plans pokazuje listę.";
         }
-        int room = MAX_HANDS - sizeOf(boss);
+        int room = capOf(boss) - sizeOf(boss);
         if (plan.hands().size() > room) {
             return "Masz miejsce jeszcze na " + room + " osób, a ten zapis ma "
                     + plan.hands().size() + ".";
@@ -2283,12 +2411,25 @@ public final class TrapCrew {
                 return;
             }
             LaundryBlock.Wash out = LaundryBlock.empty(world, at, state);
+            // Paid out in BLOCKS, with the remainder loose. A drum pays in the
+            // thousands and a stack of loose emeralds is sixty-four of them,
+            // so a washer working overnight filled a double chest with cash
+            // nine times faster than it had to and left a wall of identical
+            // stacks to sort. The denomination costs nothing: the market
+            // values a block at nine (TrapMarket.valueOf), the vault census
+            // counts it, a wallet swallows it, and the drum's own INPUT is
+            // already read in blocks-and-loose two lines down. This is a
+            // denomination, not a conversion -- the same money either way.
+            int[] cut = TrapMath.denominate(out.clean());
             List<ItemStack> money = new ArrayList<>();
-            int left = out.clean();
-            while (left > 0) {
-                int lot = Math.min(left, Items.EMERALD.getMaxCount());
-                money.add(new ItemStack(Items.EMERALD, lot));
-                left -= lot;
+            int blocks = cut[0];
+            while (blocks > 0) {
+                int lot = Math.min(blocks, Items.EMERALD_BLOCK.getMaxCount());
+                money.add(new ItemStack(Items.EMERALD_BLOCK, lot));
+                blocks -= lot;
+            }
+            if (cut[1] > 0) {
+                money.add(new ItemStack(Items.EMERALD, cut[1]));
             }
             stow(world, box, at, money);
             TrapLaw.washed(boss, out.gross(), out.cut());
@@ -2466,7 +2607,10 @@ public final class TrapCrew {
         // threw the rest of the harvest on the floor.
         if (hand.box != null) {
             net.minecraft.inventory.Inventory known = TrapBoxes.at(world, hand.box);
-            if (known != null) {
+            // Re-checked, not trusted: a box remembered before this rule
+            // existed can be a furnace, and a saved answer is exactly how a
+            // bad one survives the fix.
+            if (known != null && known.size() >= BOX_SLOTS) {
                 return known;
             }
         }
@@ -2475,7 +2619,8 @@ public final class TrapCrew {
             // Cheap test to find the candidate, then resolve the winner once.
             // TrapBoxes.at costs an entity lookup and this scan is thousands
             // of squares wide.
-            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory) {
+            if (world.getBlockEntity(pos) instanceof net.minecraft.inventory.Inventory box
+                    && box.size() >= BOX_SLOTS) {
                 hand.box = pos.toImmutable();
                 return TrapBoxes.at(world, pos);
             }
@@ -2516,7 +2661,12 @@ public final class TrapCrew {
             }
         }
         for (int slot = 0; slot < box.size() && !drop.isEmpty(); slot++) {
-            if (!box.getStack(slot).isEmpty()) {
+            // isValid as well as empty. BOX_SLOTS keeps hands out of machines
+            // in the first place; this is for the container that is big enough
+            // to qualify and still refuses things in particular slots, which
+            // several mods' cabinets and drawers do. Writing anyway is how an
+            // item goes into a slot that then throws it back out.
+            if (!box.getStack(slot).isEmpty() || !box.isValid(slot, drop)) {
                 continue;
             }
             int room = Math.min(drop.getMaxCount(), drop.getCount());
@@ -2779,6 +2929,7 @@ public final class TrapCrew {
             TrapCraft.LOGGER.warn("couldn't read the crew list: {}", failure.toString());
         }
         loadPlans(server);
+        loadPlaces(server);
     }
 
     // --- the plan file --------------------------------------------------------
@@ -2818,6 +2969,53 @@ public final class TrapCrew {
             }
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't read the crew plans: {}", failure.toString());
+        }
+    }
+
+    // --- places bought --------------------------------------------------------
+    //
+    // Its own file rather than a column on the crew list, for the reason
+    // PLACES is a map and not a field on Hand: this is the one piece of crew
+    // state that belongs to a PLAYER. A boss with nobody on the books still
+    // owns what they bought, and a crew file only has rows for people.
+
+    private static Path placeFile;
+
+    private static void loadPlaces(MinecraftServer server) {
+        placeFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-crewplaces.txt");
+        PLACES.clear();
+        try {
+            if (!Files.exists(placeFile)) {
+                return;
+            }
+            for (String line : Files.readAllLines(placeFile)) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length < 2) {
+                    continue;
+                }
+                // Clamped on the way in, not just on the way out: a file
+                // written by a build with a longer ladder would otherwise hand
+                // somebody a place this board has no slot for.
+                PLACES.put(UUID.fromString(parts[0]),
+                        Math.max(0, Math.min(Integer.parseInt(parts[1]), PLACE_COST.length)));
+            }
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't read the crew places: {}", failure.toString());
+        }
+    }
+
+    private static void savePlaces() {
+        if (placeFile == null) {
+            return;
+        }
+        try {
+            StringBuilder out = new StringBuilder();
+            for (Map.Entry<UUID, Integer> entry : PLACES.entrySet()) {
+                out.append(entry.getKey()).append(' ').append(entry.getValue()).append('\n');
+            }
+            Files.writeString(placeFile, out.toString());
+        } catch (Exception failure) {
+            TrapCraft.LOGGER.warn("couldn't write the crew places: {}", failure.toString());
         }
     }
 

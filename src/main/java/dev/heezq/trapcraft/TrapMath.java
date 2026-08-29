@@ -2595,6 +2595,41 @@ public final class TrapMath {
                 / (jobsPerShift * 20.0f);
     }
 
+    // --- room on the books --------------------------------------------------
+    //
+    // Two lines of arithmetic, here rather than in the crew, because both of
+    // them are read off a SAVED number and a saved number is whatever the
+    // file says. A count written by a build with a longer ladder must not
+    // hand out places the board cannot show, and asking a spent ladder what
+    // the next rung costs must answer "there isn't one" rather than throwing
+    // in the middle of somebody's purchase.
+
+    /** How many hands a boss who has bought {@code bought} places may have. */
+    public static int crewCap(int free, int bought, int ladder) {
+        return free + Math.max(0, Math.min(bought, ladder));
+    }
+
+    /** What the next place costs, or 0 when the ladder is spent. */
+    public static int crewPlaceCost(int[] ladder, int bought) {
+        return bought < 0 || bought >= ladder.length ? 0 : ladder[bought];
+    }
+
+    /**
+     * A pile of emeralds as blocks and loose change.
+     *
+     * Nine to the block, which is vanilla's own rate and the one the drum
+     * already reads its dirty money at. Here rather than inline because it is
+     * the one place in the mod where money changes SHAPE, and a division that
+     * quietly drops the remainder is a way of deleting emeralds that no test
+     * of the laundry would ever notice.
+     *
+     * @return {blocks, loose}, and {@code blocks * 9 + loose} is what went in
+     */
+    public static int[] denominate(int emeralds) {
+        int whole = Math.max(0, emeralds);
+        return new int[]{whole / 9, whole % 9};
+    }
+
     /**
      * Which bosses have just started or finished a shift, and with how many.
      *
