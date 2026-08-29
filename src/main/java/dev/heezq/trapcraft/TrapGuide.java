@@ -3314,18 +3314,15 @@ public final class TrapGuide {
                         + "działką.\n\n"))
                 .append(body("Nowy robotnik nie umie nic - wszystkiego "
                         + "trzeba go nauczyć.\n\n"))
-                .append(hint(TrapCrew.FREE_HANDS + " miejsc w ekipie masz "
-                        + "za darmo. Kolejne dokupisz z tablicy, do "
-                        + TrapCrew.MAX_HANDS + "."))));
+                .append(hint(TrapCrew.FREE_HANDS + " miejsc za darmo, do "
+                        + TrapCrew.MAX_HANDS + " z tablicy."))));
 
         pages.add(page(Text.empty()
                 .append(title("2. SKRZYNIA\n\n"))
                 .append(body("Wszystko, co zbierze, ląduje w pojemniku "
                         + "NAJBLIŻSZYM jego działki.\n\n"))
-                .append(hint("Skrzynia, beczka albo szafka. Piec ani "
-                        + "lejek się nie liczą.\n\n"))
-                .append(body("Z tej samej skrzyni bierze nasiona "
-                        + "i mączkę kostną."))));
+                .append(hint("Skrzynia albo beczka. Nie piec.\n\n"))
+                .append(body("Stamtąd też bierze nasiona i mączkę."))));
 
         pages.add(page(Text.empty()
                 .append(title("2b. BEZ SKRZYNI\n\n"))
