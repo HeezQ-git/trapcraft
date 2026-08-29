@@ -582,7 +582,10 @@ def gather() -> None:
     DATA["free_hands"] = int(need(r"FREE_HANDS = (\d+)", crew, "FREE_HANDS"))
     DATA["place_cost"] = ints("PLACE_COST", crew)
     DATA["max_hands"] = DATA["free_hands"] + len(DATA["place_cost"])
-    DATA["place_ladder"] = " + ".join(f"{c}e" for c in DATA["place_cost"])
+    # Seven rungs written out in full is a wall of numbers; the shape of the
+    # ladder is the point, and the board quotes the exact next one anyway.
+    DATA["place_ladder"] = (f"{DATA['place_cost'][0]}e za pierwsze, potem coraz drożej, "
+                           f"do {DATA['place_cost'][-1]}e za ostatnie")
 
     # --- the poppy line and the habit ---------------------------------------
     # Same rule as everything above: read it, never retype it. The habit page
@@ -1620,8 +1623,8 @@ def build() -> str:
     <p class="lede">{d['hire']}e za zatrudnienie, potem {d['wage']}e za każde pięć minut,
     <strong>kiedy pracują</strong>, niezależnie od tego, czy coś zebrali. {d['free_hands']}
     miejsc w ekipie dostajesz za darmo; kolejne dokupujesz z tablicy jednorazowo
-    ({d['place_ladder']}), do {d['max_hands']} osób. Miejsce to sama zgoda na większą
-    ekipę — najem i pensja dochodzą osobno.</p>
+    — {d['place_ladder']} — do {d['max_hands']} osób. Miejsce to sama zgoda na większą
+    ekipę: najem i pensja dochodzą osobno, i to one, a nie opłata, są sufitem.</p>
     <p>Domyślnie pracują <strong>tylko za dnia</strong> — o zmroku szukają łóżka na działce
     i kładą się spać — a licznik pensji staje razem z nimi, więc noce nic nie kosztują.
     Przestaw kogoś <strong>na nocną zmianę</strong> z tablicy, a nie przestanie pracować

@@ -33,53 +33,83 @@ import java.util.List;
  * only honest way to show a ladder: "Pace 2 of 4, next rung 320e" is one item
  * with lore, and three paragraphs of tellraw pretending to be one.
  *
- *   [hand][hand][hand][hand][hand][hand][hand][hand][hand]
+ *   [1][2][3][4][5][6]           [book][place][hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][job][move][wages][nights][plans][whip][fire]
- *    .   .   .   .   .   .  [book][place][hire]
+ *   [job][job][job][job][move][round][wages][nights][plans]
+ *   [7][8][9][10][11][12]            .   [whip][fire]
  *
  * The selected hand is the one the two middle rows apply to, which is why the
- * top row is heads you click rather than a list you read.
+ * heads are things you click rather than a list you read.
  *
- * The whole top row is heads and nothing else, and that is what sets the
- * ceiling on {@link TrapCrew#MAX_HANDS}: a tenth place would be somebody on
- * the payroll with nowhere to click. The book and the hire button used to
- * share that row and cost two of the nine, which is why they moved down when
- * places went on sale. The book had sat in the fifth head's slot before that,
- * and the day somebody hired a fifth hand the head was painted, painted over,
- * and left clickable -- hand five existed, worked, took a wage, and could only
- * be selected by clicking a book. Twice now the head row has been the thing
- * that was quietly too small; it gets a whole row to itself for that reason.
+ * Twelve heads in two blocks of six, top-left and bottom-left, and that is
+ * what sets the ceiling on {@link TrapCrew#MAX_HANDS}: a thirteenth place
+ * would be somebody on the payroll with nowhere to click.
+ *
+ * This board has now been quietly too small three times. The book once sat in
+ * the fifth head's slot, so the day somebody hired a fifth hand the head was
+ * painted, painted over, and left clickable. Places went on sale and the head
+ * row grew to nine, which cost the book and the hire button their spots. Then
+ * a courier job arrived, the job row ran out of room, and the move and round
+ * buttons went up into the top row -- landing on hands six and eight, which
+ * were painted and then painted over exactly like the fifth had been. Each
+ * time the failure was silent and each time a player found it.
+ *
+ * So the layout is no longer a set of numbers that happen not to collide: the
+ * static block below claims every fixed slot and throws on the second claim.
+ * Move a button onto a head now and the board refuses to open.
  */
 public class CrewScreenHandler extends ScreenHandler {
-    // Four rows, not three: the top one is nine heads now, so everything that
-    // used to share it had to go somewhere.
     private static final int ROWS = 4;
     private static final int SIZE = ROWS * 9;
 
-    /** The head row. One per hand, and the reason the crew caps at nine. */
-    private static final int HEADS = 9;
+    /**
+     * Twelve heads, six on the top row and six on the bottom.
+     *
+     * Split rather than one long run because nine was already the whole width
+     * of the board and twelve does not fit on any single row. Left-aligned in
+     * both blocks so the two read as one list that wrapped, and so the count
+     * of hands is something you take in rather than something you total up.
+     */
+    private static final int HEADS = 12;
+    private static final int HEAD_BLOCK = 6;
+    private static final int HEADS_TOP = 0;
+    private static final int HEADS_BOTTOM = 27;
 
-    private static final int HELP_SLOT = 33;
-    private static final int PLACE_SLOT = 34;
-    private static final int HIRE_SLOT = 35;
+    private static final int HELP_SLOT = 6;
+    private static final int PLACE_SLOT = 7;
+    private static final int HIRE_SLOT = 8;
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
+    // Eleven jobs, so 11..21, ending exactly where the move button starts.
     private static final int JOBS_FROM = 11;
-    // Moved off 20 into the gap the row already had when laundering made a
-    // tenth job. The job row is the only thing here that grows, so the spare
-    // slot is better spent on it than left as a hole next to the fire button.
-    private static final int WHIP_SLOT = 25;
-    // Both up on the top row, in the two gaps it has always had. The job row
-    // is the only thing on this board that grows and it had run out of room
-    // again -- Courier is the eleventh -- so the buttons moved rather than the
-    // jobs, and there is now one spare slot instead of none.
-    private static final int MOVE_SLOT = 5;
-    private static final int ROUND_SLOT = 7;
-    private static final int NIGHTS_SLOT = 23;
-    private static final int PLANS_SLOT = 24;
-    private static final int WAGES_SLOT = 22;
-    private static final int FIRE_SLOT = 26;
+    private static final int MOVE_SLOT = 22;
+    private static final int ROUND_SLOT = 23;
+    private static final int WAGES_SLOT = 24;
+    private static final int NIGHTS_SLOT = 25;
+    private static final int PLANS_SLOT = 26;
+    // Bottom right, as far from the heads as the board goes, with the spare
+    // slot between. Firing is the one button here that destroys something you
+    // paid for; it does not belong next to the thing you click to select.
+    private static final int WHIP_SLOT = 34;
+    private static final int FIRE_SLOT = 35;
+
+    /** Where head {@code nth} is painted. */
+    private static int headSlot(int nth) {
+        return nth < HEAD_BLOCK
+                ? HEADS_TOP + nth
+                : HEADS_BOTTOM + (nth - HEAD_BLOCK);
+    }
+
+    /** Which hand a slot is the head for, or -1 if it is not a head at all. */
+    private static int headAt(int slot) {
+        if (slot >= HEADS_TOP && slot < HEADS_TOP + HEAD_BLOCK) {
+            return slot - HEADS_TOP;
+        }
+        if (slot >= HEADS_BOTTOM && slot < HEADS_BOTTOM + HEAD_BLOCK) {
+            return HEAD_BLOCK + (slot - HEADS_BOTTOM);
+        }
+        return -1;
+    }
 
     /**
      * Every job, Picking included.
@@ -93,20 +123,45 @@ public class CrewScreenHandler extends ScreenHandler {
             List.of(TrapCrew.Job.values());
 
     static {
-        // The job row is laid out by counting off JOBS_FROM, so an eleventh job
-        // would land on the move button and be eaten by the click handler
-        // without a word. Better to fall over the first time somebody opens the
-        // board than to sell a job that quietly relocates the hand instead.
-        if (JOBS_FROM + TEACHABLE.size() > WAGES_SLOT) {
-            throw new IllegalStateException(
-                    "crew board: " + TEACHABLE.size() + " jobs won't fit before the wages");
-        }
-        // And the same promise for the head row. Lengthening PLACE_COST is a
-        // one-line change that would otherwise sell a place nobody can click.
+        // Every place the board sells needs a head to be painted on.
         if (TrapCrew.MAX_HANDS > HEADS) {
             throw new IllegalStateException(
-                    "crew board: " + TrapCrew.MAX_HANDS + " hands won't fit one row");
+                    "crew board: " + TrapCrew.MAX_HANDS + " hands, " + HEADS + " heads");
         }
+        // And nothing may be painted twice. This is the check that was
+        // missing: a button moved onto a head is a head that gets painted and
+        // then painted over, and the only symptom is a hand nobody can click.
+        boolean[] taken = new boolean[SIZE];
+        for (int i = 0; i < HEADS; i++) {
+            claim(taken, "head " + (i + 1), headSlot(i));
+        }
+        for (int i = 0; i < TEACHABLE.size(); i++) {
+            claim(taken, "job " + TEACHABLE.get(i).name(), JOBS_FROM + i);
+        }
+        claim(taken, "book", HELP_SLOT);
+        claim(taken, "place", PLACE_SLOT);
+        claim(taken, "hire", HIRE_SLOT);
+        claim(taken, "pace", PACE_SLOT);
+        claim(taken, "reach", REACH_SLOT);
+        claim(taken, "move", MOVE_SLOT);
+        claim(taken, "round", ROUND_SLOT);
+        claim(taken, "wages", WAGES_SLOT);
+        claim(taken, "nights", NIGHTS_SLOT);
+        claim(taken, "plans", PLANS_SLOT);
+        claim(taken, "whip", WHIP_SLOT);
+        claim(taken, "fire", FIRE_SLOT);
+    }
+
+    private static void claim(boolean[] taken, String what, int slot) {
+        if (slot < 0 || slot >= taken.length) {
+            throw new IllegalStateException(
+                    "crew board: " + what + " at " + slot + " is off a " + SIZE + "-slot board");
+        }
+        if (taken[slot]) {
+            throw new IllegalStateException(
+                    "crew board: " + what + " lands on slot " + slot + ", already taken");
+        }
+        taken[slot] = true;
     }
 
     private final SimpleInventory display = new SimpleInventory(SIZE);
@@ -149,7 +204,7 @@ public class CrewScreenHandler extends ScreenHandler {
         }
 
         for (int i = 0; i < crew.size() && i < HEADS; i++) {
-            display.setStack(i, head(crew.get(i), i, i == selected));
+            display.setStack(headSlot(i), head(crew.get(i), i, i == selected));
         }
         // The rest of the row, and it is not decoration. A bought place that
         // painted the same black pane as a locked one made the purchase read
@@ -160,7 +215,7 @@ public class CrewScreenHandler extends ScreenHandler {
         // right in the order you buy them.
         int cap = TrapCrew.capOf(boss);
         for (int i = crew.size(); i < HEADS; i++) {
-            display.setStack(i, i < cap ? emptySpot(i) : lockedSpot(i));
+            display.setStack(headSlot(i), i < cap ? emptySpot(i) : lockedSpot(i));
         }
         display.setStack(HELP_SLOT, help());
         display.setStack(PLACE_SLOT, placeTag());
@@ -528,14 +583,19 @@ public class CrewScreenHandler extends ScreenHandler {
             lore.add(line(cost + "e", Formatting.GOLD)
                     .append(plain(" -- jednorazowo, zostaje na zawsze.")
                             .formatted(Formatting.DARK_GRAY)));
-            // The rest of the ladder up front. These double, and a player who
-            // finds that out one click at a time has been sold a surprise.
+            // The next few up front. These double, and a player who finds
+            // that out one click at a time has been sold a surprise -- but
+            // seven rungs listed in full is a wall, so it stops at three and
+            // says how many are behind it.
             StringBuilder rest = new StringBuilder();
-            for (int i = bought + 1; i < TrapCrew.PLACE_COST.length; i++) {
+            int shown = 0;
+            for (int i = bought + 1; i < TrapCrew.PLACE_COST.length && shown < 3; i++, shown++) {
                 rest.append(rest.isEmpty() ? "" : ", ").append(TrapCrew.PLACE_COST[i]).append('e');
             }
+            int hidden = TrapCrew.PLACE_COST.length - bought - 1 - shown;
             if (!rest.isEmpty()) {
-                lore.add(line("Dalej: " + rest + ".", Formatting.DARK_GRAY));
+                lore.add(line("Dalej: " + rest + (hidden > 0 ? " i jeszcze " + hidden : "") + ".",
+                        Formatting.DARK_GRAY));
             }
             lore.add(Text.empty());
             lore.add(line(can ? "Kliknij, żeby dokupić miejsce." : "Nie stać cię.",
@@ -770,8 +830,9 @@ public class CrewScreenHandler extends ScreenHandler {
             super.onSlotClick(index, button, type, clicker);
             return;
         }
-        if (index < crew.size() && index < HEADS) {
-            selected = index;
+        int clicked = headAt(index);
+        if (clicked >= 0 && clicked < crew.size()) {
+            selected = clicked;
             click(SoundEvents.UI_BUTTON_CLICK.value(), 1.4F);
             paint();
             return;
@@ -780,12 +841,12 @@ public class CrewScreenHandler extends ScreenHandler {
         // a board where every other square does something reads as broken.
         // It does not buy or hire -- one button each, and neither of those is
         // a thing to trigger by poking the top row.
-        if (index < HEADS) {
-            answer(index < TrapCrew.capOf(boss)
-                    ? "To miejsce jest wolne. Zatrudnij kogoś przyciskiem na dole."
+        if (clicked >= 0) {
+            answer(clicked < TrapCrew.capOf(boss)
+                    ? "To miejsce jest wolne. Zatrudnij kogoś przyciskiem obok."
                     : "Miejsce niewykupione. Dokup je za "
                             + TrapMath.crewPlaceCost(TrapCrew.PLACE_COST,
-                                    index - TrapCrew.FREE_HANDS) + "e.");
+                                    clicked - TrapCrew.FREE_HANDS) + "e.");
             return;
         }
         if (index == HIRE_SLOT) {

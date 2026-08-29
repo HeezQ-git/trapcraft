@@ -196,16 +196,23 @@ public final class TrapCrew {
      * One-off, and it does not come back -- exactly like the hire fee it sits
      * next to. Firing somebody frees the place, not the money.
      */
-    public static final int[] PLACE_COST = {1500, 3500, 8000, 18000};
+    public static final int[] PLACE_COST =
+            {1500, 3500, 8000, 18000, 36000, 72000, 144000};
 
     /**
      * The free places plus every one that can be bought.
      *
-     * Nine, and the crew board's head row is nine slots wide, which is not a
-     * coincidence: a tenth place would be a hand on the payroll that no click
-     * can reach. Lengthening PLACE_COST means growing that row first, and
+     * Twelve, and the crew board holds exactly twelve heads -- six along the
+     * top, six along the bottom -- which is not a coincidence: a thirteenth
+     * place would be a hand on the payroll that no click can reach.
+     * Lengthening PLACE_COST means finding room on that board first, and
      * {@link CrewScreenHandler} refuses to open rather than trust anybody to
      * remember that.
+     *
+     * The last three rungs are a different kind of money from the first four.
+     * Twelve maxed hands is roughly 27,000e an hour in wages before anybody
+     * has bought a place at all, so the ceiling is the payroll and these
+     * numbers only decide how long you stare at it first.
      */
     public static final int MAX_HANDS = FREE_HANDS + PLACE_COST.length;
     /**
