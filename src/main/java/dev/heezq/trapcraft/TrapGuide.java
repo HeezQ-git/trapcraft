@@ -504,6 +504,24 @@ public final class TrapGuide {
                         + "wolniej niż opłacony.\n\n"))
                 .append(warn("Tu widać, za co płacisz."))));
 
+        // The page that had no right to exist until the call was wired up.
+        // Until then the honest text would have been "nikt po niego nie
+        // jedzie", and the book did not say that either -- it described a
+        // chase that could only happen by accident.
+        pages.add(page(Text.empty()
+                .append(title("5a. ZGŁOSZENIE\n\n"))
+                .append(body("Każde przestępstwo jest zgłaszane na "
+                        + "najbliższy komisariat od razu.\n\n"))
+                .append(body("Patrol RUSZA tam pieszo. Daleko = nie "
+                        + "zdąży."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5a2. ZASIĘG\n\n"))
+                .append(warn("Komisariat obsługuje tylko swoją okolicę.\n\n"))
+                .append(body("Dalsza część miasta potrzebuje drugiego "
+                        + "komisariatu. Sprawdzisz to po tym, czy w "
+                        + "ogóle ktoś przyjeżdża."))));
+
         int lowest = Integer.MAX_VALUE;
         int highest = 0;
         for (TrapCrime.Kind kind : TrapCrime.Kind.values()) {

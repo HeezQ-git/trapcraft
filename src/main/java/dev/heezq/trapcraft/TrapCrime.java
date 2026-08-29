@@ -821,11 +821,28 @@ public final class TrapCrime {
             tellAll(server, TrapNotes.say("  Sprawca ucieka. Dogoń go i kliknij prawym"
                     + " -- pieniądze wracają, miasto płaci nagrodę.", Formatting.DARK_GRAY));
         }
-        if (TrapPolice.onDuty() == 0) {
-            // The one message that explains the whole system in one line, and
-            // it only goes out when there is genuinely nobody to send.
-            tellAll(server, TrapNotes.say("  Na ulicy nie ma policji. Nikt inny po to "
-                    + "nie pojedzie.", Formatting.DARK_GRAY));
+        // RING THE POLICE. This is the line the whole file was missing.
+        //
+        // Everything downstream of a crime was built and correct -- a suspect
+        // stands up, runs, and a shift that can see them chases and cuffs them
+        // -- and none of it had ever happened, because nobody was ever TOLD.
+        // callOut existed and had exactly one caller: a pillager raid. So the
+        // only way a theft was ever solved was a copper happening to walk
+        // within sight of the runner by luck.
+        //
+        // Not a small miss, and the books said so out loud for anybody who
+        // read them: 130 cases cold, 0 solved, 49,504e stolen and 0 recovered
+        // -- on a world with a fully funded, top-kit, seven-officer force that
+        // had made ZERO arrests in its life. A force nobody dispatches is a
+        // wage bill with a uniform on.
+        if (!TrapPolice.callOut(world, sprawa.where)) {
+            // Which of the reasons it is, rather than assuming the street is
+            // empty. With the call wired up, "too far from the nick" is now
+            // the common one and it is the one with an answer.
+            tellAll(server, TrapNotes.say(TrapPolice.onDuty() == 0
+                    ? "  Na ulicy nie ma policji. Nikt inny po to nie pojedzie."
+                    : "  Za daleko od komisariatu. Nikt tam nie dojedzie.",
+                    Formatting.DARK_GRAY));
         }
     }
 

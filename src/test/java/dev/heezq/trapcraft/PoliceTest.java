@@ -641,4 +641,79 @@ class PoliceTest {
                         + "thing keeping the BUILDING in a feature whose dial is at the "
                         + "vault, and without it the block is decoration");
     }
+
+    /**
+     * A crime has to RING somebody.
+     *
+     * The bug this exists to prevent shipped and lived for the whole life of a
+     * world: every part of the chase was built and correct -- suspect stands
+     * up, runs, officer sees, chases, cuffs -- and `callOut` had exactly one
+     * caller, a pillager raid. So a theft told the police nothing, and the
+     * only arrests possible were a copper walking past a runner by luck.
+     *
+     * The books were the tell and nobody read them: 130 cold, 0 solved,
+     * 49,504e stolen, 0 recovered, with seven funded top-kit officers on the
+     * street. Every number in this file was right and the wire between two
+     * files was missing, which is exactly the shape a formula test cannot see.
+     */
+    @Test
+    void aCrimeCallsThePolice() throws Exception {
+        String crime = source("TrapCrime.java");
+        int open = crime.indexOf("private static void openCase(");
+        assertTrue(open > 0, "openCase moved -- this test is reading the wrong thing");
+        String body = crime.substring(open, crime.indexOf("\n    }", open));
+        assertTrue(body.contains("TrapPolice.callOut("),
+                "openCase must dispatch the police, or a theft is a suspect running "
+                        + "away from nobody and the whole force is a wage bill");
+    }
+
+    /**
+     * And the call has to reach the town it is policing.
+     *
+     * The second half of the same failure, and it would have hidden the fix:
+     * with the call wired up but bounded by BEAT_REACH, the live town had
+     * three of its twenty-eight houses inside the catchment. A force that can
+     * only attend an ninth of the burglaries against it looks, from the
+     * street, identical to one that is never told at all.
+     *
+     * The margins are the part worth pinning. Each bound sits a STRIDE inside
+     * the next, so arriving at the far end of a call leaves an officer short
+     * of the leash, and the leash short of the distance that teleports them
+     * home. Collapse either gap and you get the documented pacing bug: walk
+     * out, trip the bound, get sent back, get handed the same call again.
+     */
+    @Test
+    void aCallOutReachesFurtherThanABeat() throws Exception {
+        String police = source("TrapPolice.java");
+        assertTrue(police.contains("withinCall(station, where)"),
+                "callOut must use the call catchment, not the beat's");
+
+        int leash = constant(police, "LEASH");
+        int lost = constant(police, "LOST");
+        int stride = constant(police, "STRIDE");
+        int beatReach = leash - stride;
+        int callLeash = lost - stride;
+        int callReach = callLeash - stride;
+
+        assertTrue(callReach >= beatReach * 2,
+                "a shout has to reach at least twice as far as pottering, or the "
+                        + "catchment is still smaller than the town it is policing");
+        assertTrue(callLeash < lost,
+                "an officer answering a call must never be far enough out to be "
+                        + "teleported home mid-chase");
+        assertTrue(callReach + stride <= callLeash,
+                "and arriving at the far end of a call must leave them inside the "
+                        + "stretched leash, slop and all");
+        assertTrue(police.contains("answering(world, station) ? CALL_LEASH : LEASH"),
+                "the leash has to stretch for a live call, or the officer turns for "
+                        + "home halfway there and paces the same line all night");
+    }
+
+    /** Read `private static final int NAME = <digits>;` out of the source. */
+    private static int constant(String source, String name) {
+        var match = java.util.regex.Pattern
+                .compile("int " + name + " = (\\d+);").matcher(source);
+        assertTrue(match.find(), name + " is no longer a plain literal");
+        return Integer.parseInt(match.group(1));
+    }
 }
