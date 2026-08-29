@@ -1628,6 +1628,17 @@ def build() -> str:
     {table(["Zawód", "Koszt", "Pensja", "Co robi"], job_rows)}
     <p>Powyższe czasy to to, co zmierzyłbyś stoperem, razem z przerwą — a nie surowy odstęp
     między przebiegami.</p>
+    <h3 class="sub">Wszystko da się cofnąć</h3>
+    <p>Pensja idzie za tym, co jest <strong>włączone teraz</strong>, a nie za tym, co
+    kiedykolwiek kupiłeś. <strong>Shift+LPM</strong> na Tempie albo Zasięgu obniża poziom
+    o jeden i od razu obcina pensję; zwykły klik podnosi z powrotem — i skoro ten poziom
+    już raz kupiłeś, <strong>powrót w górę jest za darmo</strong>. Robotnik napędzony
+    na maksa na czas budowy może przespać zimę na najwolniejszym poziomie za 0e dodatku.</p>
+    <p>Zawody działają tak samo. <strong>Shift+LPM</strong> na wyuczonym zawodzie
+    <strong>wyłącza</strong> go — zwalnia jedno z dwóch miejsc i zdejmuje jego dodatek
+    z pensji — ale nauka zostaje. Możesz mieć wyuczonych pięć zawodów i włączone dwa,
+    przełączać je zależnie od pory roku, i nigdy nie płacić drugi raz. Limit dwóch dotyczy
+    tego, co robi <em>naraz</em>, nie tego, co umie.</p>
     <h3 class="sub">Jedna skrzynia</h3>
     <p>To jest rzecz, którą wszyscy mylą. Robotnik korzysta z <strong>pojemnika najbliższego
     swojemu miejscu pracy</strong> — tego jednego i żadnego innego — do wszystkiego: tam wkłada
@@ -1643,8 +1654,8 @@ def build() -> str:
     kosztowało za pierwszym razem. <code>/crew plans</code> pokazuje listę. Jeśli ekipa
     kiedykolwiek odejdzie przez brak wypłat, zapisuje się sama pod nazwą <code>walkout</code>,
     więc nic naprawdę nie przepada — po prostu płacisz drugi raz.</p>
-    <p class="note">Wszystko, czego ich uczysz, podnosi pensję. Robotnik, którego nie masz czym
-    zająć, to strata pieniędzy. Za spóźnioną wypłatę dostajesz ostrzeżenie, a nie odejście:
+    <p class="note">Wszystko, co masz <em>włączone</em>, podnosi pensję. Robotnik, którego nie
+    masz czym zająć, to strata pieniędzy — wyłącz mu, czego akurat nie potrzebujesz. Za spóźnioną wypłatę dostajesz ostrzeżenie, a nie odejście:
     {d['grace']} wypłat na zero, czyli około dwóch dni, a zapłacenie jednej umarza całe
     zaległości.</p>"""))
 

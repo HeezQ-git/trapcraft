@@ -2239,6 +2239,42 @@ class FormulaTest {
         }
     }
 
+    /**
+     * A rung is bought once, however many times you change your mind.
+     *
+     * The whole point of being able to turn a hand down: if going back up
+     * charged again, turning down would be a decision that costs 2200e to
+     * undo and nobody would ever take it. Walk the ladder up, down, up, and
+     * the bill has to be the plain climb -- not a penny more.
+     */
+    @Test
+    void aRungIsPaidForOnce() {
+        int[] costs = {0, 200, 450, 1000, 2200};
+        int rung = 0;
+        int peak = 0;
+        int spent = 0;
+        // Up to the top, all the way back down, and up again.
+        for (int step : new int[]{1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1}) {
+            if (step > 0) {
+                spent += TrapMath.crewRungCost(costs, rung + 1, peak);
+                peak = Math.max(peak, ++rung);
+            } else {
+                rung--;
+            }
+        }
+        assertEquals(3850, spent, "the ladder was bought twice");
+        assertEquals(costs.length - 1, rung);
+    }
+
+    /** A rung you have never been sold still costs its price. */
+    @Test
+    void aNewRungIsNotFree() {
+        int[] costs = {0, 200, 450, 1000, 2200};
+        assertEquals(450, TrapMath.crewRungCost(costs, 2, 1));
+        assertEquals(0, TrapMath.crewRungCost(costs, 2, 2));
+        assertEquals(0, TrapMath.crewRungCost(costs, 2, 4));
+    }
+
     /** Faster is faster, and the figure the board prints is the one you'd time. */
     @Test
     void theLadderGetsFaster() {

@@ -504,15 +504,35 @@ public final class TrapGuide {
                         + "wolniej niż opłacony.\n\n"))
                 .append(warn("Tu widać, za co płacisz."))));
 
+        int lowest = Integer.MAX_VALUE;
+        int highest = 0;
+        for (TrapCrime.Kind kind : TrapCrime.Kind.values()) {
+            lowest = Math.min(lowest, kind.fine());
+            highest = Math.max(highest, kind.fine());
+        }
         pages.add(page(Text.empty()
-                .append(title("5b. ZATRZYMANIE\n\n"))
+                .append(title("5b. ZŁAP GO SAM\n\n"))
+                .append(body("Nie musisz czekać na patrol. Dogoń go i "
+                        + "kliknij PRAWYM.\n\n"))
+                .append(body("Miasto płaci za to " + lowest + "-" + highest
+                        + "e, zależnie od sprawy.\n\n"))
+                .append(hint("Tyle samo, co grzywna sądowa."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. NIE ZABIJAJ GO\n\n"))
+                .append(body("Martwy sprawca nie oddaje niczego. "
+                        + "Pieniądze przepadają razem z nim.\n\n"))
+                .append(warn("Zakuwa się, nie zarzyna."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d. ZATRZYMANIE\n\n"))
                 .append(body("Złapany oddaje, co zabrał, i idzie do celi "
                         + "na kilka dni.\n\n"))
                 .append(body("Grzywna trafia do kasy miasta.\n\n"))
                 .append(hint("Cele pełne - wychodzi za kaucją."))));
 
         pages.add(page(Text.empty()
-                .append(title("5c. UMORZENIE\n\n"))
+                .append(title("5e. UMORZENIE\n\n"))
                 .append(body("Jeśli nikt go nie dopadnie, po kilku minutach "
                         + "sprawa jest umorzona.\n\n"))
                 .append(warn("Pieniądze przepadają na dobre."))));
@@ -2796,16 +2816,31 @@ public final class TrapGuide {
 
         pages.add(page(Text.empty()
                 .append(title("6. EFEKT WIRED\n\n"))
-                .append(body("Kokaina daje szybkość i siłę.\n\n"))
-                .append(warn("Przez cały czas trwania nic cię nie "
-                        + "kosztuje."))));
+                .append(body("Szybszy chód, mocniejszy cios i SZYBSZE "
+                        + "KOPANIE.\n\n"))
+                .append(hint("To jest towar do roboty, nie do klimatu."))));
 
         pages.add(page(Text.empty()
-                .append(title("6b. RACHUNEK\n\n"))
+                .append(title("6b. DO CZEGO\n\n"))
+                .append(body("Im czystszy proszek, tym dłużej i mocniej "
+                        + "idzie kilof.\n\n"))
+                .append(hint("Cięte starcza na jeden korytarz, idealne "
+                        + "na całą żyłę."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. RACHUNEK\n\n"))
                 .append(warn("Kiedy efekt się kończy, cała kara spada "
                         + "na ciebie NARAZ.\n\n"))
-                .append(hint("Nie bierz kolejnej działki tuż przed "
-                        + "walką."))));
+                .append(body("Wolno chodzisz, słabo bijesz i szybko "
+                        + "głodniejesz.\n\n"))
+                .append(hint("Kilof zjazd omija -- kop dalej."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6d. KIEDY NIE BRAĆ\n\n"))
+                .append(warn("Nie bierz kolejnej działki tuż przed "
+                        + "walką.\n\n"))
+                .append(hint("Zjazd zastanie cię z pustym paskiem "
+                        + "i bez siły."))));
     }
 
     // --- the chemist's handbook -----------------------------------------------
@@ -3253,6 +3288,16 @@ public final class TrapGuide {
                         + TrapCrew.PACE_COST[top] + "e.\n\n"))
                 .append(hint("Tempo kupuj w pierwszej kolejności."))));
 
+        // The page that makes the ladder safe to climb. Buying the top rung
+        // used to be a wage you carried forever, so people stopped at rung two
+        // and the 2200e one may as well not have existed.
+        pages.add(page(Text.empty()
+                .append(title("4c. W DÓŁ TEŻ\n\n"))
+                .append(body("Shift+LPM na Tempie obniża poziom "
+                        + "o jeden. Pensja spada od razu.\n\n"))
+                .append(hint("Powrót w górę jest DARMOWY - raz "
+                        + "kupiony poziom zostaje twój."))));
+
         pages.add(page(Text.empty()
                 .append(title("5. ZASIĘG DZIAŁKI\n\n"))
                 .append(body("Na start pracuje w kwadracie "
@@ -3400,7 +3445,7 @@ public final class TrapGuide {
     private static void jobs(List<RawFilteredPair<Text>> pages) {
         pages.add(page(Text.empty()
                 .append(title("6. DWA ZAWODY\n\n"))
-                .append(body("Jedna osoba może mieć maksymalnie "
+                .append(body("Jedna osoba robi naraz maksymalnie "
                         + TrapCrew.SLOTS + " zawody.\n\n"))
                 .append(body("Potrzebujesz trzeciej rzeczy? Zatrudnij "
                         + "trzecią osobę. Limit: " + TrapCrew.MAX_HANDS
@@ -3410,8 +3455,14 @@ public final class TrapGuide {
                 .append(title("6b. ZMIANA ZAWODU\n\n"))
                 .append(body("Zbieranie plonów jest darmowe i ma "
                         + "każdy.\n\n"))
-                .append(hint("Shift+LPM usuwa wykupiony zawód, żeby "
-                        + "zwolnić miejsce."))));
+                .append(hint("Shift+LPM WYŁĄCZA zawód i zwalnia "
+                        + "miejsce. Nauka zostaje."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. LIMIT TO NIE WIEDZA\n\n"))
+                .append(body("Limit " + TrapCrew.SLOTS + " dotyczy tego, co robi "
+                        + "NARAZ. Ucz ile chcesz i przełączaj.\n\n"))
+                .append(hint("Włączanie z powrotem nic nie kosztuje."))));
 
         // Five to a page. The whole list on one page was already at the ~14
         // line ceiling this book truncates at, and laundering pushed it over

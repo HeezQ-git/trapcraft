@@ -2561,6 +2561,22 @@ public final class TrapMath {
      */
     public static final float CREW_BREAK_SHARE = 0.25f;
 
+    /**
+     * What the next rung of a crew ladder costs, given the highest rung ever
+     * bought for that hand.
+     *
+     * A rung is bought once. Dropping back down is free and refunds nothing,
+     * so climbing back to somewhere you have already been is free too --
+     * otherwise "turn this one down while the farm is idle" would be a
+     * decision that costs 2200e to undo, and nobody would ever make it.
+     *
+     * @param rung the rung being moved TO
+     * @param peak the highest rung this hand has ever been sold
+     */
+    public static int crewRungCost(int[] costs, int rung, int peak) {
+        return rung <= peak ? 0 : costs[rung];
+    }
+
     /** Ticks a hand stands about for after a shift at this pace. */
     public static int crewBreak(int interval, int jobsPerShift) {
         return Math.max(20, Math.round(interval * jobsPerShift * CREW_BREAK_SHARE));
