@@ -148,8 +148,19 @@ public class CrewScreenHandler extends ScreenHandler {
             display.setStack(index, filler.copy());
         }
 
-        for (int i = 0; i < crew.size() && i < TrapCrew.MAX_HANDS; i++) {
+        for (int i = 0; i < crew.size() && i < HEADS; i++) {
             display.setStack(i, head(crew.get(i), i, i == selected));
+        }
+        // The rest of the row, and it is not decoration. A bought place that
+        // painted the same black pane as a locked one made the purchase read
+        // as "nothing happened": the money went, the board did not move, and
+        // the only way to find out it had worked was to hire somebody. The
+        // row is the whole ladder now -- who you have, what you own and have
+        // not filled, and what the next place would cost, laid out left to
+        // right in the order you buy them.
+        int cap = TrapCrew.capOf(boss);
+        for (int i = crew.size(); i < HEADS; i++) {
+            display.setStack(i, i < cap ? emptySpot(i) : lockedSpot(i));
         }
         display.setStack(HELP_SLOT, help());
         display.setStack(PLACE_SLOT, placeTag());
@@ -171,6 +182,43 @@ public class CrewScreenHandler extends ScreenHandler {
             display.setStack(FIRE_SLOT, fireTag(selected));
         }
         sendContentUpdates();
+    }
+
+    /** A place you own with nobody standing in it. */
+    private ItemStack emptySpot(int nth) {
+        ItemStack tag = new ItemStack(Items.LIME_STAINED_GLASS_PANE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Miejsce " + (nth + 1) + " -- wolne")
+                        .formatted(Formatting.GREEN, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Wykupione i puste. Nikt tu nie pracuje", Formatting.GRAY),
+                line("i nikt za nie nie bierze pensji.", Formatting.GRAY),
+                Text.empty(),
+                line("Stań tam, gdzie ma być praca, i kliknij", Formatting.YELLOW),
+                line("\"Zatrudnij kogoś\" na dole tablicy.", Formatting.YELLOW))));
+        return tag;
+    }
+
+    /**
+     * A place nobody has paid for yet, priced.
+     *
+     * Priced per SLOT rather than showing one number on the buy button,
+     * because the ladder doubles and seeing 1500 / 3500 / 8000 / 18000 spread
+     * across the row is the whole cost of a bigger crew in one look.
+     */
+    private ItemStack lockedSpot(int nth) {
+        int cost = TrapMath.crewPlaceCost(TrapCrew.PLACE_COST, nth - TrapCrew.FREE_HANDS);
+        ItemStack tag = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Miejsce " + (nth + 1) + " -- zamknięte")
+                        .formatted(Formatting.DARK_GRAY, Formatting.BOLD));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                line("Do wykupienia za ", Formatting.GRAY)
+                        .append(plain(cost + "e").formatted(Formatting.GOLD)),
+                line("Miejsca kupuje się po kolei, od lewej.", Formatting.DARK_GRAY),
+                Text.empty(),
+                line("Przycisk na dole tablicy.", Formatting.DARK_GRAY))));
+        return tag;
     }
 
     /**
@@ -726,6 +774,18 @@ public class CrewScreenHandler extends ScreenHandler {
             selected = index;
             click(SoundEvents.UI_BUTTON_CLICK.value(), 1.4F);
             paint();
+            return;
+        }
+        // An empty place is still a slot somebody just clicked, and silence on
+        // a board where every other square does something reads as broken.
+        // It does not buy or hire -- one button each, and neither of those is
+        // a thing to trigger by poking the top row.
+        if (index < HEADS) {
+            answer(index < TrapCrew.capOf(boss)
+                    ? "To miejsce jest wolne. Zatrudnij kogoś przyciskiem na dole."
+                    : "Miejsce niewykupione. Dokup je za "
+                            + TrapMath.crewPlaceCost(TrapCrew.PLACE_COST,
+                                    index - TrapCrew.FREE_HANDS) + "e.");
             return;
         }
         if (index == HIRE_SLOT) {
