@@ -440,6 +440,34 @@ public final class TrapStalls {
     }
 
     /** Empty the till into the owner's pockets. Returns what was in it. */
+    /**
+     * Empty the till without a hand to put it in.
+     *
+     * {@link #collect} needs the owner standing there, because it puts the
+     * emeralds in their pockets. A courier is the other case: somebody else
+     * carries it, and it is emeralds in a bag long before it is money in an
+     * account -- which is what makes robbing one worth doing.
+     */
+    public static int lift(Stall stall) {
+        int takings = stall.till;
+        if (takings <= 0) {
+            return 0;
+        }
+        stall.till = 0;
+        save();
+        return takings;
+    }
+
+    /** The same, for a stall being supplied by somebody else's courier. */
+    public static int payOut(Stall stall, int amount) {
+        int paid = Math.min(Math.max(0, amount), stall.till);
+        if (paid > 0) {
+            stall.till -= paid;
+            save();
+        }
+        return paid;
+    }
+
     public static int collect(ServerPlayerEntity owner, Stall stall) {
         int takings = stall.till;
         if (takings <= 0) {

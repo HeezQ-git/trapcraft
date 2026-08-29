@@ -36,6 +36,7 @@ public class TrapCraft implements ModInitializer {
         // report a town with no police to a town that has three stations.
         TrapPolice.register();
         TrapCrime.register();
+        TrapCourt.register();
         TrapShops.register();
         // After the shops and the houses: a fire picks its address out of both
         // registers, and a first roll against an unloaded one is a town where

@@ -2297,6 +2297,181 @@ class FormulaTest {
         }
     }
 
+    // --- the courier's road ---------------------------------------------------
+
+    /**
+     * A round is paid for in distance, and the pace rung is the only thing
+     * that makes it shorter. Those two together are the whole of what "level"
+     * means for a courier, and neither is visible from a screenshot.
+     */
+    @Test
+    void aFurtherShopCostsMore() {
+        int last = -1;
+        for (int blocks = 0; blocks <= 400; blocks += 20) {
+            int ticks = TrapMath.crewRoadTicks(blocks, 80);
+            assertTrue(ticks >= last, blocks + " blocks got cheaper than " + (blocks - 20));
+            last = ticks;
+        }
+        assertTrue(TrapMath.crewRoadTicks(300, 80) > TrapMath.crewRoadTicks(30, 80),
+                "a shop across town has to cost more than one across the street");
+    }
+
+    @Test
+    void aFasterCourierIsFaster() {
+        int last = Integer.MAX_VALUE;
+        for (int interval : new int[]{200, 120, 80, 50, 30}) {
+            int ticks = TrapMath.crewRoadTicks(100, interval);
+            assertTrue(ticks < last, "interval " + interval + " is not a quicker run");
+            last = ticks;
+        }
+    }
+
+    /**
+     * Two ends that can't run away. A stop in the same chunk still costs a
+     * leg -- a free delivery is a hopper -- and a route somebody sets a
+     * thousand blocks out is capped rather than a courier never seen again.
+     */
+    @Test
+    void theRoadHasBothEnds() {
+        assertTrue(TrapMath.crewRoadTicks(0, 80) > 0, "a delivery is never free");
+        assertEquals(TrapMath.crewRoadTicks(TrapMath.CREW_LEG * TrapMath.CREW_MAX_LEGS, 80),
+                TrapMath.crewRoadTicks(100000, 80),
+                "past the cap the road stops growing");
+    }
+
+    // --- the courier's road, and who is on it ---------------------------------
+
+    /**
+     * Every input to a mugging is something the boss chose, so every one of
+     * them has to actually move the number -- a risk you cannot lower is a
+     * tax, and the whole feature is meant to be a decision about when and how
+     * you move money.
+     */
+    @Test
+    void aRicherCourierIsAWorseIdea() {
+        float last = -1;
+        for (int value = 0; value <= 4000; value += 200) {
+            float odds = TrapMath.courierRobbedChance(value, 0f, false, 100);
+            assertTrue(odds >= last, value + "e got safer than " + (value - 200) + "e");
+            last = odds;
+        }
+        assertEquals(0f, TrapMath.courierRobbedChance(0, 0f, false, 100), 0.0001f,
+                "an empty bag cannot be robbed");
+    }
+
+    @Test
+    void nightAndDistanceAndPoliceAllMove() {
+        float plain = TrapMath.courierRobbedChance(500, 0f, false, 40);
+        assertTrue(TrapMath.courierRobbedChance(500, 0f, true, 40) > plain,
+                "after dark has to be worse");
+        assertTrue(TrapMath.courierRobbedChance(500, 0f, false, 400) > plain,
+                "across town has to be worse");
+        assertTrue(TrapMath.courierRobbedChance(500, 1f, false, 40) < plain,
+                "a funded force has to be worth something");
+    }
+
+    /** However rich and however lawless, some runs get through. */
+    @Test
+    void theRoadIsNeverCertainDeath() {
+        assertTrue(TrapMath.courierRobbedChance(1_000_000, 0f, true, 10_000)
+                        <= TrapMath.COURIER_CAP + 0.0001f,
+                "the cap is the whole reason a big farm can still use couriers");
+    }
+
+    // --- the court ------------------------------------------------------------
+
+    /**
+     * A court you can buy is a fine with extra clicks; a court you cannot
+     * influence is a coin flip with a building attached. Both ends are pinned
+     * here because the balance of the whole feature is the gap between them.
+     */
+    @Test
+    void aLawyerHelpsAndNeverGuarantees() {
+        float bare = TrapMath.courtOdds(0.4f, 0, 0f);
+        float last = bare;
+        for (int lawyer = 1; lawyer <= TrapMath.LAWYERS; lawyer++) {
+            float odds = TrapMath.courtOdds(0.4f, lawyer, 0f);
+            assertTrue(odds > last, "lawyer " + lawyer + " bought nothing");
+            last = odds;
+        }
+        assertTrue(last < 1f, "the best lawyer in town is still not a receipt");
+    }
+
+    @Test
+    void theOddsStayBetweenTheirBounds() {
+        for (float provable = 0f; provable <= 1f; provable += 0.05f) {
+            for (int lawyer = 0; lawyer <= TrapMath.LAWYERS + 2; lawyer++) {
+                for (float evidence = -0.5f; evidence <= 1.5f; evidence += 0.25f) {
+                    float odds = TrapMath.courtOdds(provable, lawyer, evidence);
+                    assertTrue(odds >= TrapMath.COURT_FLOOR - 0.0001f
+                                    && odds <= TrapMath.COURT_CEILING + 0.0001f,
+                            "provable " + provable + " lawyer " + lawyer
+                                    + " evidence " + evidence + " -> " + odds);
+                }
+            }
+        }
+    }
+
+    /** Funding the nick has to show up in the verdict, or the two never meet. */
+    @Test
+    void policeFundingReachesTheBench() {
+        assertTrue(TrapMath.courtOdds(0.4f, 1, 1f) > TrapMath.courtOdds(0.4f, 1, 0f),
+                "evidence has to be worth something in front of a judge");
+    }
+
+    /**
+     * The first lawyer must never be a bad bet.
+     *
+     * This is the invariant the whole fee ladder is priced off, and it is the
+     * one the flat 25e floor broke: on a 40e theft the full ladder cost 75e to
+     * win 50e, so buying representation was irrational at every small size and
+     * nothing in the game said so. A rung buys COURT_PER_LAWYER of the win, so
+     * it has to cost less than that -- at EVERY size, which is why the floor
+     * had to go and the price is a pure share.
+     */
+    @Test
+    void theFirstLawyerIsAlwaysWorthIt() {
+        for (int loot = 10; loot <= 5000; loot += 10) {
+            int win = loot + TrapMath.damages(loot);
+            assertTrue(TrapMath.damages(loot) > 0, loot + "e wins nothing extra");
+            assertTrue(TrapMath.lawyerFee(loot, 0) < TrapMath.COURT_PER_LAWYER * win,
+                    "at " + loot + "e the first lawyer costs more than it is worth");
+        }
+    }
+
+    /** And no rung is ever free, however small the theft. */
+    @Test
+    void noLawyerWorksForNothing() {
+        for (int loot = 1; loot <= 200; loot++) {
+            for (int rung = 0; rung < TrapMath.LAWYERS; rung++) {
+                assertTrue(TrapMath.lawyerFee(loot, rung) >= 1,
+                        "a lawyer was free on a " + loot + "e case");
+            }
+        }
+    }
+
+    @Test
+    void eachLawyerCostsMoreThanTheLast() {
+        int last = -1;
+        for (int rung = 0; rung < TrapMath.LAWYERS; rung++) {
+            int fee = TrapMath.lawyerFee(2000, rung);
+            assertTrue(fee > last, "rung " + rung + " was not dearer than the one before");
+            last = fee;
+        }
+    }
+
+    /** Supplying a neighbour has to leave room for both of them to want it. */
+    @Test
+    void wholesaleLeavesASpreadForBothSides() {
+        for (int shelf = 1; shelf <= 500; shelf += 7) {
+            int paid = TrapMath.wholesale(shelf, 1);
+            assertTrue(paid >= 1, "a case worth " + shelf + "e paid nothing");
+            assertTrue(paid < shelf || shelf <= 2,
+                    "at " + shelf + "e the shopkeeper keeps no spread");
+        }
+        assertEquals(0, TrapMath.wholesale(50, 0), "no cases, no money");
+    }
+
     // --- the shift bell -------------------------------------------------------
 
     /**

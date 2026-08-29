@@ -2631,6 +2631,203 @@ public final class TrapMath {
     }
 
     /**
+     * How far a courier covers before the clock ticks once more.
+     *
+     * A leg, not a block, because a delivery is not paid for in walking. The
+     * body is put down at the far end the way every other errand in this mod
+     * moves somebody across town -- a pathfinder gives out past forty blocks
+     * and nobody watches a neighbour cross the square -- so the DISTANCE has
+     * to cost something other than steps or a shop on the next street and a
+     * shop four hundred blocks away are the same shop.
+     *
+     * Twenty-four is the compromise: short enough that a market two streets
+     * over is a couple of legs rather than a rounding error, long enough that
+     * a farm supplying the far side of town is a courier who is mostly out.
+     */
+    public static final int CREW_LEG = 24;
+    /**
+     * Legs one run may cost, there and back.
+     *
+     * A cap because the alternative is a route somebody sets across a
+     * thousand blocks and a hand who is never seen again, and because past
+     * this the answer is not a faster courier, it is a nearer shop.
+     */
+    public static final int CREW_MAX_LEGS = 20;
+
+    /**
+     * Ticks a round trip to a shop this far away takes at this pace.
+     *
+     * The pace rung is the only thing that makes it shorter, which is what
+     * "level" means for a courier: a plodding hand takes about four minutes to
+     * service a shop a hundred blocks off and a flat-out one takes under
+     * twenty seconds. Same wage per hour, ten times the deliveries.
+     *
+     * Charged AFTER the drop rather than before it, as a breather. The goods
+     * are already on the shelf by then, which is the honest way round -- a
+     * courier who was going to be away for two minutes and then logged out
+     * would otherwise have eaten the load.
+     */
+    /**
+     * What a neighbour's counter pays for a delivered case of goods.
+     *
+     * Against the shelf price the shop will then charge, so both halves of it
+     * are worth doing: the supplier gets money for goods they were not going
+     * to carry into town themselves, and the shopkeeper keeps the spread for
+     * standing behind the counter. A number in the middle rather than either
+     * end, because a rate that made one side of the trade obviously right
+     * would mean nobody ever agreed to the other one.
+     *
+     * This is the first price in the mod that moves value between two PLAYERS
+     * without either of them being logged in at the same time, which is the
+     * whole reason to have it.
+     */
+    public static final float WHOLESALE = 0.55f;
+
+    /** What a case of these is worth to the shop that receives it. */
+    public static int wholesale(int shelfPrice, int cases) {
+        return Math.max(1, Math.round(shelfPrice * WHOLESALE)) * Math.max(0, cases);
+    }
+
+    // --- the court --------------------------------------------------------------
+
+    /**
+     * Whether the case is won, and what actually decides it.
+     *
+     * Three inputs, and the interesting thing about them is that a player
+     * controls exactly one directly. The crime decides how provable it is --
+     * somebody caught walking away from a smashed window is easier to convict
+     * than a pickpocket whose word is as good as the victim's. The police
+     * force's kit is EVIDENCE: a funded, geared nick turns up with statements,
+     * a stopwatch and a body camera, and an unfunded one turns up with a
+     * constable who thinks it was probably him. And the lawyer is the money.
+     *
+     * <h2>Why it is never a certainty either way</h2>
+     *
+     * Because a court you can buy is a fine with extra clicks, and a court you
+     * cannot influence is a coin flip with a building attached. The floor is
+     * there so that a case is always worth filing; the ceiling is there so
+     * that the best lawyer in town is a good bet rather than a receipt. Losing
+     * has to be a real thing that happens to prepared people or the whole
+     * feature is a queue.
+     *
+     * @param provable   the offence's own strength, 0..1
+     * @param lawyer     rungs of representation bought, 0..{@link #LAWYERS}
+     * @param evidence   0..1, the force's kit and funding
+     */
+    public static float courtOdds(float provable, int lawyer, float evidence) {
+        float odds = provable
+                + Math.max(0, Math.min(LAWYERS, lawyer)) * COURT_PER_LAWYER
+                + Math.max(0f, Math.min(1f, evidence)) * COURT_EVIDENCE;
+        return Math.max(COURT_FLOOR, Math.min(COURT_CEILING, odds));
+    }
+
+    /** Rungs of representation you may buy on one case. */
+    public static final int LAWYERS = 3;
+    /** What each rung is worth, and what the two free inputs are worth. */
+    public static final float COURT_PER_LAWYER = 0.11f;
+    public static final float COURT_EVIDENCE = 0.20f;
+    /** Nothing is hopeless and nothing is certain. */
+    public static final float COURT_FLOOR = 0.10f;
+    public static final float COURT_CEILING = 0.92f;
+
+    /**
+     * What the next rung of a lawyer costs on a case worth this much.
+     *
+     * A share of what is at stake rather than a flat price, for the reason
+     * every other ladder in this mod is not flat: a fixed fee is free on a
+     * big case and unaffordable on a small one, so it would only ever be a
+     * decision at one size of theft. Priced off the LOOT, so the question is
+     * always the same one -- how much of what you lost are you willing to
+     * spend on the chance of getting the rest back.
+     */
+    public static int lawyerFee(int loot, int rung) {
+        return Math.max(1, Math.round(loot * COURT_FEE_SHARE * (rung + 1)));
+    }
+
+    /**
+     * Of the loot, per rung, and the number is set by one sum.
+     *
+     * A rung buys {@link #COURT_PER_LAWYER} of a case worth
+     * {@code loot + damages}, so it is WORTH buying while
+     * {@code share * (rung+1) < COURT_PER_LAWYER * (1 + COURT_DAMAGES)} --
+     * about 0.1375 of the loot. At 0.055 that makes the first two rungs
+     * plainly worth it and the third a gamble on getting your own goods back
+     * rather than a better bet, which is exactly the shape a ladder should
+     * have: two easy decisions and one real one.
+     *
+     * It used to carry a flat 25e floor, and that floor was a bug rather than
+     * a balance choice -- on a 40e theft the full ladder cost 75e to win 50e,
+     * so the entire feature was irrational on small cases and nothing said so.
+     * A share has no size at which it stops making sense.
+     */
+    public static final float COURT_FEE_SHARE = 0.055f;
+
+    /** What a won case pays on top of the goods, as a share of the loot. */
+    public static final float COURT_DAMAGES = 0.25f;
+
+    /** Damages on a won case, which is what makes a trial worth the risk. */
+    public static int damages(int loot) {
+        return Math.max(1, Math.round(loot * COURT_DAMAGES));
+    }
+
+    /**
+     * The odds a loaded courier does not make it home.
+     *
+     * The first risk in this mod that a player creates on purpose and can see
+     * coming. Everything about it is a decision they already made: how far the
+     * shop is, how much they let pile up in the till before sending somebody
+     * for it, whether the round runs at night, and whether the town's police
+     * budget is anything more than a building.
+     *
+     * Value is the driver and it is deliberately not linear -- a courier
+     * fetching forty emeralds is barely worth following, and one carrying two
+     * thousand is worth following a long way. The square root keeps the top
+     * end from running away: past a few thousand it stops mattering how much
+     * more is in the bag, because there is a ceiling on how often the town
+     * produces somebody willing.
+     *
+     * Deterrence is the police force's whole reason to exist from a
+     * shopkeeper's point of view. A funded, geared force does not merely catch
+     * more of them afterwards -- it means fewer of them happen, which is the
+     * thing a budget line is actually buying and the one thing an arrest count
+     * can never show.
+     *
+     * @param value      emeralds' worth in the bag, goods included
+     * @param deterrence 0..1, from the force on the street
+     * @param night      dark outside
+     * @param blocks     how far they had to carry it
+     */
+    public static float courierRobbedChance(int value, float deterrence, boolean night,
+                                            double blocks) {
+        if (value <= 0) {
+            return 0f;
+        }
+        float base = (float) Math.sqrt(value) * COURIER_RISK;
+        base *= night ? COURIER_NIGHT : 1f;
+        // A shop two streets away is a walk; the far side of town is a
+        // journey, and a journey has more road on it to be waited beside.
+        base *= 1f + (float) Math.min(1.0, blocks / 400.0) * COURIER_DISTANCE;
+        base *= 1f - clamp01(deterrence) * COURIER_GUARDED;
+        return Math.min(COURIER_CAP, Math.max(0f, base));
+    }
+
+    /** Per square root of an emerald. Tuned so a 400e run is about 1 in 20. */
+    public static final float COURIER_RISK = 0.0025f;
+    /** After dark, and it is the single biggest lever a player controls. */
+    public static final float COURIER_NIGHT = 1.9f;
+    /** Up to this much again for a run across the whole town. */
+    public static final float COURIER_DISTANCE = 0.8f;
+    /** How much of it a fully funded, fully geared force takes off the table. */
+    public static final float COURIER_GUARDED = 0.7f;
+    /** However rich and however lawless, some runs get through. */
+    public static final float COURIER_CAP = 0.35f;
+
+    public static int crewRoadTicks(double blocks, int interval) {
+        int legs = (int) Math.ceil(Math.max(0.0, blocks) / CREW_LEG);
+        return interval * Math.max(1, Math.min(CREW_MAX_LEGS, legs)) * 2;
+    }
+
+    /**
      * Which bosses have just started or finished a shift, and with how many.
      *
      * Here rather than in the crew because it is a state machine and state

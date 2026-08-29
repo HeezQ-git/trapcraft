@@ -70,7 +70,12 @@ public class CrewScreenHandler extends ScreenHandler {
     // tenth job. The job row is the only thing here that grows, so the spare
     // slot is better spent on it than left as a hole next to the fire button.
     private static final int WHIP_SLOT = 25;
-    private static final int MOVE_SLOT = 21;
+    // Both up on the top row, in the two gaps it has always had. The job row
+    // is the only thing on this board that grows and it had run out of room
+    // again -- Courier is the eleventh -- so the buttons moved rather than the
+    // jobs, and there is now one spare slot instead of none.
+    private static final int MOVE_SLOT = 5;
+    private static final int ROUND_SLOT = 7;
     private static final int NIGHTS_SLOT = 23;
     private static final int PLANS_SLOT = 24;
     private static final int WAGES_SLOT = 22;
@@ -92,9 +97,9 @@ public class CrewScreenHandler extends ScreenHandler {
         // would land on the move button and be eaten by the click handler
         // without a word. Better to fall over the first time somebody opens the
         // board than to sell a job that quietly relocates the hand instead.
-        if (JOBS_FROM + TEACHABLE.size() > MOVE_SLOT) {
+        if (JOBS_FROM + TEACHABLE.size() > WAGES_SLOT) {
             throw new IllegalStateException(
-                    "crew board: " + TEACHABLE.size() + " jobs won't fit before the whip");
+                    "crew board: " + TEACHABLE.size() + " jobs won't fit before the wages");
         }
         // And the same promise for the head row. Lengthening PLACE_COST is a
         // one-line change that would otherwise sell a place nobody can click.
@@ -159,6 +164,7 @@ public class CrewScreenHandler extends ScreenHandler {
             }
             display.setStack(WHIP_SLOT, whipTag(card, selected));
             display.setStack(MOVE_SLOT, moveTag(card));
+            display.setStack(ROUND_SLOT, roundTag(card));
             display.setStack(NIGHTS_SLOT, nightsTag(card));
             display.setStack(PLANS_SLOT, plansTag());
             display.setStack(WAGES_SLOT, wages());
@@ -596,6 +602,63 @@ public class CrewScreenHandler extends ScreenHandler {
      * as many packets an hour. What the quarter buys is the ASKING, and it is
      * what stops this being a switch everybody flips once and forgets.
      */
+    /**
+     * The round, and the one button on this board that only a courier uses.
+     *
+     * Shown to everybody rather than hidden until the job is bought, because
+     * "where would he even take it" is the question you ask BEFORE spending
+     * 900e, and a button that appears after the purchase answers it too late.
+     */
+    private ItemStack roundTag(TrapCrew.Card card) {
+        boolean courier = card.taught().contains(TrapCrew.Job.DELIVER);
+        ItemStack tag = new ItemStack(card.round().isEmpty()
+                ? (courier ? Items.MAP : Items.GRAY_DYE) : Items.FILLED_MAP);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Trasa kuriera").formatted(courier ? Formatting.AQUA
+                        : Formatting.DARK_GRAY, Formatting.BOLD)
+                        .append(plain("  " + card.round().size() + " z "
+                                + TrapCrew.ROUTE_STOPS).formatted(Formatting.WHITE)));
+        List<Text> lore = new ArrayList<>();
+        if (card.round().isEmpty()) {
+            lore.add(line("Nie ma gdzie wozić.", Formatting.GRAY));
+        } else {
+            for (String stop : card.round()) {
+                lore.add(line("- " + stop, stop.startsWith("??")
+                        ? Formatting.RED : Formatting.WHITE));
+            }
+            // The two-hundred-block shop and the one across the street are
+            // the same click and very much not the same wage. Say so here,
+            // where the decision is, rather than in the book.
+            lore.add(line("Najdłuższy kurs: " + card.roadSeconds() + "s tam i z powrotem.",
+                    Formatting.DARK_GRAY));
+        }
+        lore.add(Text.empty());
+        lore.add(line("Stań przy kasie albo straganie -- swoim", Formatting.GRAY));
+        lore.add(line("lub cudzym -- i kliknij. Jeszcze raz skreśla.", Formatting.GRAY));
+        lore.add(line("Wozi tylko to, co dany sklep sprzedaje.", Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        // The two things about a round that are not obvious from the list of
+        // stops, and both of them are decisions rather than facts.
+        lore.add(line("U SIEBIE: zostawia towar, przywozi utarg.", Formatting.WHITE));
+        lore.add(line("U OBCEGO: sprzedaje po " + Math.round(TrapMath.WHOLESALE * 100)
+                + "% ceny półki,", Formatting.WHITE));
+        lore.add(line("z jego kasy. Utargu stamtąd nie rusza.", Formatting.DARK_GRAY));
+        lore.add(Text.empty());
+        int guarded = Math.round(TrapPolice.deterrence() * 100);
+        lore.add(line("Z pełną torbą mogą go napaść.", Formatting.RED));
+        lore.add(line("Ryzyko rośnie z wartością i odległością,", Formatting.DARK_GRAY));
+        lore.add(line("nocą prawie dwukrotnie.", Formatting.DARK_GRAY));
+        lore.add(guarded > 0
+                ? line("Policja zbija je o " + guarded + "%.", Formatting.GREEN)
+                : line("Policji nie ma. Nikt go nie pilnuje.", Formatting.RED));
+        lore.add(Text.empty());
+        lore.add(courier
+                ? line("Kliknij, stojąc przy sklepie.", Formatting.YELLOW)
+                : line("Najpierw naucz go Kurierki.", Formatting.DARK_GRAY));
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
     private ItemStack nightsTag(TrapCrew.Card card) {
         boolean on = card.nights();
         ItemStack tag = new ItemStack(on ? Items.CLOCK : Items.RED_BED);
@@ -698,6 +761,14 @@ public class CrewScreenHandler extends ScreenHandler {
         }
         if (index == MOVE_SLOT) {
             answer(TrapCrew.move(boss, card.index(), boss.getBlockPos()));
+            return;
+        }
+        if (index == ROUND_SLOT) {
+            // Chat rather than the action bar, like the whip: this one is
+            // never greyed out -- it cannot be, it depends on where you are
+            // STOOD -- so its refusal is the only thing that explains why
+            // nothing happened.
+            answer(TrapCrew.round(boss, card.index(), boss.getBlockPos()), false);
             return;
         }
         if (index == NIGHTS_SLOT) {

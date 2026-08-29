@@ -219,6 +219,31 @@ public final class TrapPolice {
      */
     private static final int BEAT_REACH = LEASH - STRIDE;
     /**
+     * How far an officer may get from the nick while ANSWERING A CALL.
+     *
+     * A shout is not a beat errand and must not be bounded like one. Measured
+     * on the live town on 2026-08-29: three of its twenty-eight houses were
+     * inside {@link #BEAT_REACH} and the furthest was 213 blocks out, so a
+     * catchment sized for pottering meant the force could only ever attend an
+     * ninth of the burglaries committed against it -- and the other eight
+     * ninths looked, from the street, exactly like a police force that does
+     * not bother.
+     *
+     * A stride under {@link #LOST}, for {@link #BEAT_REACH}'s reason one level
+     * out: arriving at the far end of a call still has to leave them short of
+     * the distance that simply teleports them home, slop and all.
+     */
+    private static final int CALL_LEASH = LOST - STRIDE;
+    /**
+     * And how far out a call may be SET, with the same stride of margin.
+     *
+     * Deliberately still finite. A nick answers its own quarter of the map and
+     * not the whole world, so a second town needs a second station -- which is
+     * the sentence {@link #callOut} was already written to mean and could not
+     * deliver while the number was 106.
+     */
+    private static final int CALL_REACH = CALL_LEASH - STRIDE;
+    /**
      * How long a call-out holds the round before the beat goes back to normal.
      *
      * A minute and a half, which is roughly a raid. Long enough to walk the
@@ -860,7 +885,13 @@ public final class TrapPolice {
             }
             return;
         }
-        if (home > (double) LEASH * LEASH) {
+        // Stretched while there is a shout, because a leash that stops short
+        // of the call is the BEAT_REACH bug wearing a different hat: the
+        // officer walks out, trips the leash, is sent home, is handed the
+        // same call again, and paces a line all night while a burglary two
+        // streets past the end of it goes unanswered.
+        int leash = answering(world, station) ? CALL_LEASH : LEASH;
+        if (home > (double) leash * leash) {
             TrapHomes.walkTo(officer, station.sign);
             return;
         }
@@ -1238,6 +1269,17 @@ public final class TrapPolice {
                 && spot.getSquaredDistance(station.sign) <= (double) BEAT_REACH * BEAT_REACH;
     }
 
+    /** The same question for a shout, which reaches further. See CALL_REACH. */
+    private static boolean withinCall(Station station, BlockPos spot) {
+        return spot != null
+                && spot.getSquaredDistance(station.sign) <= (double) CALL_REACH * CALL_REACH;
+    }
+
+    /** Is this station on a live call-out right now? */
+    private static boolean answering(ServerWorld world, Station station) {
+        return station.shout != null && world.getTime() <= station.shoutBy;
+    }
+
     /** A live call-out, or null once it has run its time. */
     private static BlockPos shoutOf(ServerWorld world, Station station) {
         if (station.shout == null) {
@@ -1297,7 +1339,7 @@ public final class TrapPolice {
         for (Station station : STATIONS) {
             if (!station.dimension.equals(here) || !station.open
                     || (station.officers.isEmpty() && station.golems.isEmpty())
-                    || !onTheRound(station, where)) {
+                    || !withinCall(station, where)) {
                 continue;
             }
             double away = where.getSquaredDistance(station.sign);
@@ -1455,6 +1497,11 @@ public final class TrapPolice {
         if (charge.restitution() > 0) {
             note.append(TrapNotes.say("   odzyskano ", Formatting.DARK_GRAY))
                     .append(TrapNotes.say(charge.restitution() + "e", Formatting.GREEN));
+        } else if (TrapCourt.any()) {
+            // Nothing came back at the kerb because there is a bench in town
+            // now. Said out loud, or a collar with no money next to it reads
+            // as the arrest having gone wrong.
+            note.append(TrapNotes.say("   sprawa idzie do sądu", Formatting.GOLD));
         }
         announce(world.getServer(), note);
     }
@@ -2211,7 +2258,7 @@ public final class TrapPolice {
 
     /** Bodies belonging to a station that no longer exists. */
     private static void sweep(ServerWorld world, Station station) {
-        Box box = new Box(station.sign).expand(LEASH);
+        Box box = new Box(station.sign).expand(LOST);
         // MobEntity rather than VillagerEntity, because the yard is swept by
         // the same pass as the shift and the cells: three tags, one walk of
         // the entity sections, and no way to add a fourth body to a station

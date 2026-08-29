@@ -837,6 +837,36 @@ public final class TrapShops {
     }
 
     /** Empty the register. */
+    /** The till, for somebody who will carry it rather than pocket it. */
+    public static int lift(Shop shop) {
+        int takings = shop.till;
+        if (takings <= 0) {
+            return 0;
+        }
+        shop.till = 0;
+        save();
+        return takings;
+    }
+
+    /**
+     * The till pays a supplier for a case that just arrived.
+     *
+     * Out of the takings rather than out of the owner's pocket, and that is
+     * the point: a shop that has sold nothing cannot buy anything, so being
+     * supplied by a neighbour is something a BUSY counter can afford and an
+     * empty one cannot. Nobody is billed while they are logged out.
+     *
+     * @return what the till could actually cover
+     */
+    public static int payOut(Shop shop, int amount) {
+        int paid = Math.min(Math.max(0, amount), shop.till);
+        if (paid > 0) {
+            shop.till -= paid;
+            save();
+        }
+        return paid;
+    }
+
     public static int collect(ServerPlayerEntity owner, Shop shop) {
         int takings = shop.till;
         if (takings <= 0) {

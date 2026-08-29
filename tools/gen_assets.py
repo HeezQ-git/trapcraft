@@ -492,6 +492,8 @@ def lang() -> None:
         "item.trapcraft.hospital": "Szpital",
         "block.trapcraft.police": "Komisariat",
         "item.trapcraft.police": "Komisariat",
+        "block.trapcraft.court": "Sąd",
+        "item.trapcraft.court": "Sąd",
         "block.trapcraft.fire_house": "Remiza",
         "item.trapcraft.fire_house": "Remiza",
         # "Shop Shelf", not "Market Shelf". Three things called market -- the
@@ -2079,6 +2081,12 @@ def advancements() -> None:
     award("collar", "Mamy go",
           "Doczekaj się pierwszego zatrzymania na swoim komisariacie.",
           "minecraft:chain", "nick", frame="goal")
+    award("bench", "Sąd nad miastem",
+          "Postaw sąd, żeby złapany złodziej odpowiadał, a nie tylko oddawał.",
+          f"{NS}:court", "nick", trigger=has(f"{NS}:court"), frame="goal")
+    award("verdict", "Sprawa wygrana",
+          "Wygraj rozprawę i odzyskaj to, co ci zabrano, z nawiązką.",
+          "minecraft:gold_ingot", "bench", frame="challenge")
     award("brigade", "Wóz wyjeżdża",
           "Otwórz remizę, żeby pożar nie był tylko twoim problemem.",
           f"{NS}:fire_house", "founded", trigger=has(f"{NS}:fire_house"), frame="goal")
@@ -3372,6 +3380,60 @@ def police_assets() -> None:
     })
 
 
+def court_assets() -> None:
+    """Limestone, a brass pediment and a set of scales, as a solid cube.
+
+    The station's reasoning exactly: it claims a FULL_BLOCK carrier, so it has
+    to BE a full block or check_models.py finds the X-ray hole, and the
+    elements are written out here rather than inherited because the checker
+    measures coverage off a model's own geometry.
+    """
+    put(f"assets/{NS}/models/block/court.json", {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "face": f"{NS}:block/court_face",
+            "side": f"{NS}:block/court_side",
+            "top": f"{NS}:block/court_top",
+            "particle": f"{NS}:block/court_side",
+        },
+        "elements": [{
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"uv": [0, 0, 16, 16], "texture": "#face"},
+                "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "east": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "west": {"uv": [0, 0, 16, 16], "texture": "#side"},
+                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                "down": {"uv": [0, 0, 16, 16], "texture": "#top"},
+            },
+        }],
+    })
+    put(f"assets/{NS}/models/item/court.json", {"parent": f"{NS}:block/court"})
+    put(f"assets/{NS}/items/court.json", {
+        "model": {"type": "minecraft:model", "model": f"{NS}:item/court"},
+    })
+    put(f"data/{NS}/loot_table/blocks/court.json", {
+        "type": "minecraft:block",
+        "pools": [{"rolls": 1, "entries": [
+            {"type": "minecraft:item", "name": f"{NS}:court"}]}],
+    })
+    # Quartz for the civic stone, a bell over the door because that is what a
+    # courthouse has, gold for the scales and a book for the law. Dearer than
+    # the station on purpose: a nick is a running cost and pays for itself in
+    # arrests, while a court is one building that changes what every arrest in
+    # town is worth -- and it should be the second thing a city builds, not
+    # the first.
+    put(f"data/{NS}/recipe/court.json", {
+        "type": "minecraft:crafting_shaped",
+        "category": "misc",
+        "pattern": ["QLQ", "GBG", "QQQ"],
+        "key": {"Q": "minecraft:quartz_block", "L": "minecraft:bell",
+                "G": "minecraft:gold_ingot", "B": "minecraft:book"},
+        "result": {"id": f"{NS}:court", "count": 1},
+    })
+
+
 def mailbox_assets() -> None:
     put(f"assets/{NS}/models/block/mailbox.json", mailbox_model())
     put(f"assets/{NS}/models/item/mailbox.json", {"parent": f"{NS}:block/mailbox"})
@@ -3424,7 +3486,7 @@ def tags() -> None:
     # machine" and "nothing works on anything".
     put("data/minecraft/tags/block/mineable/pickaxe.json", {
         "values": [f"{NS}:{b}" for b in (
-            "wash_pot", "acetylator", "city_vault", "police", "fire_house",
+            "wash_pot", "acetylator", "city_vault", "police", "court", "fire_house",
             "dirty_emerald_block", "laundry",
             # Metal machines without requiresTool: any hand drops them, a
             # pickaxe just stops pretending it's no better than a fist.
@@ -3537,6 +3599,7 @@ def main() -> None:
     mailbox_assets()
     hospital_assets()
     police_assets()
+    court_assets()
     fire_house_assets()
     vault_assets()
     shelf_assets()

@@ -121,11 +121,16 @@ public final class TrapCrime {
         // rent in one night is not a burglary, it is a wipe. A fifth to a
         // little under a half still stings, still rewards emptying the box,
         // and does not undo a week.
-        PICKPOCKET("Kradzież", 40, 90, 1, 0.08f, 0.18f),
-        BURGLARY("Włamanie", 26, 260, 2, 0.20f, 0.45f),
-        ROBBERY("Rozbój", 20, 420, 3, 0.10f, 0.20f),
-        VANDALISM("Zniszczenie mienia", 10, 140, 1, 0f, 0f),
-        MURDER("Zabójstwo", 4, 1500, 8, 0f, 0f);
+        // The last number is how provable it is in front of a judge, and it
+        // is the one thing about an offence a player cannot buy. A pickpocket
+        // is one person's word; a burglary leaves a window; a body is a body.
+        // Appended rather than slotted in, because gen_wiki reads the first
+        // five arguments off this list by position.
+        PICKPOCKET("Kradzież", 40, 90, 1, 0.08f, 0.18f, 0.28f),
+        BURGLARY("Włamanie", 26, 260, 2, 0.20f, 0.45f, 0.40f),
+        ROBBERY("Rozbój", 20, 420, 3, 0.10f, 0.20f, 0.44f),
+        VANDALISM("Zniszczenie mienia", 10, 140, 1, 0f, 0f, 0.36f),
+        MURDER("Zabójstwo", 4, 1500, 8, 0f, 0f, 0.60f);
 
         private final String display;
         private final int weight;
@@ -136,14 +141,22 @@ public final class TrapCrime {
         /** Share of the victim's held money that goes, low and high. */
         private final float takeLow;
         private final float takeHigh;
+        /** How strong the case is before anybody spends a penny on it. */
+        private final float provable;
 
-        Kind(String display, int weight, int fine, int days, float takeLow, float takeHigh) {
+        Kind(String display, int weight, int fine, int days, float takeLow, float takeHigh,
+             float provable) {
             this.display = display;
             this.weight = weight;
             this.fine = fine;
             this.days = days;
             this.takeLow = takeLow;
             this.takeHigh = takeHigh;
+            this.provable = provable;
+        }
+
+        public float provable() {
+            return provable;
         }
 
         public String display() {
@@ -185,6 +198,17 @@ public final class TrapCrime {
         /** Which house to pay back, or null when the victim was a shop. */
         UUID home;
         BlockPos till;
+        /**
+         * A player owed directly, rather than a building of theirs.
+         *
+         * The third kind of victim and the first that is not a place. A
+         * courier robbed on the road was carrying somebody's goods and
+         * somebody's takings, and neither of those is a mailbox or a till --
+         * the money has to go back to the PERSON, because that is who lost it.
+         */
+        UUID purse;
+        /** What to call them in a headline when the victim is a person. */
+        String purseName;
 
         Case(UUID id, Kind kind, String suspect, String victim, String dimension,
              BlockPos where, long day) {
@@ -235,6 +259,15 @@ public final class TrapCrime {
     private static final int SPARED = 3;
 
     private static final List<Case> OPEN = new ArrayList<>();
+    /**
+     * Arrested, charged, and waiting on a hearing.
+     *
+     * Off {@link #OPEN} because nobody is looking for them any more -- they
+     * are in a cell -- but still here rather than in {@link TrapCourt},
+     * because what is owed and to whom is this file's job and always has been.
+     * The courthouse holds the diary; the money never leaves this room.
+     */
+    private static final List<Case> PARKED = new ArrayList<>();
     /** Everything that has ever happened, by kind. For the blotter. */
     private static final Map<Kind, Integer> TALLY = new EnumMap<>(Kind.class);
     private static int solved;
@@ -708,6 +741,48 @@ public final class TrapCrime {
         return false;
     }
 
+    // --- somebody who was carrying it -----------------------------------------
+
+    /**
+     * A robbery the town did not roll for.
+     *
+     * Every other case in this file starts with {@link #roll} deciding that
+     * tonight is somebody's turn. This one is CAUSED: a courier crossed town
+     * with a bag of goods and a shop's takings in it, and the odds of that
+     * going wrong are a property of what they were carrying rather than of the
+     * clock. It is the first crime in the mod a player can talk themselves
+     * into -- there is no rule saying you have to send the day's takings
+     * across the market square at midnight.
+     *
+     * From the moment it opens it is an ordinary case: a suspect stands up,
+     * runs, and a copper either gets to them or does not. Nothing downstream
+     * knows or cares that this one had a reason.
+     *
+     * @param owed  who lost it, and who gets it back
+     * @param loot  what it was worth, valued at market
+     * @return the case, so the caller can point a waypoint at it
+     */
+    public static Case mugged(MinecraftServer server, ServerWorld world, BlockPos where,
+                              ServerPlayerEntity owed, String what, int loot) {
+        if (owed == null || loot <= 0) {
+            return null;
+        }
+        Case sprawa = new Case(UUID.randomUUID(), Kind.ROBBERY, someone(world), what,
+                world.getRegistryKey().getValue().toString(), where.toImmutable(),
+                TrapMarket.today(server));
+        sprawa.loot = loot;
+        sprawa.purse = owed.getUuid();
+        sprawa.purseName = owed.getGameProfile().getName();
+        stolen += loot;
+        // Into the town's purse like every other theft here. A robber is a
+        // townsperson and the goods they took are goods they will sell; the
+        // alternative is a mod that deletes value every time somebody is
+        // unlucky, which is the thing this file was written not to do.
+        TrapPayroll.credit(loot);
+        openCase(server, world, sprawa);
+        return sprawa;
+    }
+
     private static String someone(ServerWorld world) {
         return TrapHomes.nameFor(world.getRandom().nextInt(4096));
     }
@@ -720,7 +795,8 @@ public final class TrapCrime {
         OPEN.add(sprawa);
         TALLY.merge(sprawa.kind, 1, Integer::sum);
         RECENT.addFirst(sprawa.home != null ? sprawa.home.toString()
-                : sprawa.till != null ? sprawa.till.toShortString() : "-");
+                : sprawa.till != null ? sprawa.till.toShortString()
+                : sprawa.purse != null ? sprawa.purse.toString() : "-");
         while (RECENT.size() > SPARED) {
             RECENT.removeLast();
         }
@@ -745,11 +821,28 @@ public final class TrapCrime {
             tellAll(server, TrapNotes.say("  Sprawca ucieka. Dogoń go i kliknij prawym"
                     + " -- pieniądze wracają, miasto płaci nagrodę.", Formatting.DARK_GRAY));
         }
-        if (TrapPolice.onDuty() == 0) {
-            // The one message that explains the whole system in one line, and
-            // it only goes out when there is genuinely nobody to send.
-            tellAll(server, TrapNotes.say("  Na ulicy nie ma policji. Nikt inny po to "
-                    + "nie pojedzie.", Formatting.DARK_GRAY));
+        // RING THE POLICE. This is the line the whole file was missing.
+        //
+        // Everything downstream of a crime was built and correct -- a suspect
+        // stands up, runs, and a shift that can see them chases and cuffs them
+        // -- and none of it had ever happened, because nobody was ever TOLD.
+        // callOut existed and had exactly one caller: a pillager raid. So the
+        // only way a theft was ever solved was a copper happening to walk
+        // within sight of the runner by luck.
+        //
+        // Not a small miss, and the books said so out loud for anybody who
+        // read them: 130 cases cold, 0 solved, 49,504e stolen and 0 recovered
+        // -- on a world with a fully funded, top-kit, seven-officer force that
+        // had made ZERO arrests in its life. A force nobody dispatches is a
+        // wage bill with a uniform on.
+        if (!TrapPolice.callOut(world, sprawa.where)) {
+            // Which of the reasons it is, rather than assuming the street is
+            // empty. With the call wired up, "too far from the nick" is now
+            // the common one and it is the one with an answer.
+            tellAll(server, TrapNotes.say(TrapPolice.onDuty() == 0
+                    ? "  Na ulicy nie ma policji. Nikt inny po to nie pojedzie."
+                    : "  Za daleko od komisariatu. Nikt tam nie dojedzie.",
+                    Formatting.DARK_GRAY));
         }
     }
 
@@ -878,15 +971,107 @@ public final class TrapCrime {
         }
         OPEN.remove(sprawa);
         solved++;
+        // A town with a courthouse does not hand the money back at the kerb.
+        // The collar is the START of something now: the case is parked, the
+        // victim gets a date, and whether they see a penny of it is decided
+        // in front of a judge. That is the whole trade a courthouse offers --
+        // a chance at more than you lost, against a chance at nothing.
+        if (sprawa.loot > 0 && TrapCourt.file(world.getServer(), sprawa.id, sprawa.kind,
+                sprawa.suspect, sprawa.victim, sprawa.loot, owed(sprawa),
+                sprawa.dimension, sprawa.where)) {
+            PARKED.add(sprawa);
+            fine(sprawa);
+            save();
+            return new Charge(sprawa.kind.display(), sprawa.kind.days(), 0);
+        }
         int back = payBack(world.getServer(), sprawa);
-        // The fine comes out of the town's own purse, because the person
-        // paying it is a townsperson. Nothing is minted: a court moves money
-        // from the people to the council, which is what a fine IS.
+        fine(sprawa);
+        save();
+        return new Charge(sprawa.kind.display(), sprawa.kind.days(), back);
+    }
+
+    /**
+     * The fine comes out of the town's own purse, because the person paying it
+     * is a townsperson. Nothing is minted: a court moves money from the people
+     * to the council, which is what a fine IS.
+     */
+    private static void fine(Case sprawa) {
         if (TrapPayroll.spend(sprawa.kind.fine())) {
             TrapCity.receive(sprawa.kind.fine(), TrapCity.Duty.INCOME);
         }
+    }
+
+    /** The player owed on this case, or nobody when the victim is a villager. */
+    private static UUID owed(Case sprawa) {
+        if (sprawa.purse != null) {
+            return sprawa.purse;
+        }
+        if (sprawa.home != null) {
+            TrapHomes.Home home = TrapHomes.byId(sprawa.home);
+            return home == null ? null : home.owner();
+        }
+        if (sprawa.till != null) {
+            for (TrapShops.Shop shop : TrapShops.shops()) {
+                if (shop.pos().equals(sprawa.till)) {
+                    return shop.owner();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The verdict came in. Pay it, or don't.
+     *
+     * Called by {@link TrapCourt} and by nothing else -- the same split the
+     * arrest has. That file knows about hearings, lawyers and odds; this one
+     * knows where the money goes, and neither has ever had to learn the
+     * other's job.
+     *
+     * @return what the victim actually got, restitution and damages together
+     */
+    public static int verdict(MinecraftServer server, UUID caseId, boolean won) {
+        Case sprawa = null;
+        for (Case parked : PARKED) {
+            if (parked.id.equals(caseId)) {
+                sprawa = parked;
+                break;
+            }
+        }
+        if (sprawa == null) {
+            return 0;
+        }
+        PARKED.remove(sprawa);
+        if (!won) {
+            // The town keeps what it already has. Nothing else happens, which
+            // is exactly what losing has to feel like for winning to mean
+            // anything.
+            save();
+            return 0;
+        }
+        int back = payBack(server, sprawa);
+        if (back > 0) {
+            // Damages on top, down the same pipe and out of the same purse:
+            // the people who have to find it are the people it came from.
+            // payBack already scales itself to what the town can cover, so
+            // there is nothing to check first -- a poor town simply pays less
+            // of it, which is the honest answer and the one the notice gives.
+            Case bonus = new Case(sprawa.id, sprawa.kind, sprawa.suspect, sprawa.victim,
+                    sprawa.dimension, sprawa.where, sprawa.day);
+            bonus.loot = TrapMath.damages(sprawa.loot);
+            bonus.purse = sprawa.purse;
+            bonus.purseName = sprawa.purseName;
+            bonus.home = sprawa.home;
+            bonus.till = sprawa.till;
+            back += payBack(server, bonus);
+        }
         save();
-        return new Charge(sprawa.kind.display(), sprawa.kind.days(), back);
+        return back;
+    }
+
+    /** Cases waiting on a judge, for the courthouse to count. */
+    public static int parked() {
+        return PARKED.size();
     }
 
     // --- the citizen's arrest -------------------------------------------------
@@ -1014,6 +1199,21 @@ public final class TrapCrime {
             return 0;
         }
         recovered += back;
+        if (sprawa.purse != null) {
+            // Straight into their hands if they are here, and into their
+            // wallet if they are not -- TrapMarket already knows how to find
+            // somebody's money whether or not they are carrying it.
+            ServerPlayerEntity owed = server.getPlayerManager().getPlayer(sprawa.purse);
+            if (owed != null) {
+                TrapMarket.handOver(owed, back);
+                return back;
+            }
+            // Nobody home. The town keeps it rather than minting a pile of
+            // emeralds into an empty chunk; the case says so when they log in.
+            TrapPayroll.credit(back);
+            recovered -= back;
+            return 0;
+        }
         if (sprawa.home != null) {
             TrapHomes.Home home = TrapHomes.byId(sprawa.home);
             if (home != null) {
@@ -1056,6 +1256,10 @@ public final class TrapCrime {
     }
 
     private static void tellOwner(MinecraftServer server, Case sprawa, Text what) {
+        if (sprawa.purse != null) {
+            tell(server, sprawa.purse, what);
+            return;
+        }
         if (sprawa.home != null) {
             TrapHomes.Home home = TrapHomes.byId(sprawa.home);
             if (home != null) {
@@ -1194,6 +1398,13 @@ public final class TrapCrime {
                                 left < 30 ? Formatting.RED : Formatting.DARK_GRAY));
             }
         }
+        // Solved is no longer the end of it. A blotter that stopped at
+        // "wykryte 12/40" in a town with a bench would be hiding the half of
+        // the story where the money actually changes hands.
+        if (!PARKED.isEmpty()) {
+            out.append(TrapNotes.say("\n  " + PARKED.size() + " czeka na rozprawę.",
+                    Formatting.GOLD));
+        }
         who.sendMessage(out, false);
     }
 
@@ -1202,6 +1413,7 @@ public final class TrapCrime {
     private static void load(MinecraftServer server) {
         saveFile = server.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-crime.txt");
         OPEN.clear();
+        PARKED.clear();
         TALLY.clear();
         solved = 0;
         cold = 0;
@@ -1245,29 +1457,49 @@ public final class TrapCrime {
                     }
                 }
             }
-            case "case" -> {
-                // Two names ride at the end -- the suspect and the victim --
-                // and both can hold a space, so they are the LAST two fields of
-                // a limited split with the victim greedy. Anything new goes
-                // before them, the housing register's rule.
-                String[] parts = line.trim().split("\\s+", 15);
-                if (parts.length < 15) {
-                    return;
-                }
-                Case sprawa = new Case(UUID.fromString(parts[1]), Kind.valueOf(parts[2]),
-                        parts[13], parts[14], parts[3],
-                        new BlockPos(Integer.parseInt(parts[4]), Integer.parseInt(parts[5]),
-                                Integer.parseInt(parts[6])), Long.parseLong(parts[7]));
-                sprawa.loot = Integer.parseInt(parts[8]);
-                sprawa.cold = Long.parseLong(parts[9]);
-                sprawa.body = "-".equals(parts[10]) ? null : UUID.fromString(parts[10]);
-                sprawa.home = "-".equals(parts[11]) ? null : UUID.fromString(parts[11]);
-                sprawa.till = "-".equals(parts[12]) ? null : spot(parts[12]);
-                OPEN.add(sprawa);
-            }
+            // Two names ride at the end -- the suspect and the victim -- and
+            // both can hold a space, so they are the LAST two fields of a
+            // limited split with the victim greedy. That is also why a
+            // sixteenth column could not simply be appended: an old line read
+            // with a limit of sixteen splits the victim's name in half and a
+            // new one read with fifteen swallows a UUID into it. A new field
+            // meant a new record name, which costs one case label and cannot
+            // misread a single line either way.
+            case "case" -> readCase(line, 15, false, OPEN);
+            case "case2" -> readCase(line, 17, true, OPEN);
+            case "parked" -> readCase(line, 17, true, PARKED);
             default -> {
             }
         }
+    }
+
+    /**
+     * One case line, in either of the two shapes that have ever been written.
+     *
+     * @param columns how many fields the shape has, the victim greedy last
+     * @param person  whether it carries the two person-victim fields
+     */
+    private static void readCase(String line, int columns, boolean person,
+                                 List<Case> into) {
+        String[] parts = line.trim().split("\\s+", columns);
+        if (parts.length < columns) {
+            return;
+        }
+        int at = person ? 15 : 13;
+        Case sprawa = new Case(UUID.fromString(parts[1]), Kind.valueOf(parts[2]),
+                parts[at], parts[at + 1], parts[3],
+                new BlockPos(Integer.parseInt(parts[4]), Integer.parseInt(parts[5]),
+                        Integer.parseInt(parts[6])), Long.parseLong(parts[7]));
+        sprawa.loot = Integer.parseInt(parts[8]);
+        sprawa.cold = Long.parseLong(parts[9]);
+        sprawa.body = "-".equals(parts[10]) ? null : UUID.fromString(parts[10]);
+        sprawa.home = "-".equals(parts[11]) ? null : UUID.fromString(parts[11]);
+        sprawa.till = "-".equals(parts[12]) ? null : spot(parts[12]);
+        if (person) {
+            sprawa.purse = "-".equals(parts[13]) ? null : UUID.fromString(parts[13]);
+            sprawa.purseName = "-".equals(parts[14]) ? null : parts[14].replace('_', ' ');
+        }
+        into.add(sprawa);
     }
 
     /** "x,y,z" back into a block. Commas, because spaces are the field split. */
@@ -1292,22 +1524,33 @@ public final class TrapCrime {
                         .append(countOf(kind)).append('\n');
             }
             for (Case sprawa : OPEN) {
-                out.append("case ").append(sprawa.id).append(' ').append(sprawa.kind.name())
-                        .append(' ').append(sprawa.dimension).append(' ')
-                        .append(sprawa.where.getX()).append(' ').append(sprawa.where.getY())
-                        .append(' ').append(sprawa.where.getZ()).append(' ')
-                        .append(sprawa.day).append(' ').append(sprawa.loot).append(' ')
-                        .append(sprawa.cold).append(' ')
-                        .append(sprawa.body == null ? "-" : sprawa.body).append(' ')
-                        .append(sprawa.home == null ? "-" : sprawa.home).append(' ')
-                        .append(sprawa.till == null ? "-" : sprawa.till.getX() + ","
-                                + sprawa.till.getY() + "," + sprawa.till.getZ()).append(' ')
-                        .append(sprawa.suspect.replace(' ', '_')).append(' ')
-                        .append(sprawa.victim.replace('\n', ' ')).append('\n');
+                writeCase(out, "case2", sprawa);
+            }
+            for (Case sprawa : PARKED) {
+                writeCase(out, "parked", sprawa);
             }
             Files.writeString(saveFile, out.toString());
         } catch (Exception failure) {
             TrapCraft.LOGGER.warn("couldn't save the crime book: {}", failure.toString());
         }
+    }
+
+    /** One case line, in the shape both lists are written in. */
+    private static void writeCase(StringBuilder out, String label, Case sprawa) {
+        out.append(label).append(' ').append(sprawa.id).append(' ').append(sprawa.kind.name())
+                .append(' ').append(sprawa.dimension).append(' ')
+                .append(sprawa.where.getX()).append(' ').append(sprawa.where.getY())
+                .append(' ').append(sprawa.where.getZ()).append(' ')
+                .append(sprawa.day).append(' ').append(sprawa.loot).append(' ')
+                .append(sprawa.cold).append(' ')
+                .append(sprawa.body == null ? "-" : sprawa.body).append(' ')
+                .append(sprawa.home == null ? "-" : sprawa.home).append(' ')
+                .append(sprawa.till == null ? "-" : sprawa.till.getX() + ","
+                        + sprawa.till.getY() + "," + sprawa.till.getZ()).append(' ')
+                .append(sprawa.purse == null ? "-" : sprawa.purse).append(' ')
+                .append(sprawa.purseName == null ? "-"
+                        : sprawa.purseName.replace(' ', '_')).append(' ')
+                .append(sprawa.suspect.replace(' ', '_')).append(' ')
+                .append(sprawa.victim.replace('\n', ' ')).append('\n');
     }
 }

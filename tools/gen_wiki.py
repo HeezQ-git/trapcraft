@@ -217,6 +217,11 @@ def crew_jobs() -> list[dict]:
     """
     text = java("TrapCrew")
     body = text[text.index("public enum Job {"):]
+    # Comments first, then the terminator. A semicolon inside a note above one
+    # of the entries used to end the block early, which dropped every job below
+    # it AND the declared count in the same stroke -- so the guard below agreed
+    # with itself about a list that was missing its last member.
+    body = re.sub(r"//[^\n]*", "", body)
     body = body[:body.index(";")]
     jobs = [{"name": m.group(1), "cost": int(m.group(2)), "wage": int(m.group(3)),
              "blurb": m.group(4), "needs": m.group(5)}
