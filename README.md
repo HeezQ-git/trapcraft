@@ -369,7 +369,8 @@ Loot: a bounty split half evenly, half by damage, paid through
 sink); the top damage takes a Phantom key and **Oko Obserwatora**, a trophy whose
 right-click makes everything within 40 blocks glow for you alone. A fountain
 of dirty emerald blocks and ~1200 XP round it off, with an eight-second
-firework show. Numbers live in `ArenaMath`, which `ArenaMathTest` pins;
+light show, without a single rocket -- firework explosions crash every
+client on this pack. Numbers live in `ArenaMath`, which `ArenaMathTest` pins;
 `/guide arena` quotes them. `/arena start|stop|tp|build|cast` are the op
 tools -- an event that rolls every few hours is untestable without them.
 

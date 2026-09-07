@@ -2,7 +2,6 @@ package dev.heezq.trapcraft;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -12,8 +11,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FireworkExplosionComponent;
-import net.minecraft.component.type.FireworksComponent;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
@@ -22,12 +19,12 @@ import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.projectile.FireworkRocketEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
+import net.minecraft.particle.DustColorTransitionParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -96,7 +93,7 @@ public final class TrapArena {
     private static final double STANDS_RADIUS = 28.5;
     private static final int STANDS_Y = 70;
     private static final int VICTORY_TICKS = 20 * 90;
-    private static final int FIREWORK_TICKS = 20 * 8;
+    private static final int SHOW_TICKS = 20 * 8;
 
     private static final BlockState LIT = Blocks.SEA_LANTERN.getDefaultState();
     private static final BlockState DIM = Blocks.CRYING_OBSIDIAN.getDefaultState();
@@ -125,7 +122,8 @@ public final class TrapArena {
     private static ServerBossBar countdownBar;
     private static ServerBossBar fightBar;
     private static ServerBossBar watchBar;
-    private static int fireworksUntil;
+    private static int showUntil;
+    private static List<BlockPos> showVeins = List.of();
     private static Path saveFile;
 
     private TrapArena() {
@@ -457,7 +455,7 @@ public final class TrapArena {
         }
     }
 
-    /** The body has gone up. Loot, fireworks, the table. */
+    /** The body has gone up. Loot, the light show, the table. */
     public static void victoryBurst(WitnessEntity witness) {
         ServerWorld world = world();
         if (world == null || stage != Stage.VICTORY) {
@@ -530,15 +528,22 @@ public final class TrapArena {
             world.spawnEntity(drop);
         }
         ExperienceOrbEntity.spawn(world, at, ArenaMath.XP_TOTAL);
-        fireworksUntil = server.getTicks() + FIREWORK_TICKS;
+        // The show: veins relit one by one round the ring, bursts overhead.
+        // Particles and block updates only. Firework rockets crashed every
+        // client on this pack (Farmer's Delight hands the firework particle
+        // a StarParticle and vanilla casts it), and a rocket frozen in an
+        // unloaded chunk crashed them again on every join until it was killed.
+        showUntil = server.getTicks() + SHOW_TICKS;
+        showVeins = new ArrayList<>(blueprint.tagged("vein", ORIGIN));
+        showVeins.sort(Comparator.comparingDouble(pos ->
+                Math.atan2(pos.getZ() + 0.5 - CENTRE.z, pos.getX() + 0.5 - CENTRE.x)));
         TrapCraft.LOGGER.info("arena: the witness fell to {} players, pool {}e", players, pool);
     }
 
     private static void tickVictory(int now) {
         ServerWorld world = world();
-        if (world != null && now < fireworksUntil && now % 6 == 0) {
-            firework(world);
-            firework(world);
+        if (world != null && now < showUntil) {
+            lightShow(world, now);
         }
         if (now - stageStart == 200) {
             for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
@@ -554,25 +559,65 @@ public final class TrapArena {
         }
     }
 
-    private static final FireworkExplosionComponent.Type[] SHAPES = {
-            FireworkExplosionComponent.Type.LARGE_BALL, FireworkExplosionComponent.Type.STAR,
-            FireworkExplosionComponent.Type.BURST, FireworkExplosionComponent.Type.CREEPER,
-            FireworkExplosionComponent.Type.SMALL_BALL};
-    private static final int[] COLOURS = {0x8a4fd8, 0x34d8ea, 0xffc24a, 0xc59bff, 0xff2d55, 0xffffff};
+    private static final DustColorTransitionParticleEffect RING =
+            new DustColorTransitionParticleEffect(0x34d8ea, 0x8a4fd8, 1.4F);
 
-    private static void firework(ServerWorld world) {
+    /**
+     * Eight seconds of light, none of it an entity.
+     *
+     * The veins the third phase put out come back on one at a time round the
+     * ring with a rising chime, totem bursts bloom over the pit with a flash
+     * and a firework-blast sound, and a ring of dust runs out from the middle
+     * every two seconds. Reads as fireworks from inside the arena and cannot
+     * crash anybody, because nothing here is a rocket.
+     */
+    private static void lightShow(ServerWorld world, int now) {
         Random random = world.getRandom();
-        double angle = random.nextDouble() * Math.PI * 2;
-        double r = 8.0 + random.nextDouble() * 11.0;
-        ItemStack rocket = new ItemStack(Items.FIREWORK_ROCKET);
-        FireworkExplosionComponent burst = new FireworkExplosionComponent(
-                SHAPES[random.nextInt(SHAPES.length)],
-                IntList.of(COLOURS[random.nextInt(COLOURS.length)], COLOURS[random.nextInt(COLOURS.length)]),
-                IntList.of(COLOURS[random.nextInt(COLOURS.length)]),
-                random.nextBoolean(), random.nextBoolean());
-        rocket.set(DataComponentTypes.FIREWORKS, new FireworksComponent(1 + random.nextInt(2), List.of(burst)));
-        world.spawnEntity(new FireworkRocketEntity(world, CENTRE.x + Math.cos(angle) * r, CENTRE.y,
-                CENTRE.z + Math.sin(angle) * r, rocket));
+        int t = now - (showUntil - SHOW_TICKS);
+
+        if (t % 2 == 0 && !showVeins.isEmpty()) {
+            int step = t / 2;
+            if (step < showVeins.size()) {
+                BlockPos vein = showVeins.get(step);
+                world.setBlockState(vein, LIT, Block.NOTIFY_LISTENERS);
+                world.playSound(null, vein.getX() + 0.5, vein.getY() + 1.0, vein.getZ() + 0.5,
+                        SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.HOSTILE, 1.2F,
+                        0.6F + 1.2F * step / (float) showVeins.size());
+                world.spawnParticles(ParticleTypes.END_ROD, vein.getX() + 0.5, vein.getY() + 1.2,
+                        vein.getZ() + 0.5, 12, 0.2, 0.6, 0.2, 0.08);
+            }
+        }
+
+        if (t % 8 == 0) {
+            double angle = random.nextDouble() * Math.PI * 2;
+            double r = 3.0 + random.nextDouble() * 15.0;
+            double x = CENTRE.x + Math.cos(angle) * r;
+            double y = CENTRE.y + 4.0 + random.nextDouble() * 6.0;
+            double z = CENTRE.z + Math.sin(angle) * r;
+            world.spawnParticles(ParticleTypes.TOTEM_OF_UNDYING, x, y, z, 70, 0.2, 0.2, 0.2, 0.55);
+            world.spawnParticles(ParticleTypes.FLASH, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 25, 0.3, 0.3, 0.3, 0.18);
+            world.playSound(null, x, y, z, SoundEvents.ENTITY_FIREWORK_ROCKET_LARGE_BLAST,
+                    SoundCategory.HOSTILE, 1.5F, 0.8F + random.nextFloat() * 0.4F);
+            if (random.nextBoolean()) {
+                world.playSound(null, x, y, z, SoundEvents.ENTITY_FIREWORK_ROCKET_TWINKLE,
+                        SoundCategory.HOSTILE, 1.0F, 1.0F);
+            }
+        }
+
+        if (t % 40 < 20) {
+            double radius = (t % 40) * 1.0 + 1.0;
+            int points = (int) (radius * 4);
+            for (int i = 0; i < points; i++) {
+                double a = i * Math.PI * 2 / points;
+                world.spawnParticles(RING, CENTRE.x + Math.cos(a) * radius, CENTRE.y + 0.6,
+                        CENTRE.z + Math.sin(a) * radius, 1, 0.0, 0.1, 0.0, 0.0);
+            }
+            if (t % 40 == 0) {
+                world.playSound(null, CENTRE.x, CENTRE.y, CENTRE.z, SoundEvents.BLOCK_BELL_RESONATE,
+                        SoundCategory.HOSTILE, 1.2F, 0.7F);
+            }
+        }
     }
 
     private static void endEvent(boolean won, String why) {

@@ -4,7 +4,9 @@
 > testifies) cringe. The boss is now **Obserwator** — the watcher from the edge
 > of render distance — and every player-facing line was rewritten around
 > "it watches, it never blinks, close its eye". Internal ids (`witness`,
-> `witness_eye`) stayed.
+> `witness_eye`) stayed. The firework show was replaced by particles the same
+> night: Farmer's Delight breaks the vanilla firework particle on this pack and
+> every rocket crashed every client.
 
 Written 2026-09-07. HeezQ asked for a periodic server event: a chat line saying
 a boss has appeared on an arena, a clickable part that teleports the player to
