@@ -444,7 +444,28 @@ public final class TrapCrew {
         // the reason is now load-bearing twice over.
         DELIVER("Kurierka", "minecraft:chest_minecart", 900, 14,
                 "Rozwozi towar ze skrzyni do twoich sklepów i straganów.",
-                "trasa (mapa na tablicy) i towar na sprzedaż w skrzyni");
+                "trasa (mapa na tablicy) i towar na sprzedaż w skrzyni"),
+        // Three machines, one job, and that is not laziness -- a hand only
+        // ever runs SLOTS of them, so a poppy line split into scoring,
+        // cooking and acetylating would be a line no single hand could work
+        // and no pair could cover either. The coca line is two jobs because
+        // it is two machines; this one is three, so it is one.
+        //
+        // Priced as the whole line: the press and the refiner together come
+        // to 2150e, and this is those plus a pot and a stage whose bottom
+        // outcome is an empty machine. It is the last thing you teach.
+        //
+        // Last in the list, so last in priority against the OTHER jobs, which
+        // is fine -- picking a ripe plant is a pass, and the acetylator holds
+        // peak for PEAK_GRACE steps. Priority WITHIN the line is not fine and
+        // is not left to declaration order: see chemRank.
+        // One literal, not two joined with a +. gen_wiki reads these blurbs
+        // straight out of the source with a regex that wants a single string,
+        // and a wrapped one parses as no job at all -- which check_wiki turns
+        // into a refused deploy rather than a wiki quietly missing a row.
+        CHEM("Chemia", "trapcraft:acetylator", 2400, 34,
+                "Prowadzi całą linię makową: nacinanie, garnek, acetylator.",
+                "makówki, opium lub baza w skrzyni (a pod garnkiem ogień)");
 
         private final String display;
         private final String iconId;
@@ -2163,19 +2184,38 @@ public final class TrapCrew {
         Supplies stock = suppliesOf(box);
 
         Map<Job, BlockPos> found = new EnumMap<>(Job.class);
+        // CHEM is one job over three machines, so "nearest square offering it"
+        // is not good enough: with two scoring tables between the chest and
+        // the acetylator, the nearest is always a table, and a batch sitting
+        // at peak would ruin while the hand kept scoring pods. So within CHEM
+        // the LAST stage wins, and the scan does not stop early until it has
+        // found one. Zero for a hand who cannot do it, so nothing changes for
+        // everybody else.
+        //
+        // The price is that a chemist whose acetylator is idle walks the whole
+        // SCAN_BUDGET every pass instead of stopping early. That is 3000 state
+        // reads, the same ceiling any hand already pays whenever one of its
+        // jobs has nothing to work on, and about a sixth of a millisecond.
+        int chemBest = hand.can(Job.CHEM) ? Integer.MAX_VALUE : 0;
         int looked = 0;
         for (BlockPos pos : BlockPos.iterateOutwards(mob.getBlockPos(), reach, 5, reach)) {
             // Something for every job they know, or enough dirt for one pass.
             // Used to stop the moment it found PICKING, which meant the second
             // job of a picker was never even LOOKED for.
-            if (++looked > SCAN_BUDGET || found.size() >= hand.taught()) {
+            if (++looked > SCAN_BUDGET || (found.size() >= hand.taught() && chemBest == 0)) {
                 break;
             }
             if (!within(pos, hand.patch, reach)) {
                 continue;
             }
             Job job = jobAt(world, pos, hand, stock);
-            if (job != null) {
+            if (job == Job.CHEM) {
+                int rank = chemRank(world.getBlockState(pos).getBlock());
+                if (rank < chemBest) {
+                    chemBest = rank;
+                    found.put(job, pos.toImmutable());
+                }
+            } else if (job != null) {
                 found.putIfAbsent(job, pos.toImmutable());
             }
         }
@@ -2205,6 +2245,21 @@ public final class TrapCrew {
         }
         hand.lastJob = chosen;
         return chosen == null ? null : found.get(chosen);
+    }
+
+    /**
+     * Which end of the poppy line this machine is, latest first.
+     *
+     * Work the line backwards and two things fall out for free: a batch at
+     * peak is pulled before anything else is started, and the chest never
+     * fills with base nobody is turning into product. It is also the whole of
+     * the timing rule -- no clocks, just an order.
+     */
+    private static int chemRank(Block block) {
+        if (block instanceof AcetylatorBlock) {
+            return 0;
+        }
+        return block instanceof WashPotBlock ? 1 : 2;
     }
 
     private static boolean holds(net.minecraft.inventory.Inventory box, net.minecraft.item.Item want) {
@@ -2271,7 +2326,13 @@ public final class TrapCrew {
                 // emerald in a barrel is under the minimum load, and a hand who
                 // walked to the drum for it would stand there doing nothing
                 // every pass, which looks exactly like a hand that is broken.
-                dirty[0] * 9 + dirty[1] >= LaundryBlock.MIN_LOAD);
+                dirty[0] * 9 + dirty[1] >= LaundryBlock.MIN_LOAD,
+                batchStack(box, TrapContent.poppyPod, ScoringTableBlock.PODS_PER_BATCH),
+                // The pot wants lime as well, and takes it across stacks the
+                // way it always did -- only the opium has to come off one.
+                batchStack(box, TrapContent.rawOpium, WashPotBlock.OPIUM_PER_BATCH)
+                        && countOf(box, Items.BONE_MEAL) >= WashPotBlock.LIME_PER_BATCH,
+                holds(box, TrapContent.morphineBase) && holds(box, AcetylatorBlock.ACID));
     }
 
     /**
@@ -2315,6 +2376,10 @@ public final class TrapCrew {
             case FEED -> stock.boneMeal();
             case SOW -> stock.seeds();
             case WASH -> stock.dirty();
+            // Any of the three, because any of the three is a pass with work
+            // in it. A chemist with only base in the chest is not starved --
+            // they are at the last machine, which is where the money is.
+            case CHEM -> stock.pods() || stock.opium() || stock.base();
             // Handled by the board rather than here: what a courier needs is
             // a ROUND and something a shop would take, and neither is a
             // question about this chest alone. See cardsFor.
@@ -2325,7 +2390,46 @@ public final class TrapCrew {
     /** What the chest can back up this pass. */
     private record Supplies(boolean boneMeal, boolean seeds, boolean rawBuds,
                             boolean leaves, boolean paste, boolean rolling,
-                            boolean dirty) {
+                            boolean dirty, boolean pods, boolean opium, boolean base) {
+    }
+
+    /**
+     * One stack big enough to start a batch on its own.
+     *
+     * Not the total across the chest, because the poppy line's loaders take a
+     * STACK and check the count on it. A chest holding five pods and five more
+     * pods can't start a six-pod batch, and a counter that said otherwise
+     * would have the hand walk to the table and stand there every pass -- the
+     * exact failure the leaf press already learned once. The size comes from
+     * the block's own constant, so the two cannot drift.
+     */
+    private static boolean batchStack(net.minecraft.inventory.Inventory box,
+                                      net.minecraft.item.Item want, int per) {
+        if (box == null) {
+            return false;
+        }
+        for (int slot = 0; slot < box.size(); slot++) {
+            ItemStack stack = box.getStack(slot);
+            if (stack.isOf(want) && stack.getCount() >= per) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** How many of something the chest holds, across every stack. */
+    private static int countOf(net.minecraft.inventory.Inventory box,
+                               net.minecraft.item.Item want) {
+        if (box == null) {
+            return 0;
+        }
+        int found = 0;
+        for (int slot = 0; slot < box.size(); slot++) {
+            if (box.getStack(slot).isOf(want)) {
+                found += box.getStack(slot).getCount();
+            }
+        }
+        return found;
     }
 
     /** Inside the box the hand was hired to work. */
@@ -2383,6 +2487,34 @@ public final class TrapCrew {
             // a running load once a pass would keep it going round forever and
             // never once pull it -- the drum equivalent of pulling a rack early.
             return state.get(LaundryBlock.LOAD) == 0 && stock.dirty() ? Job.WASH : null;
+        }
+        if (block instanceof ScoringTableBlock && hand.can(Job.CHEM)) {
+            return state.get(ScoringTableBlock.LOADED)
+                    ? (state.get(ScoringTableBlock.PROGRESS) >= ScoringTableBlock.DONE
+                            ? Job.CHEM : null)
+                    : (stock.pods() ? Job.CHEM : null);
+        }
+        if (block instanceof WashPotBlock && hand.can(Job.CHEM)) {
+            if (state.get(WashPotBlock.LOADED)) {
+                return state.get(WashPotBlock.PROGRESS) >= WashPotBlock.DONE ? Job.CHEM : null;
+            }
+            // The fire is asked about HERE rather than only at the pot, for
+            // the reason the drum's boss check is: a hand who walks to a cold
+            // pot, finds it cannot light it, and burns the pass looks exactly
+            // like a hand that is broken. A cold pot is simply not work.
+            return stock.opium() && WashPotBlock.heated(world, pos) ? Job.CHEM : null;
+        }
+        if (block instanceof AcetylatorBlock && hand.can(Job.CHEM)) {
+            if (state.get(AcetylatorBlock.RUNNING)) {
+                int progress = state.get(AcetylatorBlock.PROGRESS);
+                // At peak, or already tar. The second half is not optional: a
+                // ruined run leaves the machine RUNNING with nothing in it and
+                // nothing scheduled, so if nobody tips it out it never takes
+                // another load and the chemist quietly stops at stage three.
+                return progress == AcetylatorBlock.PEAK || progress >= AcetylatorBlock.RUINED
+                        ? Job.CHEM : null;
+            }
+            return stock.base() ? Job.CHEM : null;
         }
         if (block instanceof CannabisCropBlock || block instanceof CocaCropBlock
                 || block instanceof PoppyCropBlock) {
@@ -2467,6 +2599,47 @@ public final class TrapCrew {
         }
         if (block instanceof LaundryBlock) {
             launder(world, hand, box, at, state);
+            return;
+        }
+        if (block instanceof ScoringTableBlock) {
+            ItemStack opium = ScoringTableBlock.take(state, world, at);
+            if (!opium.isEmpty()) {
+                stow(world, box, at, List.of(opium));
+                cheer(world, at, SoundEvents.BLOCK_HONEY_BLOCK_BREAK, 0.9F);
+            } else if (box != null) {
+                feed(box, TrapContent.poppyPod,
+                        pods -> ScoringTableBlock.load(state, world, at, pods));
+            }
+            return;
+        }
+        if (block instanceof WashPotBlock) {
+            ItemStack base = WashPotBlock.take(state, world, at);
+            if (!base.isEmpty()) {
+                stow(world, box, at, List.of(base));
+                cheer(world, at, SoundEvents.BLOCK_BREWING_STAND_BREW, 0.8F);
+            } else if (box != null) {
+                final net.minecraft.inventory.Inventory chest = box;
+                feed(box, TrapContent.rawOpium,
+                        opium -> WashPotBlock.load(state, world, at, opium, chest));
+            }
+            return;
+        }
+        if (block instanceof AcetylatorBlock) {
+            if (state.get(AcetylatorBlock.RUNNING)) {
+                // Empty here is a real outcome, not a miss: take() tips out a
+                // batch that went to tar and hands back nothing, which is the
+                // whole point of coming to a ruined machine at all. Nothing to
+                // stow, and no cheer for it either.
+                ItemStack dope = AcetylatorBlock.take(state, world, at);
+                if (!dope.isEmpty()) {
+                    stow(world, box, at, List.of(dope));
+                    cheer(world, at, SoundEvents.BLOCK_BREWING_STAND_BREW, 1.0F);
+                }
+            } else if (box != null) {
+                final net.minecraft.inventory.Inventory chest = box;
+                feed(box, TrapContent.morphineBase,
+                        base -> AcetylatorBlock.load(state, world, at, base, chest));
+            }
             return;
         }
         if (box != null && world.getBlockEntity(at) instanceof net.minecraft.inventory.Inventory

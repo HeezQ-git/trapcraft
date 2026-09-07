@@ -3172,6 +3172,17 @@ public final class TrapGuide {
                 .append(body("Baza, kwas, makówki, wszystko.\n\n"))
                 .append(hint("Stój przy tej maszynie i patrz."))));
 
+        // Or don't. The page above told you to stand there and watch, and it
+        // was the only advice there was until the crew learned the line -- so
+        // it now says who else can do it, on the page right after it rather
+        // than in the crew chapter thirty pages away.
+        pages.add(page(Text.empty()
+                .append(title("5d. NAJMIJ CHEMIKA\n\n"))
+                .append(body("Zawód \"" + TrapCrew.Job.CHEM.display() + "\" ("
+                        + TrapCrew.Job.CHEM.cost() + "e) ogarnia całą linię: "
+                        + "nacinanie, garnek, acetylator.\n\n"))
+                .append(hint("Ściąga w szczycie. Nie przegapia."))));
+
         MutableText worth = Text.empty().append(title("6. ILE TO WARTE\n\n"));
         for (Purity grade : Purity.values()) {
             worth.append(Text.literal(pad(grade.display(), 7)).formatted(grade.bookColour()))

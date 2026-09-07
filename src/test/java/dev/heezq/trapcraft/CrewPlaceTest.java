@@ -154,6 +154,31 @@ class CrewPlaceTest {
         }
     }
 
+    /**
+     * The job strip is a window, and its scroller sits at the end of it.
+     *
+     * Two numbers describe the same edge -- where the last job slot stops and
+     * where the scroller starts -- and the day they disagree the board either
+     * throws on open (window over the scroller) or paints a black pane in the
+     * middle of the strip and swallows a click (window short of it). The
+     * handler's static block catches the first on open; this catches both at
+     * build time, which is the difference between a failed test and a server
+     * whose crew board will not open.
+     */
+    @Test
+    void theScrollerSitsExactlyWhereTheJobWindowEnds() throws Exception {
+        String ui = Files.readString(
+                Path.of("src/main/java/dev/heezq/trapcraft/CrewScreenHandler.java"));
+        int from = num(ui, "int JOBS_FROM = (\\d+)");
+        int slots = num(ui, "int JOB_SLOTS = (\\d+)");
+        int scroll = num(ui, "int SCROLL_SLOT = (\\d+)");
+        assertEquals(from + slots, scroll,
+                "the job window is " + slots + " slots from " + from + ", so the scroller "
+                        + "belongs at " + (from + slots) + " and is at " + scroll);
+        assertTrue(scroll < num(ui, "int MOVE_SLOT = (\\d+)"),
+                "the job strip and its scroller run over the move button");
+    }
+
     private static void claim(Map<Integer, String> taken, int size, String what, int slot) {
         assertTrue(slot >= 0 && slot < size,
                 what + " sits at " + slot + ", off a " + size + "-slot board");
