@@ -35,7 +35,7 @@ import java.util.List;
  *
  *   [1][2][3][4][5][6]           [book][place][hire]
  *   [pace][reach] [job][job][job][job][job][job][job]
- *   [job][job][job][job][move][round][wages][nights][plans]
+ *   [job][job][job][more][move][round][wages][nights][plans]
  *   [7][8][9][10][11][12]            .   [whip][fire]
  *
  * The selected hand is the one the two middle rows apply to, which is why the
@@ -80,8 +80,28 @@ public class CrewScreenHandler extends ScreenHandler {
     private static final int HIRE_SLOT = 8;
     private static final int PACE_SLOT = 9;
     private static final int REACH_SLOT = 10;
-    // Eleven jobs, so 11..21, ending exactly where the move button starts.
+    /**
+     * Ten job slots and a scroller, 11..21, ending where the move button starts.
+     *
+     * It used to be eleven jobs in eleven slots, which was a board that fit
+     * exactly once. The twelfth job would have landed on the move button, and
+     * the static block below would have done the right thing -- refused to
+     * open the screen -- which is a better bug than the silent kind and still
+     * a board nobody can use.
+     *
+     * So the strip is a WINDOW now rather than the list itself. Ten is what
+     * was left after giving the last slot to the scroller, and giving it the
+     * last one rather than the first keeps the jobs everybody already knows
+     * exactly where they have always been.
+     */
     private static final int JOBS_FROM = 11;
+    private static final int JOB_SLOTS = 10;
+    // Spelled out rather than JOBS_FROM + JOB_SLOTS, because CrewPlaceTest
+    // finds this board's buttons by grepping for "int X_SLOT = <number>;" and
+    // a derived one would be silently exempt from the one check that has ever
+    // caught a collision on this screen. Widen the window and the static
+    // block below throws on the overlap; it is not left to arithmetic.
+    private static final int SCROLL_SLOT = 21;
     private static final int MOVE_SLOT = 22;
     private static final int ROUND_SLOT = 23;
     private static final int WAGES_SLOT = 24;
@@ -135,9 +155,10 @@ public class CrewScreenHandler extends ScreenHandler {
         for (int i = 0; i < HEADS; i++) {
             claim(taken, "head " + (i + 1), headSlot(i));
         }
-        for (int i = 0; i < TEACHABLE.size(); i++) {
-            claim(taken, "job " + TEACHABLE.get(i).name(), JOBS_FROM + i);
+        for (int i = 0; i < JOB_SLOTS; i++) {
+            claim(taken, "job window " + i, JOBS_FROM + i);
         }
+        claim(taken, "scroll", SCROLL_SLOT);
         claim(taken, "book", HELP_SLOT);
         claim(taken, "place", PLACE_SLOT);
         claim(taken, "hire", HIRE_SLOT);
@@ -168,6 +189,8 @@ public class CrewScreenHandler extends ScreenHandler {
     private final ServerPlayerEntity boss;
     private List<TrapCrew.Card> crew = List.of();
     private int selected = 0;
+    /** First job in the window. Clamped in paint, so it survives a shrinking list. */
+    private int scrolled = 0;
 
     public CrewScreenHandler(int syncId, PlayerInventory playerInventory) {
         super(ScreenHandlerType.GENERIC_9X4, syncId);
@@ -225,9 +248,11 @@ public class CrewScreenHandler extends ScreenHandler {
             TrapCrew.Card card = crew.get(selected);
             display.setStack(PACE_SLOT, ladder(card, true));
             display.setStack(REACH_SLOT, ladder(card, false));
-            for (int i = 0; i < TEACHABLE.size(); i++) {
-                display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(i)));
+            scrolled = Math.max(0, Math.min(scrolled, maxScroll()));
+            for (int i = 0; i < JOB_SLOTS && scrolled + i < TEACHABLE.size(); i++) {
+                display.setStack(JOBS_FROM + i, jobTag(card, TEACHABLE.get(scrolled + i)));
             }
+            display.setStack(SCROLL_SLOT, scrollTag());
             display.setStack(WHIP_SLOT, whipTag(card, selected));
             display.setStack(MOVE_SLOT, moveTag(card));
             display.setStack(ROUND_SLOT, roundTag(card));
@@ -483,6 +508,43 @@ public class CrewScreenHandler extends ScreenHandler {
                             : can ? (owned ? "Kliknij, żeby włączyć." : "Kliknij, żeby nauczyć.")
                             : "Nie stać cię.",
                     can ? Formatting.YELLOW : Formatting.DARK_GRAY));
+        }
+        tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
+        return tag;
+    }
+
+    /** How far the window can slide before it runs off the end of the list. */
+    private static int maxScroll() {
+        return Math.max(0, TEACHABLE.size() - JOB_SLOTS);
+    }
+
+    /**
+     * The scroller, and it says where you are rather than just which way it goes.
+     *
+     * "1-10 z 12" is the whole reason this is worth an item: an arrow on its
+     * own tells you there is more, and leaves you clicking it to find out how
+     * much more. The count is also the only place on the board that admits the
+     * strip is a window at all.
+     */
+    private ItemStack scrollTag() {
+        boolean more = maxScroll() > 0;
+        int shown = Math.min(JOB_SLOTS, TEACHABLE.size() - scrolled);
+        ItemStack tag = new ItemStack(more ? Items.ARROW : Items.PAPER);
+        tag.set(DataComponentTypes.CUSTOM_NAME,
+                plain("Zawody " + (scrolled + 1) + "-" + (scrolled + shown)
+                        + " z " + TEACHABLE.size())
+                        .formatted(more ? Formatting.YELLOW : Formatting.GRAY, Formatting.BOLD));
+        List<Text> lore = new ArrayList<>();
+        if (more) {
+            lore.add(line("Lista nie mieści się na tablicy.", Formatting.GRAY));
+            lore.add(Text.empty());
+            lore.add(line("LPM - dalej.", Formatting.YELLOW));
+            lore.add(line("PPM - z powrotem.", Formatting.YELLOW));
+            lore.add(line("Zawija się na końcu.", Formatting.DARK_GRAY));
+        } else {
+            // Dead today and one line to keep: drop two jobs and the arrow
+            // would still say "doesn't fit" and still do nothing when clicked.
+            lore.add(line("Cała lista mieści się na tablicy.", Formatting.DARK_GRAY));
         }
         tag.set(DataComponentTypes.LORE, new LoreComponent(lore));
         return tag;
@@ -896,8 +958,19 @@ public class CrewScreenHandler extends ScreenHandler {
             answer(TrapCrew.nights(boss, card.index()));
             return;
         }
-        if (index >= JOBS_FROM && index < JOBS_FROM + TEACHABLE.size()) {
-            TrapCrew.Job job = TEACHABLE.get(index - JOBS_FROM);
+        if (index == SCROLL_SLOT) {
+            // Wraps rather than stops. Three positions and two directions is
+            // not a thing worth greying out an arrow over, and a button that
+            // always does something is a button nobody has to look at.
+            int span = maxScroll() + 1;
+            scrolled = (scrolled + (button == 1 ? span - 1 : 1)) % span;
+            click(SoundEvents.UI_BUTTON_CLICK.value(), 1.2F);
+            paint();
+            return;
+        }
+        if (index >= JOBS_FROM && index < JOBS_FROM + JOB_SLOTS
+                && scrolled + (index - JOBS_FROM) < TEACHABLE.size()) {
+            TrapCrew.Job job = TEACHABLE.get(scrolled + (index - JOBS_FROM));
             answer(card.taught().contains(job) && type == SlotActionType.QUICK_MOVE
                     ? TrapCrew.forget(boss, card.index(), job)
                     : TrapCrew.buy(boss, card.index(), job, false));
