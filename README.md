@@ -333,9 +333,50 @@ land while their owner is logged out wait in the set until they come back for
 them, since the one thing an economy cannot survive is a payout that silently
 did not happen.
 
+## The arena
+
+Every so often, with at least two people online and ninety minutes since the
+last one, an omen goes out to the whole server: **Obserwator** -- the watcher, the
+figure Paranoia shows you at render distance, the one that vanishes when you
+turn to look -- has come down off the edge of the map, and this time it stays. A clickable line
+teleports you to an arena in its own dimension (`trapcraft:arena`, a void
+under a fixed midnight sky), and two minutes later it rises out of the floor.
+
+It is a real `HostileEntity` disguised to clients as a vex scaled ×4.1 and
+made invisible; the body is a Polymer display rig (`WitnessRig`) built from
+generated item models, so swords, arrows and crits all work and no client mod
+is involved. The pit itself is a blueprint written by `tools/gen_arena.py`
+and stamped fresh for every event, so it self-heals.
+
+| Ability | From | Counter |
+|---------|------|---------|
+| Fala -- a shockwave ring | I | jump it |
+| Oczy -- three homing eyes | I | punch one back: 25 to the boss |
+| Spojrzenie -- the stare | II | look away for 3 s |
+| Piorun -- marked lightning | II | step out of the circle |
+| Lustra -- two mirror copies | II | the real one has orbiting eyes |
+| Skok -- a blink behind you | III | none; the lights are off by now |
+| Uścisk -- one of you in its hand | III | the rest deal 12 × players in 5 s |
+
+Nobody dies: a killing blow is a **knockout** -- twenty seconds in the stands
+with everything you had, and the boss heals 8%. Ten minutes and it leaves.
+Every hit it lands adds a stack of **Groza** (slow, then dark, then bleeding),
+which fades while another player stands within four blocks -- Paranoia's
+company rule again. Phase breaks and the kill hand out **Adrenalina**.
+
+Loot: a bounty split half evenly, half by damage, paid through
+`TrapMarket.pay`; a Phantom case each (the key is on the shelf, which is the
+sink); the top damage takes a Phantom key and **Oko Obserwatora**, a trophy whose
+right-click makes everything within 40 blocks glow for you alone. A fountain
+of dirty emerald blocks and ~1200 XP round it off, with an eight-second
+light show, without a single rocket -- firework explosions crash every
+client on this pack. Numbers live in `ArenaMath`, which `ArenaMathTest` pins;
+`/guide arena` quotes them. `/arena start|stop|tp|build|cast` are the op
+tools -- an event that rolls every few hours is untestable without them.
+
 ## The guide books
 
-`/guide` — twelve books under one command, with tab-completion:
+`/guide` — thirteen books under one command, with tab-completion:
 
 | Command | Covers |
 |---------|--------|
@@ -351,6 +392,7 @@ did not happen.
 | `/guide police` | the station, the budget dial, crime, fines |
 | `/guide fires` | the brigade, the engines, what burns |
 | `/guide zaklady` | the bookmaker: what to read off the television |
+| `/guide arena` | the witness: every ability and its counter |
 
 Every number on every page is read from the constant that governs it, so
 retuning a mechanic retunes the book and it can never quietly start lying.

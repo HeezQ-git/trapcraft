@@ -182,6 +182,13 @@ public class TrapCraftClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(TrapNet.BlendMix.ID,
                 (payload, context) -> context.client().execute(
                         () -> onBlendMix(payload.parts(), payload.colour())));
+        // The arena's two: a rattle and a colour. See ArenaLook.
+        ClientPlayNetworking.registerGlobalReceiver(TrapNet.Shake.ID,
+                (payload, context) -> context.client().execute(
+                        () -> ArenaLook.shake(payload.strength(), payload.ticks())));
+        ClientPlayNetworking.registerGlobalReceiver(TrapNet.Flash.ID,
+                (payload, context) -> context.client().execute(
+                        () -> ArenaLook.flash(payload.colour(), payload.ticks())));
 
         // Logged so "is the client half even running?" is answerable from the
         // log instead of by guessing at a screen nobody else can see.
@@ -251,6 +258,7 @@ public class TrapCraftClient implements ClientModInitializer {
 
         WiredLook.tick(player);
         NodLook.tick(player);
+        ArenaLook.tick();
         updateBlur(client);
     }
 
@@ -324,7 +332,8 @@ public class TrapCraftClient implements ClientModInitializer {
 
     /** Whether anything at all wants the camera. Read by the mixins. */
     public static boolean anyLook() {
-        return intensity > 0.001F || WiredLook.active() || NodLook.active();
+        return intensity > 0.001F || WiredLook.active() || NodLook.active()
+                || ArenaLook.active();
     }
 
     /**
@@ -393,7 +402,8 @@ public class TrapCraftClient implements ClientModInitializer {
         float mixed = clash() * 0.45F * MathHelper.sin(p * 1.63F * s.swayRate() + 0.7F);
         return (base + mixed) * s.sway() * swayGain() * strength()
                 + WiredLook.jitterYaw(tickProgress)
-                + NodLook.driftYaw(tickProgress);
+                + NodLook.driftYaw(tickProgress)
+                + ArenaLook.jitterYaw(tickProgress);
     }
 
     public static float swayPitch(float tickProgress) {
@@ -403,7 +413,8 @@ public class TrapCraftClient implements ClientModInitializer {
         float mixed = clash() * 0.45F * MathHelper.sin(p * 1.11F * s.swayRate() + 2.9F);
         return (base + mixed) * s.sway() * 0.6F * swayGain() * strength()
                 + WiredLook.jitterPitch(tickProgress)
-                + NodLook.driftPitch(tickProgress);
+                + NodLook.driftPitch(tickProgress)
+                + ArenaLook.jitterPitch(tickProgress);
     }
 
     /**
@@ -508,6 +519,7 @@ public class TrapCraftClient implements ClientModInitializer {
     // --- overlay -------------------------------------------------------------
 
     private static void render(DrawContext context, RenderTickCounter counter) {
+        ArenaLook.render(context, counter.getTickProgress(false));
         WiredLook.render(context, counter.getTickProgress(false));
         NodLook.render(context, counter.getTickProgress(false));
         float s = strength();

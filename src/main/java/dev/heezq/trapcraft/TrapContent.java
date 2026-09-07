@@ -149,6 +149,11 @@ public final class TrapContent {
     public static Item gravityBongItem;
     public static RegistryEntry<StatusEffect> bakedEffect;
     public static RegistryEntry<StatusEffect> toleranceEffect;
+    /** The arena's two: the boss's debuff and the winners' buff. See TrapArena. */
+    public static RegistryEntry<StatusEffect> dreadEffect;
+    public static RegistryEntry<StatusEffect> adrenalineEffect;
+    /** Oko Obserwatora, the trophy off the arena boss. */
+    public static Item witnessEye;
 
     public static Block crop(Strain s) {
         return CROPS.get(s);
@@ -329,6 +334,12 @@ public final class TrapContent {
         toleranceEffect = Registry.registerReference(Registries.STATUS_EFFECT,
                 RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("tolerance")),
                 new ToleranceStatusEffect());
+        dreadEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("groza")),
+                new DreadStatusEffect());
+        adrenalineEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("adrenalina")),
+                new AdrenalineStatusEffect());
 
         for (Strain strain : Strain.values()) {
             Block crop = registerBlock("cannabis_crop_" + strain.id(),
@@ -526,6 +537,8 @@ public final class TrapContent {
         nerveTonic = registerItem("nerve_tonic", NerveTonicItem::new);
         ledger = registerItem("ledger", (settings, model) ->
                 new LedgerItem(settings.maxCount(1), model));
+        witnessEye = registerItem("witness_eye", (settings, model) ->
+                new WitnessEyeItem(settings.maxCount(1).rarity(net.minecraft.util.Rarity.EPIC), model));
         // maxCount 1: the balance rides on the stack, and two stacked wallets
         // would merge into whichever balance won.
         wallet = registerItem("wallet", (settings, model) ->
@@ -790,6 +803,7 @@ public final class TrapContent {
                             Quality.LOUD.index())));
                     entries.add(nerveTonic);
                     entries.add(ledger);
+                    entries.add(witnessEye);
                     entries.add(wallet());
                     entries.add(burnerPhone);
                     entries.add(marketStallItem);

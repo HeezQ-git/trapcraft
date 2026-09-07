@@ -1,0 +1,31 @@
+{
+  "textures": {
+    "face": "trapcraft:item/witness_face",
+    "particle": "trapcraft:item/witness_face"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        2,
+        13.9
+      ],
+      "to": [
+        14,
+        14,
+        14.1
+      ],
+      "faces": {
+        "south": {
+          "texture": "#face",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

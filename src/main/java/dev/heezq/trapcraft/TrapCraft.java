@@ -70,6 +70,9 @@ public class TrapCraft implements ModInitializer {
         // After TrapContent: the chest pools it injects name the case and key
         // items directly, so they have to exist by the time it registers.
         TrapCases.register();
+        // After TrapContent and TrapCases: the loot names the phantom case,
+        // its key and the trophy, and the boss wears effects TrapContent owns.
+        TrapArena.register();
         TrapEssentials.register();
 
         // Ships our textures/models inside the server-generated pack so vanilla

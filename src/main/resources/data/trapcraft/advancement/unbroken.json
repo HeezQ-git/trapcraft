@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:witness_eye"
+    },
+    "title": "Bez szwanku",
+    "description": "Pokonaj Obserwatora bez ani jednego nokautu.",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:witness"
+}
