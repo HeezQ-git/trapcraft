@@ -3408,6 +3408,59 @@ public final class TrapMath {
 
     /** Golems one level of the works puts on the street. */
     public static final int GOLEMS_PER_LEVEL = 3;
+    /**
+     * Golems one copper on the street is enough to account for.
+     *
+     * The gate below has to prove the city still pays a force. It does not
+     * have to peg the yard to the payroll one for one, and pegging it there
+     * quietly capped the works: a station is capped by its CELLS -- seven on
+     * the live town -- so the third level of a nine-thousand-emerald purchase
+     * bought nothing at all, and the fourth and the fifth after it. Two per
+     * copper leaves "no force, no golems" exactly as it was and hands the
+     * dial back to the thing the player actually bought.
+     */
+    public static final int GOLEMS_PER_OFFICER = 2;
+
+    /**
+     * Which address the shift is standing furthest away from.
+     *
+     * An index into {@code spots}, or -1 if there are none. Every point is
+     * {x, z}: height is not coverage, and a golem on a roof is watching the
+     * same street as one under it.
+     *
+     * Farthest-first, and it is the difference between six guards and six
+     * guards in one street. Rolling an errand per body out of the same hat is
+     * a random scatter, and a random scatter of six over a town CLUMPS,
+     * because no roll knows the other five happened. Scoring each address by
+     * how far the nearest errand already claimed is, and taking the best,
+     * needs no districts drawn and no body told which quarter is its own: the
+     * empty side of town simply scores highest, and keeps scoring highest
+     * until somebody is sent there.
+     *
+     * {@code from} is a random place to start scanning rather than a random
+     * choice, which is what settles ties without a Random in this file. On a
+     * quiet shift with nothing claimed every address ties at MAX_VALUE, and a
+     * fixed scan would file the whole yard to whichever house is first in the
+     * register.
+     */
+    public static int spreadPick(int[][] spots, int[][] taken, int from) {
+        int best = -1;
+        long furthest = -1L;
+        for (int step = 0; step < spots.length; step++) {
+            int at = Math.floorMod(from + step, spots.length);
+            long gap = Long.MAX_VALUE;
+            for (int[] other : taken) {
+                long dx = spots[at][0] - (long) other[0];
+                long dz = spots[at][1] - (long) other[1];
+                gap = Math.min(gap, dx * dx + dz * dz);
+            }
+            if (gap > furthest) {
+                furthest = gap;
+                best = at;
+            }
+        }
+        return best;
+    }
 
     /**
      * How many golems are actually standing, from what the city BOUGHT and
@@ -3425,7 +3478,8 @@ public final class TrapMath {
      * that opts out of it would make the rest decoration.
      */
     public static int golemGuard(int worksLevel, int officers) {
-        return Math.min(Math.max(0, worksLevel) * GOLEMS_PER_LEVEL, Math.max(0, officers));
+        return Math.min(Math.max(0, worksLevel) * GOLEMS_PER_LEVEL,
+                Math.max(0, officers) * GOLEMS_PER_OFFICER);
     }
 
     /**

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -188,8 +189,15 @@ class PoliceTest {
         assertTrue(TrapMath.golemGuard(2, 99) > TrapMath.golemGuard(1, 99),
                 "and paying for the next level has to put more of them on the street, "
                         + "or the tiers above the first are a donation");
-        assertEquals(2, TrapMath.golemGuard(3, 2),
-                "two coppers on the street means two golems, whatever the city owns");
+        assertEquals(2 * TrapMath.GOLEMS_PER_OFFICER, TrapMath.golemGuard(3, 2),
+                "two coppers on the street still bound a yard the city has overbought "
+                        + "-- loose enough that the works level is the dial the player "
+                        + "bought, tight enough that it is still a paid force holding "
+                        + "the leash");
+        assertTrue(TrapMath.golemGuard(3, 7) > TrapMath.golemGuard(2, 7),
+                "and the third level has to be worth buying at a station of seven "
+                        + "cells, which is the size of the live one: pegged one to one "
+                        + "it was nine thousand emeralds for nothing");
         assertEquals(0, TrapMath.golemGuard(-1, -1),
                 "and nothing here may go negative: a save read back wrong would "
                         + "otherwise turn into a negative want and a station that "
@@ -226,9 +234,62 @@ class PoliceTest {
                 "and it has to actually be SENT somewhere -- a golem left to its own "
                         + "goals wanders ten blocks round wherever it was made, which "
                         + "makes an army of them an ornament in the station yard");
-        assertTrue(body.contains("LEASH") && body.contains("LOST"),
-                "a golem gets the same leash a copper does; a hundred hit points of "
-                        + "iron loose two hundred blocks from its station is not a patrol");
+        assertTrue(body.contains("CALL_LEASH") && body.contains("LOST"),
+                "a golem is leashed, or a hundred hit points of iron is loose on the "
+                        + "map -- but at the CALL distance rather than the beat one. "
+                        + "BEAT_REACH is a copper's walking-home radius and a golem "
+                        + "never walks home: on the live town it put twenty-six of "
+                        + "thirty-two addresses out of bounds and left half the place "
+                        + "with no patrol that could legally be sent to it");
+        assertTrue(body.contains("CALL_REACH"),
+                "and the round it is handed has to be sized the same way, or the leash "
+                        + "is wide and the errands are still all on one side");
+    }
+
+    /**
+     * Six guards have to be six parts of town, not six bodies in one street.
+     *
+     * The half of the coverage bug that a wider round does not fix. Every body
+     * used to roll its errand independently out of the same hat, and a random
+     * scatter of six over a town clumps -- no roll knows the other five
+     * happened. Measured on the live server on 2026-09-07: six golems inside a
+     * fifty block square at the western edge of a town a hundred and sixty
+     * blocks across, with every house on the east side unwatched.
+     */
+    @Test
+    void aYardOfSixCoversSixPartsOfTownRatherThanOneCorner() {
+        // The live town, thinned to one address per street: the western end
+        // round the station, the middle, and the eastern end that had no
+        // patrol at all.
+        int[][] town = {
+            {1272, -180}, {1278, -193}, {1320, -199}, {1319, -226}, {1365, -216},
+            {1379, -245}, {1391, -192}, {1401, -207}, {1421, -312}, {1438, -237},
+        };
+        int[][] posts = new int[6][];
+        for (int golem = 0; golem < posts.length; golem++) {
+            int pick = TrapMath.spreadPick(town, Arrays.copyOf(posts, golem), golem * 7);
+            assertTrue(pick >= 0, "a town with addresses in it always has somewhere to send one");
+            posts[golem] = town[pick];
+        }
+        int west = Integer.MAX_VALUE;
+        int east = Integer.MIN_VALUE;
+        for (int[] post : posts) {
+            west = Math.min(west, post[0]);
+            east = Math.max(east, post[0]);
+        }
+        assertTrue(east - west >= 140,
+                "six errands picked against each other have to reach across the town "
+                        + "-- 1272 to 1438 is what the live one measures, and a shift "
+                        + "spread over less than 140 of that is the fifty block square "
+                        + "this was written to break up, whatever the reach allows");
+
+        assertEquals(-1, TrapMath.spreadPick(new int[0][], posts, 3),
+                "and a town with nothing registered in it yet has to say so rather "
+                        + "than index into an empty register");
+        assertEquals(8, TrapMath.spreadPick(town, new int[][] {{1272, -180}}, 0),
+                "with one body claimed at the western end the next has to be the "
+                        + "furthest thing from it, which is the far south-east corner "
+                        + "-- not merely the next house along the same street");
     }
 
     /**
@@ -259,13 +320,17 @@ class PoliceTest {
                         + "home as fast as the houses pulled it out");
 
         // And the errand has to be one they can actually be left standing at.
-        int worth = police.indexOf("private static BlockPos worthGuarding(");
-        assertTrue(worth > 0, "worthGuarding() must exist");
-        assertTrue(police.substring(worth, police.indexOf("\n    }", worth))
-                        .contains("onTheRound(station"),
+        int worth = police.indexOf("private static List<BlockPos> addresses(");
+        assertTrue(worth > 0, "addresses() must exist -- it is the round's whole register");
+        String register = police.substring(worth, police.indexOf("\n    }", worth));
+        assertTrue(register.contains("onTheRound(world, station"),
                 "an errand past the leash is an officer who walks out, gets sent home "
                         + "at 128 blocks, and is handed the same impossible errand "
                         + "again -- a copper pacing one line all night");
+        assertTrue(police.contains("station.officers, BEAT_REACH"),
+                "and the reach the officers are handed has to stay the beat one: they "
+                        + "are the half of the shift that does walk home, to a cell, "
+                        + "with somebody in it");
     }
 
     @Test

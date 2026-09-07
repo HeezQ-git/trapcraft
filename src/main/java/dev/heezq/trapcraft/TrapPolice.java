@@ -1059,7 +1059,8 @@ public final class TrapPolice {
      */
     private static void beat(ServerWorld world, Station station, VillagerEntity officer,
                              Patrol patrol) {
-        BlockPos leg = stride(world, station, officer.getBlockPos(), patrol);
+        BlockPos leg = stride(world, station, officer.getBlockPos(), patrol,
+                station.officers, BEAT_REACH);
         if (leg != null) {
             walkAt(officer, leg, BEAT_PACE);
         }
@@ -1089,6 +1090,20 @@ public final class TrapPolice {
      * and is left alone. A monster it cannot is a rumour, and the round wins
      * -- and if there is a path to that rumour the melee goal outranks this
      * anyway and takes the body back on its own.
+     *
+     * The round it is handed is a copper's round with the two limits swapped
+     * for the call-out pair, and that swap is the whole of the coverage fix.
+     * {@link #BEAT_REACH} is a walking-home distance: an officer has to be
+     * back at the nick with a suspect, before the wages, so an errand it
+     * cannot return from is not an errand. A golem does not sleep in a cell,
+     * does not book anybody in and is never counted at the door -- there is
+     * nothing for it to be near the station FOR. Measured on the live town on
+     * 2026-09-07: twenty-six of its thirty-two addresses sat outside
+     * {@link #BEAT_REACH}, so six golems shared a pool of six houses on one
+     * side of town and the other side had no patrol that could legally be
+     * sent to it. {@link #CALL_REACH} is the same town's real size -- it is
+     * already the distance a shout may come FROM, and a burglary the force is
+     * allowed to attend is a house the force should be allowed to walk past.
      */
     private static void march(ServerWorld world, Station station, IronGolemEntity golem,
                               Patrol patrol) {
@@ -1108,12 +1123,13 @@ public final class TrapPolice {
             return;
         }
         BlockPos leg;
-        if (home > (double) LEASH * LEASH) {
+        if (home > (double) CALL_LEASH * CALL_LEASH) {
             patrol.beat = null;
             patrol.post = null;
             leg = station.sign;
         } else {
-            leg = stride(world, station, golem.getBlockPos(), patrol);
+            leg = stride(world, station, golem.getBlockPos(), patrol,
+                    station.golems, CALL_REACH);
         }
         if (leg != null) {
             golem.getNavigation().startMovingTo(leg.getX() + 0.5, leg.getY(),
@@ -1136,7 +1152,7 @@ public final class TrapPolice {
      * Keeping it would be forty seconds of failing, forever.
      */
     private static BlockPos stride(ServerWorld world, Station station, BlockPos from,
-                                   Patrol patrol) {
+                                   Patrol patrol, List<Patrol> shift, int reach) {
         long now = world.getTime();
         boolean arrived = patrol.beat != null && from.isWithinDistance(patrol.beat, ARRIVED);
         boolean gaveUp = now > patrol.by;
@@ -1144,7 +1160,7 @@ public final class TrapPolice {
             if (gaveUp || patrol.post == null || from.isWithinDistance(patrol.post, AT_POST)) {
                 patrol.post = null;
             }
-            patrol.beat = nextLeg(world, station, from, patrol);
+            patrol.beat = nextLeg(world, station, from, patrol, shift, reach);
             patrol.by = now + BEAT_PATIENCE;
         }
         return patrol.beat;
@@ -1164,16 +1180,20 @@ public final class TrapPolice {
      * is the last resort and nothing else: it used to be rolled four times in
      * ten whatever the town looked like, which pulled the shift back toward
      * its own front door as fast as the houses pulled it out.
+     *
+     * A fresh errand is picked AGAINST the rest of the shift rather than out
+     * of a hat -- see {@link #spreadOut}, which is the whole of why a garrison
+     * of six covers six parts of town instead of one.
      */
     private static BlockPos nextLeg(ServerWorld world, Station station, BlockPos from,
-                                    Patrol patrol) {
+                                    Patrol patrol, List<Patrol> shift, int reach) {
         var random = world.getRandom();
         BlockPos anchor = patrol.post;
         if (anchor == null) {
             anchor = shoutOf(world, station);
         }
         if (anchor == null) {
-            anchor = worthGuarding(world, station, random);
+            anchor = spreadOut(world, station, patrol, shift, reach, random);
         }
         if (anchor == null) {
             // A point on a ring AROUND the nick, never the nick itself. Six of
@@ -1233,40 +1253,103 @@ public final class TrapPolice {
     }
 
     /**
-     * Something in this world the town would rather kept its windows, and
+     * Everything in this world the town would rather kept its windows, and
      * close enough to this station that walking there is not a punishment.
      *
      * The range test is not a detail. Without it the errand was drawn from
      * every house and counter on the server, so a station on one side of a big
      * town spent its nights sending people at addresses on the other side --
      * past the leash, back again, and out again. See {@link #BEAT_REACH}.
+     *
+     * The reach is an ARGUMENT rather than that constant, because the two
+     * bodies on the round are bounded by different things. An officer has to
+     * come back: to a cell, with a suspect, before the wages are counted. A
+     * golem never comes back at all, so pricing its round at a copper's
+     * walking-home distance is what left the far half of a town unwatched.
+     * See {@link #march}.
+     *
+     * Loaded chunks only, and that is coverage rather than caution. An address
+     * nobody has loaded has no mobs in it, no tenant in it and no burglary to
+     * interrupt -- and a body sent at one walks to the edge of the world the
+     * server is simulating and freezes there, off the register, while the
+     * station forges a replacement it does not need.
      */
-    private static BlockPos worthGuarding(ServerWorld world, Station station,
-                                          net.minecraft.util.math.random.Random random) {
+    private static List<BlockPos> addresses(ServerWorld world, Station station, int reach) {
         String here = world.getRegistryKey().getValue().toString();
         List<BlockPos> spots = new ArrayList<>();
         for (TrapHomes.Home home : TrapHomes.all()) {
             if (home.dimension().equals(here) && home.tenant() != null
-                    && onTheRound(station, home.anchor())) {
+                    && onTheRound(world, station, home.anchor(), reach)) {
                 spots.add(home.anchor());
             }
         }
         for (TrapShops.Shop shop : TrapShops.shops()) {
-            if (shop.dimension.equals(here) && onTheRound(station, shop.pos())) {
+            if (shop.dimension.equals(here) && onTheRound(world, station, shop.pos(), reach)) {
                 spots.add(shop.pos());
             }
         }
         if (TrapCity.founded() && here.equals(TrapCity.vaultWorld())
-                && onTheRound(station, TrapCity.vaultAt())) {
+                && onTheRound(world, station, TrapCity.vaultAt(), reach)) {
             spots.add(TrapCity.vaultAt());
         }
+        return spots;
+    }
+
+    /** One of them, rolled blind. Used where there is nobody to spread out from. */
+    private static BlockPos worthGuarding(ServerWorld world, Station station, int reach,
+                                          net.minecraft.util.math.random.Random random) {
+        List<BlockPos> spots = addresses(world, station, reach);
         return spots.isEmpty() ? null : spots.get(random.nextInt(spots.size()));
     }
 
-    /** Is this address on this station's round at all? */
-    private static boolean onTheRound(Station station, BlockPos spot) {
+    /**
+     * The address the rest of the shift is standing furthest away from.
+     *
+     * Measured on the live town on 2026-09-07, before this existed: all six
+     * golems inside a fifty block square at the western edge of a town a
+     * hundred and sixty blocks across, and the whole east side of it -- every
+     * house on that side -- with no patrol at all. Half of that was the reach
+     * ({@link #march}); this is the other half, and it is why they were in a
+     * square rather than merely on one side.
+     *
+     * The scoring is {@link TrapMath#spreadPick}, which is where the reasoning
+     * lives. All that is left here is the two lists it compares: the addresses
+     * worth guarding, and the errands the rest of the shift has already
+     * claimed.
+     *
+     * POSTS rather than bodies, and that is the one thing to get right. A body
+     * is where the shift WAS and a walk is half a minute long, so two golems
+     * that already share a destination have to read as sharing it from the
+     * moment they set off, not once they are stood on it together.
+     */
+    private static BlockPos spreadOut(ServerWorld world, Station station, Patrol self,
+                                      List<Patrol> shift, int reach,
+                                      net.minecraft.util.math.random.Random random) {
+        List<BlockPos> spots = addresses(world, station, reach);
+        if (spots.isEmpty()) {
+            return null;
+        }
+        int[][] where = new int[spots.size()][];
+        for (int i = 0; i < spots.size(); i++) {
+            where[i] = new int[] {spots.get(i).getX(), spots.get(i).getZ()};
+        }
+        List<int[]> claimed = new ArrayList<>();
+        for (Patrol other : shift) {
+            if (other != self && other.post != null) {
+                claimed.add(new int[] {other.post.getX(), other.post.getZ()});
+            }
+        }
+        int pick = TrapMath.spreadPick(where, claimed.toArray(new int[0][]),
+                random.nextInt(spots.size()));
+        return pick < 0 ? null : spots.get(pick);
+    }
+
+    /** Is this address on this station's round at all, and is anyone loading it? */
+    private static boolean onTheRound(ServerWorld world, Station station, BlockPos spot,
+                                      int reach) {
         return spot != null
-                && spot.getSquaredDistance(station.sign) <= (double) BEAT_REACH * BEAT_REACH;
+                && spot.getSquaredDistance(station.sign) <= (double) reach * reach
+                && world.isChunkLoaded(spot.getX() >> 4, spot.getZ() >> 4);
     }
 
     /** The same question for a shout, which reaches further. See CALL_REACH. */
@@ -1719,7 +1802,9 @@ public final class TrapPolice {
      * houses, counters and vault {@link #worthGuarding} sends the beat to, one
      * rolled per golem, which is what puts them across different parts of town
      * instead of in one heap. The square is then the nearest one to that
-     * address with sky over it.
+     * address with sky over it. At {@link #CALL_REACH}, for {@link #march}'s
+     * reason: a golem stood up inside a copper's walking-home radius starts
+     * its first shift in the half of town that was already covered.
      *
      * Sky is the indoor test because it is the only cheap one that is right.
      * {@code isSkyVisible} is sky light 15, and sky light drops a level per
@@ -1729,7 +1814,7 @@ public final class TrapPolice {
     private static BlockPos street(ServerWorld world, Station station) {
         var random = world.getRandom();
         for (int tries = 0; tries < GOLEM_TRIES; tries++) {
-            BlockPos address = worthGuarding(world, station, random);
+            BlockPos address = worthGuarding(world, station, CALL_REACH, random);
             if (address == null) {
                 // Nothing registered near this nick: a ring round it, on a
                 // fresh bearing each try, for {@link #nextLeg}'s reason.
