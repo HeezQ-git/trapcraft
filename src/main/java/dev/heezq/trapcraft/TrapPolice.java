@@ -1280,19 +1280,57 @@ public final class TrapPolice {
         for (TrapHomes.Home home : TrapHomes.all()) {
             if (home.dimension().equals(here) && home.tenant() != null
                     && onTheRound(world, station, home.anchor(), reach)) {
-                spots.add(home.anchor());
+                register(spots, home.anchor());
             }
         }
         for (TrapShops.Shop shop : TrapShops.shops()) {
             if (shop.dimension.equals(here) && onTheRound(world, station, shop.pos(), reach)) {
-                spots.add(shop.pos());
+                register(spots, shop.pos());
             }
         }
         if (TrapCity.founded() && here.equals(TrapCity.vaultWorld())
                 && onTheRound(world, station, TrapCity.vaultAt(), reach)) {
-            spots.add(TrapCity.vaultAt());
+            register(spots, TrapCity.vaultAt());
         }
         return spots;
+    }
+
+    /**
+     * One address per PLACE, not per line in the register.
+     *
+     * A block of flats is eight homes and one doorstep. The register does not
+     * know that -- it holds one row per tenancy -- so a landlord's stack of
+     * eight rooms five blocks apart reads to {@link #spreadOut} as eight
+     * different parts of town, and the arithmetic obediently sends a third of
+     * the shift to the same door. Measured on the live server twenty minutes
+     * after the round was widened on 2026-09-07: three of six golems walking
+     * in step toward one building, because that building is eight rows.
+     *
+     * {@link #AT_POST} is the threshold because the file has already decided
+     * what it means: it is the distance at which a body counts as having
+     * ARRIVED at an errand. Two addresses inside it are not two errands --
+     * standing at either one finishes both.
+     *
+     * Measured FLAT, and that is not a detail either. A block of flats is
+     * stacked, so its rows differ mostly in height: on the live register six
+     * of them share one x and z and are four blocks apart vertically, which a
+     * round distance keeps as six separate errands to a spot on the ground
+     * that is one doorstep. Height is not coverage -- the same reason
+     * {@link TrapMath#spreadPick} scores in x and z alone.
+     *
+     * ponytail: quadratic in the register, which is a few dozen rows on the
+     * live town and is walked once per leg. If a server ever registers
+     * thousands, bucket by chunk instead of scanning.
+     */
+    private static void register(List<BlockPos> spots, BlockPos spot) {
+        for (BlockPos already : spots) {
+            int dx = already.getX() - spot.getX();
+            int dz = already.getZ() - spot.getZ();
+            if (dx * dx + dz * dz <= AT_POST * AT_POST) {
+                return;
+            }
+        }
+        spots.add(spot);
     }
 
     /** One of them, rolled blind. Used where there is nobody to spread out from. */

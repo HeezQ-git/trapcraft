@@ -244,6 +244,15 @@ class PoliceTest {
         assertTrue(body.contains("CALL_REACH"),
                 "and the round it is handed has to be sized the same way, or the leash "
                         + "is wide and the errands are still all on one side");
+
+        int register = police.indexOf("private static void register(");
+        assertTrue(register > 0, "register() must exist");
+        assertTrue(police.substring(register, police.indexOf("\n    }", register))
+                        .contains("dx * dx + dz * dz <= AT_POST * AT_POST"),
+                "and the register has to be thinned to one address per PLACE: a block "
+                        + "of flats is eight tenancies and one doorstep, and without "
+                        + "this the spread sends a third of the shift to the same door "
+                        + "while believing it covered three parts of town");
     }
 
     /**
