@@ -257,6 +257,7 @@ public class TrapCraftClient implements ClientModInitializer {
         }
 
         WiredLook.tick(player);
+        NodLook.tick(player);
         ArenaLook.tick();
         updateBlur(client);
     }
@@ -331,7 +332,8 @@ public class TrapCraftClient implements ClientModInitializer {
 
     /** Whether anything at all wants the camera. Read by the mixins. */
     public static boolean anyLook() {
-        return intensity > 0.001F || WiredLook.active() || ArenaLook.active();
+        return intensity > 0.001F || WiredLook.active() || NodLook.active()
+                || ArenaLook.active();
     }
 
     /**
@@ -399,7 +401,9 @@ public class TrapCraftClient implements ClientModInitializer {
         // two strains pulling the camera in disagreement.
         float mixed = clash() * 0.45F * MathHelper.sin(p * 1.63F * s.swayRate() + 0.7F);
         return (base + mixed) * s.sway() * swayGain() * strength()
-                + WiredLook.jitterYaw(tickProgress) + ArenaLook.jitterYaw(tickProgress);
+                + WiredLook.jitterYaw(tickProgress)
+                + NodLook.driftYaw(tickProgress)
+                + ArenaLook.jitterYaw(tickProgress);
     }
 
     public static float swayPitch(float tickProgress) {
@@ -408,7 +412,9 @@ public class TrapCraftClient implements ClientModInitializer {
         float base = MathHelper.sin(p * 0.43F * s.swayRate() + 1.3F);
         float mixed = clash() * 0.45F * MathHelper.sin(p * 1.11F * s.swayRate() + 2.9F);
         return (base + mixed) * s.sway() * 0.6F * swayGain() * strength()
-                + WiredLook.jitterPitch(tickProgress) + ArenaLook.jitterPitch(tickProgress);
+                + WiredLook.jitterPitch(tickProgress)
+                + NodLook.driftPitch(tickProgress)
+                + ArenaLook.jitterPitch(tickProgress);
     }
 
     /**
@@ -419,15 +425,18 @@ public class TrapCraftClient implements ClientModInitializer {
      * than something you feel every time you light up.
      */
     public static float swayRoll(float tickProgress) {
+        // Added first and outside the gate: the long line rolls at every
+        // purity, so it must not be hidden behind weed's chaos threshold.
+        float nod = NodLook.roll(tickProgress);
         float c = chaos();
         if (c <= 0.001F) {
-            return 0.0F;
+            return nod;
         }
         HighStyle s = style();
         float p = phaseAt(tickProgress);
         float wave = MathHelper.sin(p * 0.31F * s.swayRate()) * 0.70F
                 + MathHelper.sin(p * 0.17F * s.swayRate() + 2.4F) * 0.30F;
-        return wave * 7.5F * c * (1.0F + 0.6F * clash()) * strength();
+        return wave * 7.5F * c * (1.0F + 0.6F * clash()) * strength() + nod;
     }
 
     /**
@@ -446,7 +455,8 @@ public class TrapCraftClient implements ClientModInitializer {
         // Multiplied, not added: two independent breathes that happen to
         // overlap shouldn't cancel each other out.
         return (1.0F + wave * s.fov() * fovGain() * strength())
-                * WiredLook.fovScale(tickProgress);
+                * WiredLook.fovScale(tickProgress)
+                * NodLook.fovScale(tickProgress);
     }
 
     // --- blur ----------------------------------------------------------------
@@ -461,14 +471,24 @@ public class TrapCraftClient implements ClientModInitializer {
      * on and off as you turned produced black flashes.
      */
     /**
-     * Only one post processor can be live at a time, so Baked and Wired have
-     * to take turns. Baked wins ties because it's the bigger, slower look --
-     * being coked up during a weed high should feel like a texture on top of
-     * it, not replace it. The crash overrides both: it's the whole point of
-     * the coca line and it's over in seconds.
+     * Only one post processor can be live at a time, so the three looks have to
+     * take turns, and the order is the order the drugs sit in everywhere else.
+     *
+     * Nod first: it is the heaviest pipeline in the pack and the line the whole
+     * poppy chain exists to reach, and a player who is nodding is not doing
+     * anything the other two would have been describing. Then the crash, which
+     * is the whole point of the coca line and is over in seconds. Then Baked
+     * over Wired, because being coked up during a weed high should feel like a
+     * texture on top of it rather than replace it.
      */
     private static void updateBlur(MinecraftClient client) {
-        if (WiredLook.crash() > 0.25F) {
+        if (NodLook.active()) {
+            // Outranks all three. Dope outranks the powder everywhere else in
+            // the mod -- price, hook, decay -- and the pipeline is the one
+            // place a player can only be given one of them.
+            setBlur(client, Identifier.of("trapcraft",
+                    "motion_blur_" + NodLook.stem() + "_" + NodLook.band()));
+        } else if (WiredLook.crash() > 0.25F) {
             setBlur(client, Identifier.of("trapcraft",
                     "motion_blur_" + WiredLook.stem() + "_" + WiredLook.band()));
         } else if (strength() > 0.001F) {
@@ -501,6 +521,7 @@ public class TrapCraftClient implements ClientModInitializer {
     private static void render(DrawContext context, RenderTickCounter counter) {
         ArenaLook.render(context, counter.getTickProgress(false));
         WiredLook.render(context, counter.getTickProgress(false));
+        NodLook.render(context, counter.getTickProgress(false));
         float s = strength();
         if (s <= 0.001F) {
             return;

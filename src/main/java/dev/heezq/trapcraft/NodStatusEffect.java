@@ -69,18 +69,44 @@ public class NodStatusEffect extends StatusEffect {
     }
 
     /**
-     * The look of it: a slow warm drift upward rather than smoke.
+     * The look of it from outside, which is the only look a client without the
+     * mod installed ever gets.
      *
      * FALLING_HONEY reads as heavy and unhurried and is the one vanilla
      * particle that looks like something sinking rather than rising, which is
      * the whole feeling being sold. Spawned server-side because a Polymer
      * client never gets randomDisplayTick -- see the mod's notes on that.
+     *
+     * The halo is placed rather than scattered: three to five points on a ring
+     * that turns, so a nodding player has something orbiting them instead of a
+     * cloud. It reads from across a room, which a scatter never does, and it is
+     * the only thing here that scales visibly with purity -- the ring widens
+     * and gains a point per grade, and Dobre and up light it from inside.
+     *
+     * <p>Angle comes off {@link ServerWorld#getTime()} rather than a field on
+     * this class: the ring then agrees for every player watching, needs no
+     * per-entity state, and picks up where it left off across a restart.
      */
     private static void warmth(ServerWorld world, LivingEntity entity, int amplifier) {
         Vec3d head = entity.getEyePos();
+
+        int points = 3 + amplifier;
+        double turn = world.getTime() * 0.06;
+        double radius = 0.55 + 0.12 * amplifier;
+        for (int i = 0; i < points; i++) {
+            double a = turn + i * (Math.PI * 2.0 / points);
+            world.spawnParticles(ParticleTypes.SPORE_BLOSSOM_AIR,
+                    head.x + Math.cos(a) * radius, head.y + 0.1,
+                    head.z + Math.sin(a) * radius, 1, 0.04, 0.12, 0.04, 0.0);
+        }
+
         world.spawnParticles(ParticleTypes.FALLING_HONEY,
                 head.x, head.y + 0.15, head.z, 1 + amplifier, 0.25, 0.2, 0.25, 0.0);
         world.spawnParticles(ParticleTypes.WARPED_SPORE,
                 head.x, head.y, head.z, 2 + amplifier, 0.35, 0.3, 0.35, 0.0);
+        if (amplifier > 0) {
+            world.spawnParticles(ParticleTypes.END_ROD,
+                    head.x, head.y + 0.25, head.z, amplifier, 0.18, 0.22, 0.18, 0.004);
+        }
     }
 }

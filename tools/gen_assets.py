@@ -247,7 +247,12 @@ def post_effects() -> None:
               # long trails would read as the same drug twice.
               "wired": 0.34,
               # The comedown. Trails go long as everything sags.
-              "crash": 0.82}
+              "crash": 0.82,
+              # The long line. The longest trails in the pack and by design --
+              # every band pegs the 0.90 ceiling from band 1 up, so the world
+              # smears behind your head the way it does behind the camera in
+              # every film that has ever shot this.
+              "nod": 0.81}
 
     def blit(source, output):
         return {
@@ -296,7 +301,28 @@ def post_effects() -> None:
                  "wired":    (0.35, 0.10, 2.40, 0.40, 2.60),
                  # Crash: everything slows to a crawl and the world bends
                  # under its own weight.
-                 "crash":    (1.40, 0.90, 0.50, 0.30, 0.18)}
+                 "crash":    (1.40, 0.90, 0.50, 0.30, 0.18),
+                 # Nod: the biggest warp and the biggest twist of anything
+                 # here, on the slowest clock of anything here.
+                 #
+                 # That pairing is the whole design. Blends are the trippiest
+                 # thing the weed line does and they are FAST -- hue racing,
+                 # ripples crawling. Run the same machinery at a quarter of the
+                 # rate and it stops reading as psychedelic and starts reading
+                 # as opiate: the room bends further than a blend can bend it
+                 # and takes eight seconds to finish doing it. Split stays
+                 # modest on purpose -- hard channel separation is Wired's
+                 # signature and is the one thing here that reads as sharp.
+                 #
+                 # Pulse lands at 0.45 rather than lower after working the
+                 # numbers out: the shader's swirl term runs at 0.35 * Pulse
+                 # radians a second, so at 0.30 a band-0 twist would take two
+                 # minutes to complete one cycle -- longer than a Cięte dose
+                 # lasts -- and the whole effect would read as a static lens
+                 # rather than as the room moving. 0.45 puts band 2 on the same
+                 # clock as Kush, the slowest weed there is, while bending the
+                 # world nearly three times further than any of it can.
+                 "nod":      (2.60, 2.90, 1.20, 2.20, 0.45)}
 
     # mirror segments, ghost strength, echo, posterise steps. Single strains
     # get none of it -- these four are what a blend buys you, and they escalate
@@ -308,7 +334,10 @@ def post_effects() -> None:
     # blends push past what the game normally shows; the coca line runs cold
     # and over-saturated, then the crash drains it to almost nothing.
     sat = {"blend2": 1.15, "blend3": 1.30, "blend4": 1.45,
-           "wired": 1.35, "crash": 0.22}
+           "wired": 1.35, "crash": 0.22,
+           # Warm and over-rich, the exact opposite end of the axis from the
+           # crash draining the world grey.
+           "nod": 1.28}
 
     wilds = {"blend2": [(0, 0.0, 0.00, 0), (4, 0.12, 0.10, 0), (4, 0.20, 0.18, 12)],
              "blend3": [(0, 0.0, 0.06, 0), (6, 0.18, 0.16, 14), (6, 0.28, 0.26, 9)],
@@ -316,7 +345,16 @@ def post_effects() -> None:
              # Wired posterises hard at the top -- flat banded colour reads
              # as over-exposed rather than as the liquid blend look.
              "wired":  [(0, 0.0, 0.00, 0), (0, 0.0, 0.00, 16), (0, 0.0, 0.06, 10)],
-             "crash":  [(0, 0.0, 0.10, 0), (0, 0.0, 0.16, 0), (0, 0.0, 0.22, 0)]}
+             "crash":  [(0, 0.0, 0.10, 0), (0, 0.0, 0.16, 0), (0, 0.0, 0.22, 0)],
+             # The one stem that gets all four layers at band 0.
+             #
+             # Everywhere else these are the reward for going to the trouble of
+             # blending, and gating them the same way here would mean Cięte --
+             # the purity a player actually meets first -- looked like nothing
+             # at all, which is exactly the state this stem was added to fix.
+             # By Idealne the echo is past anything a four-way mix can reach
+             # and the world posterises down to a handful of flat bands.
+             "nod":    [(4, 0.12, 0.16, 0), (6, 0.22, 0.28, 0), (8, 0.34, 0.42, 6)]}
 
     for strain, base in blends.items():
       for band, longer in enumerate(bands):

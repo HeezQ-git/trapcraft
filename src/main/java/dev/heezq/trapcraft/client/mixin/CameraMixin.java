@@ -30,9 +30,15 @@ public abstract class CameraMixin {
             return;
         }
         Camera self = (Camera) (Object) this;
+        // Clamped, because the offset is no longer small. Baked sways a couple
+        // of degrees and Wired twitches a tenth of one, but a nod drops the
+        // view a full ten -- and a player already looking straight down would
+        // be pushed past the pole, where the quaternion keeps going and the
+        // world comes back upside down behind them.
         trapcraft$setRotation(
                 self.getYaw() + TrapCraftClient.swayYaw(tickProgress),
-                self.getPitch() + TrapCraftClient.swayPitch(tickProgress));
+                MathHelper.clamp(self.getPitch() + TrapCraftClient.swayPitch(tickProgress),
+                        -90.0F, 90.0F));
 
         // Roll. Camera has no roll of its own -- setRotation builds the
         // quaternion with rotationYXZ(yaw, pitch, 0), that last zero being the
