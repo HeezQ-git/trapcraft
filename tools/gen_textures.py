@@ -4355,6 +4355,361 @@ rRRRRRRoRRRRRr..
 """
 
 
+
+# --- the bandit ----------------------------------------------------------------
+#
+# The casino golem is the slot machine cabinet walking: it wears SLOT_BODY,
+# SLOT_TRIM, SLOT_DECK and the two animated slot strips off the shelf above,
+# so it reads as the machine everybody already knows. What it needs of its
+# own is chrome for the lever and legs, the red knob, a coin to throw and a
+# tray to catch nothing.
+
+BANDIT_PAL = {**SLOT_PAL,
+    "E": "#8a8f9c",   # chrome, shadow
+    "W": "#f4f6fa",   # chrome, hot
+}
+
+BANDIT_CHROME = """
+EEEEEEEEEEEEEEEE
+EeeeeeeeeeeeeeeE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeWWeeeeeeeeeekE
+EeeeeeeeeeeeeeeE
+EEEEEEEEEEEEEkkE
+"""
+
+BANDIT_KNOB = """
+....dddddddd....
+..ddrrrrrrrrdd..
+.drrRRRrrrrrrrd.
+.drRRRRrrrrrrrd.
+drRRRRrrrrrrrrrd
+drRRRrrrrrrrrrrd
+drRRrrrrrrrrrrrd
+drrrrrrrrrrrrrrd
+drrrrrrrrrrrrrrd
+drrrrrrrrrrrrddd
+drrrrrrrrrrrdddd
+.drrrrrrrrrddd..
+.drrrrrrrrddd...
+..ddrrrrrddd....
+....dddddd......
+................
+"""
+
+# A casino chip: gold, white edge stripes, a ring in the middle.
+BANDIT_COIN = """
+....yyyyyyyy....
+..yyYYYYYYYYyy..
+.yYYwwYYYYwwYYy.
+.yYwYYYYYYYYwYy.
+yYYYYYYYYYYYYYYy
+yYwYYYYkkYYYYwYy
+yYwYYYkYYkYYYwYy
+yYYYYYkYYkYYYYYy
+yYYYYYkYYkYYYYYy
+yYwYYYkYYkYYYwYy
+yYwYYYYkkYYYYwYy
+yYYYYYYYYYYYYYYy
+.yYwYYYYYYYYwYy.
+.yYYwwYYYYwwYYy.
+..yyYYYYYYYYyy..
+....yyyyyyyy....
+"""
+
+BANDIT_TRAY = """
+yyyyyyyyyyyyyyyy
+yYYYYYYYYYYYYYYy
+yYooooooooooooYy
+yYokkkkkkkkkkoYy
+yYokkkkkkkkkkoYy
+yYooooooooooooYy
+yYYYYYYYYYYYYYYy
+yyyyyyyyyyyyyyyy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+oooooooooooooooo
+"""
+
+# Stawka: a die. The stake buff is a gamble, and a die is the one picture
+# of a gamble that reads at sixteen pixels.
+STAWKA_ICON = """
+................
+..wwwwwwwwwwww..
+.wwwwwwwwwwwwww.
+.wwccwwwwwwccww.
+.wwccwwwwwwccww.
+.wwwwwwwwwwwwww.
+.wwwwwwccwwwwww.
+.wwwwwwccwwwwww.
+.wwwwwwwwwwwwww.
+.wwccwwwwwwccww.
+.wwccwwwwwwccww.
+.wwwwwwwwwwwwww.
+..wwwwwwwwwwww..
+................
+................
+................
+"""
+
+# --- the rat king ---------------------------------------------------------------
+#
+# Wet fur, a pink tail, red eyes, and a crown that is the only bright thing
+# in a sewer. The small rats of the knot wear the same fur, which is the
+# point of a knot.
+
+RAT_PAL = {
+    "u": "#4a3a2e",   # fur, wet
+    "U": "#6b5645",   # fur
+    "h": "#8a7460",   # fur, lit
+    "n": "#b59a80",   # belly
+    "p": "#d8907c",   # skin
+    "P": "#a8654f",   # skin, shadow
+    "r": "#ff2020",   # eye
+    "R": "#ff8a8a",   # eye, glow
+    "w": "#f0ead8",   # teeth
+    "k": "#100c0a",   # black
+    "y": "#c9992e",   # gold
+    "Y": "#f2d271",   # gold, lit
+    "o": "#8a6a1c",   # gold, shadow
+    "g": "#2fd05a",   # gem
+    "G": "#9dffb8",   # gem, lit
+    "z": "#3f7a3a",   # sewer green, for the plague icon
+    "Z": "#7fd070",
+}
+
+RAT_FUR = """
+uUuuUUuUuuUUuUuu
+UUhUUUUhUUhUUUUU
+uUUUuUUUuUUUUuUU
+UuUUUUhUUUuUhUUU
+UUUhUUUUUUUUUUUu
+uUUUUuUUhUUUUUUU
+UUUUUUUUUUuUUhUU
+UhUUuUUUUUUUUUUU
+UUUUUUUhUUUUuUUU
+uUUhUUUUUUhUUUUU
+UUUUUUuUUUUUUUhU
+UUhUUUUUUUuUUUUU
+uUUUUUhUUUUUUUUU
+UUUUuUUUUhUUUuUU
+UhUUUUUUUUUUUUUu
+uuUuUUuuUUuUuuUu
+"""
+
+RAT_BELLY = """
+UUnnnnnnnnnnnnUU
+UnnnnhnnnnnnnnnU
+nnnnnnnnnnhnnnnn
+nnhnnnnnnnnnnnnn
+nnnnnnnnhnnnnnnn
+nnnnnhnnnnnnnhnn
+nnnnnnnnnnnnnnnn
+nnnhnnnnnnhnnnnn
+nnnnnnnnnnnnnnnn
+nnnnnnhnnnnnnnhn
+nnhnnnnnnnnnnnnn
+nnnnnnnnnhnnnnnn
+nnnnnhnnnnnnnnnn
+nnnnnnnnnnnhnnnn
+UnnnnnnnhnnnnnnU
+UUnnnnnnnnnnnnUU
+"""
+
+RAT_FACE = """
+uUUUUUUUUUUUUUUu
+UUUrRUUUUUURrUUU
+UUrRRrUUUURRrrUU
+UUUrrUUUUUUrrUUU
+UUUUUUUUUUUUUUUU
+UUUUUhUUUUhUUUUU
+UUUUUUhUUhUUUUUU
+UUUUUUUppUUUUUUU
+UUUUUUppppUUUUUU
+UUUUUUkppkUUUUUU
+UUUUUUUkkUUUUUUU
+UUUUUUwUUwUUUUUU
+UUUUUUwUUwUUUUUU
+UUUUUUUUUUUUUUUU
+UUUUUUUUUUUUUUUU
+uUUUUUUUUUUUUUUu
+"""
+
+RAT_EAR = """
+......UUUU......
+....UUppppUU....
+...UppppppppU...
+..UppppppppppU..
+..UppppppppppU..
+.UppppppppppppU.
+.UppppppppppppU.
+.UppppppppppppU.
+.UppppppppppppU.
+..UppppppppppU..
+..UppppppppppU..
+...UppppppppU...
+....UUppppUU....
+......UUUU......
+................
+................
+"""
+
+RAT_TAIL = """
+PppppPPppppPPppp
+pppppPPppppPPppp
+pppppPPppppPPppp
+PppppPPppppPPppp
+"""
+
+RAT_GOLD = """
+oyyyyyyyyyyyyyyo
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYggYYYYggYYYy
+yYYYgGYYYYgGYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+yYYYYYYYYYYYYYYy
+oooooooooooooooo
+"""
+
+# Zaraza: a green cloud with two red eyes in it.
+ZARAZA_ICON = """
+................
+.....zzzzzz.....
+...zzZZZZZZzz...
+..zZZZZZZZZZZz..
+.zZZrrZZZZrrZZz.
+.zZZrrZZZZrrZZz.
+zZZZZZZZZZZZZZZz
+zZZZZZZZZZZZZZZz
+zZZZZZZZZZZZZZZz
+.zZZZZZZZZZZZZz.
+.zzZZZZZZZZZZzz.
+..zzzZZZZZZzzz..
+....zzzzzzzz....
+......z..z......
+.....z....z.....
+................
+"""
+
+# --- the storm -----------------------------------------------------------------
+#
+# Cloud is the one texture in the mod that is nearly white, and the core is
+# the one that is wholly. The arcs are drawn on transparency and flicker by
+# being scaled to nothing between frames, not by animating the picture.
+
+STORM_PAL = {
+    "c": "#eef1f5",   # cloud, lit
+    "C": "#c9d0d9",   # cloud
+    "d": "#9aa3ae",   # cloud, shadow
+    "D": "#5c6470",   # storm cloud
+    "x": "#3a404a",   # storm cloud, shadow
+    "y": "#bff6ff",   # core
+    "W": "#ffffff",   # core, hot
+    "a": "#7be8ff",   # arc
+    "A": "#ffffff",   # arc, hot
+}
+
+STORM_CLOUD = """
+CCcCCCcCCCCcCCCc
+CcccCCcccCCcccCC
+cccCcccccCcccccC
+CccccCccccCccccc
+ccCcccccccccCccc
+CcccccCcccccccCc
+ccccCccccccCcccc
+CCccccccCccccccC
+cccccCccccccCccc
+ccCccccccccccccc
+CcccccccCccccccC
+ccccCccccccccCcc
+CccccccCccccccdC
+cCccccccccCccccC
+CcccCcccccccccCC
+dCCdCCCdCCCCdCCd
+"""
+
+STORM_DARK = """
+DDxDDDxDDDDxDDDx
+DxxxDDxxxDDxxxDD
+xxxDxxxxxDxxxxxD
+DxxxxDxxxxDxxxxx
+xxDxxxxxxxxxDxxx
+DxxxxxDxxxxxxxDx
+xxxxDxxxxxxxDxxx
+DDxxxxxxDxxxxxxD
+xxxxxDxxxxxxDxxx
+xxDxxxxxxxxxxxxx
+DxxxxxxxDxxxxxxD
+xxxxDxxxxxxxxDxx
+DxxxxxxxDxxxxxxD
+xDxxxxxxxxDxxxxD
+DxxxDxxxxxxxxxDD
+DDDDDDDDDDDDDDDD
+"""
+
+STORM_CORE = """
+yyyyyyyyyyyyyyyy
+yyyyyyyWWyyyyyyy
+yyyyyWWWWWWyyyyy
+yyyyWWWWWWWWyyyy
+yyyWWWWWWWWWWyyy
+yyyWWWWWWWWWWyyy
+yyWWWWWWWWWWWWyy
+yWWWWWWWWWWWWWWy
+yWWWWWWWWWWWWWWy
+yyWWWWWWWWWWWWyy
+yyyWWWWWWWWWWyyy
+yyyWWWWWWWWWWyyy
+yyyyWWWWWWWWyyyy
+yyyyyWWWWWWyyyyy
+yyyyyyyWWyyyyyyy
+yyyyyyyyyyyyyyyy
+"""
+
+STORM_ARC = """
+.......aA.......
+......aA........
+......aA........
+.....aA.........
+.....aAA........
+......aAA.......
+.......aAA......
+........aA......
+........aA......
+.......aA.......
+......aA........
+.....aA.........
+.....aA.........
+......aA........
+.......aA.......
+........a.......
+"""
+
+
 def filled(ascii_map: str, background: str) -> str:
     """Replace transparent padding with a painted background character.
 
@@ -4388,6 +4743,14 @@ def render(ascii_map: str, palette: dict[str, str]) -> Image.Image:
             a = int(hexcode[7:9], 16) if len(hexcode) == 9 else 255
             px[x, y] = (r, g, b, a)
     return img
+
+
+
+def render_strip(ascii_map: str, palette: dict[str, str]) -> Image.Image:
+    """A short strip tiled down to a full sprite, for banded textures."""
+    rows = [r for r in ascii_map.strip("\n").split("\n")]
+    tiled = "\n".join((rows * (16 // len(rows) + 1))[:16])
+    return render(tiled, palette)
 
 
 def palette_for(strain: str) -> dict[str, str]:
@@ -4767,6 +5130,26 @@ def main() -> None:
     write(render(WITNESS_SHARD, WITNESS_PAL), "item", "witness_shard.png")
     write(render(GROZA_ICON, WITNESS_PAL), "mob_effect", "groza.png")
     write(render(ADRENALINA_ICON, WITNESS_PAL), "mob_effect", "adrenalina.png")
+
+    print("the other three:")
+    write(render(BANDIT_CHROME, BANDIT_PAL), "item", "bandit_chrome.png")
+    write(render(BANDIT_KNOB, BANDIT_PAL), "item", "bandit_knob.png")
+    write(render(BANDIT_COIN, BANDIT_PAL), "item", "bandit_coin.png")
+    write(render(BANDIT_TRAY, BANDIT_PAL), "item", "bandit_tray.png")
+    write(render(STAWKA_ICON, {**BANDIT_PAL, "c": "#c22730"}), "mob_effect", "stawka.png")
+    write(render(RAT_FUR, RAT_PAL), "item", "rat_fur.png")
+    write(render(RAT_BELLY, RAT_PAL), "item", "rat_belly.png")
+    write(render(RAT_FACE, RAT_PAL), "item", "rat_face.png")
+    write(render(RAT_EAR, RAT_PAL), "item", "rat_ear.png")
+    write(render(RAT_GOLD, RAT_PAL), "item", "rat_gold.png")
+    write(render(ZARAZA_ICON, RAT_PAL), "mob_effect", "zaraza.png")
+    # The tail is a four-row strip; a box wears it stretched, which is what
+    # a segmented tail looks like from a block away.
+    write(render_strip(RAT_TAIL, RAT_PAL), "item", "rat_tail.png")
+    write(render(STORM_CLOUD, STORM_PAL), "item", "storm_cloud.png")
+    write(render(STORM_DARK, STORM_PAL), "item", "storm_dark.png")
+    write(render(STORM_CORE, STORM_PAL), "item", "storm_core.png")
+    write(render(STORM_ARC, STORM_PAL), "item", "storm_arc.png")
 
 
 if __name__ == "__main__":

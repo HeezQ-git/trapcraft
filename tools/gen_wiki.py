@@ -443,6 +443,42 @@ def gather() -> None:
         "eye_range": int(need(r"EYE_RANGE = (\d+)", arena, "EYE_RANGE")),
         "eye_reveal_s": int(need(r"EYE_REVEAL_TICKS = 20 \* (\d+)", arena, "EYE_REVEAL_TICKS")),
         "eye_cooldown_s": int(need(r"EYE_COOLDOWN_TICKS = 20 \* (\d+)", arena, "EYE_COOLDOWN_TICKS")),
+        # Bandyta
+        "lever": int(need(r"LEVER_DAMAGE = (\d+)", arena, "LEVER_DAMAGE")),
+        "chip": int(need(r"CHIP_DAMAGE = (\d+)", arena, "CHIP_DAMAGE")),
+        "chips": int(need(r"CHIPS = (\d+)", arena, "CHIPS")),
+        "roulette": int(need(r"ROULETTE_DAMAGE = (\d+)", arena, "ROULETTE_DAMAGE")),
+        "stake_max": int(need(r"STAKE_MAX = (\d+)", arena, "STAKE_MAX")),
+        "stake_s": int(need(r"STAKE_TICKS = 20 \* (\d+)", arena, "STAKE_TICKS")),
+        "stake_taken": float(need(r"STAKE_TAKEN_PER_STACK = ([\d.]+)F", arena, "STAKE_TAKEN_PER_STACK")),
+        "jackpot_heal": float(need(r"JACKPOT_HEAL = ([\d.]+)F", arena, "JACKPOT_HEAL")),
+        "double_s": int(need(r"DOUBLE_TICKS = 20 \* (\d+)", arena, "DOUBLE_TICKS")),
+        "cash_s": int(need(r"CASH_TICKS = 20 \* (\d+)", arena, "CASH_TICKS")),
+        "cash_emeralds": int(need(r"CASH_EMERALDS = (\d+)", arena, "CASH_EMERALDS")),
+        "cash_taken": float(need(r"CASH_TAKEN = ([\d.]+)F", arena, "CASH_TAKEN")),
+        "lever_spin_s": int(need(r"LEVER_SPIN_TICKS = 20 \* (\d+)", arena, "LEVER_SPIN_TICKS")),
+        "lever_cooldown_min": int(need(r"LEVER_COOLDOWN_TICKS = 20 \* (\d+)", arena, "LEVER_COOLDOWN_TICKS")) // 60,
+        # Król Szczurów
+        "tail": int(need(r"TAIL_DAMAGE = (\d+)", arena, "TAIL_DAMAGE")),
+        "erupt": int(need(r"ERUPT_DAMAGE = (\d+)", arena, "ERUPT_DAMAGE")),
+        "puddle": int(need(r"PUDDLE_DAMAGE = (\d+)", arena, "PUDDLE_DAMAGE")),
+        "plague_max": int(need(r"PLAGUE_MAX = (\d+)", arena, "PLAGUE_MAX")),
+        "rat_health": int(need(r"RAT_HEALTH = (\d+)", arena, "RAT_HEALTH")),
+        "rat_damage": int(need(r"RAT_DAMAGE = (\d+)", arena, "RAT_DAMAGE")),
+        "rat_life_s": int(need(r"RAT_LIFE_TICKS = 20 \* (\d+)", arena, "RAT_LIFE_TICKS")),
+        "rats_max": int(need(r"RATS_MAX = (\d+)", arena, "RATS_MAX")),
+        "rat_bite": float(need(r"RAT_BITE_BONUS = ([\d.]+)F", arena, "RAT_BITE_BONUS")),
+        "crown_blink": int(need(r"CROWN_BLINK = (\d+)", arena, "CROWN_BLINK")),
+        "crown_cooldown_s": int(need(r"CROWN_COOLDOWN_TICKS = 20 \* (\d+)", arena, "CROWN_COOLDOWN_TICKS")),
+        # Sztorm
+        "bolt": int(need(r"BOLT_DAMAGE = (\d+)", arena, "BOLT_DAMAGE")),
+        "rod_range": float(need(r"ROD_RANGE = ([\d.]+)", arena, "ROD_RANGE")),
+        "hail": int(need(r"HAIL_DAMAGE = (\d+)", arena, "HAIL_DAMAGE")),
+        "shock": int(need(r"SHOCK_DAMAGE = (\d+)", arena, "SHOCK_DAMAGE")),
+        "static": int(need(r"STATIC_DAMAGE = (\d+)", arena, "STATIC_DAMAGE")),
+        "twister": int(need(r"TWISTER_DAMAGE = (\d+)", arena, "TWISTER_DAMAGE")),
+        "descend_taken": float(need(r"DESCEND_TAKEN = ([\d.]+)F", arena, "DESCEND_TAKEN")),
+        "heart_cooldown_s": int(need(r"HEART_COOLDOWN_TICKS = 20 \* (\d+)", arena, "HEART_COOLDOWN_TICKS")),
     }
 
     sports = java("TrapSports")
@@ -1902,8 +1938,8 @@ def build() -> str:
          "Poradniki — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania, zakłady"],
         ["<code>/guide zaklady</code>", "Zakłady sportowe: co czytać z telewizora"],
         ["<code>/guide housing</code>", "Domy, klasy i skąd lokatorzy biorą pieniądze"],
-        ["<code>/guide arena</code>", "Obserwator: każdy atak i jak go przeżyć"],
-        ["<code>/arena join</code>", "Wejście na arenę, kiedy Obserwator na niej jest"],
+        ["<code>/guide arena</code>", "Czterech bossów: każdy atak i jak go przeżyć"],
+        ["<code>/arena join</code>", "Wejście na arenę, kiedy boss na niej jest"],
         ["<code>/arena leave</code>", "Powrót dokładnie tam, gdzie byłeś"],
         ["<code>/market</code>", "Dlaczego wszystko kosztuje tyle, ile kosztuje"],
         ["<code>/stalls</code>", "Kto sprzedaje i gdzie"],
@@ -1920,7 +1956,7 @@ def build() -> str:
         ["<code>/sethome · /home · /spawn · /back</code>", "Przemieszczanie się"],
     ]
     a = d["arena"]
-    ability_rows = [
+    witness_rows = [
         ["Fala", "I", f"Unosi się i uderza w ziemię; po arenie idzie krąg za {a['slam']}.",
          "Przeskocz krąg — trafia tylko stojących."],
         ["Oczy", "I", f"Trzy oczy, które cię szukają. Ugryzienie: {a['orb']}.",
@@ -1935,37 +1971,97 @@ def build() -> str:
         ["Uścisk", "III", f"Łapie jednego z was i ściska; po {a['grip_s']} s rzuca za {a['grip_slam']}.",
          f"Reszta zadaje {a['grip_per_player']} × liczba graczy w {a['grip_s']} s."],
     ]
-    sections.append(section("12c", "arena", "Arena", "Obserwator: boss, którego bije cały serwer", f"""
-    <p class="lede">Sylwetka, którą paranoja pokazuje na granicy widoku i która znika, gdy się do
-    niej odwrócisz, ma imię: <strong>Obserwator</strong>. Raz na jakiś czas — przy co najmniej
-    {a['min_players']} osobach online i {a['cooldown_min']} minutach od poprzedniego razu —
-    schodzi z krawędzi mapy na arenę, a na czacie staje klikalne
-    <code>[ WCHODZĘ NA ARENĘ ]</code>. Kliknięcie przenosi cię na arenę w osobnym wymiarze;
-    <code>/arena leave</code> wraca dokładnie tam, gdzie byłeś.</p>
-    <p>Od zwiastuna do walki mijają {a['gather_s'] // 60} minuty. Obserwator ma
+    bandit_rows = [
+        ["Dźwignia", "I", f"Złote linie na podłodze rysują stożek; po chwili ramię idzie w dół za {a['lever']} i odrzuca.",
+         "Zejdź z linii — bok albo plecy."],
+        ["Bębny", "I", f"Prawdziwe losowanie: {a['chips']} żetonów po {a['chip']}, jackpot dla niego "
+         f"(+{round(a['jackpot_heal'] * 100)}% życia), bonus dla was (Adrenalina i leczenie) albo ochrona.",
+         "Żeton można zbić w locie; reszty nie da się odwołać."],
+        ["Ruletka", "II", "Pierścień w podłodze kręci się i zwalnia, kula ma kolor. Na kolorze kuli: +1 Stawka. "
+         f"Na innym: {a['roulette']}.", "Poza pierścieniem nie grasz."],
+        ["Ochrona", "II", "Dwóch ochroniarzy z siekierami (zwykli mściciele).", "Zdejmij ich, zanim zdejmą ciebie."],
+        ["Podwójnie albo nic", "III", f"Kto zadał najwięcej, świeci: przez {a['double_s']} s bije za dwa i dostaje za dwa.",
+         "Albo bij, albo uciekaj. Nie stój."],
+        ["Wypłata", "III", f"Otwiera się na {a['cash_s']} s, stoi i sypie {a['cash_emeralds']} brudnymi szmaragdami.",
+         f"Wtedy dostaje ×{a['cash_taken']}. Bij."],
+    ]
+    rat_rows = [
+        ["Rój", "I", f"Z tuneli wychodzą szczury, więcej co fazę (do {a['rats_max']}): {a['rat_health']} życia, "
+         f"gryzą za {a['rat_damage']} i zarażają, żyją {a['rat_life_s']} s.",
+         f"Ktoś musi się nimi zająć: w trzeciej fazie każdy żywy szczur to +{round(a['rat_bite'] * 100)}% do jego ugryzienia."],
+        ["Ogon", "I", f"Krąg na podłodze wokół niego; po chwili ogon idzie przez cały za {a['tail']}.", "Wyjdź z kręgu."],
+        ["Nora", "II", f"Znika pod podłogą i ryje w twoją stronę — ślad widać; wychodzi pod tobą za {a['erupt']}.",
+         "Biegnij. Dogoni tylko stojącego."],
+        ["Tunel", "II", "Wchodzi w jeden tunel i wychodzi z innego, z czterema szczurami.", "Słuchaj, z którego."],
+        ["Zaraza", "III", f"Pluje kałużami tam, gdzie stoicie; w kałuży {a['puddle']} co sekundę i stopień Zarazy.",
+         "Nie stój w tym; woda w podłodze zmywa."],
+    ]
+    storm_rows = [
+        ["Wiatr", "I", "Cztery sekundy pchania ku krawędzi. Pod platformą nie ma nic, ale brama łapie.",
+         "Stań przy miedzianym słupie; kucanie to pół siły."],
+        ["Piorun", "I", f"Dwoje z was iskrzy; po chwili piorun za {a['bolt']}.",
+         f"Piorunochron w {int(a['rod_range'])} blokach bierze go za ciebie."],
+        ["Zejście", "I", f"Schodzi na podłogę na sześć sekund i dostaje wtedy ×{a['descend_taken']}. "
+         f"Lądowanie: {a['shock']}; przy nim co chwilę iskra za {a['static']}.", "Okno na miecz."],
+        ["Grad", "II", f"Białe kręgi na podłodze, spada kamień: {a['hail']} i mróz.", "Ogniska odmrażają; ruch pomaga."],
+        ["Trąba", "II", f"Słup chmur idzie po podłodze za najbliższym; łapie za {a['twister']}, podnosi i rzuca.",
+         "Wolna. Odejdź."],
+        ["Bryzy", "II", "Dwa podmuchy na 40 sekund — zwykłe bryzy, ale krawędź jest blisko.", "Zdejmij je z daleka; masz łuk."],
+        ["Nawałnica", "III", "Dziesięć sekund wiatru i piorunów naraz.", "Słup: nie wieje i nie bije. Stań i strzelaj."],
+    ]
+    sections.append(section("12c", "arena", "Arena", "czterech bossów, których bije cały serwer", f"""
+    <p class="lede">Raz na jakiś czas — przy co najmniej {a['min_players']} osobach online i
+    {a['cooldown_min']} minutach od poprzedniego razu — na czacie staje zwiastun jednego z czterech
+    bossów i klikalne <code>[ WCHODZĘ NA ARENĘ ]</code>. Kliknięcie przenosi cię na jego arenę w
+    osobnym wymiarze; <code>/arena leave</code> wraca dokładnie tam, gdzie byłeś. Boss jest losowany
+    i nigdy nie wypada dwa razy z rzędu.</p>
+    <p>Od zwiastuna do walki mijają {a['gather_s'] // 60} minuty. Każdy boss ma
     {a['base_health']} życia i {a['health_per_extra']} więcej za każdą osobę ponad pierwszą,
     a żaden cios nie zdejmie mu więcej niż {round(a['hit_cap'] * 100)}% paska. Macie
     {a['fight_min']} minut; potem znika bez łupu. Fazy zmieniają się przy
-    {a['phase_two']}% i {a['phase_three']}%.</p>
-    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], ability_rows)}
+    {a['phase_two']}% i {a['phase_three']}%, każda daje {a['adrenaline_phase_s']} s
+    <strong>Adrenaliny</strong>, wygrana {a['adrenaline_win_min']} minuty.</p>
     <h3 class="sub">Nikt tu nie ginie</h3>
     <p>Cios, który by zabił, jest <strong>nokautem</strong>: {a['knockout_s']} sekund w
-    trybunach z całym ekwipunkiem, ale Obserwator odzyskuje za to
-    {round(a['knockout_heal'] * 100)}% życia. Każde jego trafienie dodaje stopień
-    <strong>Grozy</strong> (do {a['dread_max'] + 1}): najpierw spowalnia, potem ciemnieje,
-    na końcu boli. Groza schodzi, gdy ktoś stoi w {int(a['company'])} blokach od ciebie
-    — ta sama zasada, której uczy paranoja. Każda faza daje {a['adrenaline_phase_s']} s
-    <strong>Adrenaliny</strong>, wygrana {a['adrenaline_win_min']} minuty.</p>
+    trybunach z całym ekwipunkiem, ale boss odzyskuje za to
+    {round(a['knockout_heal'] * 100)}% życia.</p>
+    <h3 class="sub">Obserwator</h3>
+    <p>Sylwetka, którą paranoja pokazuje na granicy widoku i która znika, gdy się do niej odwrócisz,
+    ma imię. Pit pod nocnym niebem. Każde jego trafienie dodaje stopień <strong>Grozy</strong>
+    (do {a['dread_max'] + 1}): najpierw spowalnia, potem ciemnieje, na końcu boli. Groza schodzi,
+    gdy ktoś stoi w {int(a['company'])} blokach od ciebie — ta sama zasada, której uczy paranoja.</p>
+    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], witness_rows)}
+    <h3 class="sub">Bandyta</h3>
+    <p>Automat, który przestał wypłacać i zaczął chodzić — dach kasyna pod neonem, ruletka w
+    podłodze. Każde jego trafienie to stopień <strong>Stawki</strong> (do {a['stake_max'] + 1}),
+    jedynego debuffa, który jest też buffem: ty bijesz mocniej, on ciebie też, o
+    {round(a['stake_taken'] * 100)}% za stopień. Schodzi sama po {a['stake_s']} s.</p>
+    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], bandit_rows)}
+    <h3 class="sub">Król Szczurów</h3>
+    <p>Kanały pod miastem: cysterna z sześcioma tunelami w ścianie i krzyżem wody w podłodze.
+    Ugryzienia i kałuże zostawiają <strong>Zarazę</strong> (do {a['plague_max'] + 1}): głód, potem
+    kręci, potem boli. Woda zmywa stopień na sekundę — i jest w podłodze.</p>
+    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], rat_rows)}
+    <h3 class="sub">Sztorm</h3>
+    <p>Platforma w chmurach bez ścian, sześć piorunochronów na miedzianych słupach, cztery ogniska
+    i most na chmurę dla trybun. Lata — dlatego na wejściu dostajesz <strong>Łuk Sztormowy</strong>
+    (Moc II, Nieskończoność), który wraca do niego na wyjściu.</p>
+    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], storm_rows)}
     <h3 class="sub">Łup</h3>
     <p>Nagroda {a['bounty_base']}e + {a['bounty_per_player']}e za osobę, pół po równo,
     pół za obrażenia. Każdy dostaje <strong>Skrzynkę Widmo</strong>; klucz jest w sklepie.
-    Kto zadał najwięcej, bierze też <strong>Klucz Widmo</strong> i <strong>Oko Obserwatora</strong>
-    — PPM i wszystko żywe w {a['eye_range']} blokach świeci przez {a['eye_reveal_s']} s,
-    tylko dla ciebie, raz na {a['eye_cooldown_s']} s. Z ciała sypie się
+    Kto zadał najwięcej, bierze też <strong>Klucz Widmo</strong> i trofeum tego bossa:
+    <strong>Oko Obserwatora</strong> (PPM i wszystko żywe w {a['eye_range']} blokach świeci przez
+    {a['eye_reveal_s']} s, tylko dla ciebie, raz na {a['eye_cooldown_s']} s),
+    <strong>Złota Dźwignia</strong> (losowy z pięciu efektów na {a['lever_spin_s']} s, raz na
+    {a['lever_cooldown_min']} min), <strong>Korona Szczurów</strong> ({a['crown_blink']} bloków
+    przez ścianę i Szybkość II, raz na {a['crown_cooldown_s']} s) albo <strong>Serce Burzy</strong>
+    (podmuch w górę i powolne opadanie, raz na {a['heart_cooldown_s']} s). Skup żadnego nie bierze;
+    wszystkie cztery naraz to osiągnięcie. Z ciała sypie się
     {a['dirty_base']} + {a['dirty_per_player']} × osoby bloków brudnych szmaragdów i około
     {a['xp']} doświadczenia.</p>
-    <p class="note">Operator: <code>/arena start [sekundy]</code>, <code>stop</code>,
-    <code>tp</code>, <code>build</code>, <code>cast &lt;atak&gt;</code>.</p>"""))
+    <p class="note">Operator: <code>/arena start [boss] [sekundy]</code>, <code>stop</code>,
+    <code>tp &lt;boss&gt;</code>, <code>build &lt;boss&gt;</code>, <code>cast &lt;atak&gt;</code>.</p>"""))
 
     sections.append(section("13", "commands", "Komendy", "każda odpowiada tylko tobie", f"""
     <p class="lede">Każda komenda odpowiada wyłącznie osobie, która ją wpisała, więc nic, co

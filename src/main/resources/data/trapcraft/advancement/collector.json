@@ -1,0 +1,78 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:rat_crown"
+    },
+    "title": "Cztery trofea",
+    "description": "Miej Oko, D\u017awigni\u0119, Koron\u0119 i Serce naraz.",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "trapcraft:witness",
+  "criteria": {
+    "witness_eye": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:witness_eye"
+            ]
+          }
+        ]
+      }
+    },
+    "golden_lever": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:golden_lever"
+            ]
+          }
+        ]
+      }
+    },
+    "rat_crown": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:rat_crown"
+            ]
+          }
+        ]
+      }
+    },
+    "storm_heart": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "trapcraft:storm_heart"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "witness_eye"
+    ],
+    [
+      "golden_lever"
+    ],
+    [
+      "rat_crown"
+    ],
+    [
+      "storm_heart"
+    ]
+  ]
+}

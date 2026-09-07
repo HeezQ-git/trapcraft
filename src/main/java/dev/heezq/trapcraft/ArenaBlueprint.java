@@ -18,40 +18,45 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * The pit, as data.
+ * An arena, as data.
  *
- * {@code tools/gen_arena.py} writes every block of the arena into
- * {@code data/trapcraft/arena/arena.blocks.gz}, one per line, relative to
+ * {@code tools/gen_arena.py} writes every block of each arena into
+ * {@code data/trapcraft/arena/<id>.blocks.gz}, one per line, relative to
  * the origin; this reads it back and stamps it into the world. Built from
  * a blueprint rather than a loop of {@code setBlockState} calls so the
  * preview on the desk and the pit on the server are the same object, and so
  * a pillar can be moved without touching Java.
  *
- * Tagged lines ({@code sigil}, {@code vein}, {@code glow}) are the blocks
- * the fight switches: {@link #tagged} hands them to {@link TrapArena} and
- * {@link #original} remembers what to put back.
+ * Tagged lines are the blocks a fight switches: {@link #tagged} hands them
+ * to the boss and {@link #original} remembers what to put back. Positions
+ * out of here are absolute; the blueprint knows its own origin.
  */
 public final class ArenaBlueprint {
     /** Anything not in the blueprint inside this cylinder is cleared on a build. */
-    private static final int CLEAR_RADIUS = 34;
-    private static final int CLEAR_BELOW = 5;
-    private static final int CLEAR_ABOVE = 26;
+    private static final int CLEAR_RADIUS = 36;
+    private static final int CLEAR_BELOW = 6;
+    private static final int CLEAR_ABOVE = 30;
 
     private record Entry(BlockPos pos, BlockState state, String tag) {
     }
 
+    private final String id;
+    private final BlockPos origin;
     private final List<Entry> entries = new ArrayList<>();
     private final Map<String, List<BlockPos>> tags = new HashMap<>();
     private final Map<BlockPos, BlockState> states = new HashMap<>();
 
-    private ArenaBlueprint() {
+    private ArenaBlueprint(String id, BlockPos origin) {
+        this.id = id;
+        this.origin = origin;
     }
 
-    public static ArenaBlueprint load() {
-        ArenaBlueprint blueprint = new ArenaBlueprint();
-        try (var raw = TrapCraft.class.getResourceAsStream("/data/trapcraft/arena/arena.blocks.gz")) {
+    public static ArenaBlueprint load(String id, BlockPos origin) {
+        ArenaBlueprint blueprint = new ArenaBlueprint(id, origin);
+        String path = "/data/trapcraft/arena/" + id + ".blocks.gz";
+        try (var raw = TrapCraft.class.getResourceAsStream(path)) {
             if (raw == null) {
-                throw new IllegalStateException("arena.blocks.gz missing from the jar");
+                throw new IllegalStateException(path + " missing from the jar");
             }
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     new GZIPInputStream(raw), StandardCharsets.UTF_8));
@@ -69,7 +74,7 @@ public final class ArenaBlueprint {
                     state = BlockArgumentParser.block(Registries.BLOCK, parts[3], false).blockState();
                 } catch (Exception e) {
                     if (bad++ < 5) {
-                        TrapCraft.LOGGER.warn("arena blueprint: cannot parse '{}' ({})", parts[3], e.getMessage());
+                        TrapCraft.LOGGER.warn("arena {}: cannot parse '{}' ({})", id, parts[3], e.getMessage());
                     }
                     continue;
                 }
@@ -81,14 +86,22 @@ public final class ArenaBlueprint {
                 }
             }
             if (bad > 0) {
-                TrapCraft.LOGGER.warn("arena blueprint: {} lines skipped", bad);
+                TrapCraft.LOGGER.warn("arena {}: {} lines skipped", id, bad);
             }
         } catch (Exception e) {
-            TrapCraft.LOGGER.error("arena blueprint unreadable -- the arena will be a void", e);
+            TrapCraft.LOGGER.error("arena {} unreadable -- it will be a void", id, e);
         }
-        TrapCraft.LOGGER.info("arena blueprint: {} blocks, {} tagged", blueprint.entries.size(),
+        TrapCraft.LOGGER.info("arena {}: {} blocks, {} tagged", id, blueprint.entries.size(),
                 blueprint.tags.values().stream().mapToInt(List::size).sum());
         return blueprint;
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public BlockPos origin() {
+        return origin;
     }
 
     public int size() {
@@ -96,14 +109,14 @@ public final class ArenaBlueprint {
     }
 
     /**
-     * Stamp the pit at {@code origin}, clearing whatever else is in the way.
+     * Stamp the arena, clearing whatever else is in the way.
      *
      * The clear pass is what makes a rebuild a reset: a block somebody left
      * on the floor last time is gone, and a pillar somebody chipped is back.
      * No neighbour updates -- nothing here needs them and twenty thousand
      * of them in one tick is a stall for no reason.
      */
-    public void build(ServerWorld world, BlockPos origin) {
+    public void build(ServerWorld world) {
         int flags = Block.NOTIFY_LISTENERS | Block.SKIP_DROPS;
         int chunks = (CLEAR_RADIUS >> 4) + 1;
         for (int cx = -chunks; cx <= chunks; cx++) {
@@ -135,7 +148,7 @@ public final class ArenaBlueprint {
     }
 
     /** World positions of every block carrying {@code tag}. */
-    public List<BlockPos> tagged(String tag, BlockPos origin) {
+    public List<BlockPos> tagged(String tag) {
         List<BlockPos> out = new ArrayList<>();
         for (BlockPos pos : tags.getOrDefault(tag, List.of())) {
             out.add(origin.add(pos));
@@ -144,7 +157,7 @@ public final class ArenaBlueprint {
     }
 
     /** What the blueprint puts at a world position, or air. */
-    public BlockState original(BlockPos world, BlockPos origin) {
+    public BlockState original(BlockPos world) {
         return states.getOrDefault(world.subtract(origin), Blocks.AIR.getDefaultState());
     }
 }

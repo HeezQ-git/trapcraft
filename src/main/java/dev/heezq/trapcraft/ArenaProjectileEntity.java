@@ -22,12 +22,13 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.joml.Matrix4f;
@@ -36,38 +37,54 @@ import xyz.nucleoid.packettweaker.PacketContext;
 import java.util.List;
 
 /**
- * An eye the witness throws.
+ * Something a boss throws.
  *
- * Slow, homing, and the one thing in the fight a player can hit back. To a
- * client it is an {@code interaction} entity -- an invisible box that takes
- * a swing -- wearing an item display of the eye, so punching it works the
- * way punching anything works. A hit turns it cyan and sends it back at the
- * boss for {@link ArenaMath#PARRY_DAMAGE}, which is more than any sword gets
- * through the hit cap: the parry is the best damage in the room, on purpose.
+ * To a client it is an {@code interaction} entity -- an invisible box that
+ * takes a swing -- wearing an item display of whatever the boss threw, so
+ * punching it works the way punching anything works. A {@link Spec} says
+ * how it flies: homing or straight, how fast, how hard it bites, and
+ * whether a hit sends it back at the boss for {@link ArenaMath#PARRY_DAMAGE},
+ * which is more than any sword gets through the hit cap on purpose.
  *
  * Plain Entity rather than a projectile class: the packet handler refuses
  * attacks on {@code PersistentProjectileEntity} outright (it disconnects the
  * player as a cheater), and a thrown-item entity would render the base item.
  */
-public class WitnessEyeEntity extends Entity implements PolymerEntity {
-    public static EntityType<WitnessEyeEntity> TYPE;
-
-    private static final float SPEED = 0.30F;
-    private static final float PARRIED_SPEED = 0.85F;
-    private static final int LIFE_TICKS = 140;
+public class ArenaProjectileEntity extends Entity implements PolymerEntity {
+    public static EntityType<ArenaProjectileEntity> TYPE;
     private static final float SIZE = 0.8F;
-    private static final DustParticleEffect TRAIL = new DustParticleEffect(0x8a4fd8, 1.1F);
+
+    /**
+     * How one flies.
+     *
+     * @param model     the item model to wear, and the one to wear once parried
+     * @param speed     blocks a tick
+     * @param homing    steer toward the target every tick, or fly straight
+     * @param parryable a swing sends it home
+     * @param damage    on a player
+     * @param trail     dust colour behind it
+     * @param life      ticks before it fades
+     * @param bite      the sound on a player
+     */
+    public record Spec(Identifier model, Identifier parriedModel, float speed, boolean homing, boolean parryable,
+                       float damage, int trail, int life, SoundEvent bite) {
+    }
+
+    private static final float PARRIED_SPEED = 0.85F;
     private static final DustParticleEffect TRAIL_PARRIED = new DustParticleEffect(0x34d8ea, 1.3F);
 
-    private WitnessEntity owner;
+    private ArenaBossEntity owner;
     private Entity target;
+    private Spec spec;
+    private Vec3d heading;
     private ServerPlayerEntity parrier;
     private boolean parried;
     private int life;
     private ElementHolder holder;
     private ItemDisplayElement look;
+    private DustParticleEffect trail;
 
-    public WitnessEyeEntity(EntityType<? extends WitnessEyeEntity> type, World world) {
+    public ArenaProjectileEntity(EntityType<? extends ArenaProjectileEntity> type, World world) {
         super(type, world);
         setNoGravity(true);
         noClip = true;
@@ -76,7 +93,7 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
     public static void register() {
         RegistryKey<EntityType<?>> key = RegistryKey.of(RegistryKeys.ENTITY_TYPE, TrapCraft.id("witness_orb"));
         TYPE = Registry.register(Registries.ENTITY_TYPE, key,
-                EntityType.Builder.<WitnessEyeEntity>create(WitnessEyeEntity::new, SpawnGroup.MISC)
+                EntityType.Builder.<ArenaProjectileEntity>create(ArenaProjectileEntity::new, SpawnGroup.MISC)
                         .dimensions(SIZE, SIZE)
                         .disableSaving()
                         .disableSummon()
@@ -88,16 +105,26 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
     }
 
     /** Throw one from {@code from} at {@code target}. */
-    public static WitnessEyeEntity launch(ServerWorld world, WitnessEntity owner, Vec3d from, Entity target) {
-        WitnessEyeEntity orb = new WitnessEyeEntity(TYPE, world);
-        orb.owner = owner;
-        orb.target = target;
-        // An entity's position is its feet; the eye's centre is half a box up.
-        orb.setPosition(from.x, from.y - SIZE / 2.0, from.z);
+    public static ArenaProjectileEntity launch(ServerWorld world, ArenaBossEntity owner, Vec3d from,
+                                               Entity target, Spec spec) {
         Vec3d aim = target.getEyePos().subtract(from).normalize();
-        orb.setVelocity(aim.multiply(SPEED));
-        world.spawnEntity(orb);
-        return orb;
+        return launch(world, owner, from, aim, target, spec);
+    }
+
+    /** Throw one along {@code direction}; the target only matters for homing. */
+    public static ArenaProjectileEntity launch(ServerWorld world, ArenaBossEntity owner, Vec3d from,
+                                               Vec3d direction, Entity target, Spec spec) {
+        ArenaProjectileEntity shot = new ArenaProjectileEntity(TYPE, world);
+        shot.owner = owner;
+        shot.target = target;
+        shot.spec = spec;
+        shot.trail = new DustParticleEffect(spec.trail(), 1.1F);
+        shot.heading = direction.normalize();
+        // An entity's position is its feet; the eye's centre is half a box up.
+        shot.setPosition(from.x, from.y - SIZE / 2.0, from.z);
+        shot.setVelocity(shot.heading.multiply(spec.speed()));
+        world.spawnEntity(shot);
+        return shot;
     }
 
     // --- the disguise -------------------------------------------------------
@@ -125,34 +152,27 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
         if (!(getWorld() instanceof ServerWorld world)) {
             return;
         }
+        if (spec == null) {
+            discard();
+            return;
+        }
         if (holder == null) {
             dress();
         }
         life++;
-        if (life > LIFE_TICKS || owner == null || owner.isRemoved() || TrapArena.stage() != TrapArena.Stage.FIGHT) {
+        if (life > spec.life() || owner == null || owner.isRemoved() || TrapArena.stage() != TrapArena.Stage.FIGHT) {
             pop(world);
             return;
         }
-        if (target == null || !target.isAlive() || (!parried && !TrapArena.isCombatant(target))) {
-            target = parried ? owner : owner.pickTarget();
-            if (target == null) {
-                pop(world);
-                return;
-            }
-        }
-
-        // Steer: blend the current heading toward the target, so it curves
-        // rather than snaps -- a curve is what makes it look for you.
         Vec3d centre = getPos().add(0.0, SIZE / 2.0, 0.0);
-        Vec3d aimAt = parried ? owner.getPos().add(0.0, 2.2, 0.0) : target.getEyePos();
-        Vec3d want = aimAt.subtract(centre).normalize().multiply(parried ? PARRIED_SPEED : SPEED);
-        setVelocity(getVelocity().multiply(0.82).add(want.multiply(0.18)));
-        setPosition(getPos().add(getVelocity()));
-
         if (parried) {
+            Vec3d aimAt = owner.getPos().add(0.0, owner.getHeight() * 0.6, 0.0);
+            Vec3d want = aimAt.subtract(centre).normalize().multiply(PARRIED_SPEED);
+            setVelocity(getVelocity().multiply(0.82).add(want.multiply(0.18)));
+            setPosition(getPos().add(getVelocity()));
             world.spawnParticles(TRAIL_PARRIED, centre.x, centre.y, centre.z, 2, 0.1, 0.1, 0.1, 0.0);
             world.spawnParticles(ParticleTypes.CRIT, centre.x, centre.y, centre.z, 1, 0.1, 0.1, 0.1, 0.02);
-            if (centre.squaredDistanceTo(aimAt) < 1.6 * 1.6) {
+            if (centre.squaredDistanceTo(aimAt) < 1.8 * 1.8) {
                 owner.parried(parrier, this);
                 world.spawnParticles(ParticleTypes.EXPLOSION, centre.x, centre.y, centre.z, 1, 0, 0, 0, 0);
                 discard();
@@ -160,7 +180,22 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
             return;
         }
 
-        world.spawnParticles(TRAIL, centre.x, centre.y, centre.z, 2, 0.12, 0.12, 0.12, 0.0);
+        if (spec.homing()) {
+            if (target == null || !target.isAlive() || !TrapArena.isCombatant(target)) {
+                target = owner.pickTarget();
+                if (target == null) {
+                    pop(world);
+                    return;
+                }
+            }
+            // Steer: blend the current heading toward the target, so it
+            // curves rather than snaps -- a curve is what makes it look for you.
+            Vec3d want = target.getEyePos().subtract(centre).normalize().multiply(spec.speed());
+            setVelocity(getVelocity().multiply(0.82).add(want.multiply(0.18)));
+        }
+        setPosition(getPos().add(getVelocity()));
+
+        world.spawnParticles(trail, centre.x, centre.y, centre.z, 2, 0.12, 0.12, 0.12, 0.0);
         if (life % 3 == 0) {
             world.spawnParticles(ParticleTypes.END_ROD, centre.x, centre.y, centre.z, 1, 0.05, 0.05, 0.05, 0.01);
         }
@@ -169,14 +204,17 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
             bite(world, player);
             return;
         }
-        if (getY() < TrapArena.ORIGIN.getY() - 2 || getY() > TrapArena.ORIGIN.getY() + 30) {
+        ArenaBoss kind = owner.kind();
+        if (getY() < kind.origin().getY() - 2 || getY() > kind.origin().getY() + 30
+                || getPos().squaredDistanceTo(kind.centre()) > (kind.pitRadius() + 6) * (kind.pitRadius() + 6)
+                || (!spec.homing() && !world.getBlockState(getBlockPos()).isAir())) {
             pop(world);
         }
     }
 
     private void dress() {
         holder = new ElementHolder();
-        look = new ItemDisplayElement(WitnessRig.modelStack(TrapCraft.id("witness_orb")));
+        look = new ItemDisplayElement(DisplayRig.modelStack(spec.model()));
         look.setItemDisplayContext(ItemDisplayContext.NONE);
         look.setBrightness(Brightness.FULL);
         look.setInterpolationDuration(2);
@@ -206,12 +244,11 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
     }
 
     private void bite(ServerWorld world, ServerPlayerEntity player) {
-        player.damage(world, world.getDamageSources().mobProjectile(this, owner), ArenaMath.ORB_DAMAGE);
-        TrapArena.dread(player, 1);
+        owner.hurtPlayer(world, player, spec.damage(), world.getDamageSources().mobProjectile(this, owner));
         Vec3d at = player.getEyePos();
-        world.playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_PHANTOM_BITE, SoundCategory.HOSTILE, 1.0F, 0.7F);
+        world.playSound(null, at.x, at.y, at.z, spec.bite(), SoundCategory.HOSTILE, 1.0F, 0.7F);
         world.spawnParticles(ParticleTypes.WITCH, at.x, at.y, at.z, 16, 0.4, 0.4, 0.4, 0.1);
-        TrapNet.flash(player, 0x5a2d9c, 8);
+        TrapNet.flash(player, spec.trail(), 8);
         discard();
     }
 
@@ -226,18 +263,24 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
     /** A swing at it: the client sent an attack, the server routes it here. */
     @Override
     public boolean damage(ServerWorld world, DamageSource source, float amount) {
-        if (parried || !(source.getAttacker() instanceof ServerPlayerEntity player)) {
+        if (parried || spec == null || !(source.getAttacker() instanceof ServerPlayerEntity player)) {
             return false;
+        }
+        Vec3d centre = getPos().add(0.0, SIZE / 2.0, 0.0);
+        if (!spec.parryable()) {
+            // Swatted rather than sent back: it still goes away, which is
+            // something, and the sound says it was a hit.
+            world.playSound(null, centre.x, centre.y, centre.z, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
+                    SoundCategory.PLAYERS, 1.0F, 1.2F);
+            pop(world);
+            return true;
         }
         parried = true;
         parrier = player;
-        target = owner;
         life = 0;
-        look.setItem(WitnessRig.modelStack(TrapCraft.id("witness_orb_cyan")));
+        look.setItem(DisplayRig.modelStack(spec.parriedModel()));
         look.setGlowing(true);
         look.setGlowColorOverride(0x34d8ea);
-
-        Vec3d centre = getPos().add(0.0, SIZE / 2.0, 0.0);
         world.playSound(null, centre.x, centre.y, centre.z, SoundEvents.ITEM_TRIDENT_RETURN,
                 SoundCategory.PLAYERS, 1.0F, 1.4F);
         world.playSound(null, centre.x, centre.y, centre.z, SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
@@ -288,10 +331,5 @@ public class WitnessEyeEntity extends Entity implements PolymerEntity {
 
     @Override
     protected void writeCustomData(WriteView view) {
-    }
-
-    /** For the boss: how far along its life, 0..1, so a late orb reads as fading. */
-    public float age() {
-        return MathHelper.clamp(life / (float) LIFE_TICKS, 0.0F, 1.0F);
     }
 }

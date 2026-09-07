@@ -1,0 +1,76 @@
+{
+  "textures": {
+    "tail": "trapcraft:item/rat_tail",
+    "particle": "trapcraft:item/rat_tail"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        7,
+        8
+      ],
+      "to": [
+        9,
+        9,
+        18
+      ],
+      "faces": {
+        "north": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#tail",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

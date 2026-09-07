@@ -1,0 +1,40 @@
+{
+  "textures": {
+    "arc": "trapcraft:item/storm_arc",
+    "particle": "trapcraft:item/storm_arc"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        7.9
+      ],
+      "to": [
+        14,
+        16,
+        8.1
+      ],
+      "faces": {
+        "north": {
+          "texture": "#arc",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#arc",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

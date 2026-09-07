@@ -2409,14 +2409,14 @@ public final class TrapGuide {
                 .append(title("ARENA"))
                 .append(Text.literal("\nporadnik walki\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("1 Wezwanie  2 Boss\n3 Ataki     4 Groza\n"
-                        + "5 Łup       6 Komendy\n"))
+                .append(body("1 Wezwanie  2 Boss\n3 Obserwator\n4 Bandyta\n"
+                        + "5 Król Szczurów\n6 Sztorm\n7 Łup       8 Komendy\n"))
                 .append(hint("Nikt tu nie ginie. Ale nie każdy wraca z łupem."))));
 
         pages.add(page(Text.empty()
                 .append(title("1. WEZWANIE\n\n"))
                 .append(body("Raz na jakiś czas, gdy jest was co najmniej "
-                        + ArenaMath.MIN_PLAYERS + ", na czacie staje Obserwator.\n\n"))
+                        + ArenaMath.MIN_PLAYERS + ", na czacie staje jeden z czterech.\n\n"))
                 .append(body("Kliknij "))
                 .append(item("[ WCHODZĘ ]"))
                 .append(body(" albo wpisz /arena join.\n\n"))
@@ -2430,8 +2430,8 @@ public final class TrapGuide {
                 .append(hint("Wejść można też w trakcie walki."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. OBSERWATOR\n\n"))
-                .append(body("Sylwetka z granicy widoku. Dziś nie zniknie, gdy na nią spojrzysz.\n\n"))
+                .append(title("2. BOSS\n\n"))
+                .append(body("Czterech, każdy na własnej arenie. Losowany; nigdy ten sam dwa razy z rzędu.\n\n"))
                 .append(body("Życie: " + ArenaMath.BASE_HEALTH + " i po "
                         + ArenaMath.HEALTH_PER_EXTRA + " za każdą osobę ponad pierwszą.\n\n"))
                 .append(warn("Macie " + ArenaMath.FIGHT_TICKS / 20 / 60 + " minut."))));
@@ -2440,13 +2440,29 @@ public final class TrapGuide {
                 .append(title("2b. NOKAUT\n\n"))
                 .append(body("Zamiast śmierci: " + ArenaMath.KNOCKOUT_TICKS / 20
                         + " s w trybunach, z całym ekwipunkiem.\n\n"))
-                .append(body("Obserwator odzyskuje za to "
+                .append(body("Boss odzyskuje za to "
                         + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "% życia.\n\n"))
                 .append(hint("Jeden cios nie zdejmie więcej niż "
                         + Math.round(ArenaMath.HIT_CAP * 100) + "% paska."))));
 
         pages.add(page(Text.empty()
-                .append(title("3. FALA\n\n"))
+                .append(title("2c. ADRENALINA\n\n"))
+                .append(body("Za każdą fazę " + ArenaMath.ADRENALINE_PHASE_TICKS / 20
+                        + " s, za wygraną " + ArenaMath.ADRENALINE_WIN_TICKS / 20 / 60
+                        + " min.\n\n"))
+                .append(body("Szybciej, mocniej i wolno leczy.\n\n"))
+                .append(hint("Fazy: " + ArenaMath.PHASE_TWO_AT + "% i "
+                        + ArenaMath.PHASE_THREE_AT + "% paska."))));
+
+        // --- Obserwator ---------------------------------------------------------
+        pages.add(page(Text.empty()
+                .append(title("3. OBSERWATOR\n\n"))
+                .append(body("Sylwetka z granicy widoku. Dziś nie zniknie, gdy na nią spojrzysz.\n\n"))
+                .append(body("Pit pod nocnym niebem. Jego waluta: Groza.\n\n"))
+                .append(hint("Trofeum: Oko Obserwatora."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3a. FALA\n\n"))
                 .append(body("Unosi się, uderza w ziemię, a po arenie idzie krąg.\n\n"))
                 .append(body("Trafia tylko stojących: " + ArenaMath.SLAM_DAMAGE
                         + " obrażeń.\n\n"))
@@ -2487,22 +2503,154 @@ public final class TrapGuide {
                 .append(hint("W trzeciej fazie gasną też światła."))));
 
         pages.add(page(Text.empty()
-                .append(title("4. GROZA\n\n"))
+                .append(title("3g. GROZA\n\n"))
                 .append(body("Każdy jego cios to jeden stopień. Do "
                         + (ArenaMath.DREAD_MAX + 1) + ".\n\n"))
                 .append(body("Spowalnia, potem ciemnieje, na końcu boli.\n\n"))
                 .append(item("Schodzi, gdy ktoś stoi w "
                         + (int) ArenaMath.COMPANY_RANGE + " blokach od ciebie."))));
 
+        // --- Bandyta ---------------------------------------------------------------
         pages.add(page(Text.empty()
-                .append(title("4b. ADRENALINA\n\n"))
-                .append(body("Za każdą fazę " + ArenaMath.ADRENALINE_PHASE_TICKS / 20
-                        + " s, za wygraną " + ArenaMath.ADRENALINE_WIN_TICKS / 20 / 60
-                        + " min.\n\n"))
-                .append(body("Szybciej, mocniej i wolno leczy."))));
+                .append(title("4. BANDYTA\n\n"))
+                .append(body("Automat, który przestał wypłacać i zaczął chodzić. Dach kasyna, neon.\n\n"))
+                .append(body("Jego waluta: Stawka.\n\n"))
+                .append(hint("Trofeum: Złota Dźwignia."))));
 
         pages.add(page(Text.empty()
-                .append(title("5. ŁUP\n\n"))
+                .append(title("4a. DŹWIGNIA\n\n"))
+                .append(body("Złote linie na podłodze przed nim: stożek. Po chwili ramię idzie w dół za "
+                        + ArenaMath.LEVER_DAMAGE + ".\n\n"))
+                .append(item("Zejdź z linii. Bok albo plecy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. BĘBNY\n\n"))
+                .append(body("Kręci. Cztery wyniki: żetony (" + ArenaMath.CHIPS + " po "
+                        + ArenaMath.CHIP_DAMAGE + "), jackpot dla niego (+"
+                        + Math.round(ArenaMath.JACKPOT_HEAL * 100) + "%), bonus dla was, ochrona.\n\n"))
+                .append(item("Żeton można zbić w locie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4c. RULETKA\n\n"))
+                .append(body("Od drugiej fazy. Pierścień w podłodze się kręci, kula ma kolor.\n\n"))
+                .append(body("Stoisz na kolorze kuli: +1 Stawka. Na innym: "
+                        + ArenaMath.ROULETTE_DAMAGE + ".\n\n"))
+                .append(item("Poza pierścieniem nie grasz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4d. OCHRONA\n\n"))
+                .append(body("Od drugiej fazy. Dwóch ochroniarzy z siekierami.\n\n"))
+                .append(item("Zwykłe moby. Zdejmij ich, zanim zdejmą ciebie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4e. PODWÓJNIE\n\n"))
+                .append(body("Trzecia faza. Kto zadał najwięcej, świeci: przez "
+                        + ArenaMath.DOUBLE_TICKS / 20 + " s bije za dwa i dostaje za dwa.\n\n"))
+                .append(item("Albo bij, albo uciekaj. Nie stój."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4f. WYPŁATA\n\n"))
+                .append(body("Trzecia faza. Otwiera się na " + ArenaMath.CASH_TICKS / 20
+                        + " s, stoi i sypie brudnymi szmaragdami.\n\n"))
+                .append(item("Wtedy dostaje ×" + ArenaMath.CASH_TAKEN + ". Bij."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4g. STAWKA\n\n"))
+                .append(body("Każdy jego cios to stopień, do " + (ArenaMath.STAKE_MAX + 1) + ".\n\n"))
+                .append(body("Ty bijesz mocniej, on ciebie też: +"
+                        + Math.round(ArenaMath.STAKE_TAKEN_PER_STACK * 100) + "% za stopień.\n\n"))
+                .append(hint("Schodzi sama po " + ArenaMath.STAKE_TICKS / 20 + " s."))));
+
+        // --- Król Szczurów -----------------------------------------------------------
+        pages.add(page(Text.empty()
+                .append(title("5. KRÓL SZCZURÓW\n\n"))
+                .append(body("Kanały pod miastem. Sześć tuneli w ścianie, woda w podłodze.\n\n"))
+                .append(body("Jego waluta: Zaraza.\n\n"))
+                .append(hint("Trofeum: Korona Szczurów."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5a. RÓJ\n\n"))
+                .append(body("Z tuneli wychodzą szczury, więcej co fazę. "
+                        + ArenaMath.RAT_HEALTH + " życia, gryzą za " + ArenaMath.RAT_DAMAGE + ".\n\n"))
+                .append(item("Ktoś musi się nimi zająć. W trzeciej fazie każdy żywy szczur to mocniejszy król."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. OGON\n\n"))
+                .append(body("Krąg na podłodze wokół niego. Po chwili ogon idzie przez cały: "
+                        + ArenaMath.TAIL_DAMAGE + ".\n\n"))
+                .append(item("Wyjdź z kręgu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. NORA\n\n"))
+                .append(body("Od drugiej fazy. Znika pod podłogą i ryje w twoją stronę. Ślad widać.\n\n"))
+                .append(body("Wychodzi pod tobą za " + ArenaMath.ERUPT_DAMAGE + ".\n\n"))
+                .append(item("Biegnij. Dogoni tylko stojącego."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5d. TUNEL\n\n"))
+                .append(body("Od drugiej fazy. Wchodzi w jeden tunel, wychodzi z innego. Z towarzystwem.\n\n"))
+                .append(item("Słuchaj, z którego."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5e. ZARAZA\n\n"))
+                .append(body("Trzecia faza: kałuże tam, gdzie stoisz. W kałuży "
+                        + ArenaMath.PUDDLE_DAMAGE + " co sekundę.\n\n"))
+                .append(body("Stopnie do " + (ArenaMath.PLAGUE_MAX + 1)
+                        + ": głód, kręci, boli.\n\n"))
+                .append(item("Woda w podłodze zmywa stopień na sekundę."))));
+
+        // --- Sztorm -----------------------------------------------------------------------
+        pages.add(page(Text.empty()
+                .append(title("6. SZTORM\n\n"))
+                .append(body("Platforma w chmurach, bez ścian. Piorunochrony na miedzi, ogniska.\n\n"))
+                .append(body("Lata. Łuk dostajesz na wejściu.\n\n"))
+                .append(hint("Trofeum: Serce Burzy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6a. WIATR\n\n"))
+                .append(body("Cztery sekundy pchania ku krawędzi. Pod areną nie ma nic, ale brama łapie.\n\n"))
+                .append(item("Stań przy miedzianym słupie. Kucanie: pół siły."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6b. PIORUN\n\n"))
+                .append(body("Dwoje z was iskrzy. Po chwili piorun za " + ArenaMath.BOLT_DAMAGE + ".\n\n"))
+                .append(item("Piorunochron w " + (int) ArenaMath.ROD_RANGE
+                        + " blokach bierze go za ciebie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6c. ZEJŚCIE\n\n"))
+                .append(body("Schodzi na podłogę na sześć sekund: wtedy dostaje ×"
+                        + ArenaMath.DESCEND_TAKEN + ".\n\n"))
+                .append(body("Lądowanie: " + ArenaMath.SHOCK_DAMAGE
+                        + ". Przy nim co chwilę iskra za " + ArenaMath.STATIC_DAMAGE + ".\n\n"))
+                .append(item("Okno na miecz."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6d. GRAD\n\n"))
+                .append(body("Od drugiej fazy. Białe kręgi, spada kamień: "
+                        + ArenaMath.HAIL_DAMAGE + " i mróz.\n\n"))
+                .append(item("Ogniska odmrażają. Ruch też pomaga."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6e. TRĄBA\n\n"))
+                .append(body("Od drugiej fazy. Słup chmur idzie po podłodze za najbliższym.\n\n"))
+                .append(body("Łapie za " + ArenaMath.TWISTER_DAMAGE
+                        + ", podnosi i rzuca.\n\n"))
+                .append(item("Wolna. Odejdź."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6f. BRYZY\n\n"))
+                .append(body("Od drugiej fazy. Dwa podmuchy na 40 s. Zwykłe bryzy, ale krawędź jest blisko.\n\n"))
+                .append(item("Zdejmij je z daleka. Masz łuk."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6g. NAWAŁNICA\n\n"))
+                .append(body("Trzecia faza. Dziesięć sekund wiatru i piorunów naraz.\n\n"))
+                .append(item("Słup: nie wieje i nie bije. Stań i strzelaj."))));
+
+        // --- Łup ---------------------------------------------------------------------------
+        pages.add(page(Text.empty()
+                .append(title("7. ŁUP\n\n"))
                 .append(body("Nagroda: " + ArenaMath.BOUNTY_BASE + "e + "
                         + ArenaMath.BOUNTY_PER_PLAYER + "e za osobę. Pół po równo, pół za obrażenia.\n\n"))
                 .append(body("Każdy dostaje "))
@@ -2510,25 +2658,31 @@ public final class TrapGuide {
                 .append(body(". Klucz jest w sklepie."))));
 
         pages.add(page(Text.empty()
-                .append(title("5b. NAJLEPSZY\n\n"))
+                .append(title("7b. NAJLEPSZY\n\n"))
                 .append(body("Kto zadał najwięcej, bierze "))
                 .append(item("Klucz Widmo"))
-                .append(body(" i "))
-                .append(item("Oko Obserwatora"))
-                .append(body(".\n\nOko: PPM i wszystko żywe w " + ArenaMath.EYE_RANGE
-                        + " blokach świeci tylko dla ciebie."))));
+                .append(body(" i trofeum tego bossa.\n\n"))
+                .append(body("Oko: wszystko żywe w " + ArenaMath.EYE_RANGE
+                        + " blokach świeci dla ciebie.\nDźwignia: losowy efekt na "
+                        + ArenaMath.LEVER_SPIN_TICKS / 20 + " s."))));
 
         pages.add(page(Text.empty()
-                .append(title("5c. FONTANNA\n\n"))
+                .append(title("7c. TROFEA\n\n"))
+                .append(body("Korona: " + ArenaMath.CROWN_BLINK
+                        + " bloków przez ścianę i Szybkość II.\n\nSerce: podmuch w górę, powolne opadanie.\n\n"))
+                .append(hint("Cztery naraz to osiągnięcie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("7d. FONTANNA\n\n"))
                 .append(body("Z ciała sypią się brudne szmaragdy: "
                         + ArenaMath.DIRTY_BASE + " + " + ArenaMath.DIRTY_PER_PLAYER
                         + " za osobę.\n\n"))
                 .append(body("Kto pierwszy, ten pierze."))));
 
         pages.add(page(Text.empty()
-                .append(title("6. KOMENDY\n\n"))
+                .append(title("8. KOMENDY\n\n"))
                 .append(body("/arena join\n/arena leave\n\n"))
-                .append(hint("Operator: /arena start, stop, tp, build, cast."))));
+                .append(hint("Operator: /arena start [boss], stop, tp, build, cast."))));
 
         return book("Arena", pages);
     }
