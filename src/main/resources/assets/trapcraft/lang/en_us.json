@@ -47,7 +47,7 @@
   "effect.trapcraft.wired": "Nakr\u0119cony",
   "effect.trapcraft.withdrawal": "Odstawienie",
   "entity.minecraft.villager.trapcraft.dealer": "Diler",
-  "entity.trapcraft.witness": "\u015awiadek",
+  "entity.trapcraft.witness": "Obserwator",
   "entity.trapcraft.witness_orb": "Oko",
   "item.trapcraft.acetylator": "Acetylator",
   "item.trapcraft.blackjack": "Blackjack",
@@ -134,5 +134,5 @@
   "item.trapcraft.toss": "Rzut monet\u0105",
   "item.trapcraft.wallet": "Portfel",
   "item.trapcraft.wash_pot": "Garnek do gotowania",
-  "item.trapcraft.witness_eye": "Oko \u015awiadka"
+  "item.trapcraft.witness_eye": "Oko Obserwatora"
 }

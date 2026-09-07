@@ -1,5 +1,11 @@
 # Arena boss event: Świadek — design
 
+> Renamed the same night: HeezQ found the courtroom angle (a witness who
+> testifies) cringe. The boss is now **Obserwator** — the watcher from the edge
+> of render distance — and every player-facing line was rewritten around
+> "it watches, it never blinks, close its eye". Internal ids (`witness`,
+> `witness_eye`) stayed.
+
 Written 2026-09-07. HeezQ asked for a periodic server event: a chat line saying
 a boss has appeared on an arena, a clickable part that teleports the player to
 that arena (its own dimension, built by the mod), a polished boss with a real

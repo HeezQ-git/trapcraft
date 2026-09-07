@@ -4,7 +4,7 @@
       "id": "trapcraft:witness_eye"
     },
     "title": "Odbite",
-    "description": "Odbij oko \u015awiadka z powrotem w niego.",
+    "description": "Odbij oko Obserwatora z powrotem w niego.",
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

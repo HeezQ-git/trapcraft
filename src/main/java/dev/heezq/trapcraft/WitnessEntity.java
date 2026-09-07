@@ -49,7 +49,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Świadek. The witness.
+ * Obserwator. The watcher.
  *
  * A real hostile mob, so every sword, arrow, crit and enchantment in the
  * pack works on it the way it works on a zombie; disguised to clients as a
@@ -330,7 +330,7 @@ public class WitnessEntity extends HostileEntity implements PolymerEntity {
             return false;
         }
         if (TrapArena.isKnockedOut(player)) {
-            player.sendMessage(Text.literal("Jesteś w nokaucie. Świadek cię nie widzi.")
+            player.sendMessage(Text.literal("Jesteś w nokaucie. Obserwator cię nie widzi.")
                     .formatted(Formatting.RED), true);
             return false;
         }

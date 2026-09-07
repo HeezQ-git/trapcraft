@@ -25,7 +25,7 @@ public final class ArenaMath {
     public static final int COOLDOWN_SECONDS = 90 * 60;
     /** The gathering window: from the omen to the boss rising. */
     public static final int GATHER_TICKS = 20 * 120;
-    /** The fight's clock. Past it the witness testifies and leaves. */
+    /** The fight's clock. Past it the watcher leaves without a word. */
     public static final int FIGHT_TICKS = 20 * 60 * 10;
     /** How long a knocked-out player sits in the stands. */
     public static final int KNOCKOUT_TICKS = 20 * 20;

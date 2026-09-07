@@ -3,8 +3,8 @@
     "icon": {
       "id": "trapcraft:witness_eye"
     },
-    "title": "Zamkni\u0119ty",
-    "description": "B\u0105d\u017a na arenie, kiedy \u015awiadek pada.",
+    "title": "Oko zamkni\u0119te",
+    "description": "B\u0105d\u017a na arenie, kiedy Obserwator pada.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

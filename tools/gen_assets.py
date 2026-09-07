@@ -532,10 +532,10 @@ def lang() -> None:
         "effect.trapcraft.withdrawal": "Odstawienie",
         "entity.minecraft.villager.trapcraft.dealer": "Diler",
         # The arena.
-        "item.trapcraft.witness_eye": "Oko Świadka",
+        "item.trapcraft.witness_eye": "Oko Obserwatora",
         "effect.trapcraft.groza": "Groza",
         "effect.trapcraft.adrenalina": "Adrenalina",
-        "entity.trapcraft.witness": "Świadek",
+        "entity.trapcraft.witness": "Obserwator",
         "entity.trapcraft.witness_orb": "Oko",
     }
     for strain, nice in STRAINS.items():
@@ -2164,13 +2164,13 @@ def advancements() -> None:
           "minecraft:barrier", "raided", frame="challenge")
 
     # The arena. All four are moments, so they are granted from TrapArena.
-    award("witness", "Zamknięty", "Bądź na arenie, kiedy Świadek pada.",
+    award("witness", "Oko zamknięte", "Bądź na arenie, kiedy Obserwator pada.",
           f"{NS}:witness_eye", "root", frame="challenge")
-    award("parry", "Odbite", "Odbij oko Świadka z powrotem w niego.",
+    award("parry", "Odbite", "Odbij oko Obserwatora z powrotem w niego.",
           f"{NS}:witness_eye", "witness")
     award("stare", "Nie patrzyłem", "Przetrwaj Spojrzenie, nie patrząc mu w oko.",
           f"{NS}:witness_eye", "witness")
-    award("unbroken", "Bez szwanku", "Pokonaj Świadka bez ani jednego nokautu.",
+    award("unbroken", "Bez szwanku", "Pokonaj Obserwatora bez ani jednego nokautu.",
           f"{NS}:witness_eye", "witness", frame="challenge")
 
 

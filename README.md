@@ -336,9 +336,9 @@ did not happen.
 ## The arena
 
 Every so often, with at least two people online and ninety minutes since the
-last one, an omen goes out to the whole server: **Świadek** -- the witness,
-the figure Paranoia shows you at render distance, which was never a pillager
--- has stepped out of the shadows and is going to testify. A clickable line
+last one, an omen goes out to the whole server: **Obserwator** -- the watcher, the
+figure Paranoia shows you at render distance, the one that vanishes when you
+turn to look -- has come down off the edge of the map, and this time it stays. A clickable line
 teleports you to an arena in its own dimension (`trapcraft:arena`, a void
 under a fixed midnight sky), and two minutes later it rises out of the floor.
 
@@ -359,14 +359,14 @@ and stamped fresh for every event, so it self-heals.
 | Uścisk -- one of you in its hand | III | the rest deal 12 × players in 5 s |
 
 Nobody dies: a killing blow is a **knockout** -- twenty seconds in the stands
-with everything you had, and the boss heals 8%. Ten minutes and it testifies.
+with everything you had, and the boss heals 8%. Ten minutes and it leaves.
 Every hit it lands adds a stack of **Groza** (slow, then dark, then bleeding),
 which fades while another player stands within four blocks -- Paranoia's
 company rule again. Phase breaks and the kill hand out **Adrenalina**.
 
 Loot: a bounty split half evenly, half by damage, paid through
 `TrapMarket.pay`; a Phantom case each (the key is on the shelf, which is the
-sink); the top damage takes a Phantom key and **Oko Świadka**, a trophy whose
+sink); the top damage takes a Phantom key and **Oko Obserwatora**, a trophy whose
 right-click makes everything within 40 blocks glow for you alone. A fountain
 of dirty emerald blocks and ~1200 XP round it off, with an eight-second
 firework show. Numbers live in `ArenaMath`, which `ArenaMathTest` pins;

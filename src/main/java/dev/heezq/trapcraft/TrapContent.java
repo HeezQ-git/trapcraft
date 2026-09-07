@@ -152,7 +152,7 @@ public final class TrapContent {
     /** The arena's two: the boss's debuff and the winners' buff. See TrapArena. */
     public static RegistryEntry<StatusEffect> dreadEffect;
     public static RegistryEntry<StatusEffect> adrenalineEffect;
-    /** Oko Świadka, the trophy off the arena boss. */
+    /** Oko Obserwatora, the trophy off the arena boss. */
     public static Item witnessEye;
 
     public static Block crop(Strain s) {

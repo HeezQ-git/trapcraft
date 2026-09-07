@@ -119,7 +119,7 @@ public final class WitnessRig extends ElementHolder {
                 addElement(eye);
             }
         }
-        nameplate = new TextDisplayElement(Text.literal("ŚWIADEK")
+        nameplate = new TextDisplayElement(Text.literal("OBSERWATOR")
                 .formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
         nameplate.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
         nameplate.setBackground(0);

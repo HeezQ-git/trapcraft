@@ -1902,8 +1902,8 @@ def build() -> str:
          "Poradniki — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania, zakłady"],
         ["<code>/guide zaklady</code>", "Zakłady sportowe: co czytać z telewizora"],
         ["<code>/guide housing</code>", "Domy, klasy i skąd lokatorzy biorą pieniądze"],
-        ["<code>/guide arena</code>", "Świadek: każdy atak i jak go przeżyć"],
-        ["<code>/arena join</code>", "Wejście na arenę, kiedy Świadek na niej stoi"],
+        ["<code>/guide arena</code>", "Obserwator: każdy atak i jak go przeżyć"],
+        ["<code>/arena join</code>", "Wejście na arenę, kiedy Obserwator na niej jest"],
         ["<code>/arena leave</code>", "Powrót dokładnie tam, gdzie byłeś"],
         ["<code>/market</code>", "Dlaczego wszystko kosztuje tyle, ile kosztuje"],
         ["<code>/stalls</code>", "Kto sprzedaje i gdzie"],
@@ -1935,22 +1935,22 @@ def build() -> str:
         ["Uścisk", "III", f"Łapie jednego z was i ściska; po {a['grip_s']} s rzuca za {a['grip_slam']}.",
          f"Reszta zadaje {a['grip_per_player']} × liczba graczy w {a['grip_s']} s."],
     ]
-    sections.append(section("12c", "arena", "Arena", "Świadek: boss, którego bije cały serwer", f"""
-    <p class="lede">Postać, którą paranoja pokazuje na granicy widoku, nigdy nie była
-    pillagerem. Nazywa się <strong>Świadek</strong>, widziała wszystko, zna każdy adres i zamierza
-    zeznawać. Raz na jakiś czas — przy co najmniej {a['min_players']} osobach online i
-    {a['cooldown_min']} minutach od poprzedniego razu — staje na czacie z klikalnym
+    sections.append(section("12c", "arena", "Arena", "Obserwator: boss, którego bije cały serwer", f"""
+    <p class="lede">Sylwetka, którą paranoja pokazuje na granicy widoku i która znika, gdy się do
+    niej odwrócisz, ma imię: <strong>Obserwator</strong>. Raz na jakiś czas — przy co najmniej
+    {a['min_players']} osobach online i {a['cooldown_min']} minutach od poprzedniego razu —
+    schodzi z krawędzi mapy na arenę, a na czacie staje klikalne
     <code>[ WCHODZĘ NA ARENĘ ]</code>. Kliknięcie przenosi cię na arenę w osobnym wymiarze;
     <code>/arena leave</code> wraca dokładnie tam, gdzie byłeś.</p>
-    <p>Od zwiastuna do walki mijają {a['gather_s'] // 60} minuty. Świadek ma
+    <p>Od zwiastuna do walki mijają {a['gather_s'] // 60} minuty. Obserwator ma
     {a['base_health']} życia i {a['health_per_extra']} więcej za każdą osobę ponad pierwszą,
     a żaden cios nie zdejmie mu więcej niż {round(a['hit_cap'] * 100)}% paska. Macie
-    {a['fight_min']} minut; potem zeznaje i znika bez łupu. Fazy zmieniają się przy
+    {a['fight_min']} minut; potem znika bez łupu. Fazy zmieniają się przy
     {a['phase_two']}% i {a['phase_three']}%.</p>
     {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], ability_rows)}
     <h3 class="sub">Nikt tu nie ginie</h3>
     <p>Cios, który by zabił, jest <strong>nokautem</strong>: {a['knockout_s']} sekund w
-    trybunach z całym ekwipunkiem, ale Świadek odzyskuje za to
+    trybunach z całym ekwipunkiem, ale Obserwator odzyskuje za to
     {round(a['knockout_heal'] * 100)}% życia. Każde jego trafienie dodaje stopień
     <strong>Grozy</strong> (do {a['dread_max'] + 1}): najpierw spowalnia, potem ciemnieje,
     na końcu boli. Groza schodzi, gdy ktoś stoi w {int(a['company'])} blokach od ciebie
@@ -1959,7 +1959,7 @@ def build() -> str:
     <h3 class="sub">Łup</h3>
     <p>Nagroda {a['bounty_base']}e + {a['bounty_per_player']}e za osobę, pół po równo,
     pół za obrażenia. Każdy dostaje <strong>Skrzynkę Widmo</strong>; klucz jest w sklepie.
-    Kto zadał najwięcej, bierze też <strong>Klucz Widmo</strong> i <strong>Oko Świadka</strong>
+    Kto zadał najwięcej, bierze też <strong>Klucz Widmo</strong> i <strong>Oko Obserwatora</strong>
     — PPM i wszystko żywe w {a['eye_range']} blokach świeci przez {a['eye_reveal_s']} s,
     tylko dla ciebie, raz na {a['eye_cooldown_s']} s. Z ciała sypie się
     {a['dirty_base']} + {a['dirty_per_player']} × osoby bloków brudnych szmaragdów i około

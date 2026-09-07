@@ -4,7 +4,7 @@
       "id": "trapcraft:witness_eye"
     },
     "title": "Bez szwanku",
-    "description": "Pokonaj \u015awiadka bez ani jednego nokautu.",
+    "description": "Pokonaj Obserwatora bez ani jednego nokautu.",
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,

@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Oko Świadka -- the trophy off the witness, and the one real item the arena
+ * Oko Obserwatora -- the trophy off the watcher, and the one real item the arena
  * adds.
  *
  * It saw everything, and now so do you: a right-click makes every creature
@@ -82,7 +82,7 @@ public class WitnessEyeItem extends Item implements PolymerItem {
 
     public static List<Text> lore() {
         return List.of(
-                line("Widział wszystko. Teraz ty też.", Formatting.LIGHT_PURPLE),
+                line("Patrzyło na wszystkich. Teraz patrzy dla ciebie.", Formatting.LIGHT_PURPLE),
                 line("PPM: wszystko żywe w " + ArenaMath.EYE_RANGE + " blokach świeci przez "
                         + ArenaMath.EYE_REVEAL_TICKS / 20 + " s.", Formatting.GRAY),
                 line("Tylko dla twoich oczu. Raz na " + ArenaMath.EYE_COOLDOWN_TICKS / 20 + " s.",

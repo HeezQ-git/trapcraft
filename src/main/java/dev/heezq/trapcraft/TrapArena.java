@@ -286,7 +286,7 @@ public final class TrapArena {
         setLights(1);
         sigil(false);
 
-        countdownBar = new ServerBossBar(Text.literal("ŚWIADEK"), BossBar.Color.PURPLE, BossBar.Style.NOTCHED_10);
+        countdownBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.NOTCHED_10);
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             countdownBar.addPlayer(player);
             player.playSoundToPlayer(SoundEvents.EVENT_RAID_HORN.value(), SoundCategory.HOSTILE, 1.0F, 0.6F);
@@ -299,7 +299,7 @@ public final class TrapArena {
     private static void tickGathering(int now) {
         int left = gatherTicks - (now - stageStart);
         if (countdownBar != null) {
-            countdownBar.setName(Text.literal("ŚWIADEK ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
+            countdownBar.setName(Text.literal("OBSERWATOR ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
                     .append(Text.literal("· arena otwiera się za " + ArenaMath.clock(left)).formatted(Formatting.WHITE)));
             countdownBar.setPercent(Math.max(0.0F, Math.min(1.0F, left / (float) gatherTicks)));
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
@@ -314,7 +314,7 @@ public final class TrapArena {
         if (left <= 0) {
             if (arenaPlayers().isEmpty()) {
                 broadcast(Text.literal("Nikt nie przyszedł. ").formatted(Formatting.GRAY, Formatting.ITALIC)
-                        .append(Text.literal("Świadek odszedł w cień.").formatted(Formatting.DARK_GRAY)));
+                        .append(Text.literal("Obserwator wrócił na krawędź mapy.").formatted(Formatting.DARK_GRAY)));
                 endEvent(false, "nobody came");
             } else {
                 startFight(now);
@@ -335,18 +335,18 @@ public final class TrapArena {
         boss.sizeFor(Math.max(1, arenaPlayers().size()));
         world.spawnEntity(boss);
 
-        fightBar = new ServerBossBar(Text.literal("ŚWIADEK"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
+        fightBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
         fightBar.setDragonMusic(true);
-        watchBar = new ServerBossBar(Text.literal("ŚWIADEK"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
+        watchBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
         sigil(true);
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("ŚWIADEK").formatted(Formatting.DARK_PURPLE, Formatting.BOLD),
-                    Text.literal("Widział wszystko. Zeznaje dziś.").formatted(Formatting.LIGHT_PURPLE), 20, 70, 20);
+            title(player, Text.literal("OBSERWATOR").formatted(Formatting.DARK_PURPLE, Formatting.BOLD),
+                    Text.literal("Patrzył od pierwszego dnia.").formatted(Formatting.LIGHT_PURPLE), 20, 70, 20);
             player.playSoundToPlayer(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 1.0F, 0.5F);
             TrapNet.flash(player, 0x2a1b3d, 30);
         }
-        broadcast(Text.literal("Świadek wstał. ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
-                .append(Text.literal("Dziesięć minut, zanim zezna. ").formatted(Formatting.GRAY))
+        broadcast(Text.literal("Obserwator jest na arenie. ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
+                .append(Text.literal("Dziesięć minut, zanim znów zniknie. ").formatted(Formatting.GRAY))
                 .append(link("[ WCHODZĘ ]", "/arena join", "Teleport na arenę")));
         TrapCraft.LOGGER.info("arena: the witness rises for {} players", arenaPlayers().size());
     }
@@ -368,7 +368,7 @@ public final class TrapArena {
         }
         int left = ArenaMath.FIGHT_TICKS - (now - stageStart);
         float fraction = Math.max(0.0F, boss.getHealth() / boss.getMaxHealth());
-        Text name = Text.literal("ŚWIADEK ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
+        Text name = Text.literal("OBSERWATOR ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
                 .append(Text.literal("· " + roman(boss.phase()) + " · " + ArenaMath.clock(left))
                         .formatted(Formatting.WHITE));
         for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
@@ -394,12 +394,12 @@ public final class TrapArena {
 
     private static void enrage() {
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("ZEZNAŁ").formatted(Formatting.RED, Formatting.BOLD),
+            title(player, Text.literal("ZNIKNĄŁ").formatted(Formatting.RED, Formatting.BOLD),
                     Text.literal("Za wolno.").formatted(Formatting.GRAY), 10, 60, 20);
             player.playSoundToPlayer(SoundEvents.ENTITY_WITHER_DEATH, SoundCategory.HOSTILE, 0.8F, 0.4F);
         }
-        broadcast(Text.literal("Świadek zeznał. ").formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal("Nikt go nie zamknął na czas.").formatted(Formatting.GRAY)));
+        broadcast(Text.literal("Obserwator zniknął. ").formatted(Formatting.RED, Formatting.BOLD)
+                .append(Text.literal("Nikt nie zamknął mu oka na czas.").formatted(Formatting.GRAY)));
         ServerWorld world = world();
         if (boss != null && world != null) {
             Vec3d at = boss.getPos();
@@ -416,7 +416,7 @@ public final class TrapArena {
             sigil(false);
         }
         Text head = Text.literal(phase == 2 ? "FAZA II" : "FAZA III").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD);
-        Text sub = Text.literal(phase == 2 ? "Zeznania" : "Wyrok").formatted(Formatting.GRAY);
+        Text sub = Text.literal(phase == 2 ? "Nie mruga." : "Gasną światła.").formatted(Formatting.GRAY);
         for (ServerPlayerEntity player : arenaPlayers()) {
             title(player, head, sub, 5, 40, 15);
             TrapNet.shake(player, 1.0F, 15);
@@ -427,8 +427,8 @@ public final class TrapArena {
                     ArenaMath.ADRENALINE_PHASE_TICKS, 0, false, true, true));
             player.heal(4.0F);
         }
-        broadcast(Text.literal("Świadek: ").formatted(Formatting.DARK_PURPLE)
-                .append(Text.literal(phase == 2 ? "faza II. Zeznania." : "faza III. Wyrok.").formatted(Formatting.GRAY)));
+        broadcast(Text.literal("Obserwator: ").formatted(Formatting.DARK_PURPLE)
+                .append(Text.literal(phase == 2 ? "faza II. Nie mruga." : "faza III. Gasną światła.").formatted(Formatting.GRAY)));
     }
 
     public static void onBossDeath(WitnessEntity witness) {
@@ -437,8 +437,8 @@ public final class TrapArena {
         }
         stage = Stage.VICTORY;
         stageStart = server.getTicks();
-        Text name = Text.literal("ŚWIADEK ").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("· zamknięty").formatted(Formatting.WHITE));
+        Text name = Text.literal("OBSERWATOR ").formatted(Formatting.GOLD, Formatting.BOLD)
+                .append(Text.literal("· oko zamknięte").formatted(Formatting.WHITE));
         for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
             if (bar != null) {
                 bar.setName(name);
@@ -447,8 +447,8 @@ public final class TrapArena {
             }
         }
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("ŚWIADEK ZAMKNIĘTY").formatted(Formatting.GOLD, Formatting.BOLD),
-                    Text.literal("Nikt nie zezna.").formatted(Formatting.YELLOW), 10, 80, 30);
+            title(player, Text.literal("OKO ZAMKNIĘTE").formatted(Formatting.GOLD, Formatting.BOLD),
+                    Text.literal("Już nie patrzy.").formatted(Formatting.YELLOW), 10, 80, 30);
             TrapNet.shake(player, 1.2F, 20);
             TrapAwards.grant(player, "witness");
             if (knockouts == 0 && DAMAGE.getOrDefault(player.getUuid(), 0.0F) > 0.0F) {
@@ -480,7 +480,7 @@ public final class TrapArena {
         int[] shares = ArenaMath.bountyShares(dealt, pool);
 
         MutableText table = Text.empty()
-                .append(Text.literal("\n✦ ŚWIADEK ZAMKNIĘTY ✦\n").formatted(Formatting.GOLD, Formatting.BOLD));
+                .append(Text.literal("\n✦ OKO ZAMKNIĘTE ✦\n").formatted(Formatting.GOLD, Formatting.BOLD));
         String top = null;
         for (int i = 0; i < players; i++) {
             UUID id = ranked.get(i).getKey();
@@ -511,7 +511,7 @@ public final class TrapArena {
         }
         table.append(Text.literal("  Skrzynka Widmo dla każdego").formatted(Formatting.LIGHT_PURPLE));
         if (top != null) {
-            table.append(Text.literal(", Klucz Widmo i Oko Świadka dla " + top).formatted(Formatting.LIGHT_PURPLE));
+            table.append(Text.literal(", Klucz Widmo i Oko Obserwatora dla " + top).formatted(Formatting.LIGHT_PURPLE));
         }
         table.append(Text.literal(".\n").formatted(Formatting.LIGHT_PURPLE))
                 .append(Text.literal("  Brudne szmaragdy leżą na arenie. Kto pierwszy.\n").formatted(Formatting.GRAY, Formatting.ITALIC))
@@ -608,7 +608,7 @@ public final class TrapArena {
             return err(source, "tylko dla graczy");
         }
         if (stage == Stage.IDLE) {
-            return err(source, "Na arenie jest cicho. Świadek jeszcze nie wyszedł z cienia.");
+            return err(source, "Na arenie jest cicho. Obserwator jeszcze nie zszedł z krawędzi.");
         }
         if (inArena(player)) {
             return err(source, "Już tu jesteś.");
@@ -731,7 +731,7 @@ public final class TrapArena {
             world.playSound(null, boss.getX(), boss.getY() + 2.0, boss.getZ(), SoundEvents.ENTITY_PILLAGER_CELEBRATE,
                     SoundCategory.HOSTILE, 1.5F, 0.5F);
             Text line = Text.literal(player.getNameForScoreboard() + " padł. ").formatted(Formatting.RED)
-                    .append(Text.literal("Świadek odzyskuje " + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "%.")
+                    .append(Text.literal("Obserwator odzyskuje " + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "%.")
                             .formatted(Formatting.GRAY));
             for (ServerPlayerEntity other : arenaPlayers()) {
                 other.sendMessage(line, false);
@@ -857,12 +857,13 @@ public final class TrapArena {
         MutableText text = Text.empty();
         if (first) {
             text.append(Text.literal("\n✦ ARENA ✦\n").formatted(Formatting.DARK_PURPLE, Formatting.BOLD))
-                    .append(Text.literal("Świadek wyszedł z cienia. ").formatted(Formatting.LIGHT_PURPLE))
-                    .append(Text.literal("Widział wszystko. Zna każdy adres.\n").formatted(Formatting.GRAY))
+                    .append(Text.literal("Obserwator zszedł z krawędzi mapy.\n").formatted(Formatting.LIGHT_PURPLE))
+                    .append(Text.literal("Ta sylwetka na granicy widoku, która znikała, gdy się odwracałeś. "
+                            + "Dziś nie zniknie.\n").formatted(Formatting.GRAY))
                     .append(Text.literal("Arena otwiera się za " + ArenaMath.clock(ticksLeft) + ". ").formatted(Formatting.WHITE))
-                    .append(Text.literal("Jak nikt nie przyjdzie, jutro zeznaje.\n").formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
+                    .append(Text.literal("Nikt tam nie ginie: nokaut, trybuny, powrót.\n").formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
         } else {
-            text.append(Text.literal("Świadek czeka. ").formatted(Formatting.LIGHT_PURPLE))
+            text.append(Text.literal("Obserwator czeka. ").formatted(Formatting.LIGHT_PURPLE))
                     .append(Text.literal(ArenaMath.clock(ticksLeft) + ".\n").formatted(Formatting.WHITE));
         }
         text.append(Text.literal("   ")).append(link("[ WCHODZĘ NA ARENĘ ]", "/arena join",
@@ -901,7 +902,7 @@ public final class TrapArena {
                 .executes(context -> {
                     context.getSource().sendFeedback(() -> Text.empty()
                             .append(Text.literal("Arena\n").formatted(Formatting.DARK_PURPLE, Formatting.BOLD))
-                            .append(Text.literal("  /arena join   wejdź, kiedy Świadek stoi na arenie\n").formatted(Formatting.GRAY))
+                            .append(Text.literal("  /arena join   wejdź, kiedy Obserwator jest na arenie\n").formatted(Formatting.GRAY))
                             .append(Text.literal("  /arena leave  wróć tam, gdzie byłeś\n").formatted(Formatting.GRAY))
                             .append(Text.literal("  /guide arena  jak z nim walczyć").formatted(Formatting.GRAY)), false);
                     return 1;

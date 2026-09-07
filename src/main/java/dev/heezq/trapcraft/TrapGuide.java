@@ -145,7 +145,7 @@ public final class TrapGuide {
                 .append(pick("police", "policja, przestępczość, mandaty"))
                 .append(pick("fires", "pożary, remiza, wozy"))
                 .append(pick("zaklady", "zakłady sportowe i telewizor"))
-                .append(pick("arena", "Świadek: boss, którego cały serwer bije razem"))
+                .append(pick("arena", "Obserwator: boss, którego cały serwer bije razem"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -2409,14 +2409,14 @@ public final class TrapGuide {
                 .append(title("ARENA"))
                 .append(Text.literal("\nporadnik walki\n\n")
                         .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
-                .append(body("1 Wezwanie  2 Świadek\n3 Ataki     4 Groza\n"
+                .append(body("1 Wezwanie  2 Boss\n3 Ataki     4 Groza\n"
                         + "5 Łup       6 Komendy\n"))
                 .append(hint("Nikt tu nie ginie. Ale nie każdy wraca z łupem."))));
 
         pages.add(page(Text.empty()
                 .append(title("1. WEZWANIE\n\n"))
                 .append(body("Raz na jakiś czas, gdy jest was co najmniej "
-                        + ArenaMath.MIN_PLAYERS + ", na czacie staje Świadek.\n\n"))
+                        + ArenaMath.MIN_PLAYERS + ", na czacie staje Obserwator.\n\n"))
                 .append(body("Kliknij "))
                 .append(item("[ WCHODZĘ ]"))
                 .append(body(" albo wpisz /arena join.\n\n"))
@@ -2430,8 +2430,8 @@ public final class TrapGuide {
                 .append(hint("Wejść można też w trakcie walki."))));
 
         pages.add(page(Text.empty()
-                .append(title("2. ŚWIADEK\n\n"))
-                .append(body("Widział wszystko. Zna każdy adres. Dziś zeznaje.\n\n"))
+                .append(title("2. OBSERWATOR\n\n"))
+                .append(body("Sylwetka z granicy widoku. Dziś nie zniknie, gdy na nią spojrzysz.\n\n"))
                 .append(body("Życie: " + ArenaMath.BASE_HEALTH + " i po "
                         + ArenaMath.HEALTH_PER_EXTRA + " za każdą osobę ponad pierwszą.\n\n"))
                 .append(warn("Macie " + ArenaMath.FIGHT_TICKS / 20 / 60 + " minut."))));
@@ -2440,7 +2440,7 @@ public final class TrapGuide {
                 .append(title("2b. NOKAUT\n\n"))
                 .append(body("Zamiast śmierci: " + ArenaMath.KNOCKOUT_TICKS / 20
                         + " s w trybunach, z całym ekwipunkiem.\n\n"))
-                .append(body("Świadek odzyskuje za to "
+                .append(body("Obserwator odzyskuje za to "
                         + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "% życia.\n\n"))
                 .append(hint("Jeden cios nie zdejmie więcej niż "
                         + Math.round(ArenaMath.HIT_CAP * 100) + "% paska."))));
@@ -2514,7 +2514,7 @@ public final class TrapGuide {
                 .append(body("Kto zadał najwięcej, bierze "))
                 .append(item("Klucz Widmo"))
                 .append(body(" i "))
-                .append(item("Oko Świadka"))
+                .append(item("Oko Obserwatora"))
                 .append(body(".\n\nOko: PPM i wszystko żywe w " + ArenaMath.EYE_RANGE
                         + " blokach świeci tylko dla ciebie."))));
 
