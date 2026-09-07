@@ -460,7 +460,9 @@ public final class TrapArena {
     /** The body has gone up. Loot, fireworks, the table. */
     public static void victoryBurst(WitnessEntity witness) {
         ServerWorld world = world();
-        if (world == null) {
+        if (world == null || stage != Stage.VICTORY) {
+            // /kill on one an op summoned to look at: the rig still dies
+            // properly, but nobody won anything.
             return;
         }
         Vec3d at = witness.getPos().add(0.0, 1.5, 0.0);
