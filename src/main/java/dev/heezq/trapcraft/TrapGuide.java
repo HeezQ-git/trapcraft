@@ -79,7 +79,10 @@ public final class TrapGuide {
                                         createFires())))
                         .then(CommandManager.literal("zaklady")
                                 .executes(context -> give(context.getSource(),
-                                        createBookmaker())))));
+                                        createBookmaker())))
+                        .then(CommandManager.literal("arena")
+                                .executes(context -> give(context.getSource(),
+                                        createArena())))));
         registerWiki();
     }
 
@@ -142,6 +145,7 @@ public final class TrapGuide {
                 .append(pick("police", "policja, przestępczość, mandaty"))
                 .append(pick("fires", "pożary, remiza, wozy"))
                 .append(pick("zaklady", "zakłady sportowe i telewizor"))
+                .append(pick("arena", "Świadek: boss, którego cały serwer bije razem"))
                 .append(Text.literal("  /wiki").formatted(Formatting.GOLD)
                         .styled(style -> style.withClickEvent(
                                 new net.minecraft.text.ClickEvent.RunCommand("/wiki")))
@@ -2393,6 +2397,140 @@ public final class TrapGuide {
                         + "zanim jeszcze spojrzy na kurs."))));
 
         return book("Zakłady", pages);
+    }
+
+    /**
+     * The arena. Every figure is read off ArenaMath, so retuning the boss
+     * retunes the pages that tell you how to beat it.
+     */
+    public static ItemStack createArena() {
+        List<RawFilteredPair<Text>> pages = new ArrayList<>();
+        pages.add(page(Text.empty()
+                .append(title("ARENA"))
+                .append(Text.literal("\nporadnik walki\n\n")
+                        .formatted(Formatting.DARK_GRAY, Formatting.ITALIC))
+                .append(body("1 Wezwanie  2 Świadek\n3 Ataki     4 Groza\n"
+                        + "5 Łup       6 Komendy\n"))
+                .append(hint("Nikt tu nie ginie. Ale nie każdy wraca z łupem."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1. WEZWANIE\n\n"))
+                .append(body("Raz na jakiś czas, gdy jest was co najmniej "
+                        + ArenaMath.MIN_PLAYERS + ", na czacie staje Świadek.\n\n"))
+                .append(body("Kliknij "))
+                .append(item("[ WCHODZĘ ]"))
+                .append(body(" albo wpisz /arena join.\n\n"))
+                .append(hint("Masz " + ArenaMath.GATHER_TICKS / 20 / 60 + " min, zanim wstanie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("1b. POWRÓT\n\n"))
+                .append(body("/arena leave wraca dokładnie tam, gdzie byłeś.\n\n"))
+                .append(body("Po wygranej wracacie sami po "
+                        + "chwili na arenie.\n\n"))
+                .append(hint("Wejść można też w trakcie walki."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2. ŚWIADEK\n\n"))
+                .append(body("Widział wszystko. Zna każdy adres. Dziś zeznaje.\n\n"))
+                .append(body("Życie: " + ArenaMath.BASE_HEALTH + " i po "
+                        + ArenaMath.HEALTH_PER_EXTRA + " za każdą osobę ponad pierwszą.\n\n"))
+                .append(warn("Macie " + ArenaMath.FIGHT_TICKS / 20 / 60 + " minut."))));
+
+        pages.add(page(Text.empty()
+                .append(title("2b. NOKAUT\n\n"))
+                .append(body("Zamiast śmierci: " + ArenaMath.KNOCKOUT_TICKS / 20
+                        + " s w trybunach, z całym ekwipunkiem.\n\n"))
+                .append(body("Świadek odzyskuje za to "
+                        + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "% życia.\n\n"))
+                .append(hint("Jeden cios nie zdejmie więcej niż "
+                        + Math.round(ArenaMath.HIT_CAP * 100) + "% paska."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3. FALA\n\n"))
+                .append(body("Unosi się, uderza w ziemię, a po arenie idzie krąg.\n\n"))
+                .append(body("Trafia tylko stojących: " + ArenaMath.SLAM_DAMAGE
+                        + " obrażeń.\n\n"))
+                .append(item("Przeskocz go."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3b. OCZY\n\n"))
+                .append(body("Rzuca trzema oczami, które cię szukają. Ugryzienie: "
+                        + ArenaMath.ORB_DAMAGE + ".\n\n"))
+                .append(body("Uderz oko, a wróci do niego za "
+                        + ArenaMath.PARRY_DAMAGE + ".\n\n"))
+                .append(item("Najlepszy cios w tej walce."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3c. SPOJRZENIE\n\n"))
+                .append(body("Od drugiej fazy. Oko robi się czerwone, na ekranie NIE PATRZ.\n\n"))
+                .append(body("Kto patrzy, dostaje " + ArenaMath.STARE_DAMAGE
+                        + " co pół sekundy.\n\n"))
+                .append(item("Odwróć się na " + ArenaMath.STARE_TICKS / 20 + " s."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3d. PIORUN\n\n"))
+                .append(body("Żółte kręgi na podłodze. Po chwili w każdy bije piorun za "
+                        + ArenaMath.LIGHTNING_DAMAGE + ".\n\n"))
+                .append(item("Wyjdź z kręgu."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3e. LUSTRA\n\n"))
+                .append(body("Od drugiej fazy stają trzy. Dwa pękają od jednego ciosu.\n\n"))
+                .append(item("Prawdziwy ma oczy krążące wokół głowy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("3f. UŚCISK\n\n"))
+                .append(body("Trzecia faza. Łapie jednego z was.\n\n"))
+                .append(body("Reszta ma " + ArenaMath.GRIP_TICKS / 20 + " s, żeby zadać "
+                        + ArenaMath.GRIP_RELEASE_PER_PLAYER + " za każdą osobę. Inaczej: "
+                        + ArenaMath.GRIP_SLAM_DAMAGE + ".\n\n"))
+                .append(hint("W trzeciej fazie gasną też światła."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4. GROZA\n\n"))
+                .append(body("Każdy jego cios to jeden stopień. Do "
+                        + (ArenaMath.DREAD_MAX + 1) + ".\n\n"))
+                .append(body("Spowalnia, potem ciemnieje, na końcu boli.\n\n"))
+                .append(item("Schodzi, gdy ktoś stoi w "
+                        + (int) ArenaMath.COMPANY_RANGE + " blokach od ciebie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("4b. ADRENALINA\n\n"))
+                .append(body("Za każdą fazę " + ArenaMath.ADRENALINE_PHASE_TICKS / 20
+                        + " s, za wygraną " + ArenaMath.ADRENALINE_WIN_TICKS / 20 / 60
+                        + " min.\n\n"))
+                .append(body("Szybciej, mocniej i wolno leczy."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5. ŁUP\n\n"))
+                .append(body("Nagroda: " + ArenaMath.BOUNTY_BASE + "e + "
+                        + ArenaMath.BOUNTY_PER_PLAYER + "e za osobę. Pół po równo, pół za obrażenia.\n\n"))
+                .append(body("Każdy dostaje "))
+                .append(item("Skrzynkę Widmo"))
+                .append(body(". Klucz jest w sklepie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5b. NAJLEPSZY\n\n"))
+                .append(body("Kto zadał najwięcej, bierze "))
+                .append(item("Klucz Widmo"))
+                .append(body(" i "))
+                .append(item("Oko Świadka"))
+                .append(body(".\n\nOko: PPM i wszystko żywe w " + ArenaMath.EYE_RANGE
+                        + " blokach świeci tylko dla ciebie."))));
+
+        pages.add(page(Text.empty()
+                .append(title("5c. FONTANNA\n\n"))
+                .append(body("Z ciała sypią się brudne szmaragdy: "
+                        + ArenaMath.DIRTY_BASE + " + " + ArenaMath.DIRTY_PER_PLAYER
+                        + " za osobę.\n\n"))
+                .append(body("Kto pierwszy, ten pierze."))));
+
+        pages.add(page(Text.empty()
+                .append(title("6. KOMENDY\n\n"))
+                .append(body("/arena join\n/arena leave\n\n"))
+                .append(hint("Operator: /arena start, stop, tp, build, cast."))));
+
+        return book("Arena", pages);
     }
 
     private static ItemStack book(String title, List<RawFilteredPair<Text>> pages) {

@@ -1,0 +1,40 @@
+{
+  "textures": {
+    "eye": "trapcraft:item/witness_eye_red",
+    "particle": "trapcraft:item/witness_eye_red"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        2,
+        7.6
+      ],
+      "to": [
+        14,
+        14,
+        8.4
+      ],
+      "faces": {
+        "north": {
+          "texture": "#eye",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#eye",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

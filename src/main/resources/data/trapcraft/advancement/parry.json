@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:witness_eye"
+    },
+    "title": "Odbite",
+    "description": "Odbij oko \u015awiadka z powrotem w niego.",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:witness"
+}

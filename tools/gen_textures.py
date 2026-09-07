@@ -4096,6 +4096,265 @@ def tv_screen_frames() -> list[str]:
     return frames
 
 
+
+# --- the witness -------------------------------------------------------------
+#
+# The arena boss. A shadow in a hood with one eye too many, so the palette is
+# three things: fabric that is nearly black, the purple every other glow in
+# this mod already uses, and the pale of an eye that never blinks. Cyan is the
+# parry colour and nothing else, so an orb that has changed sides is readable
+# from across the pit. Red is the stare, and only the stare.
+
+WITNESS_PAL = {
+    "k": "#07060d",     # void
+    "K": "#100e1c",     # fabric
+    "n": "#191632",     # fold
+    "N": "#26214a",     # fold, lit
+    "p": "#4a2a8c",     # seam
+    "P": "#8a4fd8",     # seam, lit
+    "l": "#c59bff",     # lavender rim of the eye
+    "c": "#34d8ea",     # cyan
+    "C": "#a8f4ff",     # cyan, lit
+    "w": "#ece4ff",     # sclera
+    "W": "#ffffff",     # highlight
+    "y": "#0b0710",     # pupil
+    "r": "#ff2d55",     # red iris
+    "R": "#ff8a6a",     # red glow
+    "o": "#ffc24a",     # gold
+    "g": "#1a1730",     # hand
+    "G": "#2c2750",     # hand, lit edge
+}
+
+# Vertical folds and a purple hem: the body of the cloak, every side.
+WITNESS_CLOAK = """
+KKKnKKKKnKKKKnKK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+KnkKnkKKnkKnkKnK
+pPpppPppppPpppPp
+KpKKKpKKKKpKKKpK
+kkkkkkkkkkkkkkkk
+"""
+
+# Only the seams, on a transparent ground. Drawn on a second, fully bright
+# element sitting a hair proud of the cloak, which is how a vanilla client
+# gets emissive stitching without a shader.
+WITNESS_SEAMS = """
+................
+................
+.....P........P.
+.....P........P.
+.....p........p.
+................
+..P........P....
+..P........P....
+..p........p....
+................
+................
+................
+................
+pPpppPppppPpppPp
+.p...p....p...p.
+................
+"""
+
+# The hood, sides and back: plainer than the cloak so the face is the thing.
+WITNESS_HOOD = """
+KKKKKKKKKKKKKKKK
+KnKKnKKKKKnKKnKK
+KnKKnKKKKKnKKnKK
+KnKKnKKKKKnKKnKK
+KKKKnKKKKKnKKKKK
+KKKKnKKKKKnKKKKK
+KKKKKKKKKKKKKKKK
+KKKKKKKKKKKKKKKK
+KKKKKKKKKKKKKKKK
+KnKKKKKKKKKKKKnK
+KnKKKKKKKKKKKKnK
+KnKKKKKKKKKKKKnK
+KKKKKKKKKKKKKKKK
+pppppppppppppppp
+PpPpPpPpPpPpPpPp
+kkkkkkkkkkkkkkkk
+"""
+
+# Inside the hood. One eye, wide, and nothing else: no mouth, no nose, no
+# suggestion of a face under it. The cyan ring round the pupil is what reads
+# as "looking at you" at twenty blocks.
+WITNESS_FACE = """
+kkkkkkkkkkkkkkkk
+kKKKKKKKKKKKKKKk
+kKKKKKllllKKKKKk
+kKKKllwwwwllKKKk
+kKKlwwwwwwwwlKKk
+kKlwwwwPPPwwwwlk
+kKlwwwPcWcPwwwlk
+kKlwwwPcyycPwwlk
+kKlwwwPcyycPwwlk
+kKlwwwPccccPwwlk
+kKlwwwwPPPwwwwlk
+kKKlwwwwwwwwlKKk
+kKKKllwwwwllKKKk
+kKKKKKllllKKKKKk
+kKKKKKKKKKKKKKKk
+kkkkkkkkkkkkkkkk
+"""
+
+# The small eyes that orbit it, the orbs it throws, and the trophy. Round, so
+# it works billboarded on a flat quad and wrapped round a cube.
+WITNESS_EYE = """
+................
+.....llllll.....
+...llwwwwwwll...
+..lwwwwwwwwwwl..
+.lwwwwwwwwwwwwl.
+.lwwwwwPPPwwwwl.
+llwwwwPcWcPwwwll
+lwwwwwPcyycPwwwl
+lwwwwwPcyycPwwwl
+llwwwwPccccPwwll
+.lwwwwwPPPwwwwl.
+.lwwwwwwwwwwwwl.
+..lwwwwwwwwwwl..
+...llwwwwwwll...
+.....llllll.....
+................
+"""
+
+# The back and sides of an eyeball: white with a vein or two, so the trophy
+# is an eye from every angle and not a die with one painted face.
+WITNESS_SCLERA = """
+wwwwwwwwwwwwwwww
+wwwwlwwwwwwwwwww
+wwwwwlwwwwwwlwww
+wwwwwwlwwwwlwwww
+wwwwwwwwwwwlwwww
+wwwwwwwwwwlwwwww
+wwlwwwwwwwwwwwww
+wwwlwwwwwwwwwwww
+wwwwlwwwwwwwwwww
+wwwwwwwwwwwwlwww
+wwwwwwwwwwwwwlww
+wwwwwwwwwwwwwwlw
+wwwwwlwwwwwwwwww
+wwwwlwwwwwwwwwww
+wwwlwwwwwwwwwwww
+wwwwwwwwwwwwwwww
+"""
+
+# A hand with no arm behind it. Dark, with the knuckles lit purple.
+WITNESS_HAND = """
+GGGGGGGGGGGGGGGG
+GggggggggggggggG
+GggPgggPgggPgggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+kkkkkkkkkkkkkkkk
+"""
+
+# A finger: the same dark, ending in a purple nail with a cyan point.
+WITNESS_FINGER = """
+GGGGGGGGGGGGGGGG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggggggggggggG
+GggggPPPPPPggggG
+GgggPPPCCPPPgggG
+GgggPPCCCCPPgggG
+GggggPCCCCPggggG
+kkkkkkCCCCkkkkkk
+"""
+
+# A crystal shard for the crown: white at the point, purple at the root.
+WITNESS_SHARD = """
+.......WW.......
+......WlW.......
+......lllW......
+.....lllll......
+.....lPlll......
+....lPPPll......
+....PPPPPl......
+....PPPPPP......
+...pPPPPPP......
+...pPPPPPp......
+...ppPPPpp......
+...pppPppp......
+....ppppp.......
+....pppp........
+.....pp.........
+......p.........
+"""
+
+# Groza (dread): the boss's eye, bloodshot, on the effect list. Same shape as
+# the icons for Baked and Wired -- an icon that does not belong to the set
+# reads as another mod's.
+GROZA_ICON = """
+................
+................
+....PPPPPPPP....
+..PPwwwwwwwwPP..
+.PwwwwrrrrwwwwP.
+PwwwwrrRRrrwwwwP
+PwwwrrRyyRrrwwwP
+PwwwrrRyyRrrwwwP
+PwwwwrrRRrrwwwwP
+.PwwwwrrrrwwwwP.
+..PPwwwwwwwwPP..
+....PPPPPPPP....
+................
+.....k..k..k....
+....k..k..k.....
+................
+"""
+
+# Adrenalina: a heart with a bolt through it. The reward buff, so it is the
+# one icon in the set that is warm.
+ADRENALINA_ICON = """
+................
+..rrr....rrr....
+.rRRrr..rrRRr...
+rRRRRrrrrRRRRr..
+rRRRRRRRRRRRRr..
+rRRRRRRoRRRRRr..
+.rRRRRooRRRRr...
+..rRRRoooRRr....
+...rRRooRRr.....
+....rRooRr......
+.....roor.......
+......oo........
+.......o........
+................
+................
+................
+"""
+
+
 def filled(ascii_map: str, background: str) -> str:
     """Replace transparent padding with a painted background character.
 
@@ -4487,6 +4746,27 @@ def main() -> None:
     # Wired is the coca line's effect, so it takes the coca palette rather than
     # a strain's. Missing entirely until now -- see the note on WIRED_ICON.
     write(render(WIRED_ICON, palette_for("haze")), "mob_effect", "wired.png")
+
+    print("the witness:")
+    write(render(WITNESS_CLOAK, WITNESS_PAL), "item", "witness_cloak.png")
+    write(render(WITNESS_SEAMS, WITNESS_PAL), "item", "witness_seams.png")
+    write(render(WITNESS_HOOD, WITNESS_PAL), "item", "witness_hood.png")
+    write(render(WITNESS_FACE, WITNESS_PAL), "item", "witness_face.png")
+    # The stare: the same face with the iris gone red and the ring hot.
+    write(render(WITNESS_FACE.translate(str.maketrans({"P": "r", "c": "R"})), WITNESS_PAL),
+          "item", "witness_face_red.png")
+    write(render(WITNESS_EYE, WITNESS_PAL), "item", "witness_eye.png")
+    write(render(WITNESS_EYE.translate(str.maketrans({"P": "r", "c": "R"})), WITNESS_PAL),
+          "item", "witness_eye_red.png")
+    # An orb somebody punched back: cyan, so whose side it is on is visible.
+    write(render(WITNESS_EYE.translate(str.maketrans({"P": "c", "c": "C"})), WITNESS_PAL),
+          "item", "witness_eye_cyan.png")
+    write(render(WITNESS_SCLERA, WITNESS_PAL), "item", "witness_sclera.png")
+    write(render(WITNESS_HAND, WITNESS_PAL), "item", "witness_hand.png")
+    write(render(WITNESS_FINGER, WITNESS_PAL), "item", "witness_finger.png")
+    write(render(WITNESS_SHARD, WITNESS_PAL), "item", "witness_shard.png")
+    write(render(GROZA_ICON, WITNESS_PAL), "mob_effect", "groza.png")
+    write(render(ADRENALINA_ICON, WITNESS_PAL), "mob_effect", "adrenalina.png")
 
 
 if __name__ == "__main__":

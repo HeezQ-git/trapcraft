@@ -409,6 +409,42 @@ def gather() -> None:
     DATA["house_rate"] = int(need(r"HOUSE_RATE = (\d+)", city, "HOUSE_RATE"))
     DATA["club_door"] = ints("DOOR", clubs)
 
+    arena = java("ArenaMath")
+    DATA["arena"] = {
+        "min_players": int(need(r"MIN_PLAYERS = (\d+)", arena, "MIN_PLAYERS")),
+        "cooldown_min": int(need(r"COOLDOWN_SECONDS = (\d+) \* 60", arena, "COOLDOWN_SECONDS")),
+        "gather_s": int(need(r"GATHER_TICKS = 20 \* (\d+)", arena, "GATHER_TICKS")),
+        "fight_min": int(need(r"FIGHT_TICKS = 20 \* 60 \* (\d+)", arena, "FIGHT_TICKS")),
+        "knockout_s": int(need(r"KNOCKOUT_TICKS = 20 \* (\d+)", arena, "KNOCKOUT_TICKS")),
+        "knockout_heal": float(need(r"KNOCKOUT_HEAL = ([\d.]+)F", arena, "KNOCKOUT_HEAL")),
+        "base_health": int(need(r"BASE_HEALTH = (\d+)", arena, "BASE_HEALTH")),
+        "health_per_extra": int(need(r"HEALTH_PER_EXTRA = (\d+)", arena, "HEALTH_PER_EXTRA")),
+        "hit_cap": float(need(r"HIT_CAP = ([\d.]+)F", arena, "HIT_CAP")),
+        "slam": int(need(r"SLAM_DAMAGE = (\d+)", arena, "SLAM_DAMAGE")),
+        "orb": int(need(r"ORB_DAMAGE = (\d+)", arena, "ORB_DAMAGE")),
+        "parry": int(need(r"PARRY_DAMAGE = (\d+)", arena, "PARRY_DAMAGE")),
+        "stare": int(need(r"STARE_DAMAGE = (\d+)", arena, "STARE_DAMAGE")),
+        "stare_s": int(need(r"STARE_TICKS = (\d+)", arena, "STARE_TICKS")) // 20,
+        "lightning": int(need(r"LIGHTNING_DAMAGE = (\d+)", arena, "LIGHTNING_DAMAGE")),
+        "grip_slam": int(need(r"GRIP_SLAM_DAMAGE = (\d+)", arena, "GRIP_SLAM_DAMAGE")),
+        "grip_per_player": int(need(r"GRIP_RELEASE_PER_PLAYER = (\d+)", arena, "GRIP_RELEASE_PER_PLAYER")),
+        "grip_s": int(need(r"GRIP_TICKS = (\d+)", arena, "GRIP_TICKS")) // 20,
+        "phase_two": int(need(r"PHASE_TWO_AT = (\d+)", arena, "PHASE_TWO_AT")),
+        "phase_three": int(need(r"PHASE_THREE_AT = (\d+)", arena, "PHASE_THREE_AT")),
+        "dread_max": int(need(r"DREAD_MAX = (\d+)", arena, "DREAD_MAX")),
+        "company": float(need(r"COMPANY_RANGE = ([\d.]+)", arena, "COMPANY_RANGE")),
+        "bounty_base": int(need(r"BOUNTY_BASE = (\d+)", arena, "BOUNTY_BASE")),
+        "bounty_per_player": int(need(r"BOUNTY_PER_PLAYER = (\d+)", arena, "BOUNTY_PER_PLAYER")),
+        "dirty_base": int(need(r"DIRTY_BASE = (\d+)", arena, "DIRTY_BASE")),
+        "dirty_per_player": int(need(r"DIRTY_PER_PLAYER = (\d+)", arena, "DIRTY_PER_PLAYER")),
+        "xp": int(need(r"XP_TOTAL = (\d+)", arena, "XP_TOTAL")),
+        "adrenaline_phase_s": int(need(r"ADRENALINE_PHASE_TICKS = 20 \* (\d+)", arena, "ADRENALINE_PHASE_TICKS")),
+        "adrenaline_win_min": int(need(r"ADRENALINE_WIN_TICKS = 20 \* (\d+)", arena, "ADRENALINE_WIN_TICKS")) // 60,
+        "eye_range": int(need(r"EYE_RANGE = (\d+)", arena, "EYE_RANGE")),
+        "eye_reveal_s": int(need(r"EYE_REVEAL_TICKS = 20 \* (\d+)", arena, "EYE_REVEAL_TICKS")),
+        "eye_cooldown_s": int(need(r"EYE_COOLDOWN_TICKS = 20 \* (\d+)", arena, "EYE_COOLDOWN_TICKS")),
+    }
+
     sports = java("TrapSports")
     DATA["leagues"] = leagues()
     DATA["book_margin"] = float(need(r"BOOK_MARGIN = ([\d.]+)f", math, "BOOK_MARGIN"))
@@ -902,6 +938,7 @@ def build() -> str:
         # called police on one page is a page that answers neither question.
         ("10", "heat", "Naloty"), ("11", "street", "Ulica"),
         ("12", "casino", "Kasyno"), ("12b", "bets", "Zakłady"),
+        ("12c", "arena", "Arena"),
         ("13", "commands", "Komendy"),
         ("14", "awards", "Osiągnięcia"),
     ]
@@ -1865,6 +1902,9 @@ def build() -> str:
          "Poradniki — uprawa, koka, mak, nałóg, ulica, ekipa, kasyno, miasto, mieszkania, zakłady"],
         ["<code>/guide zaklady</code>", "Zakłady sportowe: co czytać z telewizora"],
         ["<code>/guide housing</code>", "Domy, klasy i skąd lokatorzy biorą pieniądze"],
+        ["<code>/guide arena</code>", "Świadek: każdy atak i jak go przeżyć"],
+        ["<code>/arena join</code>", "Wejście na arenę, kiedy Świadek na niej stoi"],
+        ["<code>/arena leave</code>", "Powrót dokładnie tam, gdzie byłeś"],
         ["<code>/market</code>", "Dlaczego wszystko kosztuje tyle, ile kosztuje"],
         ["<code>/stalls</code>", "Kto sprzedaje i gdzie"],
         ["<code>/city</code>", "Kasa miasta, aktualne podatki i ile każdy zebrał"],
@@ -1879,6 +1919,54 @@ def build() -> str:
         ["<code>/earnings</code>", "Dzisiejsze zarobki wszystkich, według źródła"],
         ["<code>/sethome · /home · /spawn · /back</code>", "Przemieszczanie się"],
     ]
+    a = d["arena"]
+    ability_rows = [
+        ["Fala", "I", f"Unosi się i uderza w ziemię; po arenie idzie krąg za {a['slam']}.",
+         "Przeskocz krąg — trafia tylko stojących."],
+        ["Oczy", "I", f"Trzy oczy, które cię szukają. Ugryzienie: {a['orb']}.",
+         f"Uderz oko: wraca do niego za {a['parry']} — najlepszy cios w walce."],
+        ["Spojrzenie", "II", f"Oko czerwienieje, na ekranie NIE PATRZ. Kto patrzy: {a['stare']} co pół sekundy.",
+         f"Odwróć wzrok na {a['stare_s']} s."],
+        ["Piorun", "II", f"Żółte kręgi na podłodze, po chwili piorun za {a['lightning']}.",
+         "Wyjdź z kręgu."],
+        ["Lustra", "II", "Trzy sylwetki, dwie pękają od jednego ciosu.",
+         "Prawdziwy ma oczy krążące wokół głowy."],
+        ["Skok", "III", "Znika i staje za tobą.", "Nie ma — odwróć się. Światła już zgasły."],
+        ["Uścisk", "III", f"Łapie jednego z was i ściska; po {a['grip_s']} s rzuca za {a['grip_slam']}.",
+         f"Reszta zadaje {a['grip_per_player']} × liczba graczy w {a['grip_s']} s."],
+    ]
+    sections.append(section("12c", "arena", "Arena", "Świadek: boss, którego bije cały serwer", f"""
+    <p class="lede">Postać, którą paranoja pokazuje na granicy widoku, nigdy nie była
+    pillagerem. Nazywa się <strong>Świadek</strong>, widziała wszystko, zna każdy adres i zamierza
+    zeznawać. Raz na jakiś czas — przy co najmniej {a['min_players']} osobach online i
+    {a['cooldown_min']} minutach od poprzedniego razu — staje na czacie z klikalnym
+    <code>[ WCHODZĘ NA ARENĘ ]</code>. Kliknięcie przenosi cię na arenę w osobnym wymiarze;
+    <code>/arena leave</code> wraca dokładnie tam, gdzie byłeś.</p>
+    <p>Od zwiastuna do walki mijają {a['gather_s'] // 60} minuty. Świadek ma
+    {a['base_health']} życia i {a['health_per_extra']} więcej za każdą osobę ponad pierwszą,
+    a żaden cios nie zdejmie mu więcej niż {round(a['hit_cap'] * 100)}% paska. Macie
+    {a['fight_min']} minut; potem zeznaje i znika bez łupu. Fazy zmieniają się przy
+    {a['phase_two']}% i {a['phase_three']}%.</p>
+    {table(["Atak", "Faza", "Co robi", "Jak przeżyć"], ability_rows)}
+    <h3 class="sub">Nikt tu nie ginie</h3>
+    <p>Cios, który by zabił, jest <strong>nokautem</strong>: {a['knockout_s']} sekund w
+    trybunach z całym ekwipunkiem, ale Świadek odzyskuje za to
+    {round(a['knockout_heal'] * 100)}% życia. Każde jego trafienie dodaje stopień
+    <strong>Grozy</strong> (do {a['dread_max'] + 1}): najpierw spowalnia, potem ciemnieje,
+    na końcu boli. Groza schodzi, gdy ktoś stoi w {int(a['company'])} blokach od ciebie
+    — ta sama zasada, której uczy paranoja. Każda faza daje {a['adrenaline_phase_s']} s
+    <strong>Adrenaliny</strong>, wygrana {a['adrenaline_win_min']} minuty.</p>
+    <h3 class="sub">Łup</h3>
+    <p>Nagroda {a['bounty_base']}e + {a['bounty_per_player']}e za osobę, pół po równo,
+    pół za obrażenia. Każdy dostaje <strong>Skrzynkę Widmo</strong>; klucz jest w sklepie.
+    Kto zadał najwięcej, bierze też <strong>Klucz Widmo</strong> i <strong>Oko Świadka</strong>
+    — PPM i wszystko żywe w {a['eye_range']} blokach świeci przez {a['eye_reveal_s']} s,
+    tylko dla ciebie, raz na {a['eye_cooldown_s']} s. Z ciała sypie się
+    {a['dirty_base']} + {a['dirty_per_player']} × osoby bloków brudnych szmaragdów i około
+    {a['xp']} doświadczenia.</p>
+    <p class="note">Operator: <code>/arena start [sekundy]</code>, <code>stop</code>,
+    <code>tp</code>, <code>build</code>, <code>cast &lt;atak&gt;</code>.</p>"""))
+
     sections.append(section("13", "commands", "Komendy", "każda odpowiada tylko tobie", f"""
     <p class="lede">Każda komenda odpowiada wyłącznie osobie, która ją wpisała, więc nic, co
     uruchomisz, nie jest ogłaszane reszcie serwera.</p>

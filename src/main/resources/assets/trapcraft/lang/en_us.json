@@ -39,12 +39,16 @@
   "block.trapcraft.toss": "Rzut monet\u0105",
   "block.trapcraft.wash_pot": "Garnek do gotowania",
   "block.trapcraft.wild_cannabis": "Dzikie konopie",
+  "effect.trapcraft.adrenalina": "Adrenalina",
   "effect.trapcraft.baked": "Na\u0107pany",
+  "effect.trapcraft.groza": "Groza",
   "effect.trapcraft.nod": "Odlot",
   "effect.trapcraft.tolerance": "Tolerancja",
   "effect.trapcraft.wired": "Nakr\u0119cony",
   "effect.trapcraft.withdrawal": "Odstawienie",
   "entity.minecraft.villager.trapcraft.dealer": "Diler",
+  "entity.trapcraft.witness": "\u015awiadek",
+  "entity.trapcraft.witness_orb": "Oko",
   "item.trapcraft.acetylator": "Acetylator",
   "item.trapcraft.blackjack": "Blackjack",
   "item.trapcraft.blend_bud": "Susz mieszany",
@@ -129,5 +133,6 @@
   "item.trapcraft.television": "Telewizor",
   "item.trapcraft.toss": "Rzut monet\u0105",
   "item.trapcraft.wallet": "Portfel",
-  "item.trapcraft.wash_pot": "Garnek do gotowania"
+  "item.trapcraft.wash_pot": "Garnek do gotowania",
+  "item.trapcraft.witness_eye": "Oko \u015awiadka"
 }

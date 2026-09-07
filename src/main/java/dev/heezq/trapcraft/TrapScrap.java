@@ -52,6 +52,11 @@ public final class TrapScrap {
         if (stack.getItem() instanceof WandItem) {
             return "różdżki nie wracają na półkę";
         }
+        // The boss drop. A scrap price on it is a payout schedule for the
+        // arena, and the arena already pays through the bounty.
+        if (stack.getItem() instanceof WitnessEyeItem) {
+            return "cudzych oczu się nie skupuje";
+        }
         // Cases and keys, both halves. The key because the shelf sells it and
         // chests give it away, so a counter that took it would pay for
         // exploring in emeralds instead of in cases. The case because it is

@@ -64,6 +64,42 @@ public final class TrapNet {
         }
     }
 
+    /**
+     * The arena wants the camera.
+     *
+     * A shake for the slam and the phase breaks, a flash for a hit and a
+     * teleport. Both are one number and a length, both are optional the same
+     * way every other packet here is: a client without the mod never
+     * registered a receiver and simply feels nothing.
+     */
+    public record Shake(float strength, int ticks) implements CustomPayload {
+        public static final CustomPayload.Id<Shake> ID = new CustomPayload.Id<>(TrapCraft.id("shake"));
+
+        public static final PacketCodec<RegistryByteBuf, Shake> CODEC = PacketCodec.tuple(
+                PacketCodecs.FLOAT, Shake::strength,
+                PacketCodecs.VAR_INT, Shake::ticks,
+                Shake::new);
+
+        @Override
+        public CustomPayload.Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record Flash(int colour, int ticks) implements CustomPayload {
+        public static final CustomPayload.Id<Flash> ID = new CustomPayload.Id<>(TrapCraft.id("flash"));
+
+        public static final PacketCodec<RegistryByteBuf, Flash> CODEC = PacketCodec.tuple(
+                PacketCodecs.INTEGER, Flash::colour,
+                PacketCodecs.VAR_INT, Flash::ticks,
+                Flash::new);
+
+        @Override
+        public CustomPayload.Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public static final Identifier TLOK_PULL = TrapCraft.id("tlok_pull");
     public static final Identifier BONG_HIT = TrapCraft.id("bong_hit");
     public static final Identifier MIX_STIR = TrapCraft.id("mix_stir");
@@ -76,6 +112,22 @@ public final class TrapNet {
     public static void register() {
         PayloadTypeRegistry.playS2C().register(PlayAnim.ID, PlayAnim.CODEC);
         PayloadTypeRegistry.playS2C().register(BlendMix.ID, BlendMix.CODEC);
+        PayloadTypeRegistry.playS2C().register(Shake.ID, Shake.CODEC);
+        PayloadTypeRegistry.playS2C().register(Flash.ID, Flash.CODEC);
+    }
+
+    /** Rattle one player's camera. Silently nothing for a client without the mod. */
+    public static void shake(ServerPlayerEntity player, float strength, int ticks) {
+        if (player != null && ServerPlayNetworking.canSend(player, Shake.ID)) {
+            ServerPlayNetworking.send(player, new Shake(strength, ticks));
+        }
+    }
+
+    /** A colour over one player's screen, fading over {@code ticks}. */
+    public static void flash(ServerPlayerEntity player, int colour, int ticks) {
+        if (player != null && ServerPlayNetworking.canSend(player, Flash.ID)) {
+            ServerPlayNetworking.send(player, new Flash(colour, ticks));
+        }
     }
 
     /** Tell one player's client what they just smoked. */

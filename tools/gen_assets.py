@@ -8,6 +8,7 @@ else. Don't hand-edit the output; the next run overwrites it.
 """
 
 import json
+import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "src/main/resources"
@@ -530,6 +531,12 @@ def lang() -> None:
         "effect.trapcraft.nod": "Odlot",
         "effect.trapcraft.withdrawal": "Odstawienie",
         "entity.minecraft.villager.trapcraft.dealer": "Diler",
+        # The arena.
+        "item.trapcraft.witness_eye": "Oko Świadka",
+        "effect.trapcraft.groza": "Groza",
+        "effect.trapcraft.adrenalina": "Adrenalina",
+        "entity.trapcraft.witness": "Świadek",
+        "entity.trapcraft.witness_orb": "Oko",
     }
     for strain, nice in STRAINS.items():
         entries[f"block.trapcraft.cannabis_crop_{strain}"] = f"Krzak {nice}"
@@ -2156,6 +2163,16 @@ def advancements() -> None:
     award("clean", "Nic tu nie ma", "Przetrwaj nalot, nie tracąc ani grama towaru.",
           "minecraft:barrier", "raided", frame="challenge")
 
+    # The arena. All four are moments, so they are granted from TrapArena.
+    award("witness", "Zamknięty", "Bądź na arenie, kiedy Świadek pada.",
+          f"{NS}:witness_eye", "root", frame="challenge")
+    award("parry", "Odbite", "Odbij oko Świadka z powrotem w niego.",
+          f"{NS}:witness_eye", "witness")
+    award("stare", "Nie patrzyłem", "Przetrwaj Spojrzenie, nie patrząc mu w oko.",
+          f"{NS}:witness_eye", "witness")
+    award("unbroken", "Bez szwanku", "Pokonaj Świadka bez ani jednego nokautu.",
+          f"{NS}:witness_eye", "witness", frame="challenge")
+
 
 def climb_assets() -> None:
     put(f"assets/{NS}/models/block/climb.json", climb_model())
@@ -3457,6 +3474,216 @@ def mailbox_assets() -> None:
     })
 
 
+
+# --- the witness and the arena ----------------------------------------------
+#
+# The arena boss is a Polymer display rig: every part below is an item model
+# that an ItemDisplayElement wears through an item_model component on a paper
+# stack, so none of them is a registered item. The one real item is the
+# trophy, witness_eye. Sizes are in model units (16 to a block); the rig
+# scales and places them, and the placement lives in RIG below so the desk
+# previewer and WitnessRig read the same numbers.
+#
+# Every face names its uv. The rig parts are the first models in the mod
+# that lean on element rotation and on boxes hanging below y=0, and a
+# derived uv outside the sprite samples the atlas neighbour -- see
+# check_models.py.
+
+WHOLE_UV = [0, 0, 16, 16]
+
+
+def part(frm, to, tex, faces=("north", "south", "east", "west", "up", "down"),
+         rotation=None, **per_face) -> dict:
+    """A cuboid wearing one texture (or one per named face), whole sprite."""
+    element = {"from": list(frm), "to": list(to), "faces": {}}
+    for side in faces:
+        element["faces"][side] = {"texture": "#" + per_face.get(side, tex),
+                                  "uv": WHOLE_UV}
+    if rotation is not None:
+        element["rotation"] = rotation
+    return element
+
+
+def witness_models() -> dict[str, dict]:
+    """name -> model JSON, for every rig part and the trophy."""
+    models = {}
+
+    # The cloak: shoulders, a taper, and four tatters hanging below the hem
+    # so it never quite touches the ground.
+    models["witness_body"] = {
+        "textures": {"cloak": f"{NS}:item/witness_cloak", "particle": f"{NS}:item/witness_cloak"},
+        "elements": [
+            part([2, 11, 3], [14, 16, 13], "cloak"),
+            part([3, 5, 4], [13, 11.5, 12], "cloak"),
+            part([4, 0, 5], [12, 5.5, 11], "cloak"),
+            part([4, -4, 5], [6, 0.5, 7], "cloak"),
+            part([10, -3, 5], [12, 0.5, 7], "cloak"),
+            part([4, -3, 9], [6, 0.5, 11], "cloak"),
+            part([10, -4, 9], [12, 0.5, 11], "cloak"),
+        ],
+    }
+    # The seams alone, a hair outside the cloak: drawn fully bright.
+    models["witness_body_glow"] = {
+        "textures": {"seams": f"{NS}:item/witness_seams", "particle": f"{NS}:item/witness_seams"},
+        "elements": [
+            part([1.9, 10.9, 2.9], [14.1, 16.1, 13.1], "seams"),
+            part([2.9, 4.9, 3.9], [13.1, 11.6, 12.1], "seams"),
+            part([3.9, -0.1, 4.9], [12.1, 5.6, 11.1], "seams"),
+        ],
+    }
+    # The hood: a cube with the front face left off (the face element sits
+    # there, fully bright) and a peak of three steps above it.
+    models["witness_hood"] = {
+        "textures": {"hood": f"{NS}:item/witness_hood", "particle": f"{NS}:item/witness_hood"},
+        "elements": [
+            part([2, 2, 2], [14, 14, 14], "hood", faces=("north", "east", "west", "up", "down")),
+            part([3, 14, 3], [13, 17, 13], "hood"),
+            part([5, 17, 5], [11, 20, 11], "hood"),
+            part([7, 20, 7], [9, 23, 9], "hood"),
+        ],
+    }
+    for face, texture in (("witness_face", "witness_face"),
+                          ("witness_face_red", "witness_face_red")):
+        models[face] = {
+            "textures": {"face": f"{NS}:item/{texture}", "particle": f"{NS}:item/{texture}"},
+            "elements": [part([2, 2, 13.9], [14, 14, 14.1], "face", faces=("south",))],
+        }
+    # A hand: palm, three fingers, a thumb. Mirrored in the rig by scale.
+    models["witness_hand"] = {
+        "textures": {"hand": f"{NS}:item/witness_hand", "finger": f"{NS}:item/witness_finger",
+                     "particle": f"{NS}:item/witness_hand"},
+        "elements": [
+            part([3, 6, 5], [13, 12, 11], "hand"),
+            part([3.5, 0, 6], [5.5, 6.5, 10], "finger"),
+            part([7, -1, 6], [9, 6.5, 10], "finger"),
+            part([10.5, 0, 6], [12.5, 6.5, 10], "finger"),
+            part([0.5, 5, 6], [3, 9, 10], "finger"),
+        ],
+    }
+    # The crown: eight shards on a ring, every other one turned 45 degrees,
+    # which is the one rotation a model element is allowed.
+    shards = []
+    for k in range(8):
+        angle = k * 45
+        radius = 6.5
+        cx = 8 + radius * math.cos(math.radians(angle))
+        cz = 8 + radius * math.sin(math.radians(angle))
+        element = part([cx - 0.9, 6, cz - 0.9], [cx + 0.9, 10 + (k % 2) * 1.5, cz + 0.9], "shard")
+        if k % 2:
+            element["rotation"] = {"origin": [round(cx, 3), 8, round(cz, 3)], "axis": "y",
+                                   "angle": 45}
+        shards.append(element)
+    models["witness_halo"] = {
+        "textures": {"shard": f"{NS}:item/witness_shard", "particle": f"{NS}:item/witness_shard"},
+        "elements": shards,
+    }
+    # The orbiting eyes: a flat quad, billboarded by the rig so it always
+    # faces whoever is looking. Both sides painted, since a billboard can
+    # still be seen from behind for a frame.
+    for name, texture in (("witness_eye_orbit", "witness_eye"),
+                          ("witness_eye_orbit_red", "witness_eye_red")):
+        models[name] = {
+            "textures": {"eye": f"{NS}:item/{texture}", "particle": f"{NS}:item/{texture}"},
+            "elements": [part([2, 2, 7.6], [14, 14, 8.4], "eye", faces=("north", "south"))],
+        }
+    # The orb it throws, and the one that has been punched back: a cube of
+    # eyes, so it is looking at you whichever way it is tumbling.
+    for name, texture in (("witness_orb", "witness_eye"), ("witness_orb_cyan", "witness_eye_cyan")):
+        models[name] = {
+            "textures": {"eye": f"{NS}:item/{texture}", "particle": f"{NS}:item/{texture}"},
+            "elements": [part([3, 3, 3], [13, 13, 13], "eye")],
+        }
+    # The trophy: an eyeball, iris to the front, white behind. Held like the
+    # other 3D items in the mod so it sits in a slot at the vanilla scale.
+    models["witness_eye"] = {
+        "textures": {"eye": f"{NS}:item/witness_eye", "sclera": f"{NS}:item/witness_sclera",
+                     "particle": f"{NS}:item/witness_sclera"},
+        "display": held(1.0, gui_rotation=(20, 200, 0)),
+        "elements": [
+            part([4, 4, 4], [12, 12, 12], "sclera", south="eye"),
+        ],
+    }
+    return models
+
+
+# Where each rig part sits, in blocks from the boss's feet, and how big it
+# is. The scale multiplies the model (16 units = one block at scale 1).
+# Orbiting eyes are placed by WitnessRig every tick and are not listed.
+RIG = [
+    {"name": "body", "model": "witness_body", "offset": [0, 1.05, 0], "scale": 2.0,
+     "bright": False, "shadow": 0.9},
+    {"name": "body_glow", "model": "witness_body_glow", "offset": [0, 1.05, 0], "scale": 2.0,
+     "bright": True},
+    {"name": "hood", "model": "witness_hood", "offset": [0, 2.65, 0], "scale": 1.85,
+     "bright": False},
+    {"name": "face", "model": "witness_face", "offset": [0, 2.65, 0], "scale": 1.85,
+     "bright": True},
+    {"name": "hand_l", "model": "witness_hand", "offset": [1.3, 1.7, 0.55], "scale": 1.1,
+     "bright": False},
+    # Turned round rather than mirrored: a negative scale does not survive
+    # the matrix decomposition a display entity's transformation goes through,
+    # and a half turn puts the thumb on the inside either way.
+    {"name": "hand_r", "model": "witness_hand", "offset": [-1.3, 1.7, 0.55], "scale": 1.1,
+     "bright": False, "yaw": 180},
+    {"name": "halo", "model": "witness_halo", "offset": [0, 3.45, 0], "scale": 1.7,
+     "bright": True},
+]
+
+
+def witness_assets() -> None:
+    for name, model in witness_models().items():
+        put(f"assets/{NS}/models/item/{name}.json", model)
+        put(f"assets/{NS}/items/{name}.json", {
+            "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+        })
+    put(f"data/{NS}/arena/rig.json", {"parts": RIG})
+
+
+def arena_assets() -> None:
+    """The arena's own dimension: a void under a fixed midnight sky.
+
+    A datapack dimension, so the registry loader adds it to the existing
+    world on the next start and the mod never has to create a world by hand.
+    The void biome spawns nothing and rains nowhere; overworld effects keep
+    the stars and a full moon over the pit.
+    """
+    put(f"data/{NS}/dimension_type/arena.json", {
+        "ultrawarm": False,
+        "natural": False,
+        "coordinate_scale": 1.0,
+        "has_skylight": True,
+        "has_ceiling": False,
+        "ambient_light": 0.05,
+        "fixed_time": 18000,
+        "monster_spawn_light_level": 0,
+        "monster_spawn_block_light_limit": 0,
+        "piglin_safe": False,
+        # True: a bed that explodes is the one thing worse than a bed that
+        # sets a spawn point in the void, and /arena leave covers the latter.
+        "bed_works": True,
+        "respawn_anchor_works": False,
+        "has_raids": False,
+        "logical_height": 384,
+        "min_y": -64,
+        "height": 384,
+        "infiniburn": "#minecraft:infiniburn_overworld",
+        "effects": "minecraft:overworld",
+    })
+    put(f"data/{NS}/dimension/arena.json", {
+        "type": f"{NS}:arena",
+        "generator": {
+            "type": "minecraft:flat",
+            "settings": {
+                "biome": "minecraft:the_void",
+                "lakes": False,
+                "features": False,
+                "layers": [],
+                "structure_overrides": [],
+            },
+        },
+    })
+
+
 def tags() -> None:
     """Make the hammer enchantable, and the tool-required blocks minable.
 
@@ -3606,6 +3833,8 @@ def main() -> None:
     laundry_assets()
     till_assets()
     slot_assets()
+    witness_assets()
+    arena_assets()
     tags()
     worldgen()
     recipes()
