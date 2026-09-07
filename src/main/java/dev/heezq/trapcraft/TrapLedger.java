@@ -104,6 +104,20 @@ public final class TrapLedger {
                 .merge(source, delta, Integer::sum);
     }
 
+    /**
+     * Close one day's book and open the next.
+     *
+     * A handover rather than a copy: a row is only ever reachable from these
+     * two maps, so clearing the outer one leaves the inner ones to the keeper
+     * and {@link #tally} builds fresh ones for the day that just started.
+     */
+    public static void rollOver(Map<String, Map<Source, Integer>> closing,
+                                Map<String, Map<Source, Integer>> keeper) {
+        keeper.clear();
+        keeper.putAll(closing);
+        closing.clear();
+    }
+
     /** Everything in and out, added up. */
     public static int net(Map<Source, Integer> row) {
         int total = 0;
@@ -141,8 +155,10 @@ public final class TrapLedger {
 
     // --- the books -----------------------------------------------------------
 
-    /** Today's book, by player name. Flushed and cleared when the day turns. */
+    /** Today's book, by player name. Flushed and handed over when the day turns. */
     private static final Map<String, Map<Source, Integer>> TODAY = new LinkedHashMap<>();
+    /** The day that just ended, kept whole for anybody assessing it after. */
+    private static final Map<String, Map<Source, Integer>> YESTERDAY = new LinkedHashMap<>();
     private static long day = -1;
     private static Path rows;
     private static Path summary;
@@ -170,7 +186,7 @@ public final class TrapLedger {
             if (now != day) {
                 flush(day);
                 day = now;
-                TODAY.clear();
+                rollOver(TODAY, YESTERDAY);
             }
         });
         registerCommand();
@@ -184,12 +200,32 @@ public final class TrapLedger {
     /**
      * Today's book for one player, or an empty row.
      *
-     * The revenue office reads this. Handed out as an unmodifiable view
+     * The day so far, which is what a readout wants and NOT what an assessment
+     * wants -- see {@link #yesterday}. Handed out as an unmodifiable view
      * because the ledger is the only thing allowed to write to it -- an audit
      * that could edit the evidence is not an audit.
      */
     public static Map<Source, Integer> today(String who) {
         Map<Source, Integer> row = TODAY.get(who);
+        return row == null ? Map.of() : java.util.Collections.unmodifiableMap(row);
+    }
+
+    /**
+     * The day that just ended, for anybody assessing it after the fact.
+     *
+     * The revenue office reads THIS, and the distinction is the whole of
+     * whether it works. This class notices the day turning every second and
+     * TrapLaw notices it every ten, and this one's tick handler is registered
+     * first -- so the book was always emptied before the office got round to
+     * reading it, and what got assessed was the handful of seconds of the NEW
+     * day that had accrued in between. Live, that was one debt of 4335e
+     * against a dealer who had banked 71640e undeclared in a single day.
+     *
+     * In memory only, like {@link #TODAY}: a restart still loses the day's
+     * evidence, which is the same amnesty a restart has always granted.
+     */
+    public static Map<Source, Integer> yesterday(String who) {
+        Map<Source, Integer> row = YESTERDAY.get(who);
         return row == null ? Map.of() : java.util.Collections.unmodifiableMap(row);
     }
 

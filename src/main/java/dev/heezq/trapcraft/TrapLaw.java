@@ -35,8 +35,9 @@ import java.util.Map;
  * <h2>How the office knows</h2>
  *
  * Off {@link TrapLedger}, which has flagged every source declared or otherwise
- * since the day it shipped. It reads the day's book rather than guessing from
- * how much somebody is carrying: wealth swings when you empty a chest, and an
+ * since the day it shipped. It reads {@link TrapLedger#yesterday}, the book
+ * the ledger closed rather than the one it is still writing, and reads a book
+ * at all rather than guessing from how much somebody is carrying: wealth swings when you empty a chest, and an
  * office that assessed you for going to the bank would be noise wearing a
  * uniform.
  *
@@ -160,7 +161,7 @@ public final class TrapLaw {
     // --- the assessment -------------------------------------------------------
 
     /**
-     * The day's reckoning, per player.
+     * The reckoning for the day just gone, per player.
      *
      * Exposure is undeclared income LESS whatever was washed, so somebody who
      * put the day's takings through their own shop is square with the office
@@ -174,7 +175,7 @@ public final class TrapLaw {
         float share = TrapCity.inForce(TrapCity.Act.DRIVE) ? ASSESSMENT_DRIVE : ASSESSMENT;
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             String name = player.getGameProfile().getName();
-            int undeclared = TrapLedger.undeclaredOf(TrapLedger.today(name));
+            int undeclared = TrapLedger.undeclaredOf(TrapLedger.yesterday(name));
             int exposure = undeclared - WASHED.getOrDefault(name, 0);
             if (exposure <= LOOKS_AWAY) {
                 continue;
