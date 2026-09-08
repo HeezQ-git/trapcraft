@@ -152,8 +152,14 @@ public final class TrapContent {
     /** The arena's two: the boss's debuff and the winners' buff. See TrapArena. */
     public static RegistryEntry<StatusEffect> dreadEffect;
     public static RegistryEntry<StatusEffect> adrenalineEffect;
-    /** Oko Obserwatora, the trophy off the arena boss. */
+    /** The bandit's and the rat king's own: see BanditBoss and RatKingBoss. */
+    public static RegistryEntry<StatusEffect> stakeEffect;
+    public static RegistryEntry<StatusEffect> plagueEffect;
+    /** The four trophies, one off each arena boss. */
     public static Item witnessEye;
+    public static Item goldenLever;
+    public static Item ratCrown;
+    public static Item stormHeart;
 
     public static Block crop(Strain s) {
         return CROPS.get(s);
@@ -340,6 +346,12 @@ public final class TrapContent {
         adrenalineEffect = Registry.registerReference(Registries.STATUS_EFFECT,
                 RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("adrenalina")),
                 new AdrenalineStatusEffect());
+        stakeEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("stawka")),
+                new StakeStatusEffect());
+        plagueEffect = Registry.registerReference(Registries.STATUS_EFFECT,
+                RegistryKey.of(RegistryKeys.STATUS_EFFECT, TrapCraft.id("zaraza")),
+                new PlagueStatusEffect());
 
         for (Strain strain : Strain.values()) {
             Block crop = registerBlock("cannabis_crop_" + strain.id(),
@@ -539,6 +551,12 @@ public final class TrapContent {
                 new LedgerItem(settings.maxCount(1), model));
         witnessEye = registerItem("witness_eye", (settings, model) ->
                 new WitnessEyeItem(settings.maxCount(1).rarity(net.minecraft.util.Rarity.EPIC), model));
+        goldenLever = registerItem("golden_lever", (settings, model) ->
+                new GoldenLeverItem(settings.maxCount(1).rarity(net.minecraft.util.Rarity.EPIC), model));
+        ratCrown = registerItem("rat_crown", (settings, model) ->
+                new RatCrownItem(settings.maxCount(1).rarity(net.minecraft.util.Rarity.EPIC), model));
+        stormHeart = registerItem("storm_heart", (settings, model) ->
+                new StormHeartItem(settings.maxCount(1).rarity(net.minecraft.util.Rarity.EPIC), model));
         // maxCount 1: the balance rides on the stack, and two stacked wallets
         // would merge into whichever balance won.
         wallet = registerItem("wallet", (settings, model) ->
@@ -804,6 +822,9 @@ public final class TrapContent {
                     entries.add(nerveTonic);
                     entries.add(ledger);
                     entries.add(witnessEye);
+                    entries.add(goldenLever);
+                    entries.add(ratCrown);
+                    entries.add(stormHeart);
                     entries.add(wallet());
                     entries.add(burnerPhone);
                     entries.add(marketStallItem);

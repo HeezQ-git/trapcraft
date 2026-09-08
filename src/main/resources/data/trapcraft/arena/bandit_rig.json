@@ -1,0 +1,99 @@
+{
+  "parts": [
+    {
+      "name": "body",
+      "model": "bandit_body",
+      "offset": [
+        0,
+        1.7,
+        0
+      ],
+      "scale": 2.2,
+      "shadow": 0.9
+    },
+    {
+      "name": "marquee",
+      "model": "bandit_marquee",
+      "offset": [
+        0,
+        3.62,
+        0
+      ],
+      "scale": 2.2,
+      "bright": true
+    },
+    {
+      "name": "reel_0",
+      "model": "bandit_reel",
+      "offset": [
+        -0.5,
+        1.95,
+        0.62
+      ],
+      "scale": 1.25,
+      "bright": true
+    },
+    {
+      "name": "reel_1",
+      "model": "bandit_reel",
+      "offset": [
+        0,
+        1.95,
+        0.62
+      ],
+      "scale": 1.25,
+      "bright": true
+    },
+    {
+      "name": "reel_2",
+      "model": "bandit_reel",
+      "offset": [
+        0.5,
+        1.95,
+        0.62
+      ],
+      "scale": 1.25,
+      "bright": true
+    },
+    {
+      "name": "arm",
+      "model": "bandit_arm",
+      "offset": [
+        1.05,
+        2.0,
+        0.1
+      ],
+      "scale": 1.6
+    },
+    {
+      "name": "tray",
+      "model": "bandit_tray",
+      "offset": [
+        0,
+        0.85,
+        0.62
+      ],
+      "scale": 1.4
+    },
+    {
+      "name": "leg_l",
+      "model": "bandit_leg",
+      "offset": [
+        0.45,
+        0.7,
+        0
+      ],
+      "scale": 1.4
+    },
+    {
+      "name": "leg_r",
+      "model": "bandit_leg",
+      "offset": [
+        -0.45,
+        0.7,
+        0
+      ],
+      "scale": 1.4
+    }
+  ]
+}

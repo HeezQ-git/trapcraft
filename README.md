@@ -336,43 +336,43 @@ did not happen.
 ## The arena
 
 Every so often, with at least two people online and ninety minutes since the
-last one, an omen goes out to the whole server: **Obserwator** -- the watcher, the
-figure Paranoia shows you at render distance, the one that vanishes when you
-turn to look -- has come down off the edge of the map, and this time it stays. A clickable line
-teleports you to an arena in its own dimension (`trapcraft:arena`, a void
-under a fixed midnight sky), and two minutes later it rises out of the floor.
+last one, an omen goes out to the whole server: one of four bosses has turned
+up, and a clickable line teleports you to its arena in the mod's own dimension
+(`trapcraft:arena`, a void under a fixed midnight sky). Two minutes later it
+rises. The draw never repeats the last boss.
 
-It is a real `HostileEntity` disguised to clients as a vex scaled ×4.1 and
-made invisible; the body is a Polymer display rig (`WitnessRig`) built from
-generated item models, so swords, arrows and crits all work and no client mod
-is involved. The pit itself is a blueprint written by `tools/gen_arena.py`
-and stamped fresh for every event, so it self-heals.
+| Boss | Arena | Its currency | Trophy |
+|------|-------|--------------|--------|
+| **Obserwator** -- the watcher Paranoia shows at render distance | a pit under the night | Groza: slow, dark, bleed; fades on company | Oko Obserwatora: everything near you glows, for you alone |
+| **Bandyta** -- a slot machine that stopped paying and started walking | a casino roof under neon, roulette in the floor | Stawka: hit harder, get hit harder | Złota Dźwignia: one of five buffs, drawn blind |
+| **Król Szczurów** -- the one rat in the sewer with a crown | a cistern with six tunnels and water in the floor | Zaraza: hunger, nausea, bleed; washes off in water | Korona Szczurów: eight blocks through a wall |
+| **Sztorm** -- a cloud that stopped over town with something lit inside | a disc in the sky: no walls, lightning rods, braziers | the cold and the edge | Serce Burzy: a gust up and a slow fall |
 
-| Ability | From | Counter |
-|---------|------|---------|
-| Fala -- a shockwave ring | I | jump it |
-| Oczy -- three homing eyes | I | punch one back: 25 to the boss |
-| Spojrzenie -- the stare | II | look away for 3 s |
-| Piorun -- marked lightning | II | step out of the circle |
-| Lustra -- two mirror copies | II | the real one has orbiting eyes |
-| Skok -- a blink behind you | III | none; the lights are off by now |
-| Uścisk -- one of you in its hand | III | the rest deal 12 × players in 5 s |
+Every boss is a real `HostileEntity` disguised to clients as a vanilla mob
+chosen for its box and its voice (vex, iron golem, ravager, ghast) and made
+invisible; the body is a Polymer display rig built from generated item models,
+so swords, arrows and crits all work and no client mod is involved. The shared
+skeleton is `ArenaBoss` (who it is, where it fights, what it says, what it
+drops), `ArenaBossEntity` (the cast scheduler, phases, damage policy, death),
+`DisplayRig` (a body from `<id>_rig.json`) and `ArenaProjectileEntity`
+(anything thrown, parryable or not); `TrapArena` runs one event loop and never
+names a boss. Each arena is a blueprint written by `tools/gen_arena.py` and
+stamped fresh for every event, so it self-heals.
 
 Nobody dies: a killing blow is a **knockout** -- twenty seconds in the stands
 with everything you had, and the boss heals 8%. Ten minutes and it leaves.
-Every hit it lands adds a stack of **Groza** (slow, then dark, then bleeding),
-which fades while another player stands within four blocks -- Paranoia's
-company rule again. Phase breaks and the kill hand out **Adrenalina**.
+Phase breaks and the kill hand out **Adrenalina**. The storm lends everyone a
+bow on the way in and takes it back on the way out, because it flies.
 
 Loot: a bounty split half evenly, half by damage, paid through
 `TrapMarket.pay`; a Phantom case each (the key is on the shelf, which is the
-sink); the top damage takes a Phantom key and **Oko Obserwatora**, a trophy whose
-right-click makes everything within 40 blocks glow for you alone. A fountain
-of dirty emerald blocks and ~1200 XP round it off, with an eight-second
-light show, without a single rocket -- firework explosions crash every
-client on this pack. Numbers live in `ArenaMath`, which `ArenaMathTest` pins;
-`/guide arena` quotes them. `/arena start|stop|tp|build|cast` are the op
-tools -- an event that rolls every few hours is untestable without them.
+sink); the top damage takes a Phantom key and the boss's trophy, none of which
+the scrap counter will buy. A fountain of dirty emerald blocks and ~1200 XP
+round it off, with an eight-second light show without a single rocket --
+firework explosions crash every client on this pack. Numbers live in
+`ArenaMath`, which `ArenaMathTest` pins; `/guide arena` and the wiki quote
+them. `/arena start [boss]|stop|tp <boss>|build <boss>|cast <ability>` are the
+op tools -- an event that rolls every few hours is untestable without them.
 
 ## The guide books
 
@@ -392,7 +392,7 @@ tools -- an event that rolls every few hours is untestable without them.
 | `/guide police` | the station, the budget dial, crime, fines |
 | `/guide fires` | the brigade, the engines, what burns |
 | `/guide zaklady` | the bookmaker: what to read off the television |
-| `/guide arena` | the witness: every ability and its counter |
+| `/guide arena` | four bosses: every ability and its counter |
 
 Every number on every page is read from the constant that governs it, so
 retuning a mechanic retunes the book and it can never quietly start lying.

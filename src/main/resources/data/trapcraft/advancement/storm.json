@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:storm_heart"
+    },
+    "title": "Niebo czyste",
+    "description": "B\u0105d\u017a w chmurach, kiedy Sztorm cichnie.",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:root"
+}

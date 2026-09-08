@@ -80,4 +80,26 @@ class ArenaMathTest {
         assertEquals("0:05", ArenaMath.clock(100));
         assertEquals("0:00", ArenaMath.clock(-40));
     }
+
+    @Test
+    void theStakeIsLinearAndNeverBelowOne() {
+        assertEquals(1.0F, ArenaMath.stakeMultiplier(0), 0.0001F);
+        assertEquals(1.0F, ArenaMath.stakeMultiplier(-3), 0.0001F);
+        assertEquals(1.0F + 4 * ArenaMath.STAKE_TAKEN_PER_STACK, ArenaMath.stakeMultiplier(4), 0.0001F);
+    }
+
+    @Test
+    void theSwarmGrowsWithThePhaseAndStops() {
+        assertEquals(8, ArenaMath.ratsFor(1));
+        assertEquals(10, ArenaMath.ratsFor(2));
+        assertEquals(ArenaMath.RATS_MAX, ArenaMath.ratsFor(3));
+        assertEquals(ArenaMath.RATS_MAX, ArenaMath.ratsFor(9));
+    }
+
+    @Test
+    void theRatBiteIsCapped() {
+        assertEquals(1.0F, ArenaMath.ratBite(0), 0.0001F);
+        assertEquals(1.0F + 2 * ArenaMath.RAT_BITE_BONUS, ArenaMath.ratBite(2), 0.0001F);
+        assertEquals(ArenaMath.RAT_BITE_CAP, ArenaMath.ratBite(100), 0.0001F);
+    }
 }

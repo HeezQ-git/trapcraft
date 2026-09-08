@@ -7,34 +7,30 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
-import net.minecraft.particle.DustColorTransitionParticleEffect;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
@@ -63,14 +59,17 @@ import java.util.UUID;
  *
  * Every so often, with company online, an omen goes out -- a line in chat
  * with a link on it -- and for two minutes anybody who clicks is stood at
- * the gate of a pit in its own dimension. Then the witness rises, and the
- * next ten minutes are {@link WitnessEntity}'s.
+ * the gate of one of the arenas in {@code trapcraft:arena}. Then the boss
+ * the draw picked rises, and the next ten minutes are its.
  *
- * This class is the clock and the doorman: the roll, the gathering, the
- * bars, who came in and where they came from, knockouts (nobody dies here,
- * they sit in the stands for twenty seconds), the lights, the loot, and the
- * way home. Origins are written to {@code world/trapcraft-arena.txt} so a
- * restart mid-fight still knows where everybody lives.
+ * This class is the clock and the doorman, and it knows no boss by name:
+ * the roll and the draw, the gathering, the bars, who came in and where
+ * they came from, knockouts (nobody dies here, they sit in the stands for
+ * twenty seconds), the loot, the show, and the way home. Everything a boss
+ * decides -- its arena, its words, its lights, its trophy -- is asked of
+ * the {@link ArenaBoss} on duty. Origins and the last draw are written to
+ * {@code world/trapcraft-arena.txt} so a restart mid-fight still knows where
+ * everybody lives and who fought last.
  *
  * <h2>Money</h2>
  *
@@ -84,21 +83,9 @@ public final class TrapArena {
     public enum Stage { IDLE, GATHERING, FIGHT, VICTORY }
 
     public static final RegistryKey<World> WORLD_KEY = RegistryKey.of(RegistryKeys.WORLD, TrapCraft.id("arena"));
-    /** The blueprint's (0, 0, 0): the block under the centre of the pit floor. */
-    public static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
-    public static final Vec3d CENTRE = new Vec3d(0.5, 65.0, 0.5);
-    public static final double PIT_RADIUS = 20.5;
-    private static final Vec3d GATE = new Vec3d(0.5, 65.0, 27.5);
-    private static final float GATE_YAW = 180.0F;
-    private static final double STANDS_RADIUS = 28.5;
-    private static final int STANDS_Y = 70;
+    public static final BlockState LIT = Blocks.SEA_LANTERN.getDefaultState();
     private static final int VICTORY_TICKS = 20 * 90;
     private static final int SHOW_TICKS = 20 * 8;
-
-    private static final BlockState LIT = Blocks.SEA_LANTERN.getDefaultState();
-    private static final BlockState DIM = Blocks.CRYING_OBSIDIAN.getDefaultState();
-    private static final BlockState DARK = Blocks.POLISHED_BLACKSTONE.getDefaultState();
-    private static final BlockState DARK_WALL = Blocks.POLISHED_BLACKSTONE_BRICKS.getDefaultState();
 
     private record Origin(String world, double x, double y, double z, float yaw, float pitch) {
         static Origin of(ServerPlayerEntity player) {
@@ -111,14 +98,18 @@ public final class TrapArena {
     private static Stage stage = Stage.IDLE;
     private static int stageStart;
     private static int gatherTicks;
-    private static WitnessEntity boss;
+    private static ArenaBoss current;
+    private static ArenaBossEntity boss;
     private static ArenaBlueprint blueprint;
+    private static final Map<String, ArenaBlueprint> BLUEPRINTS = new HashMap<>();
     private static final Map<UUID, Origin> ORIGINS = new HashMap<>();
     private static final Map<UUID, Float> DAMAGE = new HashMap<>();
     private static final Map<UUID, String> NAMES = new HashMap<>();
     private static final Map<UUID, Integer> KNOCKED_OUT = new HashMap<>();
+    private static final List<Entity> ADDS = new ArrayList<>();
     private static int knockouts;
     private static long lastEventEnd = Long.MIN_VALUE / 4;
+    private static String lastBossId;
     private static ServerBossBar countdownBar;
     private static ServerBossBar fightBar;
     private static ServerBossBar watchBar;
@@ -131,8 +122,16 @@ public final class TrapArena {
 
     public static void register() {
         WitnessEntity.register();
-        WitnessEyeEntity.register();
+        BanditEntity.register();
+        RatKingEntity.register();
+        RatEntity.register();
+        StormEntity.register();
+        ArenaProjectileEntity.register();
         WitnessEyeItem.register();
+        ArenaBosses.register(WitnessBoss.INSTANCE);
+        ArenaBosses.register(BanditBoss.INSTANCE);
+        ArenaBosses.register(RatKingBoss.INSTANCE);
+        ArenaBosses.register(StormBoss.INSTANCE);
 
         ServerLifecycleEvents.SERVER_STARTED.register(TrapArena::load);
         ServerLifecycleEvents.SERVER_STOPPING.register(s -> {
@@ -157,6 +156,11 @@ public final class TrapArena {
         return stage;
     }
 
+    /** The boss on duty, or null between events. */
+    public static ArenaBoss current() {
+        return current;
+    }
+
     private static ServerWorld world() {
         return server == null ? null : server.getWorld(WORLD_KEY);
     }
@@ -172,17 +176,19 @@ public final class TrapArena {
     }
 
     /** Somebody the boss may go for: in the pit, alive, survival, and not sat out. */
-    public static boolean isCombatant(net.minecraft.entity.Entity entity) {
+    public static boolean isCombatant(Entity entity) {
         if (!(entity instanceof ServerPlayerEntity player) || !inArena(player) || !player.isAlive()) {
             return false;
         }
-        if (player.isSpectator() || player.isCreative() || isKnockedOut(player)) {
+        if (player.isSpectator() || player.isCreative() || isKnockedOut(player) || current == null) {
             return false;
         }
-        double dx = player.getX() - CENTRE.x;
-        double dz = player.getZ() - CENTRE.z;
-        return dx * dx + dz * dz <= (PIT_RADIUS + 0.5) * (PIT_RADIUS + 0.5)
-                && player.getY() > ORIGIN.getY() - 2 && player.getY() < ORIGIN.getY() + 14;
+        Vec3d centre = current.centre();
+        double dx = player.getX() - centre.x;
+        double dz = player.getZ() - centre.z;
+        double r = current.pitRadius() + 0.5;
+        int floor = current.origin().getY();
+        return dx * dx + dz * dz <= r * r && player.getY() > floor - 2 && player.getY() < floor + current.pitCeiling();
     }
 
     public static List<ServerPlayerEntity> combatants() {
@@ -220,22 +226,34 @@ public final class TrapArena {
         NAMES.put(player.getUuid(), player.getNameForScoreboard());
     }
 
-    /** Add Groza stacks. Fresh instance rather than a longer one, so the icon's amplifier moves. */
-    public static void dread(ServerPlayerEntity player, int add) {
+    /** An add the boss called: cleared with the event. */
+    public static void track(Entity add) {
+        ADDS.add(add);
+    }
+
+    /**
+     * Stack an arena debuff. Fresh instance rather than a longer one, so the
+     * icon's amplifier moves; called from a boss's tick, never from inside an
+     * effect's own update.
+     */
+    public static void stack(ServerPlayerEntity player, RegistryEntry<StatusEffect> effect, int add, int max, int ticks) {
         if (player == null || !player.isAlive()) {
             return;
         }
-        StatusEffectInstance current = player.getStatusEffect(TrapContent.dreadEffect);
-        int amplifier = current == null ? add - 1 : Math.min(ArenaMath.DREAD_MAX, current.getAmplifier() + add);
-        player.removeStatusEffect(TrapContent.dreadEffect);
-        player.addStatusEffect(new StatusEffectInstance(TrapContent.dreadEffect, ArenaMath.DREAD_TICKS,
-                Math.max(0, amplifier), false, true, true));
+        StatusEffectInstance now = player.getStatusEffect(effect);
+        int amplifier = now == null ? add - 1 : Math.min(max, now.getAmplifier() + add);
+        player.removeStatusEffect(effect);
+        player.addStatusEffect(new StatusEffectInstance(effect, ticks, Math.max(0, amplifier), false, true, true));
     }
 
     public static void title(ServerPlayerEntity player, Text title, Text subtitle, int in, int stay, int out) {
         player.networkHandler.sendPacket(new TitleFadeS2CPacket(in, stay, out));
         player.networkHandler.sendPacket(new SubtitleS2CPacket(subtitle));
         player.networkHandler.sendPacket(new TitleS2CPacket(title));
+    }
+
+    private static ArenaBlueprint blueprintOf(ArenaBoss kind) {
+        return BLUEPRINTS.computeIfAbsent(kind.id(), id -> ArenaBlueprint.load(id, kind.origin()));
     }
 
     // --- the clock ----------------------------------------------------------------
@@ -254,8 +272,8 @@ public final class TrapArena {
         if (stage != Stage.IDLE) {
             voidCatch();
             knockoutReturns(now);
-            if (now % 20 == 0) {
-                dreadTick(now);
+            if (now % 20 == 0 && current != null) {
+                current.debuffTick(world(), arenaPlayers(), now);
             }
         }
     }
@@ -267,12 +285,17 @@ public final class TrapArena {
         long since = System.currentTimeMillis() / 1000 - lastEventEnd;
         int online = server.getPlayerManager().getPlayerList().size();
         if (ArenaMath.omenRolls(since, online, server.getOverworld().getRandom().nextFloat())) {
-            startGathering(ArenaMath.GATHER_TICKS);
+            ArenaBoss drawn = ArenaBosses.draw(server.getOverworld().getRandom(), lastBossId);
+            if (drawn != null) {
+                startGathering(drawn, ArenaMath.GATHER_TICKS);
+            }
         }
     }
 
-    private static void startGathering(int ticks) {
+    private static void startGathering(ArenaBoss kind, int ticks) {
         ServerWorld world = world();
+        current = kind;
+        blueprint = blueprintOf(kind);
         stage = Stage.GATHERING;
         stageStart = server.getTicks();
         gatherTicks = ticks;
@@ -280,25 +303,24 @@ public final class TrapArena {
         NAMES.clear();
         KNOCKED_OUT.clear();
         knockouts = 0;
-        blueprint.build(world, ORIGIN);
-        setLights(1);
-        sigil(false);
+        blueprint.build(world);
+        kind.onBuilt(world, blueprint);
 
-        countdownBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.NOTCHED_10);
+        countdownBar = new ServerBossBar(kind.styledName(), kind.barColour(1), BossBar.Style.NOTCHED_10);
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             countdownBar.addPlayer(player);
             player.playSoundToPlayer(SoundEvents.EVENT_RAID_HORN.value(), SoundCategory.HOSTILE, 1.0F, 0.6F);
             player.playSoundToPlayer(SoundEvents.BLOCK_BELL_RESONATE, SoundCategory.HOSTILE, 0.6F, 0.5F);
         }
         announce(ticks, true);
-        TrapCraft.LOGGER.info("arena: omen, gathering for {} ticks", ticks);
+        TrapCraft.LOGGER.info("arena: omen for {}, gathering for {} ticks", kind.id(), ticks);
     }
 
     private static void tickGathering(int now) {
         int left = gatherTicks - (now - stageStart);
         if (countdownBar != null) {
-            countdownBar.setName(Text.literal("OBSERWATOR ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
-                    .append(Text.literal("· arena otwiera się za " + ArenaMath.clock(left)).formatted(Formatting.WHITE)));
+            countdownBar.setName(current.styledName().append(Text.literal(" · arena otwiera się za "
+                    + ArenaMath.clock(left)).formatted(Formatting.WHITE)));
             countdownBar.setPercent(Math.max(0.0F, Math.min(1.0F, left / (float) gatherTicks)));
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 if (!countdownBar.getPlayers().contains(player)) {
@@ -311,8 +333,7 @@ public final class TrapArena {
         }
         if (left <= 0) {
             if (arenaPlayers().isEmpty()) {
-                broadcast(Text.literal("Nikt nie przyszedł. ").formatted(Formatting.GRAY, Formatting.ITALIC)
-                        .append(Text.literal("Obserwator wrócił na krawędź mapy.").formatted(Formatting.DARK_GRAY)));
+                broadcast(current.nobodyCame());
                 endEvent(false, "nobody came");
             } else {
                 startFight(now);
@@ -328,37 +349,30 @@ public final class TrapArena {
             countdownBar.clearPlayers();
             countdownBar = null;
         }
-        boss = new WitnessEntity(WitnessEntity.TYPE, world);
-        boss.refreshPositionAndAngles(CENTRE.x, CENTRE.y, CENTRE.z, 180.0F, 0.0F);
-        boss.sizeFor(Math.max(1, arenaPlayers().size()));
-        world.spawnEntity(boss);
-
-        fightBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
-        fightBar.setDragonMusic(true);
-        watchBar = new ServerBossBar(Text.literal("OBSERWATOR"), BossBar.Color.PURPLE, BossBar.Style.PROGRESS);
-        sigil(true);
+        boss = current.spawn(world, Math.max(1, arenaPlayers().size()));
+        fightBar = new ServerBossBar(current.styledName(), current.barColour(1), BossBar.Style.PROGRESS);
+        watchBar = new ServerBossBar(current.styledName(), current.barColour(1), BossBar.Style.PROGRESS);
+        current.onFightStart(world, blueprint);
+        ArenaBoss.Line line = current.fightStart();
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("OBSERWATOR").formatted(Formatting.DARK_PURPLE, Formatting.BOLD),
-                    Text.literal("Patrzył od pierwszego dnia.").formatted(Formatting.LIGHT_PURPLE), 20, 70, 20);
+            title(player, line.title(), line.subtitle(), 20, 70, 20);
             player.playSoundToPlayer(SoundEvents.ENTITY_ENDER_DRAGON_GROWL, SoundCategory.HOSTILE, 1.0F, 0.5F);
             TrapNet.flash(player, 0x2a1b3d, 30);
         }
-        broadcast(Text.literal("Obserwator jest na arenie. ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
-                .append(Text.literal("Dziesięć minut, zanim znów zniknie. ").formatted(Formatting.GRAY))
-                .append(link("[ WCHODZĘ ]", "/arena join", "Teleport na arenę")));
-        TrapCraft.LOGGER.info("arena: the witness rises for {} players", arenaPlayers().size());
+        broadcast(current.fightBroadcast().copy().append(link("[ WCHODZĘ ]", "/arena join", "Teleport na arenę")));
+        TrapCraft.LOGGER.info("arena: {} rises for {} players", current.id(), arenaPlayers().size());
     }
 
     /** The intro is over; the boss is in play. */
-    public static void fightBegins(WitnessEntity witness) {
+    public static void fightBegins(ArenaBossEntity witness) {
         for (ServerPlayerEntity player : arenaPlayers()) {
-            player.sendMessage(Text.literal("Patrzy na ciebie.").formatted(Formatting.DARK_PURPLE), true);
+            player.sendMessage(Text.literal("Patrzy na ciebie.").formatted(current.colour()), true);
         }
     }
 
     private static void tickFight(int now) {
         if (boss == null || boss.isRemoved()) {
-            endEvent(false, "the witness is gone");
+            endEvent(false, "the boss is gone");
             return;
         }
         if (boss.isDead()) {
@@ -366,14 +380,12 @@ public final class TrapArena {
         }
         int left = ArenaMath.FIGHT_TICKS - (now - stageStart);
         float fraction = Math.max(0.0F, boss.getHealth() / boss.getMaxHealth());
-        Text name = Text.literal("OBSERWATOR ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD)
-                .append(Text.literal("· " + roman(boss.phase()) + " · " + ArenaMath.clock(left))
-                        .formatted(Formatting.WHITE));
+        Text name = current.styledName().append(Text.literal(" · " + roman(boss.phase()) + " · "
+                + ArenaMath.clock(left)).formatted(Formatting.WHITE));
         for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
             bar.setName(name);
             bar.setPercent(fraction);
-            bar.setColor(boss.phase() == 3 ? BossBar.Color.RED : boss.phase() == 2 ? BossBar.Color.PINK
-                    : BossBar.Color.PURPLE);
+            bar.setColor(current.barColour(boss.phase()));
         }
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             boolean here = inArena(player);
@@ -391,32 +403,29 @@ public final class TrapArena {
     }
 
     private static void enrage() {
+        ArenaBoss.Line line = current.enrage();
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("ZNIKNĄŁ").formatted(Formatting.RED, Formatting.BOLD),
-                    Text.literal("Za wolno.").formatted(Formatting.GRAY), 10, 60, 20);
+            title(player, line.title(), line.subtitle(), 10, 60, 20);
             player.playSoundToPlayer(SoundEvents.ENTITY_WITHER_DEATH, SoundCategory.HOSTILE, 0.8F, 0.4F);
         }
-        broadcast(Text.literal("Obserwator zniknął. ").formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal("Nikt nie zamknął mu oka na czas.").formatted(Formatting.GRAY)));
+        broadcast(current.enrageBroadcast());
         ServerWorld world = world();
         if (boss != null && world != null) {
             Vec3d at = boss.getPos();
-            world.spawnParticles(ParticleTypes.REVERSE_PORTAL, at.x, at.y + 1.5, at.z, 80, 0.8, 1.5, 0.8, 0.5);
+            world.spawnParticles(net.minecraft.particle.ParticleTypes.REVERSE_PORTAL, at.x, at.y + 1.5, at.z,
+                    80, 0.8, 1.5, 0.8, 0.5);
         }
         endEvent(false, "the clock ran out");
     }
 
     // --- phases, death, loot ------------------------------------------------------------
 
-    public static void onPhase(WitnessEntity witness, int phase) {
-        setLights(phase);
-        if (phase == 3) {
-            sigil(false);
-        }
-        Text head = Text.literal(phase == 2 ? "FAZA II" : "FAZA III").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD);
-        Text sub = Text.literal(phase == 2 ? "Nie mruga." : "Gasną światła.").formatted(Formatting.GRAY);
+    public static void onPhase(ArenaBossEntity witness, int phase) {
+        ServerWorld world = world();
+        current.onPhase(world, blueprint, phase);
+        ArenaBoss.Line line = current.phase(phase);
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, head, sub, 5, 40, 15);
+            title(player, line.title(), line.subtitle(), 5, 40, 15);
             TrapNet.shake(player, 1.0F, 15);
             TrapNet.flash(player, phase == 3 ? 0x000000 : 0x5a2d9c, 20);
         }
@@ -425,18 +434,17 @@ public final class TrapArena {
                     ArenaMath.ADRENALINE_PHASE_TICKS, 0, false, true, true));
             player.heal(4.0F);
         }
-        broadcast(Text.literal("Obserwator: ").formatted(Formatting.DARK_PURPLE)
-                .append(Text.literal(phase == 2 ? "faza II. Nie mruga." : "faza III. Gasną światła.").formatted(Formatting.GRAY)));
+        broadcast(current.phaseBroadcast(phase));
     }
 
-    public static void onBossDeath(WitnessEntity witness) {
+    public static void onBossDeath(ArenaBossEntity witness) {
         if (stage != Stage.FIGHT) {
             return;
         }
         stage = Stage.VICTORY;
         stageStart = server.getTicks();
-        Text name = Text.literal("OBSERWATOR ").formatted(Formatting.GOLD, Formatting.BOLD)
-                .append(Text.literal("· oko zamknięte").formatted(Formatting.WHITE));
+        Text name = current.styledName().copy().formatted(Formatting.GOLD)
+                .append(Text.literal(" · pokonany").formatted(Formatting.WHITE));
         for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
             if (bar != null) {
                 bar.setName(name);
@@ -444,19 +452,20 @@ public final class TrapArena {
                 bar.setColor(BossBar.Color.YELLOW);
             }
         }
+        ArenaBoss.Line line = current.victory();
         for (ServerPlayerEntity player : arenaPlayers()) {
-            title(player, Text.literal("OKO ZAMKNIĘTE").formatted(Formatting.GOLD, Formatting.BOLD),
-                    Text.literal("Już nie patrzy.").formatted(Formatting.YELLOW), 10, 80, 30);
+            title(player, line.title(), line.subtitle(), 10, 80, 30);
             TrapNet.shake(player, 1.2F, 20);
-            TrapAwards.grant(player, "witness");
+            TrapAwards.grant(player, current.killAward());
             if (knockouts == 0 && DAMAGE.getOrDefault(player.getUuid(), 0.0F) > 0.0F) {
                 TrapAwards.grant(player, "unbroken");
             }
         }
+        clearAdds();
     }
 
     /** The body has gone up. Loot, the light show, the table. */
-    public static void victoryBurst(WitnessEntity witness) {
+    public static void victoryBurst(ArenaBossEntity witness) {
         ServerWorld world = world();
         if (world == null || stage != Stage.VICTORY) {
             // /kill on one an op summoned to look at: the rig still dies
@@ -478,7 +487,7 @@ public final class TrapArena {
         int[] shares = ArenaMath.bountyShares(dealt, pool);
 
         MutableText table = Text.empty()
-                .append(Text.literal("\n✦ OKO ZAMKNIĘTE ✦\n").formatted(Formatting.GOLD, Formatting.BOLD));
+                .append(Text.literal("\n" + current.victoryHeader() + "\n").formatted(Formatting.GOLD, Formatting.BOLD));
         String top = null;
         for (int i = 0; i < players; i++) {
             UUID id = ranked.get(i).getKey();
@@ -500,7 +509,7 @@ public final class TrapArena {
             player.getInventory().offerOrDrop(new ItemStack(TrapContent.CASES.get(CaseOdds.Tier.PHANTOM)));
             if (i == 0) {
                 player.getInventory().offerOrDrop(new ItemStack(TrapContent.KEYS.get(CaseOdds.Tier.PHANTOM)));
-                player.getInventory().offerOrDrop(new ItemStack(TrapContent.witnessEye));
+                player.getInventory().offerOrDrop(new ItemStack(current.trophy()));
             }
             player.addStatusEffect(new StatusEffectInstance(TrapContent.adrenalineEffect,
                     ArenaMath.ADRENALINE_WIN_TICKS, 0, false, true, true));
@@ -509,7 +518,8 @@ public final class TrapArena {
         }
         table.append(Text.literal("  Skrzynka Widmo dla każdego").formatted(Formatting.LIGHT_PURPLE));
         if (top != null) {
-            table.append(Text.literal(", Klucz Widmo i Oko Obserwatora dla " + top).formatted(Formatting.LIGHT_PURPLE));
+            table.append(Text.literal(", Klucz Widmo i " + current.trophyName() + " dla " + top)
+                    .formatted(Formatting.LIGHT_PURPLE));
         }
         table.append(Text.literal(".\n").formatted(Formatting.LIGHT_PURPLE))
                 .append(Text.literal("  Brudne szmaragdy leżą na arenie. Kto pierwszy.\n").formatted(Formatting.GRAY, Formatting.ITALIC))
@@ -528,22 +538,24 @@ public final class TrapArena {
             world.spawnEntity(drop);
         }
         ExperienceOrbEntity.spawn(world, at, ArenaMath.XP_TOTAL);
+
         // The show: veins relit one by one round the ring, bursts overhead.
         // Particles and block updates only. Firework rockets crashed every
         // client on this pack (Farmer's Delight hands the firework particle
         // a StarParticle and vanilla casts it), and a rocket frozen in an
         // unloaded chunk crashed them again on every join until it was killed.
         showUntil = server.getTicks() + SHOW_TICKS;
-        showVeins = new ArrayList<>(blueprint.tagged("vein", ORIGIN));
+        showVeins = new ArrayList<>(blueprint.tagged("vein"));
+        Vec3d centre = current.centre();
         showVeins.sort(Comparator.comparingDouble(pos ->
-                Math.atan2(pos.getZ() + 0.5 - CENTRE.z, pos.getX() + 0.5 - CENTRE.x)));
-        TrapCraft.LOGGER.info("arena: the witness fell to {} players, pool {}e", players, pool);
+                Math.atan2(pos.getZ() + 0.5 - centre.z, pos.getX() + 0.5 - centre.x)));
+        TrapCraft.LOGGER.info("arena: {} fell to {} players, pool {}e", current.id(), players, pool);
     }
 
     private static void tickVictory(int now) {
         ServerWorld world = world();
         if (world != null && now < showUntil) {
-            lightShow(world, now);
+            current.showTick(world, blueprint, showVeins, now - (showUntil - SHOW_TICKS));
         }
         if (now - stageStart == 200) {
             for (ServerBossBar bar : new ServerBossBar[]{fightBar, watchBar}) {
@@ -559,65 +571,13 @@ public final class TrapArena {
         }
     }
 
-    private static final DustColorTransitionParticleEffect RING =
-            new DustColorTransitionParticleEffect(0x34d8ea, 0x8a4fd8, 1.4F);
-
-    /**
-     * Eight seconds of light, none of it an entity.
-     *
-     * The veins the third phase put out come back on one at a time round the
-     * ring with a rising chime, totem bursts bloom over the pit with a flash
-     * and a firework-blast sound, and a ring of dust runs out from the middle
-     * every two seconds. Reads as fireworks from inside the arena and cannot
-     * crash anybody, because nothing here is a rocket.
-     */
-    private static void lightShow(ServerWorld world, int now) {
-        Random random = world.getRandom();
-        int t = now - (showUntil - SHOW_TICKS);
-
-        if (t % 2 == 0 && !showVeins.isEmpty()) {
-            int step = t / 2;
-            if (step < showVeins.size()) {
-                BlockPos vein = showVeins.get(step);
-                world.setBlockState(vein, LIT, Block.NOTIFY_LISTENERS);
-                world.playSound(null, vein.getX() + 0.5, vein.getY() + 1.0, vein.getZ() + 0.5,
-                        SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.HOSTILE, 1.2F,
-                        0.6F + 1.2F * step / (float) showVeins.size());
-                world.spawnParticles(ParticleTypes.END_ROD, vein.getX() + 0.5, vein.getY() + 1.2,
-                        vein.getZ() + 0.5, 12, 0.2, 0.6, 0.2, 0.08);
+    private static void clearAdds() {
+        for (Entity add : ADDS) {
+            if (!add.isRemoved()) {
+                add.discard();
             }
         }
-
-        if (t % 8 == 0) {
-            double angle = random.nextDouble() * Math.PI * 2;
-            double r = 3.0 + random.nextDouble() * 15.0;
-            double x = CENTRE.x + Math.cos(angle) * r;
-            double y = CENTRE.y + 4.0 + random.nextDouble() * 6.0;
-            double z = CENTRE.z + Math.sin(angle) * r;
-            world.spawnParticles(ParticleTypes.TOTEM_OF_UNDYING, x, y, z, 70, 0.2, 0.2, 0.2, 0.55);
-            world.spawnParticles(ParticleTypes.FLASH, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
-            world.spawnParticles(ParticleTypes.END_ROD, x, y, z, 25, 0.3, 0.3, 0.3, 0.18);
-            world.playSound(null, x, y, z, SoundEvents.ENTITY_FIREWORK_ROCKET_LARGE_BLAST,
-                    SoundCategory.HOSTILE, 1.5F, 0.8F + random.nextFloat() * 0.4F);
-            if (random.nextBoolean()) {
-                world.playSound(null, x, y, z, SoundEvents.ENTITY_FIREWORK_ROCKET_TWINKLE,
-                        SoundCategory.HOSTILE, 1.0F, 1.0F);
-            }
-        }
-
-        if (t % 40 < 20) {
-            double radius = (t % 40) * 1.0 + 1.0;
-            int points = (int) (radius * 4);
-            for (int i = 0; i < points; i++) {
-                double a = i * Math.PI * 2 / points;
-                world.spawnParticles(RING, CENTRE.x + Math.cos(a) * radius, CENTRE.y + 0.6,
-                        CENTRE.z + Math.sin(a) * radius, 1, 0.0, 0.1, 0.0, 0.0);
-            }
-            if (t % 40 == 0) {
-                world.playSound(null, CENTRE.x, CENTRE.y, CENTRE.z, SoundEvents.BLOCK_BELL_RESONATE,
-                        SoundCategory.HOSTILE, 1.2F, 0.7F);
-            }
-        }
+        ADDS.clear();
     }
 
     private static void endEvent(boolean won, String why) {
@@ -633,16 +593,21 @@ public final class TrapArena {
             boss.discard();
         }
         boss = null;
+        clearAdds();
         for (ServerPlayerEntity player : arenaPlayers()) {
             sendHome(player, won ? "Arena zamknięta. Wracasz z łupem." : "Arena zamknięta. Wracasz.");
         }
-        setLights(1);
-        sigil(false);
+        if (current != null && world() != null) {
+            current.onEnd(world(), blueprint);
+            lastBossId = current.id();
+        }
         stage = Stage.IDLE;
+        String was = current == null ? "?" : current.id();
+        current = null;
         lastEventEnd = System.currentTimeMillis() / 1000;
         KNOCKED_OUT.clear();
         save();
-        TrapCraft.LOGGER.info("arena: event over ({})", why);
+        TrapCraft.LOGGER.info("arena: {} over ({})", was, why);
     }
 
     // --- coming and going -----------------------------------------------------------
@@ -652,8 +617,10 @@ public final class TrapArena {
         if (player == null) {
             return err(source, "tylko dla graczy");
         }
-        if (stage == Stage.IDLE) {
-            return err(source, "Na arenie jest cicho. Obserwator jeszcze nie zszedł z krawędzi.");
+        if (stage == Stage.IDLE || current == null) {
+            source.sendFeedback(() -> Text.literal("Na arenie jest cicho. Zwiastun przyjdzie na czat.")
+                    .formatted(Formatting.RED), false);
+            return 0;
         }
         if (inArena(player)) {
             return err(source, "Już tu jesteś.");
@@ -665,11 +632,13 @@ public final class TrapArena {
         ORIGINS.putIfAbsent(player.getUuid(), Origin.of(player));
         NAMES.put(player.getUuid(), player.getNameForScoreboard());
         save();
-        player.teleport(world, GATE.x, GATE.y, GATE.z, Set.of(), GATE_YAW, 0.0F, true);
+        Vec3d gate = current.gate();
+        player.teleport(world, gate.x, gate.y, gate.z, Set.of(), current.gateYaw(), 0.0F, true);
         player.playSoundToPlayer(SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.7F);
         player.playSoundToPlayer(SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.8F, 0.5F);
         TrapNet.flash(player, 0x2a1b3d, 25);
-        player.sendMessage(Text.literal("Jesteś na arenie. ").formatted(Formatting.LIGHT_PURPLE)
+        current.onEnter(player);
+        player.sendMessage(Text.literal("Jesteś na arenie. ").formatted(current.colour())
                 .append(link("/arena leave", "/arena leave", "Wracasz tam, gdzie byłeś"))
                 .append(Text.literal(" wraca tam, gdzie byłeś. Nikt tu nie ginie: nokaut to 20 s w trybunach.")
                         .formatted(Formatting.GRAY)), false);
@@ -703,7 +672,9 @@ public final class TrapArena {
     private static void sendHome(ServerPlayerEntity player, String why) {
         Origin origin = ORIGINS.remove(player.getUuid());
         save();
-        player.removeStatusEffect(TrapContent.dreadEffect);
+        for (ArenaBoss kind : ArenaBosses.all()) {
+            kind.onLeave(player);
+        }
         KNOCKED_OUT.remove(player.getUuid());
         ServerWorld target = null;
         if (origin != null) {
@@ -754,17 +725,17 @@ public final class TrapArena {
     private static void knockout(ServerPlayerEntity player, ServerWorld world) {
         player.setHealth(player.getMaxHealth());
         player.setFireTicks(0);
+        player.setFrozenTicks(0);
         player.getHungerManager().setFoodLevel(Math.max(player.getHungerManager().getFoodLevel(), 12));
-        player.removeStatusEffect(TrapContent.dreadEffect);
+        for (ArenaBoss kind : ArenaBosses.all()) {
+            kind.onKnockout(player);
+        }
         player.fallDistance = 0.0;
-        // Anywhere in the stands but the gate's own sector, which is where
-        // the landing is and where a knocked-out player would fall to the
-        // floor of it instead.
-        double angle = Math.toRadians(110 + world.getRandom().nextInt(320));
-        double x = CENTRE.x + Math.cos(angle) * STANDS_RADIUS;
-        double z = CENTRE.z + Math.sin(angle) * STANDS_RADIUS;
-        float yaw = (float) Math.toDegrees(Math.atan2(-(CENTRE.x - x), CENTRE.z - z));
-        player.teleport(world, x, STANDS_Y, z, Set.of(), yaw, 10.0F, true);
+        ArenaBoss kind = current == null ? WitnessBoss.INSTANCE : current;
+        Vec3d spot = kind.standsSpot(world.getRandom());
+        Vec3d centre = kind.centre();
+        float yaw = (float) Math.toDegrees(Math.atan2(-(centre.x - spot.x), centre.z - spot.z));
+        player.teleport(world, spot.x, spot.y, spot.z, Set.of(), yaw, 10.0F, true);
         KNOCKED_OUT.put(player.getUuid(), server.getTicks() + ArenaMath.KNOCKOUT_TICKS);
         knockouts++;
         title(player, Text.literal("NOKAUT").formatted(Formatting.RED, Formatting.BOLD),
@@ -775,9 +746,7 @@ public final class TrapArena {
             boss.heal(boss.getMaxHealth() * ArenaMath.KNOCKOUT_HEAL);
             world.playSound(null, boss.getX(), boss.getY() + 2.0, boss.getZ(), SoundEvents.ENTITY_PILLAGER_CELEBRATE,
                     SoundCategory.HOSTILE, 1.5F, 0.5F);
-            Text line = Text.literal(player.getNameForScoreboard() + " padł. ").formatted(Formatting.RED)
-                    .append(Text.literal("Obserwator odzyskuje " + Math.round(ArenaMath.KNOCKOUT_HEAL * 100) + "%.")
-                            .formatted(Formatting.GRAY));
+            Text line = current.knockoutLine(player.getNameForScoreboard());
             for (ServerPlayerEntity other : arenaPlayers()) {
                 other.sendMessage(line, false);
             }
@@ -798,10 +767,11 @@ public final class TrapArena {
             KNOCKED_OUT.remove(id);
             ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
             ServerWorld world = world();
-            if (player == null || world == null || !inArena(player) || stage != Stage.FIGHT) {
+            if (player == null || world == null || !inArena(player) || stage != Stage.FIGHT || current == null) {
                 continue;
             }
-            player.teleport(world, GATE.x, GATE.y, GATE.z, Set.of(), GATE_YAW, 0.0F, true);
+            Vec3d gate = current.gate();
+            player.teleport(world, gate.x, gate.y, gate.z, Set.of(), current.gateYaw(), 0.0F, true);
             title(player, Text.literal("WRACASZ").formatted(Formatting.GREEN, Formatting.BOLD),
                     Text.literal("Do roboty.").formatted(Formatting.GRAY), 5, 30, 10);
             player.playSoundToPlayer(SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.0F, 1.2F);
@@ -810,89 +780,16 @@ public final class TrapArena {
 
     private static void voidCatch() {
         ServerWorld world = world();
-        if (world == null) {
+        if (world == null || current == null) {
             return;
         }
         for (ServerPlayerEntity player : arenaPlayers()) {
-            if (player.getY() < ArenaMath.VOID_Y) {
+            if (player.getY() < current.voidY()) {
                 player.fallDistance = 0.0;
-                player.teleport(world, GATE.x, GATE.y, GATE.z, Set.of(), GATE_YAW, 0.0F, true);
+                Vec3d gate = current.gate();
+                player.teleport(world, gate.x, gate.y, gate.z, Set.of(), current.gateYaw(), 0.0F, true);
                 player.sendMessage(Text.literal("Pod areną nie ma nic. Wracasz na bramę.").formatted(Formatting.GRAY), true);
             }
-        }
-    }
-
-    /**
-     * What Groza does, once a second, from outside the effect loop.
-     *
-     * Two stacks pulse the screen dark, three bleed, and every stack fades
-     * on company: the same rule Paranoia taught everyone.
-     */
-    private static void dreadTick(int now) {
-        List<ServerPlayerEntity> here = arenaPlayers();
-        for (ServerPlayerEntity player : here) {
-            StatusEffectInstance dread = player.getStatusEffect(TrapContent.dreadEffect);
-            if (dread == null) {
-                continue;
-            }
-            int stacks = dread.getAmplifier();
-            if (stacks >= 2 && now % 60 == 0) {
-                player.addStatusEffect(new StatusEffectInstance(StatusEffects.DARKNESS, 40, 0,
-                        true, false, false));
-            }
-            if (stacks >= 3 && now % 40 == 0) {
-                player.damage(player.getWorld(), player.getWorld().getDamageSources().magic(), 1.0F);
-                player.playSoundToPlayer(SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.HOSTILE, 0.8F, 0.9F);
-            }
-            boolean company = false;
-            for (ServerPlayerEntity other : here) {
-                if (other != player && other.isAlive()
-                        && other.squaredDistanceTo(player) <= ArenaMath.COMPANY_RANGE * ArenaMath.COMPANY_RANGE) {
-                    company = true;
-                    break;
-                }
-            }
-            if (!company) {
-                continue;
-            }
-            int amplifier = dread.getAmplifier();
-            int left = dread.getDuration();
-            player.removeStatusEffect(TrapContent.dreadEffect);
-            if (amplifier > 0) {
-                player.addStatusEffect(new StatusEffectInstance(TrapContent.dreadEffect, left, amplifier - 1,
-                        false, true, true));
-            }
-        }
-    }
-
-    // --- the lights ------------------------------------------------------------------
-
-    private static void setLights(int phase) {
-        ServerWorld world = world();
-        if (world == null || blueprint == null) {
-            return;
-        }
-        for (BlockPos pos : blueprint.tagged("vein", ORIGIN)) {
-            BlockState state = phase == 1 ? blueprint.original(pos, ORIGIN) : phase == 2 ? DIM : DARK;
-            world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
-        }
-        for (BlockPos pos : blueprint.tagged("glow", ORIGIN)) {
-            BlockState state = phase == 3 ? DARK_WALL : blueprint.original(pos, ORIGIN);
-            world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
-        }
-        if (phase == 3) {
-            world.playSound(null, CENTRE.x, CENTRE.y, CENTRE.z, SoundEvents.BLOCK_BEACON_DEACTIVATE,
-                    SoundCategory.HOSTILE, 2.0F, 0.5F);
-        }
-    }
-
-    private static void sigil(boolean on) {
-        ServerWorld world = world();
-        if (world == null || blueprint == null) {
-            return;
-        }
-        for (BlockPos pos : blueprint.tagged("sigil", ORIGIN)) {
-            world.setBlockState(pos, on ? LIT : blueprint.original(pos, ORIGIN), Block.NOTIFY_LISTENERS);
         }
     }
 
@@ -901,28 +798,23 @@ public final class TrapArena {
     private static void announce(int ticksLeft, boolean first) {
         MutableText text = Text.empty();
         if (first) {
-            text.append(Text.literal("\n✦ ARENA ✦\n").formatted(Formatting.DARK_PURPLE, Formatting.BOLD))
-                    .append(Text.literal("Obserwator zszedł z krawędzi mapy.\n").formatted(Formatting.LIGHT_PURPLE))
-                    .append(Text.literal("Ta sylwetka na granicy widoku, która znikała, gdy się odwracałeś. "
-                            + "Dziś nie zniknie.\n").formatted(Formatting.GRAY))
-                    .append(Text.literal("Arena otwiera się za " + ArenaMath.clock(ticksLeft) + ". ").formatted(Formatting.WHITE))
-                    .append(Text.literal("Nikt tam nie ginie: nokaut, trybuny, powrót.\n").formatted(Formatting.DARK_GRAY, Formatting.ITALIC));
+            text.append(Text.literal("\n✦ ARENA ✦\n").formatted(current.colour(), Formatting.BOLD));
+            text.append(current.omen(ArenaMath.clock(ticksLeft)));
         } else {
-            text.append(Text.literal("Obserwator czeka. ").formatted(Formatting.LIGHT_PURPLE))
-                    .append(Text.literal(ArenaMath.clock(ticksLeft) + ".\n").formatted(Formatting.WHITE));
+            text.append(current.omenAgain(ArenaMath.clock(ticksLeft)));
         }
         text.append(Text.literal("   ")).append(link("[ WCHODZĘ NA ARENĘ ]", "/arena join",
                 "Teleport na arenę. Wracasz przez /arena leave.")).append(Text.literal("\n"));
         broadcast(text);
     }
 
-    private static MutableText link(String label, String command, String hover) {
+    public static MutableText link(String label, String command, String hover) {
         return Text.literal(label).formatted(Formatting.GREEN, Formatting.BOLD)
                 .styled(style -> style.withClickEvent(new ClickEvent.RunCommand(command))
                         .withHoverEvent(new HoverEvent.ShowText(Text.literal(hover))));
     }
 
-    private static void broadcast(Text text) {
+    public static void broadcast(Text text) {
         server.getPlayerManager().broadcast(text, false);
     }
 
@@ -945,21 +837,48 @@ public final class TrapArena {
     private static void commands(CommandDispatcher<ServerCommandSource> dispatcher) {
         var root = CommandManager.literal("arena")
                 .executes(context -> {
-                    context.getSource().sendFeedback(() -> Text.empty()
+                    MutableText help = Text.empty()
                             .append(Text.literal("Arena\n").formatted(Formatting.DARK_PURPLE, Formatting.BOLD))
-                            .append(Text.literal("  /arena join   wejdź, kiedy Obserwator jest na arenie\n").formatted(Formatting.GRAY))
+                            .append(Text.literal("  /arena join   wejdź, kiedy boss jest na arenie\n").formatted(Formatting.GRAY))
                             .append(Text.literal("  /arena leave  wróć tam, gdzie byłeś\n").formatted(Formatting.GRAY))
-                            .append(Text.literal("  /guide arena  jak z nim walczyć").formatted(Formatting.GRAY)), false);
+                            .append(Text.literal("  /guide arena  jak z nimi walczyć\n").formatted(Formatting.GRAY))
+                            .append(Text.literal("  Bossowie: ").formatted(Formatting.DARK_GRAY));
+                    for (ArenaBoss kind : ArenaBosses.all()) {
+                        help.append(Text.literal(ArenaBoss.cap(kind.displayName()) + " ").formatted(kind.colour()));
+                    }
+                    context.getSource().sendFeedback(() -> help, false);
                     return 1;
                 })
                 .then(CommandManager.literal("join").executes(context -> join(context.getSource())))
-                .then(CommandManager.literal("leave").executes(context -> leave(context.getSource())))
-                .then(CommandManager.literal("start")
-                        .requires(source -> source.hasPermissionLevel(2))
-                        .executes(context -> start(context.getSource(), ArenaMath.GATHER_TICKS / 20))
-                        .then(CommandManager.argument("seconds", IntegerArgumentType.integer(5, 600))
-                                .executes(context -> start(context.getSource(),
-                                        IntegerArgumentType.getInteger(context, "seconds")))))
+                .then(CommandManager.literal("leave").executes(context -> leave(context.getSource())));
+
+        var start = CommandManager.literal("start")
+                .requires(source -> source.hasPermissionLevel(2))
+                .executes(context -> start(context.getSource(), null, ArenaMath.GATHER_TICKS / 20))
+                .then(CommandManager.argument("seconds", IntegerArgumentType.integer(5, 600))
+                        .executes(context -> start(context.getSource(), null,
+                                IntegerArgumentType.getInteger(context, "seconds"))));
+        var tp = CommandManager.literal("tp").requires(source -> source.hasPermissionLevel(2));
+        var build = CommandManager.literal("build").requires(source -> source.hasPermissionLevel(2));
+        for (ArenaBoss kind : ArenaBosses.all()) {
+            start.then(CommandManager.literal(kind.id())
+                    .executes(context -> start(context.getSource(), kind, ArenaMath.GATHER_TICKS / 20))
+                    .then(CommandManager.argument("seconds", IntegerArgumentType.integer(5, 600))
+                            .executes(context -> start(context.getSource(), kind,
+                                    IntegerArgumentType.getInteger(context, "seconds")))));
+            tp.then(CommandManager.literal(kind.id()).executes(context -> visit(context.getSource(), kind)));
+            build.then(CommandManager.literal(kind.id()).executes(context -> {
+                ServerWorld world = world();
+                if (world == null) {
+                    return err(context.getSource(), "brak wymiaru areny");
+                }
+                ArenaBlueprint plan = blueprintOf(kind);
+                plan.build(world);
+                kind.onBuilt(world, plan);
+                return ok(context.getSource(), kind.id() + ": " + plan.size() + " bloków");
+            }));
+        }
+        root.then(start).then(tp).then(build)
                 .then(CommandManager.literal("stop")
                         .requires(source -> source.hasPermissionLevel(2))
                         .executes(context -> {
@@ -969,62 +888,63 @@ public final class TrapArena {
                             broadcast(Text.literal("Arena przerwana.").formatted(Formatting.GRAY));
                             endEvent(false, "stopped by " + context.getSource().getName());
                             return ok(context.getSource(), "przerwane");
-                        }))
-                .then(CommandManager.literal("tp")
-                        .requires(source -> source.hasPermissionLevel(2))
-                        .executes(context -> visit(context.getSource())))
-                .then(CommandManager.literal("build")
-                        .requires(source -> source.hasPermissionLevel(2))
-                        .executes(context -> {
-                            ServerWorld world = world();
-                            if (world == null) {
-                                return err(context.getSource(), "brak wymiaru areny");
-                            }
-                            blueprint.build(world, ORIGIN);
-                            setLights(1);
-                            return ok(context.getSource(), "arena zbudowana: " + blueprint.size() + " bloków");
                         }));
+
         var cast = CommandManager.literal("cast").requires(source -> source.hasPermissionLevel(2));
-        for (WitnessEntity.Ability ability : WitnessEntity.Ability.values()) {
-            cast.then(CommandManager.literal(ability.name().toLowerCase(java.util.Locale.ROOT))
-                    .executes(context -> {
-                        if (boss == null || !boss.isAlive() || stage != Stage.FIGHT) {
-                            return err(context.getSource(), "nie ma teraz bossa");
-                        }
-                        boss.begin(ability);
-                        return ok(context.getSource(), "cast " + ability);
-                    }));
+        java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+        ids.add("phase");
+        for (ArenaBoss kind : ArenaBosses.all()) {
+            ids.addAll(kind.abilities());
+        }
+        for (String id : ids) {
+            cast.then(CommandManager.literal(id).executes(context -> {
+                if (boss == null || !boss.isAlive() || stage != Stage.FIGHT) {
+                    return err(context.getSource(), "nie ma teraz bossa");
+                }
+                if (!boss.begin(id)) {
+                    return err(context.getSource(), current.displayName() + " nie ma ataku " + id);
+                }
+                return ok(context.getSource(), "cast " + id);
+            }));
         }
         root.then(cast);
         dispatcher.register(root);
     }
 
-    private static int start(ServerCommandSource source, int seconds) {
+    private static int start(ServerCommandSource source, ArenaBoss kind, int seconds) {
         if (world() == null) {
             return err(source, "brak wymiaru areny -- sprawdź log startu");
         }
         if (stage != Stage.IDLE) {
             return err(source, "arena już trwa");
         }
-        startGathering(seconds * 20);
-        return ok(source, "zwiastun wysłany, " + seconds + " s do walki");
+        if (kind == null) {
+            kind = ArenaBosses.draw(server.getOverworld().getRandom(), lastBossId);
+        }
+        if (kind == null) {
+            return err(source, "nie ma żadnego bossa");
+        }
+        startGathering(kind, seconds * 20);
+        return ok(source, kind.id() + ": zwiastun wysłany, " + seconds + " s do walki");
     }
 
-    /** Have a look at the pit without an event. Same door home. */
-    private static int visit(ServerCommandSource source) {
+    /** Have a look at a pit without an event. Same door home. */
+    private static int visit(ServerCommandSource source, ArenaBoss kind) {
         ServerPlayerEntity player = source.getPlayer();
         ServerWorld world = world();
         if (player == null || world == null) {
             return err(source, "brak gracza albo wymiaru");
         }
         if (stage == Stage.IDLE) {
-            blueprint.build(world, ORIGIN);
-            setLights(1);
+            ArenaBlueprint plan = blueprintOf(kind);
+            plan.build(world);
+            kind.onBuilt(world, plan);
         }
         ORIGINS.putIfAbsent(player.getUuid(), Origin.of(player));
         save();
-        player.teleport(world, GATE.x, GATE.y, GATE.z, Set.of(), GATE_YAW, 0.0F, true);
-        return ok(source, "arena; /arena leave wraca");
+        Vec3d gate = kind.gate();
+        player.teleport(world, gate.x, gate.y, gate.z, Set.of(), kind.gateYaw(), 0.0F, true);
+        return ok(source, kind.id() + "; /arena leave wraca");
     }
 
     // --- storage ----------------------------------------------------------------------------
@@ -1032,13 +952,19 @@ public final class TrapArena {
     private static void load(MinecraftServer s) {
         server = s;
         saveFile = s.getSavePath(WorldSavePath.ROOT).resolve("trapcraft-arena.txt");
-        blueprint = ArenaBlueprint.load();
+        BLUEPRINTS.clear();
+        for (ArenaBoss kind : ArenaBosses.all()) {
+            blueprintOf(kind);
+        }
         try {
             if (Files.exists(saveFile)) {
                 for (String line : Files.readAllLines(saveFile)) {
                     String[] parts = line.trim().split(" ");
-                    if (parts.length == 2 && parts[0].equals("last")) {
+                    if (parts.length >= 2 && parts[0].equals("last")) {
                         lastEventEnd = Long.parseLong(parts[1]);
+                        if (parts.length >= 3) {
+                            lastBossId = parts[2];
+                        }
                     } else if (parts.length == 8 && parts[0].equals("origin")) {
                         ORIGINS.put(UUID.fromString(parts[1]), new Origin(parts[2],
                                 Double.parseDouble(parts[3]), Double.parseDouble(parts[4]),
@@ -1054,8 +980,8 @@ public final class TrapArena {
             TrapCraft.LOGGER.error("arena: dimension {} is not loaded -- the event is OFF. "
                     + "Is data/trapcraft/dimension/arena.json in the jar?", WORLD_KEY.getValue());
         } else {
-            TrapCraft.LOGGER.info("arena: dimension {} ready, {} origins on file", WORLD_KEY.getValue(),
-                    ORIGINS.size());
+            TrapCraft.LOGGER.info("arena: dimension {} ready, {} bosses, {} origins on file, last was {}",
+                    WORLD_KEY.getValue(), ArenaBosses.all().size(), ORIGINS.size(), lastBossId);
         }
     }
 
@@ -1064,7 +990,7 @@ public final class TrapArena {
             return;
         }
         StringBuilder out = new StringBuilder();
-        out.append("last ").append(lastEventEnd).append('\n');
+        out.append("last ").append(lastEventEnd).append(' ').append(lastBossId == null ? "-" : lastBossId).append('\n');
         for (Map.Entry<UUID, Origin> entry : ORIGINS.entrySet()) {
             Origin o = entry.getValue();
             out.append("origin ").append(entry.getKey()).append(' ').append(o.world()).append(' ')

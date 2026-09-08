@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "trapcraft:rat_crown"
+    },
+    "title": "Korona spad\u0142a",
+    "description": "B\u0105d\u017a w kana\u0142ach, kiedy Kr\u00f3l Szczur\u00f3w pada.",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ],
+  "parent": "trapcraft:root"
+}

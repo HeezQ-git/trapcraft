@@ -75,6 +75,59 @@ public final class ArenaMath {
     public static final int EYE_REVEAL_TICKS = 20 * 8;
     public static final int EYE_COOLDOWN_TICKS = 20 * 90;
 
+    // --- the other bosses ---------------------------------------------------------
+    // Two of them walk up and hit; nine on a swing where the witness has eight,
+    // because the witness also stares and the others only bite.
+    public static final int HEAVY_MELEE_DAMAGE = 9;
+
+    // Bandyta. Stawka is the one debuff that is also a buff: every stack is
+    // fifteen percent more taken and a point and a half more dealt.
+    public static final int LEVER_DAMAGE = 9;
+    public static final int CHIP_DAMAGE = 5;
+    public static final int CHIPS = 12;
+    public static final int ROULETTE_DAMAGE = 8;
+    public static final int STAKE_MAX = 3;
+    public static final int STAKE_TICKS = 20 * 20;
+    public static final float STAKE_TAKEN_PER_STACK = 0.15F;
+    public static final float JACKPOT_HEAL = 0.06F;
+    public static final int DOUBLE_TICKS = 20 * 8;
+    public static final int CASH_TICKS = 20 * 5;
+    public static final int CASH_EMERALDS = 8;
+    public static final float CASH_TAKEN = 1.5F;
+    public static final int LEVER_SPIN_TICKS = 20 * 30;
+    public static final int LEVER_COOLDOWN_TICKS = 20 * 300;
+
+    // Król Szczurów. The rats are the fight; the king bites harder for every
+    // one still alive, so the room has to choose between him and them.
+    public static final int TAIL_DAMAGE = 7;
+    public static final double TAIL_RANGE = 4.5;
+    public static final int ERUPT_DAMAGE = 10;
+    public static final int PUDDLE_DAMAGE = 2;
+    public static final int PUDDLE_TICKS = 20 * 8;
+    public static final int PLAGUE_MAX = 3;
+    public static final int PLAGUE_TICKS = 20 * 15;
+    public static final int RAT_HEALTH = 8;
+    public static final int RAT_DAMAGE = 3;
+    public static final int RAT_LIFE_TICKS = 20 * 60;
+    public static final int RATS_MAX = 12;
+    public static final float RAT_BITE_BONUS = 0.05F;
+    public static final float RAT_BITE_CAP = 1.6F;
+    public static final int CROWN_BLINK = 8;
+    public static final int CROWN_COOLDOWN_TICKS = 20 * 60;
+
+    // Sztorm. Nothing to hide behind but copper and fire, on purpose.
+    public static final int BOLT_DAMAGE = 9;
+    public static final double ROD_RANGE = 3.5;
+    public static final int HAIL_DAMAGE = 3;
+    public static final int HAIL_FREEZE_TICKS = 200;
+    public static final double FIRE_RANGE = 3.0;
+    public static final int SHOCK_DAMAGE = 6;
+    public static final int STATIC_DAMAGE = 3;
+    public static final int TWISTER_DAMAGE = 4;
+    public static final double WIND_PUSH = 0.055;
+    public static final float DESCEND_TAKEN = 1.5F;
+    public static final int HEART_COOLDOWN_TICKS = 20 * 45;
+
     /** Health for a fight this many people joined. Never below one player's worth. */
     public static int bossHealth(int players) {
         return BASE_HEALTH + HEALTH_PER_EXTRA * Math.max(0, players - 1);
@@ -121,6 +174,21 @@ public final class ArenaMath {
             shares[i] = (int) Math.floor(pool * (even + earned));
         }
         return shares;
+    }
+
+    /** How the bandit hits somebody with this many Stawka stacks: 1 = as written. */
+    public static float stakeMultiplier(int stacks) {
+        return 1.0F + STAKE_TAKEN_PER_STACK * Math.max(0, stacks);
+    }
+
+    /** How many rats a swarm calls in this phase. */
+    public static int ratsFor(int phase) {
+        return Math.min(RATS_MAX, 6 + 2 * Math.max(1, phase));
+    }
+
+    /** How the rat king bites with this many rats alive: capped, or a swarm is a one-shot. */
+    public static float ratBite(int rats) {
+        return Math.min(RAT_BITE_CAP, 1.0F + RAT_BITE_BONUS * Math.max(0, rats));
     }
 
     /** Damage the room must land to free a held player. */

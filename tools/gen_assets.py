@@ -574,7 +574,16 @@ def lang() -> None:
         "effect.trapcraft.groza": "Groza",
         "effect.trapcraft.adrenalina": "Adrenalina",
         "entity.trapcraft.witness": "Obserwator",
-        "entity.trapcraft.witness_orb": "Oko",
+        "entity.trapcraft.witness_orb": "Pocisk",
+        "entity.trapcraft.bandit": "Bandyta",
+        "entity.trapcraft.ratking": "Król Szczurów",
+        "entity.trapcraft.rat": "Szczur",
+        "entity.trapcraft.storm": "Sztorm",
+        "item.trapcraft.golden_lever": "Złota Dźwignia",
+        "item.trapcraft.rat_crown": "Korona Szczurów",
+        "item.trapcraft.storm_heart": "Serce Burzy",
+        "effect.trapcraft.stawka": "Stawka",
+        "effect.trapcraft.zaraza": "Zaraza",
     }
     for strain, nice in STRAINS.items():
         entries[f"block.trapcraft.cannabis_crop_{strain}"] = f"Krzak {nice}"
@@ -2210,6 +2219,31 @@ def advancements() -> None:
           f"{NS}:witness_eye", "witness")
     award("unbroken", "Bez szwanku", "Pokonaj Obserwatora bez ani jednego nokautu.",
           f"{NS}:witness_eye", "witness", frame="challenge")
+    award("bandit", "Jackpot", "Bądź na dachu, kiedy Bandyta pada.",
+          f"{NS}:golden_lever", "root", frame="challenge")
+    award("ratking", "Korona spadła", "Bądź w kanałach, kiedy Król Szczurów pada.",
+          f"{NS}:rat_crown", "root", frame="challenge")
+    award("storm", "Niebo czyste", "Bądź w chmurach, kiedy Sztorm cichnie.",
+          f"{NS}:storm_heart", "root", frame="challenge")
+    # All four trophies at once. Four criteria in four groups, which is AND;
+    # award() writes one group, which is OR, so this one is spelled out.
+    trophies = ["witness_eye", "golden_lever", "rat_crown", "storm_heart"]
+    put(f"data/{NS}/advancement/collector.json", {
+        "display": {
+            "icon": {"id": f"{NS}:rat_crown"},
+            "title": "Cztery trofea",
+            "description": "Miej Oko, Dźwignię, Koronę i Serce naraz.",
+            "frame": "challenge",
+            "show_toast": True,
+            "announce_to_chat": True,
+            "hidden": False,
+        },
+        "parent": f"{NS}:witness",
+        "criteria": {name: {"trigger": "minecraft:inventory_changed",
+                            "conditions": {"items": [{"items": [f"{NS}:{name}"]}]}}
+                     for name in trophies},
+        "requirements": [[name] for name in trophies],
+    })
 
 
 def climb_assets() -> None:
@@ -3669,12 +3703,229 @@ RIG = [
 
 
 def witness_assets() -> None:
-    for name, model in witness_models().items():
+    boss_assets()
+
+
+
+# --- the other three bosses -------------------------------------------------------
+#
+# Same construction as the witness: item models on paper stacks, laid out by
+# a rig file per boss. The bandit borrows the slot machine's block textures
+# wholesale -- it IS the machine, walking -- so it needs only chrome, a knob,
+# a coin and a tray of its own.
+
+SLOT = f"{NS}:block/slot_"
+
+
+def bandit_models() -> dict[str, dict]:
+    models = {}
+    models["bandit_body"] = {
+        "textures": {"body": SLOT + "body", "trim": SLOT + "trim", "deck": SLOT + "deck",
+                     "particle": SLOT + "body"},
+        "elements": [
+            part([2, 0, 3], [14, 14, 12], "body", up="trim", down="deck"),
+            # A lip round the top and a plinth round the bottom, so the
+            # cabinet is a cabinet and not a crate.
+            part([1.5, 13, 2.5], [14.5, 14.5, 12.5], "trim"),
+            part([1.5, 0, 2.5], [14.5, 1.5, 12.5], "deck"),
+        ],
+    }
+    models["bandit_marquee"] = {
+        "textures": {"lamps": SLOT + "marquee", "trim": SLOT + "trim", "particle": SLOT + "trim"},
+        "elements": [part([3, 0, 4], [13, 6, 12], "trim", south="lamps", north="lamps")],
+    }
+    models["bandit_reel"] = {
+        "textures": {"reel": SLOT + "screen", "particle": SLOT + "screen"},
+        "elements": [part([5, 5, 5], [11, 11, 11], "reel")],
+    }
+    # The lever pivots at the model's centre, so the rod grows up from y=8:
+    # a rotation in the rig then swings it about its own base.
+    models["bandit_arm"] = {
+        "textures": {"chrome": f"{NS}:item/bandit_chrome", "knob": f"{NS}:item/bandit_knob",
+                     "particle": f"{NS}:item/bandit_chrome"},
+        "elements": [
+            part([7, 8, 7], [9, 22, 9], "chrome"),
+            part([5, 21, 5], [11, 27, 11], "knob"),
+        ],
+    }
+    models["bandit_leg"] = {
+        "textures": {"chrome": f"{NS}:item/bandit_chrome", "particle": f"{NS}:item/bandit_chrome"},
+        "elements": [
+            part([5, 2, 5], [11, 8, 11], "chrome"),
+            part([3, 0, 3], [13, 2.5, 13], "chrome"),
+        ],
+    }
+    models["bandit_tray"] = {
+        "textures": {"tray": f"{NS}:item/bandit_tray", "particle": f"{NS}:item/bandit_tray"},
+        "elements": [part([3, 0, 5], [13, 4, 11], "tray")],
+    }
+    models["bandit_coin"] = {
+        "textures": {"coin": f"{NS}:item/bandit_coin", "particle": f"{NS}:item/bandit_coin"},
+        "elements": [part([4, 4, 7], [12, 12, 9], "coin")],
+    }
+    # The trophy: the lever off the machine, held like the other 3D items.
+    models["golden_lever"] = {
+        "textures": {"chrome": f"{NS}:item/bandit_chrome", "knob": f"{NS}:item/bandit_knob",
+                     "particle": f"{NS}:item/bandit_knob"},
+        "display": held(1.0, gui_rotation=(30, 225, 0)),
+        "elements": [
+            part([7, 0, 7], [9, 12, 9], "chrome"),
+            part([5, 11, 5], [11, 17, 11], "knob"),
+            part([4, 0, 4], [12, 1.5, 12], "chrome"),
+        ],
+    }
+    return models
+
+
+def ratking_models() -> dict[str, dict]:
+    fur = f"{NS}:item/rat_fur"
+    models = {}
+    models["ratking_body"] = {
+        "textures": {"fur": fur, "belly": f"{NS}:item/rat_belly", "particle": fur},
+        "elements": [
+            part([2, 0, -4], [14, 10, 16], "fur", down="belly"),
+            # The knot: four smaller bodies clinging to the flanks, tails and all.
+            part([-2, 3, 0], [3, 7, 11], "fur"),
+            part([13, 2, 2], [18, 6, 13], "fur"),
+            part([1, 9, 4], [6, 13, 14], "fur"),
+            part([10, 9, 1], [15, 13, 11], "fur"),
+        ],
+    }
+    models["ratking_head"] = {
+        "textures": {"fur": fur, "face": f"{NS}:item/rat_face", "particle": fur},
+        "elements": [
+            part([3, 0, 3], [13, 9, 13], "fur", south="face"),
+            part([5, 1, 13], [11, 6, 16], "fur"),
+        ],
+    }
+    models["ratking_ear"] = {
+        "textures": {"ear": f"{NS}:item/rat_ear", "particle": f"{NS}:item/rat_ear"},
+        "elements": [part([5, 0, 7.5], [11, 7, 8.5], "ear", faces=("north", "south"))],
+    }
+    models["ratking_tail"] = {
+        "textures": {"tail": f"{NS}:item/rat_tail", "particle": f"{NS}:item/rat_tail"},
+        "elements": [part([7, 7, 8], [9, 9, 18], "tail")],
+    }
+    models["ratking_leg"] = {
+        "textures": {"fur": fur, "particle": fur},
+        "elements": [part([5, 0, 5], [11, 8, 11], "fur")],
+    }
+    # The crown: eight gold blocks on a ring, four points, the one bright
+    # thing in the sewer. Also the trophy, at inventory scale.
+    crown = []
+    for k in range(8):
+        angle = k * 45
+        cx = 8 + 5.5 * math.cos(math.radians(angle))
+        cz = 8 + 5.5 * math.sin(math.radians(angle))
+        element = part([cx - 1.4, 2, cz - 1.4], [cx + 1.4, 5, cz + 1.4], "gold")
+        if k % 2:
+            element["rotation"] = {"origin": [round(cx, 3), 3.5, round(cz, 3)], "axis": "y", "angle": 45}
+        crown.append(element)
+        if k % 2 == 0:
+            crown.append(part([cx - 0.9, 5, cz - 0.9], [cx + 0.9, 9, cz + 0.9], "gold"))
+    models["ratking_crown"] = {
+        "textures": {"gold": f"{NS}:item/rat_gold", "particle": f"{NS}:item/rat_gold"},
+        "elements": crown,
+    }
+    models["rat_crown"] = {
+        "textures": {"gold": f"{NS}:item/rat_gold", "particle": f"{NS}:item/rat_gold"},
+        "display": held(1.0, gui_rotation=(30, 225, 0)),
+        "elements": crown,
+    }
+    return models
+
+
+def storm_models() -> dict[str, dict]:
+    models = {}
+    for name, texture in (("storm_lump", "storm_cloud"), ("storm_lump_dark", "storm_dark")):
+        models[name] = {
+            "textures": {"cloud": f"{NS}:item/{texture}", "particle": f"{NS}:item/{texture}"},
+            "elements": [part([3, 3, 3], [13, 13, 13], "cloud")],
+        }
+    models["storm_core"] = {
+        "textures": {"core": f"{NS}:item/storm_core", "particle": f"{NS}:item/storm_core"},
+        "elements": [part([5, 5, 5], [11, 11, 11], "core")],
+    }
+    models["storm_arc"] = {
+        "textures": {"arc": f"{NS}:item/storm_arc", "particle": f"{NS}:item/storm_arc"},
+        "elements": [part([2, 0, 7.9], [14, 16, 8.1], "arc", faces=("north", "south"))],
+    }
+    models["storm_heart"] = {
+        "textures": {"core": f"{NS}:item/storm_core", "arc": f"{NS}:item/storm_arc",
+                     "particle": f"{NS}:item/storm_core"},
+        "display": held(1.0, gui_rotation=(30, 225, 0)),
+        "elements": [
+            part([5, 5, 5], [11, 11, 11], "core"),
+            part([2, 1, 7.9], [14, 15, 8.1], "arc", faces=("north", "south")),
+            {"from": [7.9, 1, 2], "to": [8.1, 15, 14],
+             "faces": {"east": {"texture": "#arc", "uv": WHOLE_UV}, "west": {"texture": "#arc", "uv": WHOLE_UV}}},
+        ],
+    }
+    return models
+
+
+# One rig per boss. Offsets are blocks from the feet, scales multiply the
+# model (16 units = one block at scale 1). Parts a rig moves every tick
+# (orbiting eyes, cloud lumps) still need a line here so they exist.
+RIGS = {
+    "witness": RIG,
+    "bandit": [
+        {"name": "body", "model": "bandit_body", "offset": [0, 1.7, 0], "scale": 2.2, "shadow": 0.9},
+        {"name": "marquee", "model": "bandit_marquee", "offset": [0, 3.62, 0], "scale": 2.2, "bright": True},
+        {"name": "reel_0", "model": "bandit_reel", "offset": [-0.5, 1.95, 0.62], "scale": 1.25, "bright": True},
+        {"name": "reel_1", "model": "bandit_reel", "offset": [0, 1.95, 0.62], "scale": 1.25, "bright": True},
+        {"name": "reel_2", "model": "bandit_reel", "offset": [0.5, 1.95, 0.62], "scale": 1.25, "bright": True},
+        # On the cabinet's left from where it stands, which is the right of
+        # whoever faces it: where a lever is.
+        {"name": "arm", "model": "bandit_arm", "offset": [1.05, 2.0, 0.1], "scale": 1.6},
+        {"name": "tray", "model": "bandit_tray", "offset": [0, 0.85, 0.62], "scale": 1.4},
+        {"name": "leg_l", "model": "bandit_leg", "offset": [0.45, 0.7, 0], "scale": 1.4},
+        {"name": "leg_r", "model": "bandit_leg", "offset": [-0.45, 0.7, 0], "scale": 1.4},
+    ],
+    "ratking": [
+        {"name": "body", "model": "ratking_body", "offset": [0, 1.25, -0.3], "scale": 2.0, "shadow": 1.1},
+        {"name": "head", "model": "ratking_head", "offset": [0, 1.55, 1.75], "scale": 1.7},
+        {"name": "ear_l", "model": "ratking_ear", "offset": [0.45, 2.35, 1.6], "scale": 1.1},
+        {"name": "ear_r", "model": "ratking_ear", "offset": [-0.45, 2.35, 1.6], "scale": 1.1},
+        {"name": "crown", "model": "ratking_crown", "offset": [0, 2.25, 1.75], "scale": 1.4, "bright": True},
+        {"name": "tail_0", "model": "ratking_tail", "offset": [0, 1.0, -1.6], "scale": 1.6, "yaw": 180},
+        {"name": "tail_1", "model": "ratking_tail", "offset": [0, 0.9, -2.5], "scale": 1.4, "yaw": 180},
+        {"name": "tail_2", "model": "ratking_tail", "offset": [0, 0.8, -3.3], "scale": 1.2, "yaw": 180},
+        {"name": "leg_fl", "model": "ratking_leg", "offset": [0.75, 0.35, 0.9], "scale": 1.2},
+        {"name": "leg_fr", "model": "ratking_leg", "offset": [-0.75, 0.35, 0.9], "scale": 1.2},
+        {"name": "leg_bl", "model": "ratking_leg", "offset": [0.75, 0.35, -1.2], "scale": 1.2},
+        {"name": "leg_br", "model": "ratking_leg", "offset": [-0.75, 0.35, -1.2], "scale": 1.2},
+    ],
+    "storm": [
+        {"name": "core", "model": "storm_core", "offset": [0, 1.6, 0], "scale": 1.3, "bright": True},
+        {"name": "lump_0", "model": "storm_lump", "offset": [0.9, 1.9, 0.3], "scale": 1.7, "shadow": 1.2},
+        {"name": "lump_1", "model": "storm_lump", "offset": [-0.8, 1.7, 0.6], "scale": 1.5},
+        {"name": "lump_2", "model": "storm_lump", "offset": [0.2, 2.3, -0.8], "scale": 1.6},
+        {"name": "lump_3", "model": "storm_lump", "offset": [-0.5, 1.1, -0.5], "scale": 1.4},
+        {"name": "lump_4", "model": "storm_lump", "offset": [0.7, 1.0, -0.2], "scale": 1.2},
+        {"name": "lump_5", "model": "storm_lump", "offset": [-0.2, 2.5, 0.9], "scale": 1.3},
+        {"name": "lump_6", "model": "storm_lump", "offset": [0, 1.6, 0], "scale": 1.9},
+        {"name": "arc_0", "model": "storm_arc", "offset": [0, 1.6, 0], "scale": 1.6, "bright": True},
+        {"name": "arc_1", "model": "storm_arc", "offset": [0, 1.6, 0], "scale": 1.6, "bright": True, "yaw": 90},
+        {"name": "arc_2", "model": "storm_arc", "offset": [0, 1.6, 0], "scale": 1.3, "bright": True, "yaw": 45},
+        {"name": "arc_3", "model": "storm_arc", "offset": [0, 1.6, 0], "scale": 1.3, "bright": True, "yaw": 135},
+    ],
+}
+
+
+def boss_assets() -> None:
+    models = {}
+    models.update(witness_models())
+    models.update(bandit_models())
+    models.update(ratking_models())
+    models.update(storm_models())
+    for name, model in models.items():
         put(f"assets/{NS}/models/item/{name}.json", model)
         put(f"assets/{NS}/items/{name}.json", {
             "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
         })
-    put(f"data/{NS}/arena/rig.json", {"parts": RIG})
+    for boss, parts in RIGS.items():
+        put(f"data/{NS}/arena/{boss}_rig.json", {"parts": parts})
 
 
 def arena_assets() -> None:

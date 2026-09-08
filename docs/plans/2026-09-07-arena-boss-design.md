@@ -200,4 +200,47 @@ Generators: `gen_textures.py`, `gen_assets.py`, new `gen_arena.py`,
   and firework layers enough; layering them is free and cannot break.
 - No permadeath or item loss in the arena: the event is meant to be joined,
   not feared.
-- No second boss. One, done properly.
+- ~~No second boss. One, done properly.~~ See the addendum below.
+
+## Addendum, 2026-09-08: the boss system
+
+HeezQ, after the first night: "czy mógłbyś dodać jeszcze drugiego bossa z
+inną areną i w ogóle w innym stylu ... może cały system bossów?", and then
+"wszystkie trzy pomysły są GENIALNE wdróż je wszystkie ... zrób jakiś shared
+logic dla bossów". So: three more, on one abstraction.
+
+**The abstraction.** `ArenaBoss` is the definition (id, name, colour, origin,
+gate, stands, texts, trophy, award, hooks for lights, lending, debuffs and the
+victory show); `ArenaBossEntity` is the fight's skeleton (the cast scheduler
+over an `Ability(id, cooldown, unlockedAt)` list, the intro, phases, the
+per-hit cap, player-only damage, the death, the pit bounds); `DisplayRig` is a
+body read from `data/trapcraft/arena/<id>_rig.json`, which `gen_assets.py`
+writes from the same table the desk previewer renders; `ArenaProjectileEntity`
+is anything thrown, with a `Spec` for speed, homing, parry and bite.
+`ArenaBosses` holds the pool and draws, never the same twice in a row.
+`TrapArena` runs the one event loop and knows no boss by name. All four arenas
+sit in the one dimension, far apart: witness at (0, 64, 0), bandit at
+(2000, 64, 0), rat king at (0, 64, 2000), storm at (2000, 150, 2000).
+
+**Bandyta** (casino roof, iron golem box): lever cone, a real reel roll with
+four outcomes, a roulette that spins the floor's ring blocks and pays the
+ball's colour, two vindicator bouncers, double-or-nothing on the top damage,
+and the payout: five seconds open, spitting dirty emeralds, taking half again.
+Its currency Stawka is the one debuff that is also a buff.
+
+**Król Szczurów** (sewer cistern, ravager box): rat swarms out of the six
+tunnels (a silverfish disguise, a minute to live), a telegraphed tail sweep,
+burrowing under the floor toward you with a visible trail, into one tunnel
+and out of another with company, and puddles of Zaraza in the third phase,
+where every living rat is more bite. Zaraza washes off in the floor's water.
+
+**Sztorm** (sky disc, ghast box, no gravity, hovers and circles): wind toward
+the edge unless you are at a copper pillar, bolts that a lightning rod within
+3.5 blocks takes instead, a descent that is the melee window, hail that
+freezes and braziers that thaw, a wandering twister, two breezes, and the
+tempest. Everyone is lent a Power II / Infinity bow at the gate and it is
+taken back at every exit, ender chest included.
+
+Trophies: Złota Dźwignia (one of five buffs, blind), Korona Szczurów (eight
+blocks through a wall plus Speed II), Serce Burzy (a gust up and slow
+falling). None sells. `collector` is the advancement for all four.
