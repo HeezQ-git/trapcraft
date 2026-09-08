@@ -83,8 +83,17 @@ public final class TrapCrime {
     /** How far a fleeing suspect gets per shove, and how often they are shoved. */
     private static final int FLEE_STEP = 14;
     private static final int FLEE_TICKS = 40;
-    /** How far from the scene a suspect will go before they are simply gone. */
-    private static final int FLEE_LIMIT = 80;
+    /**
+     * How far from the scene a suspect will go before they lie low.
+     *
+     * Was 80, and 80 is why nobody was ever caught. A runner shoved
+     * {@link #FLEE_STEP} blocks every two seconds clears eighty of them
+     * before a player has finished reading the chat line telling them to give
+     * chase -- so they walked to the marker, found an empty doorstep, and
+     * concluded the whole thing was a number in a log. Forty keeps him in the
+     * district he robbed, which is the only place anybody is going to look.
+     */
+    private static final int FLEE_LIMIT = 40;
     /** Mailboxes and tills further than this from a player are not worth simulating. */
     private static final int WITNESS_RANGE = 128;
 
@@ -879,6 +888,15 @@ public final class TrapCrime {
         if (speed != null) {
             speed.setBaseValue(TrapMath.SUSPECT_PACE);
         }
+        // The one line that makes this a chase instead of a statistic.
+        //
+        // A dark-red name over a villager is invisible behind the first wall
+        // he turns, and he turns one immediately -- which is the whole of
+        // "kliknij prawym, ale tam nigdy nikogo nie ma". A glow renders
+        // through terrain out to the client's tracking distance, so the
+        // moment the announcement lands there is somebody visibly legging it
+        // down a street. The flag, not a status effect: Polymer strips those.
+        body.setGlowing(true);
         world.spawnEntity(body);
         sprawa.body = body.getUuid();
     }
@@ -895,6 +913,13 @@ public final class TrapCrime {
                 continue;
             }
             BlockPos from = body.getBlockPos();
+            // Move the call with the man. callOut froze the shout at the
+            // scene for ninety seconds, so the shift was dispatched to a
+            // doorstep the runner had already left -- they turned up, stood
+            // in the right place at the wrong time, and went home. An officer
+            // only acquires a suspect inside sight AND line of sight, so the
+            // address the beat is anchored on has to be where he IS.
+            TrapPolice.relay(world, from);
             int away = (int) Math.sqrt(from.getSquaredDistance(sprawa.where));
             var random = world.getRandom();
             BlockPos target;

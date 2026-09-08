@@ -434,6 +434,38 @@ class PoliceTest {
         }
     }
 
+    /**
+     * The chase has to be joinable, or the whole file is a random number.
+     *
+     * Two hundred and fourteen offences, two arrests. Every part downstream of
+     * the collar was built and correct -- restitution, the fine, a courthouse
+     * with a diary and a lawyer to hire -- and none of it had ever run twice,
+     * because the four minutes in the middle were unplayable. The chat line
+     * said "chase him and right-click"; the man was an unlit villager eighty
+     * blocks away behind a wall before the line finished rendering, and the
+     * shift was dispatched to the doorstep he had already left.
+     *
+     * All three are one-line joins whose absence looks like the crime system
+     * being decorative, which is exactly how it got reported.
+     */
+    @Test
+    void aRunnerCanActuallyBeChased() throws Exception {
+        String crime = source("TrapCrime.java");
+        assertTrue(crime.contains("body.setGlowing(true)"),
+                "a suspect nobody can see through the first wall he turns is not a "
+                        + "suspect, it is a log line -- the glow IS the discoverability");
+        assertFalse(crime.contains("FLEE_LIMIT = 80"),
+                "eighty blocks is further than a player gets while reading the "
+                        + "announcement, so the race was over before it was announced");
+        assertTrue(crime.contains("TrapPolice.relay(world, from)"),
+                "and the call has to move with the man: a shout frozen at the scene "
+                        + "sends the shift to the right place at the wrong time");
+        String police = source("TrapPolice.java");
+        assertFalse(police.contains("patrol.post = null;\n            }\n        }\n        station.shout = where"),
+                "relay must not drop the legs the way callOut does -- twice a second "
+                        + "that is a shift thrashing in place instead of walking");
+    }
+
     // --- the joins ------------------------------------------------------------
 
     @Test

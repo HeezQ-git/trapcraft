@@ -1501,6 +1501,38 @@ public final class TrapPolice {
         return true;
     }
 
+    /**
+     * The call follows the runner.
+     *
+     * {@link #callOut} answers the question "who goes?" once, and froze the
+     * address it sent them to. That was the whole of why a funded force with
+     * seven officers on it had two arrests in two hundred and fourteen cases:
+     * the shout said the mailbox, the man was two streets away by the time
+     * anybody rounded the corner, and an officer only ever acquires a suspect
+     * inside their own sight line. The dispatcher had no radio.
+     *
+     * Deliberately quieter than {@link #callOut}: no bell, no message to the
+     * chief, no dropping the leg everybody is halfway through. Called twice a
+     * second per open case, any of those would be a shift that thrashes in
+     * place instead of walking. It only moves the pin; the next leg reads it.
+     *
+     * The window is NOT extended either -- a case is worth ninety seconds of
+     * the round however far the man runs, or a suspect who keeps moving owns
+     * the whole shift for as long as he cares to.
+     */
+    public static void relay(ServerWorld world, BlockPos where) {
+        if (where == null) {
+            return;
+        }
+        String here = world.getRegistryKey().getValue().toString();
+        for (Station station : STATIONS) {
+            if (station.dimension.equals(here) && station.shout != null
+                    && world.getTime() <= station.shoutBy && withinCall(station, where)) {
+                station.shout = where.toImmutable();
+            }
+        }
+    }
+
     // --- the two things they do -----------------------------------------------
 
     /**
